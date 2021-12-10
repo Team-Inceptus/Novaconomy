@@ -1,0 +1,9 @@
+name: Novaconomy
+version: 1.0.0
+api-version: 1.18
+main: us.teaminceptus.novaconomy.Novaconomy	
+commands:
+  ehelp:
+    usage: /ehelp [criteria]
+    description: Economy help
+    
