@@ -1,5 +1,9 @@
 package us.teaminceptus.novaconomy.api.economy;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.inventory.ItemStack;
 
@@ -18,7 +22,7 @@ public class Economy {
 		this.section = section;
 		this.name = name;
 		this.icon = icon;
-		this.hasNaturalIncrase = naturalIncrease;
+		this.hasNaturalIncrease = naturalIncrease;
 
 		if (!(section.isString("name"))) {
 			section.set("name", this.name);
@@ -33,14 +37,14 @@ public class Economy {
 		}
 
 		if (!(section.isBoolean("increase-naturally"))) {
-			section.set("increase-naturally", this.hasNaturalIncrase);
+			section.set("increase-naturally", this.hasNaturalIncrease);
 		}
 	}
 
 	public static Economy getEconomy(String name) {
 		ConfigurationSection section = Novaconomy.getEconomiesFile().getConfigurationSection(name.toLowerCase());
 		if (section != null) {
-			return new Economy(section, section.getString("name"), section.getItemStack("icon"), (char) section.get("symbol"));
+			return new Economy(section, section.getString("name"), section.getItemStack("icon"), (char) section.get("symbol"), section.getBoolean("increase-naturally"));
 		} else return null;
 	}
 
@@ -55,7 +59,7 @@ public class Economy {
 	public static final List<Economy> getEconomies() {
 		List<Economy> economies = new ArrayList<>();
 		
-		Novaconomy.getEconomiesFile().getValues().values().forEach(obj -> {
+		Novaconomy.getEconomiesFile().getValues(false).values().forEach(obj -> {
 			if (obj instanceof ConfigurationSection s) {
 				economies.add(getEconomy(s.getName()));
 			}
@@ -92,6 +96,7 @@ public class Economy {
 		
 		private Builder() {
 			this.icon = new ItemStack(Material.GOLD_INGOT);
+			this.symbol = '$';
 			this.increaseNaturally = true;
 		}
 
@@ -115,9 +120,8 @@ public class Economy {
 			return this;
 		}
 
-		public Economy build() throws IllegalArgumentException, UnsupportedOperationException {
+		public final Economy build() throws IllegalArgumentException, UnsupportedOperationException {
 			if (this.name == null) throw new IllegalArgumentException("Name cannot be null");
-			if (this.symbol == null) throw new IllegalArgumentException("Symbol cannot be null");
 
 			if (Novaconomy.getEconomiesFile().getConfigurationSection(this.name.toLowerCase()) != null)
 			throw new UnsupportedOperationException("Economy already exists");
@@ -128,7 +132,8 @@ public class Economy {
 			es.set("icon", this.symbol);
 			es.set("symbol", this.symbol);
 
-			Economy econ = new Economy(es, this.name, this.icon, this.symbol);
+			Economy econ = new Economy(es, this.name, this.icon, this.symbol, this.increaseNaturally);
+			return econ;
 		}
 	}
 
