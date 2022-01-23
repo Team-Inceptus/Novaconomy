@@ -1,5 +1,8 @@
 package us.teaminceptus.novaconomy;
 
+import java.io.File;
+import java.io.IOException;
+
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -7,15 +10,15 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 public class Novaconomy extends JavaPlugin {
 
-	private static final File playerDir;
-	private static final FileConfiguration economiesFile;
+	private static File playerDir;
+	private static FileConfiguration economiesFile;
 
 	public void onEnable() {
 		saveDefaultConfig();
 		saveConfig();
 		playerDir = new File(JavaPlugin.getPlugin(Novaconomy.class).getDataFolder().getPath() + "/players"); 	
 		File economyFile = new File(JavaPlugin.getPlugin(Novaconomy.class).getDataFolder(), "economies.yml");
-		economiesFile = YamlConfiguration.loadConfiguration(file);
+		economiesFile = YamlConfiguration.loadConfiguration(economyFile);
 
 		new Commands(this);
 		new Events(this);
@@ -94,8 +97,12 @@ public class Novaconomy extends JavaPlugin {
 
 	public static final void saveEconomiesFile() {
 		File economyFile = new File(JavaPlugin.getPlugin(Novaconomy.class).getDataFolder(), "economies.yml");
-
-		getEconomiesFile().save(economyFile);
+		
+		try {
+			getEconomiesFile().save(economyFile);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
 }
