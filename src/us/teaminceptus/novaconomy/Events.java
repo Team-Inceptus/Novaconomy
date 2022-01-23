@@ -1,14 +1,17 @@
 package us.teaminceptus.novaconomy;
 
+import java.util.Random;
+
+import org.bukkit.Bukkit;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
-import org.bukkit.Bukkit;
 
 import us.teaminceptus.novaconomy.api.NovaPlayer;
+import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.events.PlayerChangeBalanceEvent;
 
 class Events implements Listener {
@@ -36,11 +39,11 @@ class Events implements Listener {
 			double previousBal = np.getBalance(econ);
 			double newBal = previousBal + increase;
 
-			PlayerChangeBalanceEvent event = new PlayerChangeBalanceEvent(p, increase, previousBal, newBal, true);
+			PlayerChangeBalanceEvent event = new PlayerChangeBalanceEvent(p, econ, increase, previousBal, newBal, true);
 
 			Bukkit.getPluginManager().callEvent(event);
 			if (!(event.isCancelled())) {
-				
+				np.setBalance(econ, newBal);
 			}
 		}
 	}
