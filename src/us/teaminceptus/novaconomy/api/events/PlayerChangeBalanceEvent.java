@@ -3,6 +3,8 @@ package us.teaminceptus.novaconomy.api.events;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
 
+import us.teaminceptus.novaconomy.api.economy.Economy;
+
 public class PlayerChangeBalanceEvent extends PlayerEconomyEvent implements Cancellable {
 
 	private boolean isCancelled;

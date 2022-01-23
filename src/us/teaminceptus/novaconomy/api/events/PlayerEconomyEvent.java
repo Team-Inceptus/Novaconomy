@@ -4,6 +4,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.player.PlayerEvent;
 
+import us.teaminceptus.novaconomy.api.economy.Economy;
+
 public abstract class PlayerEconomyEvent extends PlayerEvent {
 
 	private final double amount;
