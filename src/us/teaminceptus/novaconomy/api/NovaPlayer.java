@@ -1,10 +1,12 @@
 package us.teaminceptus.novaconomy.api;
 
+import java.io.File;
+import java.io.IOException;
+
 import org.bukkit.OfflinePlayer;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
-
-import java.util.UUID;
 
 import us.teaminceptus.novaconomy.Novaconomy;
 import us.teaminceptus.novaconomy.api.economy.Economy;
@@ -15,8 +17,15 @@ public class NovaPlayer {
 	
 	private final File playerFile;
 	private final FileConfiguration playerConfig;
-
-	public NovaPlayer(OfflinePlayer p) {
+	
+	
+	/**
+	 * Creates a new Player.
+	 * @param p Player to use
+	 * @throws IllegalArgumentException if p is null
+	 */
+	public NovaPlayer(OfflinePlayer p) throws IllegalArgumentException {
+		if (p == null) throw new IllegalArgumentException("player is null");
 		this.player = p;
 
 		if (!(Novaconomy.getPlayerDirectory().exists())) {
@@ -37,26 +46,47 @@ public class NovaPlayer {
 
 		reloadValues();
 	}
-
+	
+	/**
+	 * Fetches the balance of this player
+	 * @param econ Economy to use
+	 * @return Player Balance
+	 * @throws IllegalArgumentException if economy is null
+	 */
 	public final double getBalance(Economy econ) throws IllegalArgumentException {
 		if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
 		return this.playerConfig.getConfigurationSection("economies").getConfigurationSection(econ.getName().toLowerCase()).getDouble("balance");
 	}
-
+	
+	/**
+	 * Sets the balance of this player
+	 * @param econ Economy to use
+	 * @throws IllegalArgumentException if economy is null
+	 */
 	public final void setBalance(Economy econ, double newBal) throws IllegalArgumentException {
 		if (newBal < 0) throw new IllegalArgumentException("Balance cannot be negative");
 		if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
 
 		this.playerConfig.getConfigurationSection("economies").getConfigurationSection(econ.getName().toLowerCase()).set("balance", newBal);
 	}
-
-	public final void add(Economy econ, double add) {
+	
+	/**
+	 * Adds to the balance of this player
+	 * @param econ Economy to use
+	 * @throws IllegalArgumentException if economy is null
+	 */
+	public final void add(Economy econ, double add) throws IllegalArgumentException {
 		if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
 
 		setBalance(econ, getBalance(econ) + add);
 	}
-
-	public final void remove(Economy econ, double remove) {
+	
+	/**
+	 * Removes from the balance of this player
+	 * @param econ Economy to use
+	 * @throws IllegalArgumentException if economy is null
+	 */
+	public final void remove(Economy econ, double remove) throws IllegalArgumentException {
 		if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
 
 		setBalance(econ, getBalance(econ) - remove);
