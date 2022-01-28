@@ -24,7 +24,7 @@ class Events implements Listener {
 	}
 
 	static Random r = new Random();
-
+	
 	@EventHandler
 	public void moneyIncrease(EntityDamageByEntityEvent e) {
 		if (e.isCancelled()) return;
@@ -36,14 +36,12 @@ class Events implements Listener {
 
 		for (Economy econ : Economy.getNaturalEconomies()) {
 			double increase = en.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue() / r.nextInt(2) + 1.5;
-			double previousBal = np.getBalance(econ);
-			double newBal = previousBal + increase;
 
 			PlayerChangeBalanceEvent event = new PlayerChangeBalanceEvent(p, econ, increase, previousBal, newBal, true);
 
 			Bukkit.getPluginManager().callEvent(event);
 			if (!(event.isCancelled())) {
-				np.setBalance(econ, newBal);
+				np.add(econ, increase);
 			}
 		}
 	}

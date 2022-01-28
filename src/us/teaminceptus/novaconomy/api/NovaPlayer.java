@@ -11,7 +11,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import us.teaminceptus.novaconomy.Novaconomy;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 
-public class NovaPlayer {
+public final class NovaPlayer {
 
 	private final OfflinePlayer player;
 	
@@ -45,6 +45,10 @@ public class NovaPlayer {
 		this.playerConfig = YamlConfiguration.loadConfiguration(playerFile);
 
 		reloadValues();
+	}
+
+	public final FileConfiguration getPlayerConfig() {
+		return this.playerConfig;
 	}
 	
 	/**

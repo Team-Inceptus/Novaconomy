@@ -8,11 +8,19 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
-public class Novaconomy extends JavaPlugin {
+public class Novaconomy extends JavaPlugin implements NovaConfig {
 
 	private static File playerDir;
 	private static FileConfiguration economiesFile;
 
+	public static void sendPluginMessage(CommandSender sender, String message) {
+		sender.sendMessage(ChatColor.YELLOW + "[" + ChatColor.GOLD + "Novaconomy" + ChatColor.YELLOW + "] " + ChatColor.DARK_AQUA + message);
+	}
+
+	public static void sendError(CommandSender sender, String error) {
+		sendPluginMessage(sender, ChatColor.RED + error);
+	}
+	
 	public void onEnable() {
 		saveDefaultConfig();
 		saveConfig();
@@ -81,10 +89,14 @@ public class Novaconomy extends JavaPlugin {
 		}
 
 		if (!(interest.isDouble("ValueMultiplier"))) {
-			interest.set("ValueMultiplier", 1.02D);
+			interest.set("ValueMultiplier", 1.03D);
 		}
 
 		saveConfig();
+	}
+
+	public static final NovaConfig getConfiguration() {
+		return JavaPlugin.getPlugin(Novaconomy.class);
 	}
 
 	public static final File getPlayerDirectory() {
@@ -99,7 +111,7 @@ public class Novaconomy extends JavaPlugin {
 		File economyFile = new File(JavaPlugin.getPlugin(Novaconomy.class).getDataFolder(), "economies.yml");
 		
 		try {
-			getEconomiesFile().save(economyFile);
+			economiesFile.save(economyFile);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

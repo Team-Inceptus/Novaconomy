@@ -1,4 +1,4 @@
-package us.teaminceptus.novaconomy.api.events;
+package us.teaminceptus.novaconomy.api.events.player;
 
 import org.bukkit.entity.Player;
 import org.bukkit.event.HandlerList;
