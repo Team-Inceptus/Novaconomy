@@ -1,13 +1,25 @@
 package us.teaminceptus.novaconomy.api.economy;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.Material;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.plugin.java.JavaPlugin;
 
 import us.teaminceptus.novaconomy.Novaconomy;
+import us.teaminceptus.novaconomy.api.NovaPlayer;
 
 public final class Economy implements ConfigurationSerializable {
 
@@ -21,6 +33,8 @@ public final class Economy implements ConfigurationSerializable {
 	private boolean interestEnabled;
 	
 	private Economy(ConfigurationSection section, String name, ItemStack icon, char symbol, boolean naturalIncrease, double conversionScale) {
+		FileConfiguration economies = Novaconomy.getEconomiesFile();
+		
 		this.symbol = symbol;
 		this.section = section;
 		this.name = name;
@@ -34,6 +48,10 @@ public final class Economy implements ConfigurationSerializable {
 
 		if (!(section.isItemStack("icon"))) {
 			section.set("icon", this.icon);
+		}
+		
+		if (!(section.isString("symbol"))) {
+			section.set("symbol", this.symbol);
 		}
 
 		if (section.getString("symbol").length() > 1) {
@@ -53,6 +71,13 @@ public final class Economy implements ConfigurationSerializable {
 		}
 
 		this.interestEnabled = section.getBoolean("interest");
+		
+		try {
+			economies.save(new File(JavaPlugin.getPlugin(Novaconomy.class).getDataFolder(), "economies.yml"));
+		} catch (IOException e) {
+			JavaPlugin.getPlugin(Novaconomy.class).getLogger().info("Error saving economies.yml");
+			e.printStackTrace();
+		}
 	}
 
 	// Implementation & Recommended Implementation
@@ -71,9 +96,11 @@ public final class Economy implements ConfigurationSerializable {
 	}
 
 	public static final Economy deserialize(Map<String, Object> serial) {
-		Economy econ = new Economy(serial.get("section"), (String) serial.get("name"), (ItemStack) section.get("icon"), (char) section.get("symbol"), (boolean) section.get("increase-naturally"), (double) serial.get("conversion-scale")));
+		Economy econ = new Economy((ConfigurationSection) serial.get("section"), (String) serial.get("name"), (ItemStack) serial.get("icon"), (char) serial.get("symbol"), (boolean) serial.get("increase-naturally"), (double) serial.get("conversion-scale"));
 
-		econ.interestEnabled = serial.get
+		econ.interestEnabled = (boolean) serial.get("interest");
+		
+		return econ;
 	}
 	
 	// Other
@@ -92,7 +119,7 @@ public final class Economy implements ConfigurationSerializable {
 	}
 
 	private void setValues() {
-		section.set("interest", this.interest);
+		section.set("interest", this.interestEnabled);
 
 		section.set("name", this.name);
 		section.set("icon", this.icon);
@@ -110,7 +137,7 @@ public final class Economy implements ConfigurationSerializable {
 		
 		FileConfiguration config = Novaconomy.getEconomiesFile();
 
-		config.set(econ.getSection(), null);
+		config.set(econ.getEconomySection().getCurrentPath(), null);
 		for (OfflinePlayer p : Bukkit.getOfflinePlayers()) {
 			NovaPlayer np = new NovaPlayer(p);
 			FileConfiguration playerConfig = np.getPlayerConfig();
@@ -118,7 +145,7 @@ public final class Economy implements ConfigurationSerializable {
 			playerConfig.set(econ.getName(), null);
 			
 			try {
-				playerConfig.save(new File(JavaPlugin.getPlugin(Novaconomy.class).getDataFolder().getPath() + "/players", p.getUniqueId().toString() + ".yml");
+				playerConfig.save(new File(JavaPlugin.getPlugin(Novaconomy.class).getDataFolder().getPath() + "/players", p.getUniqueId().toString() + ".yml"));
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -135,7 +162,7 @@ public final class Economy implements ConfigurationSerializable {
 	public static Economy getEconomy(String name) {
 		ConfigurationSection section = Novaconomy.getEconomiesFile().getConfigurationSection(name.toLowerCase());
 		if (section != null) {
-			return new Economy(section, section.getString("name"), section.getItemStack("icon"), (char) section.get("symbol"), section.getBoolean("increase-naturally"));
+			return new Economy(section, section.getString("name"), section.getItemStack("icon"), section.getString("symbol").charAt(0), section.getBoolean("increase-naturally"), section.getDouble("conversion-scale"));
 		} else return null;
 	}
 
@@ -220,8 +247,8 @@ public final class Economy implements ConfigurationSerializable {
 			return this;
 		}
 
-		public Builder setIcon(Material icon) {
-			ItemStack icon = new ItemStack(icon);
+		public Builder setIcon(Material iconM) {
+			ItemStack icon = new ItemStack(iconM);
 			ItemMeta meta = icon.getItemMeta();
 			meta.setDisplayName(ChatColor.AQUA + this.name);
 			icon.setItemMeta(meta);
@@ -233,6 +260,7 @@ public final class Economy implements ConfigurationSerializable {
 
 		public Builder setIcon(ItemStack stack) {
 			this.icon = stack;
+			return this;
 		}
 
 		public Builder setIncreaseNaturally(boolean increaseNaturally) {
