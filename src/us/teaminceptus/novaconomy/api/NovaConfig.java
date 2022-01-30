@@ -1,14 +1,26 @@
 package us.teaminceptus.novaconomy.api;
 
+import java.io.File;
+
+import org.bukkit.configuration.file.FileConfiguration;
+
+import us.teaminceptus.novaconomy.Novaconomy;
+
 public interface NovaConfig {
 	
 	long getIntervalTicks();
 
-	File getPlayerDirectory();
+	static File getPlayerDirectory() {
+		return Novaconomy.getPlayerDirectory();
+	}
 
-	void saveEconomiesFile();
+	static void saveEconomiesFile() {
+		Novaconomy.saveEconomiesFile();
+	}
 
-	FileConfiguration getEconomiesFile();
+	static FileConfiguration getEconomiesFile() {
+		return Novaconomy.getEconomiesFile();
+	}
 
 	boolean isInterestEnabled();
 
@@ -41,5 +53,13 @@ public interface NovaConfig {
 	void setMiningChance(int chance);
 
 	void setFarmingChance(int chance);	
+	
+	void setFarmingIncrease(boolean increase);
+	
+	void setMiningIncrease(boolean increase);
+	
+	void setKillIncrease(boolean increase);
+	
+	void setDeathDecrease(boolean decrease);
 	 
 }
