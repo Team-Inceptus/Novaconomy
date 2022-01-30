@@ -1,8 +1,24 @@
 package us.teaminceptus.novaconomy;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.Material;
+import org.bukkit.Sound;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.PluginCommand;
+import org.bukkit.command.TabExecutor;
+import org.bukkit.entity.Player;
+
+import net.md_5.bungee.api.ChatMessageType;
+import net.md_5.bungee.api.chat.TextComponent;
+import us.teaminceptus.novaconomy.api.NovaPlayer;
+import us.teaminceptus.novaconomy.api.economy.Economy;
+import us.teaminceptus.novaconomy.api.events.player.PlayerPayEvent;
 
 class Commands implements TabExecutor {
 
@@ -43,7 +59,10 @@ class Commands implements TabExecutor {
 			case "economy": {
 				switch (args.length) {
 					case 1: {
-						suggestions.addAll(Arrays.asList("create", "delete", "info", "addbal", "removebal"));
+						suggestions.addAll(Arrays.asList("info"));
+						
+						if (sender.hasPermission("novaconomy.economy"))
+						suggestions.addAll(Arrays.asList("create", "delete", "addbal", "removebal"));
 						return suggestions;
 					}
 					case 2: {
@@ -56,7 +75,7 @@ class Commands implements TabExecutor {
 						if (args[0].equalsIgnoreCase("addbal") || args[0].equalsIgnoreCase("removebal")) {
 							for (Player p : Bukkit.getOnlinePlayers()) suggestions.add(p.getName());
 						} else if (args[0].equalsIgnoreCase("create")) {
-							suggestions.addAll("$", "%", "₼", "ƒ", "¥", "₡", "₱", "£", "Q", "L", "P", "₭", "₦", "₽", "฿", "₫", "A", "a", "r", "R", "C", "c", "D", "d", "W", "w", "B", "b");
+							suggestions.addAll(Arrays.asList("$", "%", "�", "�", "Q", "L", "P", "A", "a", "r", "R", "C", "c", "D", "d", "W", "w", "B", "b"));
 						}
 						
 						return suggestions;
@@ -67,41 +86,65 @@ class Commands implements TabExecutor {
 						}
 						return suggestions;
 					}
-					case 5: {
+					case 6: {
 						if (args[0].equalsIgnoreCase("create")) {
 							suggestions.addAll(Arrays.asList("true", "false"));
 						}
 
 						return suggestions;
 					}
+					
 				}
+				return suggestions;
+			}
+			case "pay": {
+				switch (args.length) {
+					case 1: {
+						for (Player p : Bukkit.getOnlinePlayers()) suggestions.add(p.getName());
+						return suggestions;
+					}
+					case 2: {
+						for (Economy econ : Economy.getEconomies()) suggestions.add(econ.getName());
+						return suggestions;
+					}
+				}
+				
+				return suggestions;
 			}
 		}
 		
 		return suggestions;
 	}
 	
+	
+	
 	public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
 		switch (cmd.getName()) {
 			case "ehelp": {
 				List<String> commandInfo = new ArrayList<>();
 				for (String name : plugin.getDescription().getCommands().keySet()) {
-					PluginCommand cmd = plugin.getCommand(name);
+					PluginCommand pcmd = plugin.getCommand(name);
+					
+					if (pcmd.getPermission() != null && !(sender.hasPermission(pcmd.getPermission()))) continue;
 
 					if (sender.isOp()) {
-						commandInfo.add(ChatColor.GOLD + cmd.getUsage() + ChatColor.WHITE + " - " + ChatColor.GREEN + cmd.getDescription() + ChatColor.WHITE + " | " + ChatColor.BLUE + cmd.getPermission());
+						commandInfo.add(ChatColor.GOLD + pcmd.getUsage() + ChatColor.WHITE + " - " + ChatColor.GREEN + pcmd.getDescription() + ChatColor.WHITE + " | " + ChatColor.BLUE + (pcmd.getPermission() == null ? "No Permissions" : pcmd.getPermission()));
 					} else {
-						commandInfo.add(ChatColor.GOLD + cmd.getUsage() + ChatColor.WHITE + " - " + ChatColor.GREEN + cmd.getDescription());
+						commandInfo.add(ChatColor.GOLD + pcmd.getUsage() + ChatColor.WHITE + " - " + ChatColor.GREEN + pcmd.getDescription());
 					}
 				}
 
-				String msg = ChatColor.GOLD + "" + ChatColor.UNDERLINE + "Commands\n" + String.join("\n", commandInfo.toArray(new String[]{}));
+				String msg = ChatColor.GOLD + "" + ChatColor.UNDERLINE + "Commands\n\n" + String.join("\n", commandInfo.toArray(new String[]{}));
 
 				sender.sendMessage(msg);
 				break;
 			}
 			case "balance": {
 				if (!(sender instanceof Player p)) return false;
+				if (Economy.getEconomies().size() < 1) {
+					p.sendMessage(ChatColor.RED + "There are no economies! Ask an Admin to create one!");
+					return true;
+				}
 				NovaPlayer np = new NovaPlayer(p);
 				
 				List<String> balanceInfo = new ArrayList<>();
@@ -121,6 +164,10 @@ class Commands implements TabExecutor {
 			}
 			case "convert": {
 				if (!(sender instanceof Player p)) return false;
+				if (Economy.getEconomies().size() < 1) {
+					p.sendMessage(ChatColor.RED + "There are no economies! Ask an Admin to create one!");
+					return true;
+				}
 				NovaPlayer np = new NovaPlayer(p);
 				try {
 					if (args.length < 1) {
@@ -177,6 +224,10 @@ class Commands implements TabExecutor {
 			}
 			case "pay": {
 				if (!(sender instanceof Player p)) return false;
+				if (Economy.getEconomies().size() < 1) {
+					p.sendMessage(ChatColor.RED + "There are no economies! Ask an Admin to create one!");
+					return true;
+				}
 				NovaPlayer np = new NovaPlayer(p);
 				try {
 
@@ -192,38 +243,38 @@ class Commands implements TabExecutor {
 	
 					Player target = Bukkit.getPlayer(args[0]);
 					NovaPlayer nt = new NovaPlayer(target);
-
+					
 					if (args.length < 2) {
-						Novaconomy.sendError(p, "Please provide an amount to pay.");
-						return false;
-					}
-
-					double amount = Double.parseDouble(args[1]);
-
-					if (args.length < 3) {
 						Novaconomy.sendError(p, "Please provide an economy.");
 						return false;
 					}
 
-					if (Economy.getEconomy(args[2]) == null) {
+					if (Economy.getEconomy(args[1]) == null) {
 						Novaconomy.sendError(p, "Please provide a valid economy.");
 						return false;
 					}
 
-					Economy econ = Economy.getEconomy(args[2]);
+					Economy econ = Economy.getEconomy(args[1]);
+					
+					if (args.length < 3) {
+						Novaconomy.sendError(p, "Please provide an amount to pay.");
+						return false;
+					}
 
+					double amount = Double.parseDouble(args[2]);
+					
 					if (np.getBalance(econ) < amount) {
 						Novaconomy.sendError(p, "You do not have enough money to pay this player!");
 						return false;
 					}
 
-					PlayerPayEvent event = new PlayerPayEvent(p, target, econ, amount, nt.getBalance(econ), nt.getBalance(econ) + amount);
+					PlayerPayEvent e = new PlayerPayEvent(p, target, econ, amount, nt.getBalance(econ), nt.getBalance(econ) + amount);
 
-					Bukkit.getPluginManager().callEvent(event);
+					Bukkit.getPluginManager().callEvent(e);
 
-					if (!(event.isCancelled())) {
-						np.remove(amount);
-						nt.add(amount);
+					if (!(e.isCancelled())) {
+						np.remove(econ, amount);
+						nt.add(econ, amount);
 
 						target.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(ChatColor.GOLD + "+" + Double.toString(Math.floor(e.getAmount() * 100) / 100) + ChatColor.GREEN + " from " + ChatColor.GOLD + e.getPayer().getName()));
 						target.sendMessage(ChatColor.GREEN + "Received " + ChatColor.GOLD + econ.getSymbol() + Double.toString(Math.floor(e.getAmount() * 100) / 100) + ChatColor.GREEN + " from " + ChatColor.GOLD + e.getPayer().getName());
@@ -243,6 +294,10 @@ class Commands implements TabExecutor {
 
 				switch (args[0].toLowerCase()) {
 					case "create": {
+						if (!(sender.hasPermission("novaconomy.economy.create"))) {
+							sender.sendMessage(ChatColor.RED + "You do not have access to this argument.");
+							return true;
+						}
 						try {
 							if (args.length < 2) {
 								Novaconomy.sendError(sender, "Please provide a valid name.");
@@ -274,7 +329,7 @@ class Commands implements TabExecutor {
 								return false;
 							}
 
-							Material icon = Material.matchMaterial(args[3].toUpperCase().replaceAll("minecraft:", ""));
+							Material icon = Material.valueOf(args[3].replaceAll("minecraft:", "").toUpperCase());
 
 							if (args.length < 5) {
 								Novaconomy.sendError(sender, "Please provide a valid conversion scale.");
@@ -294,7 +349,7 @@ class Commands implements TabExecutor {
 								naturalIncrease = Boolean.parseBoolean(args[5]);
 							}
 							
-								Economy.builder().setName(name).setSymbol(symbol).setIcon(icon).setNaturallyIncrease(naturalIncrease).setConversionScale(scale).build();
+								Economy.builder().setName(name).setSymbol(symbol).setIcon(icon).setIncreaseNaturally(naturalIncrease).setConversionScale(scale).build();
 							
 							sender.sendMessage(ChatColor.GREEN + "Economy successfully created!");
 						} catch (IllegalArgumentException e) {
@@ -304,6 +359,10 @@ class Commands implements TabExecutor {
 						break;
 					}
 					case "delete": {
+						if (!(sender.hasPermission("novaconomy.economy.delete"))) {
+							sender.sendMessage(ChatColor.RED + "You do not have access to this argument.");
+							return true;
+						}
 						if (args.length < 2) {
 							Novaconomy.sendError(sender, "Please provide an economy to delete.");
 							return false;
@@ -323,6 +382,10 @@ class Commands implements TabExecutor {
 						break;
 					}
 					case "info": {
+						if (!(sender.hasPermission("novaconomy.economy.info"))) {
+							sender.sendMessage(ChatColor.RED + "You do not have access to this argument.");
+							return true;
+						}
 						if (args.length < 2) {
 							Novaconomy.sendError(sender, "Please provide an economy to query about.");
 							return false;
@@ -346,6 +409,10 @@ class Commands implements TabExecutor {
 						break;
 					}
 					case "addbal": {
+						if (!(sender.hasPermission("novaconomy.economy.addbalance"))) {
+							sender.sendMessage(ChatColor.RED + "You do not have access to this argument.");
+							return true;
+						}
 						try {
 							if (args.length < 2) {
 								Novaconomy.sendError(sender, "Please provide a valid economy.");
@@ -384,14 +451,18 @@ class Commands implements TabExecutor {
 								return false;
 							}
 
-							np.add(econ, add);
-							sender.sendMessage(ChatColor.GREEN + "Successfully added " + ChatColor.GOLD + econ.getSymbol() + args[3] + ChatColor.GREEN + " to " + ChatColor.GOLD + target.getName() + "'s " + ChatColor.GREEN + " balance.");
+							nt.add(econ, add);
+							sender.sendMessage(ChatColor.GREEN + "Successfully added " + ChatColor.GOLD + econ.getSymbol() + args[3] + ChatColor.GREEN + " to " + ChatColor.GOLD + target.getName() + "'s " + ChatColor.GREEN + "balance.");
 						} catch (NumberFormatException e) {
 							Novaconomy.sendError(sender, "Please provide a valid amount to add.");
 						}
 						break;
 					}
 					case "removebal": {	
+						if (!(sender.hasPermission("novaconomy.economy.removebalance"))) {
+							sender.sendMessage(ChatColor.RED + "You do not have access to this argument.");
+							return true;
+						}
 						try {
 							if (args.length < 2) {
 								Novaconomy.sendError(sender, "Please provide a valid economy.");
@@ -430,14 +501,32 @@ class Commands implements TabExecutor {
 								return false;
 							}
 
-							np.remove(econ, remove);
-							sender.sendMessage(ChatColor.GREEN + "Successfully removed " + ChatColor.GOLD + econ.getSymbol() + args[3] + ChatColor.GREEN + " from " + ChatColor.GOLD + target.getName() + "'s " + ChatColor.GREEN + " balance.");
+							nt.remove(econ, remove);
+							sender.sendMessage(ChatColor.GREEN + "Successfully removed " + ChatColor.GOLD + econ.getSymbol() + args[3] + ChatColor.GREEN + " from " + ChatColor.GOLD + target.getName() + "'s " + ChatColor.GREEN + "balance.");
 						} catch (NumberFormatException e) {
 							Novaconomy.sendError(sender, "Please provide a valid amount to remove.");
+							return false;
 						}
 						break;
 					}
-					
+					case "interest": {
+						if (args.length < 1) {
+							Novaconomy.sendError(sender, "Please provide valid arguments.");
+							return false;
+						}
+						
+						switch (args[0].toLowerCase()) {
+							case "enable": {
+								
+								break;
+							}
+							default: {
+								Novaconomy.sendError(sender, "Please provide valid arugments.");
+								return false;
+							}
+						}
+						break;
+					}
 					default: {
 						Novaconomy.sendError(sender, "Please provide valid arguments.");
 						return false;
@@ -451,7 +540,7 @@ class Commands implements TabExecutor {
 			}
 		}
 
-		return false;
+		return true;
 	}
 
 
