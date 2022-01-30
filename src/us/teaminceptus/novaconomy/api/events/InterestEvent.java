@@ -1,5 +1,15 @@
 package us.teaminceptus.novaconomy.api.events;
 
+import java.util.HashMap;
+import java.util.Map;
+
+import org.bukkit.event.Cancellable;
+import org.bukkit.event.Event;
+import org.bukkit.event.HandlerList;
+
+import us.teaminceptus.novaconomy.api.NovaPlayer;
+import us.teaminceptus.novaconomy.api.economy.Economy;
+
 public class InterestEvent extends Event implements Cancellable {
 
 	private final Map<NovaPlayer, Map<Economy, Double>> previousBalances;
@@ -33,7 +43,7 @@ public class InterestEvent extends Event implements Cancellable {
 	}
 
 	public Map<Economy, Double> getPreviousBalance(NovaPlayer np) throws IllegalArgumentException {
-		if (np == null) throw new IlleaglArgumentException("NovaPlayer cannot be null");
+		if (np == null) throw new IllegalArgumentException("NovaPlayer cannot be null");
 		return this.previousBalances.get(np);
 	}
 
@@ -42,7 +52,7 @@ public class InterestEvent extends Event implements Cancellable {
 	}
 
 	public Map<Economy, Double> getNewBalance(NovaPlayer np) throws IllegalArgumentException {
-		if (np == null) throw new IlleaglArgumentException("NovaPlayer cannot be null");
+		if (np == null) throw new IllegalArgumentException("NovaPlayer cannot be null");
 		return this.newBalances.get(np);
 	}
 
@@ -51,7 +61,7 @@ public class InterestEvent extends Event implements Cancellable {
 	}
 
 	public Map<Economy, Double> getInterestAmount(NovaPlayer np) throws IllegalArgumentException {
-		if (np == null) throw new IlleaglArgumentException("NovaPlayer cannot be null");
+		if (np == null) throw new IllegalArgumentException("NovaPlayer cannot be null");
 		return this.interestAmount.get(np);
 	}
 
