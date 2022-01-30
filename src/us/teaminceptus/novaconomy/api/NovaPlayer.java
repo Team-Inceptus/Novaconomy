@@ -7,6 +7,8 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
+import org.bukkit.plugin.java.JavaPlugin;
 
 import us.teaminceptus.novaconomy.Novaconomy;
 import us.teaminceptus.novaconomy.api.economy.Economy;
@@ -52,6 +54,23 @@ public final class NovaPlayer {
 	}
 	
 	/**
+	 * Fetch the player this class belongs to
+	 * @return OfflinePlayer of this object
+	 */
+	public final OfflinePlayer getPlayer() {
+		return this.player;
+	}
+	
+	/**
+	 * Fetch the online player this class belongs to
+	 * @return Player if online, else null
+	 */
+	public final Player getOnlinePlayer() {
+		if (this.player.isOnline()) return this.player.getPlayer();
+		else return null;
+	}
+	
+	/**
 	 * Fetches the balance of this player
 	 * @param econ Economy to use
 	 * @return Player Balance
@@ -72,6 +91,13 @@ public final class NovaPlayer {
 		if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
 
 		this.playerConfig.getConfigurationSection("economies").getConfigurationSection(econ.getName().toLowerCase()).set("balance", newBal);
+	
+		try {
+			this.playerConfig.save(this.playerFile);
+		} catch (IOException e) {
+			JavaPlugin.getPlugin(Novaconomy.class).getLogger().info("Error saving player file");
+			e.printStackTrace();
+		}
 	}
 	
 	/**
