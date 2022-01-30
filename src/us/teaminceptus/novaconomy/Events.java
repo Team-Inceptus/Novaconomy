@@ -12,7 +12,7 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 
 import us.teaminceptus.novaconomy.api.NovaPlayer;
 import us.teaminceptus.novaconomy.api.economy.Economy;
-import us.teaminceptus.novaconomy.api.events.PlayerChangeBalanceEvent;
+import us.teaminceptus.novaconomy.api.events.player.PlayerChangeBalanceEvent;
 
 class Events implements Listener {
 
@@ -36,8 +36,9 @@ class Events implements Listener {
 
 		for (Economy econ : Economy.getNaturalEconomies()) {
 			double increase = en.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue() / r.nextInt(2) + 1.5;
-
-			PlayerChangeBalanceEvent event = new PlayerChangeBalanceEvent(p, econ, increase, previousBal, newBal, true);
+			double previousBal = np.getBalance(econ);
+			
+			PlayerChangeBalanceEvent event = new PlayerChangeBalanceEvent(p, econ, increase, previousBal, previousBal + increase, true);
 
 			Bukkit.getPluginManager().callEvent(event);
 			if (!(event.isCancelled())) {
