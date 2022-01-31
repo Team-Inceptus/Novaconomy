@@ -38,7 +38,6 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 	}
 	
 	protected static BukkitRunnable INTEREST_RUNNABLE = new BukkitRunnable() {
-		
 		public void run() {
 			if (!(Novaconomy.getConfiguration().isInterestEnabled())) cancel();
 			
