@@ -6,3 +6,4 @@ bin/
 .replit
 .breakpoints
 target/
+.factorypath
