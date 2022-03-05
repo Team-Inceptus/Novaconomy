@@ -24,9 +24,10 @@ public class InterestEvent extends Event implements Cancellable {
 	
 	/**
 	 * Represents an Event when Interest is called
+	 * <p>
+	 * This Event will calculate {@link InterestEvent#getNewBalance(NovaPlayer)} on its own
 	 * @param previousBalances A Map of Players to the economies affected and their previous balances
 	 * @param interestAmount A Map of Players to the economies affected and the amount added
-	 * @apiNote The Event will calculate the New Balance on its own
 	 */
 	public InterestEvent(Map<NovaPlayer, Map<Economy, Double>> previousBalances, Map<NovaPlayer, Map<Economy, Double>> interestAmount) {
 		this.previousBalances = previousBalances;
