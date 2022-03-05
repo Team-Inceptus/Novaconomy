@@ -64,7 +64,7 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 	/**
 	 * Send an Error as this Plugin
 	 * @param sender Sender to send to
-	 * @param error Erro to send
+	 * @param error Error to send
 	 */
 	public static void sendError(CommandSender sender, String error) {
 		sendPluginMessage(sender, ChatColor.RED + error);
