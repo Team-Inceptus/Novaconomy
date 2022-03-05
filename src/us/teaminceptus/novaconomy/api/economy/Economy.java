@@ -85,7 +85,12 @@ public final class Economy implements ConfigurationSerializable {
 	}
 
 	// Implementation & Recommended Implementation
-	
+		
+	/**
+	 * Serialization inside a YML File
+	 * @return Serialized Economy
+	 * @apiNote This is only meant to be passed to {@link Economy#deserialize(Map)}
+	 */
 	public final Map<String, Object> serialize() {
 		Map<String, Object> serial = new HashMap<>();
 		serial.put("section", section);
@@ -98,8 +103,16 @@ public final class Economy implements ConfigurationSerializable {
 		
 		return serial;
 	}
-
-	public static final Economy deserialize(Map<String, Object> serial) {
+	
+	/**
+	 * Serialization from a YML File
+	 * @param serial Map of serialization
+	 * @throws NullPointerException if a necessary part is missing
+	 * @return Economy Class
+	 * @see Economy#serialize()
+	 * @apiNote Using this method from a constructed map may break the plugin. Only input Maps from {@link Economy#serialize()}
+	 */
+	public static final Economy deserialize(Map<String, Object> serial) throws NullPointerException {
 		Economy econ = new Economy((ConfigurationSection) serial.get("section"), (String) serial.get("name"), (ItemStack) serial.get("icon"), (char) serial.get("symbol"), (boolean) serial.get("increase-naturally"), (double) serial.get("conversion-scale"));
 
 		econ.interestEnabled = (boolean) serial.get("interest");

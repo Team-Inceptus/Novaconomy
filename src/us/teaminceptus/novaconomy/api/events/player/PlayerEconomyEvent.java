@@ -15,7 +15,13 @@ public abstract class PlayerEconomyEvent extends PlayerEvent {
 	private final double amount;
 	private final Economy econ;
 	private static final HandlerList HANDLERS = new HandlerList();
-
+	
+	/**
+	 * Represents an Economy-Related Event
+	 * @param who Player involved
+	 * @param amount Amount added
+	 * @param econ Economy involved
+	 */
 	public PlayerEconomyEvent(Player who, double amount, Economy econ) {
 		super(who);
 		this.amount = amount;

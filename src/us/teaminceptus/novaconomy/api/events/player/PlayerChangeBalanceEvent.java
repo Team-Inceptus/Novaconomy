@@ -15,7 +15,17 @@ public class PlayerChangeBalanceEvent extends PlayerEconomyEvent implements Canc
 	private boolean isNatural;
 	private double newBal;
 	private double previousBal;
-
+	
+	/**
+	 * Called when a Player's Balance Changes
+	 * @param target Target involved in this event
+	 * @param econ Economy involved
+	 * @param amount Amount added
+	 * @param previousBal Previous Balance
+	 * @param newBal New Balance (previousBal + amount = newBal is NOT being checked)
+	 * @param isNatural If this addition was natural
+	 * @see PlayerEconomyEvent
+	 */
 	public PlayerChangeBalanceEvent(Player target, Economy econ, double amount, double previousBal, double newBal, boolean isNatural) {
 		super(target, amount, econ);
 		this.newBal = newBal;

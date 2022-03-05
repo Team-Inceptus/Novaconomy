@@ -10,7 +10,16 @@ import us.teaminceptus.novaconomy.api.economy.Economy;
 public class PlayerPayEvent extends PlayerChangeBalanceEvent {
 
 	private Player payer;
-
+	
+	/**
+	 * Represents an Event when a Player pays another Player
+	 * @param target Player being paid
+	 * @param payer Player paying
+	 * @param econ Economy involved
+	 * @param paid Amount paid
+	 * @param previousBal Previous Balance before transaction
+	 * @param newBal Balance After transaction (previousBal + paid = newBal is NOT being checked)
+	 */
 	public PlayerPayEvent(Player target, Player payer, Economy econ, double paid, double previousBal, double newBal) {
 		super(target, econ, paid, previousBal, newBal, false);
 		this.payer = payer;
