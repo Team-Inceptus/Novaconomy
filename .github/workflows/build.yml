@@ -24,7 +24,7 @@ jobs:
       run: |
         mvn install
         cd target/apidocs
-    - name: Sync files
+    - name: Upload JavaDoc
       uses: SamKirkland/FTP-Deploy-Action@4.1.0
       with:
         server: ${{ secrets.FTP_HOST }}
