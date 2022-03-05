@@ -31,7 +31,7 @@ jobs:
     - name: Build JavaDoc
       run: |
         mkdir docs
-        cp -Rfv target/apidocs/* gh-pages/
+        cp -Rfv target/apidocs/* docs/
         cd docs
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
@@ -40,6 +40,6 @@ jobs:
     - name: Push JavaDoc Changes
       uses: ad-m/github-push-action@master
       with:
-        branch: gh-pages
-        directory: gh-pages
+        branch: main
+        directory: docs
         github_token: ${{ secrets.ACTION_KEY }}
