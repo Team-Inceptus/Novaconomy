@@ -30,6 +30,7 @@ jobs:
         mvn install
     - name: Build JavaDoc
       run: |
+        mkdir gh-pages
         cp -Rfv target/apidocs/* gh-pages/
         cd gh-pages
         git config --local user.email "action@github.com"
