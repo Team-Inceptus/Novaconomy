@@ -75,7 +75,7 @@ class Commands implements TabExecutor {
 						if (args[0].equalsIgnoreCase("addbal") || args[0].equalsIgnoreCase("removebal")) {
 							for (Player p : Bukkit.getOnlinePlayers()) suggestions.add(p.getName());
 						} else if (args[0].equalsIgnoreCase("create")) {
-							suggestions.addAll(Arrays.asList("$", "%", "¥", "£", "Q", "L", "P", "A", "a", "r", "R", "C", "c", "D", "d", "W", "w", "B", "b"));
+							suggestions.addAll(Arrays.asList("$", "%", "Q", "L", "P", "A", "a", "r", "R", "C", "c", "D", "d", "W", "w", "B", "b"));
 						}
 						
 						return suggestions;
