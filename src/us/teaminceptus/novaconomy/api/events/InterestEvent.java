@@ -10,6 +10,9 @@ import org.bukkit.event.HandlerList;
 import us.teaminceptus.novaconomy.api.NovaPlayer;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 
+/**
+ * Called when Interest happens
+ */
 public class InterestEvent extends Event implements Cancellable {
 
 	private final Map<NovaPlayer, Map<Economy, Double>> previousBalances;
@@ -37,29 +40,59 @@ public class InterestEvent extends Event implements Cancellable {
 
 		this.newBalances = newBalances;
 	}
-
+	
+	/**
+	 * Fetch a Map of what players were affected to their previous balances.
+	 * @return Map of Previous Balances
+	 */
 	public Map<NovaPlayer, Map<Economy, Double>> getAllPreviousBalances() {
 		return this.previousBalances;
 	}
-
+	
+	/**
+	 * Utility Method to get the values affected from this player and their previous balances
+	 * @param np Player to use
+	 * @return Map of Economies to their Previous Balances
+	 * @throws IllegalArgumentException if player is null
+	 */
 	public Map<Economy, Double> getPreviousBalance(NovaPlayer np) throws IllegalArgumentException {
 		if (np == null) throw new IllegalArgumentException("NovaPlayer cannot be null");
 		return this.previousBalances.get(np);
 	}
-
+	
+	/**
+	 * Fetch a Map of what players were affected to their new balances.
+	 * @return Map of New Balances
+	 */
 	public Map<NovaPlayer, Map<Economy, Double>> getAllNewBalances() {
 		return this.newBalances;
 	}
-
+	
+	/**
+	 * Utility Method to get the values affected from this player and their new balances
+	 * @param np Player to use
+	 * @return Map of Economies to their New Balances
+	 * @throws IllegalArgumentException if player is null
+	 */
 	public Map<Economy, Double> getNewBalance(NovaPlayer np) throws IllegalArgumentException {
 		if (np == null) throw new IllegalArgumentException("NovaPlayer cannot be null");
 		return this.newBalances.get(np);
 	}
-
+	
+	/**
+	 * Fetch a Map of what players were affected to how much was added to each balance
+	 * @return Map of Interest Amount
+	 */
 	public Map<NovaPlayer, Map<Economy, Double>> getAllInterestAmounts() {
 		return this.interestAmount;
 	}
-
+	
+	/**
+	 * Utility Method to get the values affected from this player and the amount added to their balance
+	 * @param np Player to use
+	 * @return Map of Economies to their additions
+	 * @throws IllegalArgumentException if player is null
+	 */
 	public Map<Economy, Double> getInterestAmount(NovaPlayer np) throws IllegalArgumentException {
 		if (np == null) throw new IllegalArgumentException("NovaPlayer cannot be null");
 		return this.interestAmount.get(np);

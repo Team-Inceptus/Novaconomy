@@ -5,6 +5,10 @@ import org.bukkit.event.Cancellable;
 
 import us.teaminceptus.novaconomy.api.economy.Economy;
 
+/**
+ * Called when a player's balance changes
+ *
+ */
 public class PlayerChangeBalanceEvent extends PlayerEconomyEvent implements Cancellable {
 
 	private boolean isCancelled;
@@ -19,15 +23,27 @@ public class PlayerChangeBalanceEvent extends PlayerEconomyEvent implements Canc
 		this.previousBal = previousBal;
 		this.isCancelled = false;
 	}
-
+	
+	/**
+	 * Whether or not this increase was caused by a natural event (i.e. fishing increase)
+	 * @return true if natural, else false
+	 */
 	public boolean isNatural() {
 		return this.isNatural;
 	}
-
+	
+	/**
+	 * Fetch the previous balance of this player
+	 * @return Previous Balance
+	 */
 	public double getPreviousBalance() {
 		return this.previousBal;
 	}
-
+	
+	/**
+	 * Fetch the new balance of this player 
+	 * @return New Balance
+	 */
 	public double getNewBalance() {
 		return this.newBal;
 	}
@@ -36,7 +52,6 @@ public class PlayerChangeBalanceEvent extends PlayerEconomyEvent implements Canc
 		return this.isCancelled;
 	}
 
-	@Override
 	public void setCancelled(boolean isCancelled) {
 		this.isCancelled = isCancelled;
 	}

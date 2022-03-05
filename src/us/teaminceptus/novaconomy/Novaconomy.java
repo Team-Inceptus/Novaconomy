@@ -166,9 +166,6 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 		INTEREST_RUNNABLE.runTask(this);
 		saveConfig();
 	}
-	
-	
-	
 
 	public static final NovaConfig getConfiguration() {
 		return JavaPlugin.getPlugin(Novaconomy.class);
@@ -267,44 +264,43 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 
 	@Override
 	public void setFishingChance(int chance) {
-		// TODO Auto-generated method stub
-		
+		NATURAL_CAUSES.set("FishingIncreaseChance", chance);
+		saveConfig();
 	}
 
 	@Override
 	public void setMiningChance(int chance) {
-		// TODO Auto-generated method stub
-		
+		NATURAL_CAUSES.set("MiningChanceIncrease", chance);
+		saveConfig();
 	}
 
 	@Override
 	public void setFarmingChance(int chance) {
-		// TODO Auto-generated method stub
-		
+		NATURAL_CAUSES.set("FarmingIncreaseChance", chance);
+		saveConfig();
 	}
 
 	@Override
 	public void setFarmingIncrease(boolean increase) {
-		// TODO Auto-generated method stub
-		
+		NATURAL_CAUSES.set("FarmingIncrease", increase);
+		saveConfig();
 	}
 
 	@Override
 	public void setMiningIncrease(boolean increase) {
-		// TODO Auto-generated method stub
-		
+		NATURAL_CAUSES.set("MiningIncrease", increase);
+		saveConfig();
 	}
 
 	@Override
 	public void setKillIncrease(boolean increase) {
-		// TODO Auto-generated method stub
-		
+		NATURAL_CAUSES.set("KillIncrease", increase);
 	}
 
 	@Override
 	public void setDeathDecrease(boolean decrease) {
-		// TODO Auto-generated method stub
-		
+		NATURAL_CAUSES.set("DeathDecrease", decrease);
+		saveConfig();
 	}
 
 }

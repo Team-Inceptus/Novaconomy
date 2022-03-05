@@ -13,6 +13,10 @@ import org.bukkit.plugin.java.JavaPlugin;
 import us.teaminceptus.novaconomy.Novaconomy;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 
+/**
+ * Class representing a Player used in the Plugin
+ *
+ */
 public final class NovaPlayer {
 
 	private final OfflinePlayer player;
@@ -48,7 +52,11 @@ public final class NovaPlayer {
 
 		reloadValues();
 	}
-
+	
+	/**
+	 * Fetch the Configuration file this player's information is stored in
+	 * @return ({@link FileConfiguration} representing player config
+	 */
 	public final FileConfiguration getPlayerConfig() {
 		return this.playerConfig;
 	}

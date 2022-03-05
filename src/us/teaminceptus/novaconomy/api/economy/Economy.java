@@ -21,6 +21,10 @@ import org.bukkit.plugin.java.JavaPlugin;
 import us.teaminceptus.novaconomy.Novaconomy;
 import us.teaminceptus.novaconomy.api.NovaPlayer;
 
+/**
+ * Represents an Economy
+ *
+ */
 public final class Economy implements ConfigurationSerializable {
 
 	private final char symbol;
@@ -81,7 +85,7 @@ public final class Economy implements ConfigurationSerializable {
 	}
 
 	// Implementation & Recommended Implementation
-
+	
 	public final Map<String, Object> serialize() {
 		Map<String, Object> serial = new HashMap<>();
 		serial.put("section", section);
@@ -104,15 +108,27 @@ public final class Economy implements ConfigurationSerializable {
 	}
 	
 	// Other
-
+	
+	/**
+	 * Whether or not this Economy supports interest
+	 * @return true if allows, else false
+	 */
 	public boolean hasInterest() {
 		return section.getBoolean("interest");
 	}
-
+	
+	/**
+	 * Fetch a list of all economies supporting interest
+	 * @return List of Interest Economies
+	 */
 	public static List<Economy> getInterestEconomies() {
 		return getEconomies().stream().filter(econ -> econ.hasInterest()).toList();
 	}
-
+	
+	/**
+	 * Set the interest acception state of this economy
+	 * @param interest Whether or not to allow interest
+	 */
 	public void setInterest(boolean interest) {
 		this.interestEnabled = interest;
 		setValues();
@@ -127,11 +143,21 @@ public final class Economy implements ConfigurationSerializable {
 		section.set("increase-naturally", this.hasNaturalIncrease);
 		section.set("conversion-scale", this.conversionScale);
 	}
-
+	
+	/**
+	 * Remove an Economy from the Plugin
+	 * @param name Name of the Economy
+	 * @see Economy#removeEconomy(Economy)
+	 */
 	public static void removeEconomy(String name) {
 		removeEconomy(getEconomy(name));
 	}
-
+	
+	/**
+	 * Remove an Economy from the Plugin
+	 * @param econ Economy to remove
+	 * @throws IllegalArgumentException if economy is null
+	 */
 	public static void removeEconomy(Economy econ) throws IllegalArgumentException {
 		if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
 		
@@ -158,26 +184,51 @@ public final class Economy implements ConfigurationSerializable {
 			e.printStackTrace();
 		}
 	}
-
+	
+	/**
+	 * Fetch an Economy 
+	 * @param name Name of the Economy
+	 * @return Found Economy, or null if none found
+	 */
 	public static Economy getEconomy(String name) {
 		ConfigurationSection section = Novaconomy.getEconomiesFile().getConfigurationSection(name.toLowerCase());
 		if (section != null) {
 			return new Economy(section, section.getString("name"), section.getItemStack("icon"), section.getString("symbol").charAt(0), section.getBoolean("increase-naturally"), section.getDouble("conversion-scale"));
 		} else return null;
 	}
-
+	
+	/**
+	 * Get the Symbol of this Economy
+	 * @return {@link Character} representing this icon
+	 */
 	public final char getSymbol() {
 		return this.symbol;
 	}
-
+	
+	/**
+	 * Whether or not this economy will naturally increase (not the same as Interest)
+	 * <p>
+	 * An economy increasing naturally means that it increases from NaturalCauses (i.e. Mining, Fishing). Specific events can be turned off in the configuration.
+	 * @return true if naturally increases, else false
+	 */
 	public final boolean hasNaturalIncrease() {
 		return this.hasNaturalIncrease;
 	}
-
+	
+	/**
+	 * Return the scale of which this economy will be converted to a different economy
+	 * <p>
+	 * An economy with a conversion scale of {@code 1} and another with a conversion scale of {@code 0.5} would have a 2:1 ratio, meaning that 100 in the first economy would be 200 in the second economy.
+	 * @return conversion scale of this economy
+	 */
 	public final double getConversionScale() {
 		return this.conversionScale;
 	}
-
+	
+	/**
+	 * Fetch a list of all economies registered on the Plugin
+	 * @return List of Registered Economies
+	 */
 	public static final List<Economy> getEconomies() {
 		List<Economy> economies = new ArrayList<>();
 		
@@ -189,27 +240,59 @@ public final class Economy implements ConfigurationSerializable {
 
 		return economies;
 	}
-
+	
+	/**
+	 * Fetch a list of economies that increase naturally
+	 * @return List of Economies that increase naturally
+	 */
 	public static final List<Economy> getNaturalEconomies() {
 		return getEconomies().stream().filter(econ -> econ.hasNaturalIncrease()).toList();
 	}
-
+	
+	/**
+	 * Return the ConfigurationSection that this Economy is stored in
+	 * @return {@link ConfigurationSection} of this economy
+	 */
 	public final ConfigurationSection getEconomySection() {
 		return this.section;
 	}
-
+	
+	/**
+	 * Fetch the name of this economy
+	 * @return Name of this economy
+	 */
 	public final String getName() {
 	 	return this.name;
 	}
-
+	
+	/**
+	 * Get the Icon of this Economy
+	 * @return Icon of this Economy
+	 */
 	public final ItemStack getIcon() {
 		return this.icon;
 	}
-
+	
+	/**
+	 * Convert this economy to another economy
+	 * @param to The New Economy to convert to
+	 * @param fromAmount How much amount is to be converted
+	 * @return Converted amount in the other economy's form
+	 * @throws IllegalArgumentException if to or from is null, or economies are identical
+	 * @see Economy#convertAmount(Economy, Economy, double)
+	 */
 	public final double convertAmount(Economy to, double fromAmount) throws IllegalArgumentException {
 		return convertAmount(this, to, fromAmount);
 	}
-
+	
+	/**
+	 * Convert one economy's balance to another
+	 * @param from The Economy to convert from
+	 * @param to The Economy to convert to
+	 * @param fromAmount How much amount is to be converted
+	 * @return Converted amount in the other economy's form
+	 * @throws IllegalArgumentException if to or from is null, or economies are identical
+	 */
 	public static final double convertAmount(Economy from, Economy to, double fromAmount) throws IllegalArgumentException {
 		if (from == null) throw new IllegalArgumentException("Economy from is null");
 		if (to == null) throw new IllegalArgumentException("Economy to is null");
@@ -218,11 +301,19 @@ public final class Economy implements ConfigurationSerializable {
 
 		return fromAmount * scale;
 	}
-
+	
+	/**
+	 * Fetch a Builder used for creating economies
+	 * @return {@link Builder} Class
+	 */
 	public static Economy.Builder builder() {
 		return new Economy.Builder();
 	}
-
+	
+	/**
+	 * Class used for Creating Economies
+	 * @see Economy#builder()
+	 */
 	public static final class Builder {
 		char symbol;
 		String name;
@@ -236,17 +327,33 @@ public final class Economy implements ConfigurationSerializable {
 			this.increaseNaturally = true;
 			this.conversionScale = 1;
 		}
-
+		
+		/**
+		 * Set the Symbol of this Economy
+		 * @param symbol Symbol of this economy
+		 * @return Builder Class, for chaining
+		 */
 		public Builder setSymbol(char symbol) {
 			this.symbol = symbol;
 			return this;
 		}
-
+		
+		/**
+		 * Set the name of this Economy
+		 * @param name Name of the Economy
+		 * @return Builder Class, for chaining
+		 */
 		public Builder setName(String name) {
 			this.name = name;
 			return this;
 		}
-
+		
+		/**
+		 * Set the Icon of this Economy
+		 * @param iconM Icon Material
+		 * @return Builder Class, for chaining
+		 * @see Builder#setIcon(ItemStack)
+		 */
 		public Builder setIcon(Material iconM) {
 			ItemStack icon = new ItemStack(iconM);
 			ItemMeta meta = icon.getItemMeta();
@@ -257,22 +364,43 @@ public final class Economy implements ConfigurationSerializable {
 			
 			return this;
 		}
-
+		
+		/**
+		 * Set the Icon of this Economy
+		 * @param stack {@link ItemStack} for this economy
+		 * @return Builder Class, for chaining
+		 */
 		public Builder setIcon(ItemStack stack) {
 			this.icon = stack;
 			return this;
 		}
-
+		
+		/**
+		 * Set whether or not this economy increases naturally (i.e. Increases from Mining)
+		 * @param increaseNaturally Whether or not this economy should increase from Natural Causes
+		 * @return Builder Class, for chaining
+		 */
 		public Builder setIncreaseNaturally(boolean increaseNaturally) {
 			this.increaseNaturally = increaseNaturally;
 			return this;
 		}
-
+		
+		/**
+		 * Set the Conversion Scale (used to convert the value to other economies)
+		 * @param scale Scale of this economy
+		 * @return Builder Class, for chaining
+		 */
 		public Builder setConversionScale(double scale) {
 			this.conversionScale = scale;
 			return this;
 		}
-
+		
+		/**
+		 * Builds this economy
+		 * @return Created Economy
+		 * @throws IllegalArgumentException if name is null (icon's default is Gold Ingot)
+		 * @throws UnsupportedOperationException if already exists
+		 */
 		public final Economy build() throws IllegalArgumentException, UnsupportedOperationException {
 			if (this.name == null) throw new IllegalArgumentException("Name cannot be null");
 
