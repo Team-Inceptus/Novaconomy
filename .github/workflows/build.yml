@@ -35,6 +35,7 @@ jobs:
         cd gh-pages
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
+        git add ./
         git commit -m "Update javadoc pages for latest release" -a
     - name: Push JavaDoc Changes
       uses: ad-m/github-push-action@master
