@@ -27,7 +27,7 @@ jobs:
     - name: Sync files
       uses: SamKirkland/FTP-Deploy-Action@4.1.0
       with:
-        server: myhsoting.com
-        username: user@tutsplanet.com
-        password: ${{ secrets.PROD_FTP_PWD }}'
+        server: ${{ secrets.FTP_HOST }}
+        username: %{{ secrets.FTP_USERNAME }}
+        password: ${{ secrets.FTP_PASSWORD }}'
         server-dir: htdocs/novaconomy/
