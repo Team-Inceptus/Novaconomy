@@ -25,6 +25,7 @@
 		<plugin>
 			<groupId>org.apache.maven.plugins</groupId>
 			<artifactId>maven-javadoc-plugin</artifactId>
+			<version>3.3.0</version>
 			<executions>
 				<execution>
 					<id>attach-javadocs</id>
@@ -42,7 +43,6 @@
 	        <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
 	    </repository>
 	</repositories>
-	
 	<dependencies>
 	    <dependency>
            <groupId>org.spigotmc</groupId>
@@ -50,6 +50,7 @@
            <version>1.18.2-R0.1-SNAPSHOT</version>
            <scope>provided</scope>
 	    </dependency>
+
         <dependency>
             <groupId>org.jetbrains</groupId>
             <artifactId>annotations-java5</artifactId>
