@@ -222,6 +222,8 @@ public final class Economy implements ConfigurationSerializable {
 	 * Whether or not this economy will naturally increase (not the same as Interest)
 	 * <p>
 	 * An economy increasing naturally means that it increases from NaturalCauses (i.e. Mining, Fishing). Specific events can be turned off in the configuration.
+	 * <p>
+	 * Death Decrease applies to ALL Economies, so turn it off globally if you don't want that.
 	 * @return true if naturally increases, else false
 	 */
 	public final boolean hasNaturalIncrease() {
