@@ -1,0 +1,40 @@
+name: Build Project
+on:
+  push:
+      branches: [ main ]
+    pull_request:
+      branches: [ main ]
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Set up JDK 17
+      uses: actions/setup-java@v2
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+        
+    - name: Setup Dependencies
+      run: |
+        wget -O BuildTools.jar https://hub.spigotmc.org/jenkins/job/BuildTools/lastSuccessfulBuild/artifact/target/BuildTools.jar
+        java -jar BuildTools.jar --rev 1.18.2 --remapped
+    - name: Build Project
+      run: |
+        mvn package clean
+        mvn install
+    - name: Build JavaDoc
+      run: |
+        cp -Rfv target/apidocs/* gh-pages/
+        cd gh-pages
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git commit -m "Update javadoc pages for latest release" -a
+    - name: Push JavaDoc Changes
+      uses: ad-m/github-push-action@master
+      with:
+        branch: gh-pages
+        directory: gh-pages
+        github_token: ${{ secrets.ACTION_KEY }}
