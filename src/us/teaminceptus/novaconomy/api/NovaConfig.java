@@ -13,6 +13,12 @@ import us.teaminceptus.novaconomy.Novaconomy;
 public interface NovaConfig {
 	
 	/**
+	 * Whether or not Notifications is turned on inside of the configuration.
+	 * @return true if notifications, else false
+	 */
+	boolean hasNotifications();
+	
+	/**
 	 * Fetch how often Interest is Applied.
 	 * @return how often interest is applied, in ticks
 	 */
@@ -160,5 +166,20 @@ public interface NovaConfig {
 	 * @param decrease Whether or not dying should decrease money
 	 */
 	void setDeathDecrease(boolean decrease);
+	
+	/**
+	 * Fetches the Divider used when removing money in a DeathDecrease.
+	 * @return Divider Used
+	 * @see NovaConfig#setDeathDivider(double)
+	 */
+	double getDeathDivider();
+	
+	/**
+	 * Sets the divider of the Death Event.
+	 * <p>
+	 * When a Player dies, the plugin will remove the balance divided by this value.
+	 * @param divider Divider to use
+	 */
+	void setDeathDivider(double divider);
 	 
 }
