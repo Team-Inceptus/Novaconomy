@@ -8,7 +8,6 @@ import us.teaminceptus.novaconomy.Novaconomy;
 
 /**
  * Configuration used for API
- * @see {@link Novaconomy}
  */
 public interface NovaConfig {
 	
