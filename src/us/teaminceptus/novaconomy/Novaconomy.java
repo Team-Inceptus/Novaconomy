@@ -39,6 +39,10 @@ import us.teaminceptus.novaconomy.api.events.InterestEvent;
 import us.teaminceptus.novaconomy.api.events.player.PlayerChangeBalanceEvent;
 import us.teaminceptus.novaconomy.api.events.player.PlayerPayEvent;
 
+/**
+ * Class representing this Plugin
+ * @see NovaConfig
+ */
 public class Novaconomy extends JavaPlugin implements NovaConfig {
 	
 	private static File playerDir;
@@ -47,11 +51,21 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 	private static FileConfiguration CONFIG;
 	private static final ConfigurationSection INTEREST = CONFIG.getConfigurationSection("Interest");
 	private static final ConfigurationSection NATURAL_CAUSES = CONFIG.getConfigurationSection("NaturalCauses");
-
+	
+	/**
+	 * Send a Message as this Plugin
+	 * @param sender Sender to send to
+	 * @param message Message to send
+	 */
 	public static void sendPluginMessage(CommandSender sender, String message) {
 		sender.sendMessage(ChatColor.YELLOW + "[" + ChatColor.GOLD + "Novaconomy" + ChatColor.YELLOW + "] " + ChatColor.DARK_AQUA + message);
 	}
-
+	
+	/**
+	 * Send an Error as this Plugin
+	 * @param sender Sender to send to
+	 * @param error Erro to send
+	 */
 	public static void sendError(CommandSender sender, String error) {
 		sendPluginMessage(sender, ChatColor.RED + error);
 	}
@@ -613,7 +627,7 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 
 	}
 	
-	protected static BukkitRunnable INTEREST_RUNNABLE = new BukkitRunnable() {
+	private static BukkitRunnable INTEREST_RUNNABLE = new BukkitRunnable() {
 		public void run() {
 			if (!(Novaconomy.getConfiguration().isInterestEnabled())) cancel();
 			
@@ -758,7 +772,7 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 	public static final FileConfiguration getEconomiesFile() {
 		return economiesFile;
 	}
-
+	
 	public static final void saveEconomiesFile() {
 		File economyFile = new File(JavaPlugin.getPlugin(Novaconomy.class).getDataFolder(), "economies.yml");
 		
@@ -767,7 +781,6 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		
 	}
 	
 	@Override
