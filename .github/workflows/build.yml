@@ -30,7 +30,6 @@ jobs:
         mvn install
     - name: Build JavaDoc
       run: |
-        mkdir docs
         cp -Rfv target/apidocs/* docs/
         cd docs
         git config --local user.email "action@github.com"
