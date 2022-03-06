@@ -10,7 +10,35 @@ With the freedom to have your own symbols, icons, conversion rates, and even int
 - Vault API Hook
 
 ## Novaconomy API
-Novaconomy does not currently support Maven and Gradle, but it does have a Developer API. We may add it to the Central Repository soon!
+[![](https://jitpack.io/v/Team-Inceptus/Novaconomy.svg)](https://jitpack.io/#Team-Inceptus/Novaconomy)
+
+Published as a JitPack repository
+### Maven
+```xml
+	<repositories>
+		<repository>
+		    <id>jitpack.io</id>
+		    <url>https://jitpack.io</url>
+		</repository>
+	</repositories>
+	<dependency>
+	    <groupId>com.github.Team-Inceptus</groupId>
+	    <artifactId>Novaconomy</artifactId>
+	    <version>d80cda62</version>
+	</dependency>
+```
+
+### Gradle
+```
+		repositories {
+			...
+			maven { url 'https://jitpack.io' }
+		}
+
+	 	dependencies {
+	   	     implementation 'com.github.Team-Inceptus:Novaconomy:Tag'
+		}	
+```
 
 JavaDocs are available at [https://novaconomy.teaminceptus.us](https://novaconomy.teaminceptus.us)
 
