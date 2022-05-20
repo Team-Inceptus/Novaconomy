@@ -26,6 +26,11 @@
 			<groupId>org.apache.maven.plugins</groupId>
 			<artifactId>maven-javadoc-plugin</artifactId>
 			<version>3.3.0</version>
+			<configuration>
+				<links>
+					<link>https://hub.spigotmc.org/javadocs/spigot/</link>
+				</links>
+			</configuration>
 			<executions>
 				<execution>
 					<id>attach-javadocs</id>
