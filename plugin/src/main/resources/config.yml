@@ -1,0 +1,68 @@
+# Novaconomy v${project.version}
+#
+# Created by GamerCoder215
+
+# Economies made in version v1.0.0 are no longer compatible with versions 1.1.0 and up. Please re-create them.
+
+# Whether players should be notified of Plugin Events (e.g. Interest)
+Notifications: true
+
+# The Language of this Plugin (Shown in messages, titles, etc.). Will default to English if not found.
+# Valid Languages:
+#
+# - en (English)
+# - es (Spanish / Español)
+# - fr (French / Français)
+# - de (German / Deutsch)
+# - pt (Portuguese / Português)
+#
+Language: en
+
+# Natural Causes to gain or lose money
+NaturalCauses:
+
+  # Whether Players gain money from killing entities
+  KillIncrease: true
+
+  # The Chance of gaining money from killing entities (out of 100)
+  KillIncreaseChance: 100
+
+  # Whether Players gain money from fishing
+  FishingIncrease: true
+
+  # The Chance of gaining money from fishing (out of 100)
+  FishingIncreaseChance: 70
+
+  # Whether Players gain money from farming
+  FarmingIncrease: true
+
+  # The Chance of gaining money from farming (out of 100)
+  FarmingIncreaseChance: 40
+
+  # Whether players gain money from mining ores
+  MiningIncrease: true
+
+  # The Chance of gaining money from mining ores (out of 100)
+  MiningIncreaseChance: 30
+
+  # Whether Players lose money on death
+  DeathDecrease: true
+
+  # If DeathDecrease is set to true, their balance is divided by this number.
+  DeathDivider: 2
+
+# Interest Section
+Interest:
+
+  # Whether Interest is enabled
+  Enabled: true
+
+  # How often, in ticks, for interest to happen.
+  #
+  # 20 ticks = 1 second
+  IntervalTicks: 1728000
+
+  # What the balance should be multiplied by for interest to happen.
+  #
+  # Ex: 5% increase = 1.05 | 20% increase = 1.2
+  ValueMultiplier: 1.03
