@@ -40,7 +40,11 @@
                     <relocations>
                         <relocation>
                             <pattern>com.jeff_media.updatechecker</pattern>
-                            <shadedPattern>us.teaminceptus.novaconomy.updatechecker</shadedPattern>
+                            <shadedPattern>us.teaminceptus.updatechecker</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>org.bstats</pattern>
+                            <shadedPattern>us.teaminceptus.bstats</shadedPattern>
                         </relocation>
                     </relocations>
                 </configuration>
@@ -73,6 +77,12 @@
             <groupId>com.jeff_media</groupId>
             <artifactId>SpigotUpdateChecker</artifactId>
             <version>2.3.0</version> <!-- Check on GitHub for the latest version -->
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.bstats</groupId>
+            <artifactId>bstats-bukkit</artifactId>
+            <version>3.0.0</version>
             <scope>compile</scope>
         </dependency>
     </dependencies>

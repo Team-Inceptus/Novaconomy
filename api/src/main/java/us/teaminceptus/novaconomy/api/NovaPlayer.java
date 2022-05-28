@@ -1,14 +1,14 @@
 package us.teaminceptus.novaconomy.api;
 
-import java.io.File;
-import java.io.IOException;
-
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import us.teaminceptus.novaconomy.api.economy.Economy;
+
+import java.io.File;
+import java.io.IOException;
 
 /**
  * Class representing a Player used in the Plugin
@@ -161,5 +161,4 @@ public final class NovaPlayer {
                 }
             }
     }
-
 }

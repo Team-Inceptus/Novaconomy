@@ -5,6 +5,7 @@ import com.jeff_media.updatechecker.UpdateChecker;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.TextComponent;
+import org.bstats.bukkit.Metrics;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.block.Block;
@@ -199,7 +200,6 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 	}
 
 	private static final Set<Material> ores = new HashSet<Material>() {{
-		add(Material.ANCIENT_DEBRIS);
 		addAll(Arrays.stream(Material.values()).filter(m -> m.name().endsWith("ORE")).collect(Collectors.toSet()));
 	}};
 	
@@ -897,9 +897,13 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 				.checkEveryXHours(1)
 				.checkNow();
 
+		Metrics metrics = new Metrics(this, PLUGIN_ID);
+
 		saveConfig();
 		getLogger().info("Successfully loaded Novaconomy");
 	}
+
+	private static final int PLUGIN_ID = 15322;
 
 	private void reloadValues() {
 		// Config Checks

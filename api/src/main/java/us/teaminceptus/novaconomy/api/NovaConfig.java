@@ -10,7 +10,7 @@ import java.io.File;
 /**
  * Configuration used for API
  */
-public interface NovaConfig {
+public interface NovaConfig  {
 
     /**
      * Fetches this Configuration.

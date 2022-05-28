@@ -171,7 +171,7 @@ public final class Economy implements ConfigurationSerializable {
     public static Economy getEconomy(@NotNull String name) throws IllegalArgumentException {
         Validate.notNull(name, "Name is null");
         ConfigurationSection section = NovaConfig.getEconomiesConfig().getConfigurationSection(name.toLowerCase());
-        if (section != null) return section.getObject("economy", Economy.class);
+        if (section != null) return (Economy) section.get("economy");
         else return null;
     }
 
@@ -207,7 +207,7 @@ public final class Economy implements ConfigurationSerializable {
         Set<Economy> economies = new HashSet<>();
 
         final FileConfiguration config = NovaConfig.getEconomiesConfig();
-        config.getKeys(false).forEach(key -> economies.add(config.getConfigurationSection(key).getObject("economy", Economy.class)));
+        config.getKeys(false).forEach(key -> economies.add((Economy) config.getConfigurationSection(key).get("economy")));
 
         return economies;
     }
