@@ -27,7 +27,7 @@ body:
       Ex: "Economy creation is failing"
   validations:
     required: true
-  
+
 - type: textarea
   attributes:
     label: Steps to Reproduce
@@ -45,7 +45,7 @@ body:
         Ex: "Economy info in my language should be displayed"
   validations:
       required: true
-- type: textara
+- type: textarea
   attributes:
     label: Actual Behavior
     description: What does the plugin do? What are the error messages shown?
