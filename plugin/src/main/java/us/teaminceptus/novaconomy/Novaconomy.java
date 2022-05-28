@@ -1,5 +1,7 @@
 package us.teaminceptus.novaconomy;
 
+import com.jeff_media.updatechecker.UpdateCheckSource;
+import com.jeff_media.updatechecker.UpdateChecker;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.TextComponent;
@@ -335,15 +337,15 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 						balanceInfo.add(ChatColor.GOLD + econ.getName() + ChatColor.AQUA + " - " + ChatColor.GREEN + econ.getSymbol() + Math.floor(np.getBalance(econ) * 100) / 100);
 					}
 
-					p.sendMessage(getMessage("command.balance.balances") + "\n" + String.join("\n", balanceInfo.toArray(new String[]{})));
+					p.sendMessage(get("command.balance.balances") + "\n" + String.join("\n", balanceInfo.toArray(new String[]{})));
 					break;
 				}
 				case "novaconomyreload": {
-					sender.sendMessage(getMessage("command.reload.reloading"));
+					sender.sendMessage(get("command.reload.reloading"));
 					plugin.reloadConfig();
 					plugin.reloadValues();
 					Novaconomy.updateInterest();
-					sender.sendMessage(getMessage("command.reload.success"));
+					sender.sendMessage(get("command.reload.success"));
 					break;
 				}
 				case "convert": {
@@ -852,6 +854,8 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 			if (!(f.exists())) {
 				saveResource("novaconomy" + (l.getIdentifier().length() == 0 ? "" : "_" + l.getIdentifier()) + ".properties", false);
 			}
+
+			getLogger().info("Loaded Language " + l.name() + "...");
 		}
 
 		ConfigurationSerialization.registerClass(Economy.class);
@@ -874,13 +878,25 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 
 		prefix = get("plugin.prefix");
 
+		getLogger().info("Loaded Files...");
+
 		new Commands(this);
 		new Events(this);
 
 		reloadValues();
 		
 		INTEREST_RUNNABLE.runTaskTimer(this, getIntervalTicks(), getIntervalTicks());
-		
+
+		getLogger().info("Loaded Core Functionality...");
+
+		new UpdateChecker(this, UpdateCheckSource.SPIGOT, "https://www.spigotmc.org/resources/novaconomy.100503/")
+				.setDownloadLink("https://www.spigotmc.org/resources/novaconomy.100503/")
+				.setNotifyOpsOnJoin(true)
+				.setChangelogLink("https://github.com/Team-Inceptus/Novaconomy/releases/")
+				.setUserAgent("Java 8 Novaconomy User Agent")
+				.checkEveryXHours(1)
+				.checkNow();
+
 		saveConfig();
 		getLogger().info("Successfully loaded Novaconomy");
 	}
