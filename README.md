@@ -24,11 +24,19 @@ Published as a JitPack repository
 		        <url>https://jitpack.io</url>
 		    </repository>
 	    </repositories>
+    
         <dependencies>
+            <!-- Include just the API -->
             <dependency>
-                <groupId>com.github.Team-Inceptus</groupId>
-                <artifactId>Novaconomy</artifactId>
-                <version>d80cda62</version>
+                <groupId>us.teaminceptus.Novaconomy</groupId>
+                <artifactId>novaconomy-api</artifactId>
+                <version>1.1.0</version>
+            </dependency>
+            <!-- Include the Actual Plugin -->
+            <dependency>
+                <groupId>us.teaminceptus.Novaconomy</groupId>
+                <artifactId>novaconomy</artifactId>
+                <version>1.1.0</version>
             </dependency>
         </dependencies>
 	</project>
