@@ -6,7 +6,7 @@ if [ ! -d "docs" ]; then
   mkdir docs
 fi;
 
-cp -Rfv target/apidocs/* ./docs/
+cp -Rfv api/target/apidocs/* ./docs/
 
 git checkout gh-pages
 
