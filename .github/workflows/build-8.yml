@@ -22,5 +22,6 @@ jobs:
           java-version: '8'
       - name: Build Project
         run: |
-          mvn package clean
-          mvn install
+          mvn package clean install
+      - name: Build JavaDoc
+        run: bash javadoc.sh

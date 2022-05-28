@@ -22,7 +22,4 @@ jobs:
         java-version: '17'
     - name: Build Project
       run: |
-        mvn package clean
-        mvn install
-    - name: Build JavaDoc
-      run: bash javadoc.sh
+        mvn package clean install
