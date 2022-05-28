@@ -1,0 +1,59 @@
+name: Report a Bug
+description: Report a Novaconomy Bug.
+labels: ['unconfirmed bug']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking the time to report a Novaconomy bug. Please take time to fill out the information below.
+  - type: dropdown
+    attributes:
+      label: Bug Type
+      description: What type of bug are you trying to report?
+      multiple: true
+      options:
+        - Performance / Memory Leak / Server Crash
+        - Configuration Data Loss
+        - Compatibility Issues
+        - Console Errors
+        - Other Unexpected Behavior
+  validations:
+    required: true
+
+  - type: textarea
+    attributes:
+      label: Description
+      placeholder: |
+        Ex: "Economy creation is failing"
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Steps to Reproduce
+      description: Explain how to recreate this bug.
+      placeholder: |
+        Ex: 
+        1. Run /economy info
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Expected Behavior
+      description: What you expect the plugin to do.
+      placeholder: |
+        Ex: "Economy info in my language should be displayed"
+    validations:
+      required: true
+  - type: textara
+    attributes:
+      label: Actual Behavior
+      description: What does the plugin do? What are the error messages shown?
+      placeholder: |
+        Ex: "Info is shown in English and plugin throws error "Unknown Language"
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: |
+        In the box below, you can attach any relevant info or files that may help us solve the bug.
+        If you think this issue is relevant to any other issues, please mention it here.

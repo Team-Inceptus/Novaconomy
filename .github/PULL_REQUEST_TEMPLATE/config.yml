@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Discord
+    url: https://discord.gg/WVFNWEvuqX
+    about: Report an issue on our official Discord!
+  - name: SpigotMC Page
+    url: https://www.spigotmc.org/resources/novaconomy.100503/
+    about: Review or request something on our official Spigot Page!
