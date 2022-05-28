@@ -1,65 +1,62 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
-  <groupId>us.teaminceptus</groupId>
-  <artifactId>Novaconomy</artifactId>
-  <version>1.0.0-SNAPSHOT</version>
-  <name>Novaconomy</name>
-  <build>
-    <sourceDirectory>src</sourceDirectory>
-    <resources>
-      <resource>
-        <directory>src</directory>
-        <excludes>
-          <exclude>**/*.java</exclude>
-        </excludes>
-      </resource>
-    </resources>
-    <plugins>
-      <plugin>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.8.1</version>
-        <configuration>
-          <release>16</release>
-        </configuration>
-      </plugin>
-		<plugin>
-			<groupId>org.apache.maven.plugins</groupId>
-			<artifactId>maven-javadoc-plugin</artifactId>
-			<version>3.3.0</version>
-			<configuration>
-				<links>
-					<link>https://hub.spigotmc.org/javadocs/spigot/</link>
-				</links>
-			</configuration>
-			<executions>
-				<execution>
-					<id>attach-javadocs</id>
-					<goals>
-						<goal>jar</goal>
-					</goals>
-				</execution>
-			</executions>
-		</plugin>
-    </plugins>
-  </build>
-	<repositories>
-	    <repository>
-	        <id>spigot-repo</id>
-	        <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
-	    </repository>
-	</repositories>
-	<dependencies>
-	    <dependency>
-           <groupId>org.spigotmc</groupId>
-           <artifactId>spigot-api</artifactId>
-           <version>1.18.2-R0.1-SNAPSHOT</version>
-           <scope>provided</scope>
-	    </dependency>
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>us.teaminceptus</groupId>
+    <artifactId>novaconomy-parent</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
 
+    <name>Novaconomy-Parent</name>
+    <description>Multi-Economy Plugin</description>
+    <packaging>pom</packaging>
+
+    <properties>
+        <java.version>8</java.version>
+        <maven.compiler.release>8</maven.compiler.release>
+        <maven.compiler.source>8</maven.compiler.source>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <developers>
+        <developer>
+            <name>GamerCoder215</name>
+            <email>gamercoder215@teaminceptus.us</email>
+            <roles>
+                <role>Owner</role>
+            </roles>
+        </developer>
+    </developers>
+
+    <modules>
+        <module>api</module>
+        <module>plugin</module>
+    </modules>
+
+    <build>
+        <finalName>${project.name}-${project.version}</finalName>
+        <defaultGoal>package clean install</defaultGoal>
+        <plugins>
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.10.1</version>
+                <configuration>
+                    <source>8</source>
+                    <target>8</target>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+	<repositories>
+        <repository>
+            <id>spigot-repo</id>
+            <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
+        </repository>
+	</repositories>
+
+	<dependencies>
         <dependency>
-            <groupId>org.jetbrains</groupId>
-            <artifactId>annotations-java5</artifactId>
-            <version>21.0.1</version>
+            <groupId>org.spigotmc</groupId>
+            <artifactId>spigot-api</artifactId>
+            <version>1.16.5-R0.1-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
 	</dependencies>
