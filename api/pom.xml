@@ -9,6 +9,7 @@
 
     <artifactId>novaconomy-api</artifactId>
     <name>Novaconomy-API</name>
+    <description>API for Novaconomy, a plugin featuring multi-economies</description>
 
     <build>
         <sourceDirectory>src/main/java</sourceDirectory>
