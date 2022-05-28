@@ -1,9 +1,7 @@
-.classpath
-.gitattributes
-.project
 bin/
-.settings/
 .replit
 .breakpoints
 target/
 .factorypath
+.idea
+*.iml
