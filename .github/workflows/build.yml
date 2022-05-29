@@ -28,12 +28,3 @@ jobs:
           java-version: ${{ matrix.java-version }}
       - name: Build Project
         run: mvn package clean install
-
-  deploy:
-    name: Deploy
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Build JavaDoc
-        run: bash javadoc.sh
