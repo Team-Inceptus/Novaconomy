@@ -22,7 +22,7 @@ done
 cp -Rfv ./docs/* ./
 rm -rf ./docs
 
-echo "team-inceptus.github.io" > CNAME
+echo "novaconomy.teaminceptus.us" > CNAME
 
 git add .
 git branch -D gh-pages
