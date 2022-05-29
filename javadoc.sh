@@ -22,6 +22,8 @@ done
 cp -Rfv ./docs/* ./
 rm -rf ./docs
 
+echo "team-inceptus.github.io" > CNAME
+
 git add .
 git branch -D gh-pages
 git branch -m gh-pages
