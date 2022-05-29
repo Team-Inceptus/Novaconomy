@@ -1,4 +1,4 @@
-name: Build Project - Other
+name: Build Project
 
 on:
   push:
@@ -14,7 +14,7 @@ jobs:
 
     strategy:
       matrix:
-        java-version: [11, 16, 17]
+        java-version: [8, 11, 16, 17]
 
     name: Build
     runs-on: ubuntu-latest
@@ -28,3 +28,12 @@ jobs:
           java-version: ${{ matrix.java-version }}
       - name: Build Project
         run: mvn package clean install
+
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Build JavaDoc
+        run: bash javadoc.sh
