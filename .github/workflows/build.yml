@@ -1,4 +1,4 @@
-name: Build Project - Java 16
+name: Build Project - Other
 
 on:
   push:
@@ -9,17 +9,22 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy:
-    name: Deploy
+
+  build:
+
+    strategy:
+      matrix:
+        java-version: [11, 16, 17]
+
+    name: Build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
 
-      - name: Set up JDK 16
+      - name: Set up JDK
         uses: actions/setup-java@v2
         with:
           distribution: 'temurin'
-          java-version: '16'
+          java-version: ${{ matrix.java-version }}
       - name: Build Project
-        run: |
-          mvn package clean install
+        run: mvn package clean install
