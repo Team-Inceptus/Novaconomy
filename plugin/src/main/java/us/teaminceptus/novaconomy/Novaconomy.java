@@ -889,7 +889,7 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 
 		getLogger().info("Loaded Core Functionality...");
 
-		new UpdateChecker(this, UpdateCheckSource.SPIGOT, "https://www.spigotmc.org/resources/novaconomy.100503/")
+		new UpdateChecker(this, UpdateCheckSource.SPIGOT, "100503")
 				.setDownloadLink("https://www.spigotmc.org/resources/novaconomy.100503/")
 				.setNotifyOpsOnJoin(true)
 				.setChangelogLink("https://github.com/Team-Inceptus/Novaconomy/releases/")
