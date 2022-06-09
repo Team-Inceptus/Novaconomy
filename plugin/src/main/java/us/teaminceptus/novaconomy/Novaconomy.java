@@ -2,17 +2,17 @@ package us.teaminceptus.novaconomy;
 
 import com.jeff_media.updatechecker.UpdateCheckSource;
 import com.jeff_media.updatechecker.UpdateChecker;
-import net.md_5.bungee.api.ChatMessageType;
-import net.md_5.bungee.api.chat.BaseComponent;
-import net.md_5.bungee.api.chat.TextComponent;
+import org.bukkit.plugin.Plugin;
+import us.teaminceptus.novaconomy.abstraction.CommandWrapper;
+import us.teaminceptus.novaconomy.abstraction.Wrapper;
 import org.bstats.bukkit.Metrics;
-import org.bukkit.*;
-import org.bukkit.attribute.Attribute;
+import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.Material;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.block.Block;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
-import org.bukkit.command.PluginCommand;
-import org.bukkit.command.TabExecutor;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -64,6 +64,66 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 
 	static Random r = new Random();
 
+	private static void updateInterest() {
+		Novaconomy plugin = getPlugin(Novaconomy.class);
+
+		config = plugin.getConfig();
+		interest = config.getConfigurationSection("Interest");
+		ncauses = config.getConfigurationSection("NaturalCauses");
+
+		if (INTEREST_RUNNABLE.getTaskId() != -1) INTEREST_RUNNABLE.cancel();
+
+		INTEREST_RUNNABLE = new BukkitRunnable() {
+			public void run() {
+				if (!(NovaConfig.getConfiguration().isInterestEnabled())) cancel();
+
+				Map<NovaPlayer, Map<Economy, Double>> previousBals = new HashMap<>();
+				Map<NovaPlayer, Map<Economy, Double>> amounts = new HashMap<>();
+
+				for (OfflinePlayer p : Bukkit.getOfflinePlayers()) {
+					NovaPlayer np = new NovaPlayer(p);
+
+					Map<Economy, Double> previousBal = new HashMap<>();
+					Map<Economy, Double> amount = new HashMap<>();
+					for (Economy econ : Economy.getInterestEconomies()) {
+						double balance = np.getBalance(econ);
+						double add = (balance * (NovaConfig.getConfiguration().getInterestMultiplier() - 1)) / econ.getConversionScale();
+
+						previousBal.put(econ, balance);
+						amount.put(econ, add);
+					}
+
+					previousBals.put(np, previousBal);
+					amounts.put(np, amount);
+				}
+
+				InterestEvent event = new InterestEvent(previousBals, amounts);
+				Bukkit.getPluginManager().callEvent(event);
+				if (!(event.isCancelled())) {
+					for (NovaPlayer np : previousBals.keySet()) {
+						int i = 0;
+						for (Economy econ : previousBals.get(np).keySet()) {
+							np.add(econ, amounts.get(np).get(econ));
+							i++;
+						}
+
+						if (np.getPlayer().isOnline() && NovaConfig.getConfiguration().hasNotifications()) {
+							np.getOnlinePlayer().sendMessage(String.format(getMessage("notification.interest"), i + "", (i == 1 ? get("constants.economy") : get("constants.economies"))));
+						}
+					}
+				}
+			}
+
+		};
+
+		new BukkitRunnable() {
+			public void run() {
+				INTEREST_RUNNABLE.runTaskTimer(plugin, plugin.getIntervalTicks(), plugin.getIntervalTicks());
+			}
+		}.runTask(plugin);
+
+	}
+
 	private class Events implements Listener {
 		
 		private Novaconomy plugin;
@@ -85,13 +145,13 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 
 			NovaPlayer np = new NovaPlayer(p);
 			
-			List<BaseComponent> added = new ArrayList<>();
+			List<String> added = new ArrayList<>();
 
 			int size = Economy.getNaturalEconomies().size();
 			
 			for (Economy econ : Economy.getNaturalEconomies()) {
 				double divider = r.nextInt(2) + 1.5;
-				double increase = (en.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue() / divider) / econ.getConversionScale();
+				double increase = (en.getMaxHealth() / divider) / econ.getConversionScale();
 				
 				double previousBal = np.getBalance(econ);
 				
@@ -101,27 +161,27 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 				if (!(event.isCancelled())) {
 					np.add(econ, increase);
 					
-					TextComponent message = new TextComponent(ChatColor.GREEN + "+" + Math.floor(increase * 100) / 100 + econ.getSymbol() + (size == 1 ? "" : ", "));
+					String message = ChatColor.GREEN + "+" + Math.floor(increase * 100) / 100 + econ.getSymbol() + (size == 1 ? "" : ", ");
 					added.add(message);
 				}
 			}
 			
-			if (plugin.hasNotifications()) p.spigot().sendMessage(ChatMessageType.ACTION_BAR, added.toArray(new BaseComponent[0]));
+			if (plugin.hasNotifications()) getWrapper().sendActionbar(p, String.join("\n", added.toArray(new String[0])));
 		}
 		
 		@EventHandler
 		public void moneyIncrease(BlockBreakEvent e) {
 			if (e.isCancelled()) return;
 			if (!(plugin.hasMiningIncrease())) return;
-			if (!(e.isDropItems())) return;
+			if (e.getBlock().getDrops().size() < 1) return;
 			
 			Block b = e.getBlock();
 			Player p = e.getPlayer();
 			NovaPlayer np = new NovaPlayer(p);
 			
 			if (!(ores.contains(b.getType()))) return;
-			
-			List<BaseComponent> added = new ArrayList<>();
+
+			List<String> added = new ArrayList<>();
 			
 			for (Economy econ : Economy.getNaturalEconomies()) {
 				double divider = r.nextInt(2) + 1.25;
@@ -135,12 +195,12 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 				if (!(event.isCancelled())) {
 					np.add(econ, increase);
 					
-					TextComponent message = new TextComponent(ChatColor.GREEN + "+" + Math.floor(increase * 100) / 100 + econ.getSymbol() + ", ");
+					String message = ChatColor.GREEN + "+" + Math.floor(increase * 100) / 100 + econ.getSymbol() + ", ";
 					added.add(message);
 				}
 			}
 			
-			if (plugin.hasNotifications()) p.spigot().sendMessage(ChatMessageType.ACTION_BAR, added.toArray(new BaseComponent[0]));
+			if (plugin.hasNotifications()) getWrapper().sendActionbar(p, String.join("\n", added.toArray(new String[0])));
 		}
 		
 		@EventHandler
@@ -153,7 +213,7 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 			Player p = e.getPlayer();
 			NovaPlayer np = new NovaPlayer(p);
 			
-			List<BaseComponent> added = new ArrayList<>();
+			List<String> added = new ArrayList<>();
 			
 			for (Economy econ : Economy.getNaturalEconomies()) {
 				double divider = r.nextInt(2) + 1;
@@ -167,13 +227,13 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 				if (!(event.isCancelled())) {
 					np.add(econ, increase);
 					
-					TextComponent message = new TextComponent(ChatColor.GREEN + "+" + Math.floor(increase * 100) / 100 + econ.getSymbol() + ", ");
+					String message = ChatColor.GREEN + "+" + Math.floor(increase * 100) / 100 + econ.getSymbol() + ", ";
 					added.add(message);
 				}
 				
 			}
 			
-			if (plugin.hasNotifications()) p.spigot().sendMessage(ChatMessageType.ACTION_BAR, added.toArray(new BaseComponent[0]));
+			if (plugin.hasNotifications()) getWrapper().sendActionbar(p, String.join("\n", added.toArray(new String[0])));
 		}
 		
 		@EventHandler
@@ -202,604 +262,30 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 	private static final Set<Material> ores = new HashSet<Material>() {{
 		addAll(Arrays.stream(Material.values()).filter(m -> m.name().endsWith("ORE")).collect(Collectors.toSet()));
 	}};
-	
-	
-	private static class Commands implements TabExecutor {
 
-		protected Novaconomy plugin;
-
-		protected Commands(Novaconomy plugin) {
-			this.plugin = plugin;
-			for (String name : plugin.getDescription().getCommands().keySet()) {
-				plugin.getCommand(name).setExecutor(this);
-				plugin.getCommand(name).setTabCompleter(this);
-			}
+	private static CommandWrapper getCommandWrapper() {
+		try {
+			return (CommandWrapper) Class.forName(Novaconomy.class.getPackage().getName() + ".CommandWrapperV" + getWrapper().getCommandVersion()).getConstructor(Plugin.class).newInstance(JavaPlugin.getPlugin(Novaconomy.class));
+		} catch (Exception e) {
+			e.printStackTrace();
+			return null;
 		}
-
-		public List<String> onTabComplete(CommandSender sender, Command cmd, String label, String[] args) {
-			List<String> suggestions = new ArrayList<>();
-
-			switch (cmd.getName()) {
-				case "ehelp": {
-					suggestions.addAll(plugin.getDescription().getCommands().keySet());
-					return suggestions;
-				}
-				case "convert": {
-					switch (args.length) {
-						case 1: {
-							for (Economy econ : Economy.getEconomies()) suggestions.add(econ.getName());
-							return suggestions;
-						}
-						case 2: {
-							for (Economy econ : Economy.getEconomies()) {
-								if (econ.getName().equals(args[0])) continue;
-								suggestions.add(econ.getName());
-							}
-							return suggestions;
-						}
-					}
-					return suggestions;
-				}
-				case "economy": {
-					switch (args.length) {
-						case 1: {
-							suggestions.addAll(Arrays.asList("info"));
-							
-							if (sender.hasPermission("novaconomy.economy")) suggestions.addAll(Arrays.asList("create", "delete", "addbal", "removebal", "setbal"));
-							return suggestions;
-						}
-						case 2: {
-							if (!(args[0].equalsIgnoreCase("create"))) {
-								for (Economy econ : Economy.getEconomies()) suggestions.add(econ.getName());
-							}
-							return suggestions;
-						}
-						case 3: {
-							if (args[0].toLowerCase().contains("bal")) {
-								for (Player p : Bukkit.getOnlinePlayers()) suggestions.add(p.getName());
-							} else if (args[0].equalsIgnoreCase("create")) {
-								suggestions.addAll(Arrays.asList("$", "%", "Q", "L", "P", "A", "a", "r", "R", "C", "c", "D", "d", "W", "w", "B", "b"));
-							}
-							
-							return suggestions;
-						}
-						case 4: {
-							if (args[0].equalsIgnoreCase("create")) {
-								for (Material m : Material.values()) suggestions.add("minecraft:" + m.name().toLowerCase());
-							}
-							return suggestions;
-						}
-						case 6: {
-							if (args[0].equalsIgnoreCase("create")) {
-								suggestions.addAll(Arrays.asList("true", "false"));
-							}
-
-							return suggestions;
-						}
-						
-					}
-					return suggestions;
-				}
-				case "pay": {
-					switch (args.length) {
-						case 1: {
-							for (Player p : Bukkit.getOnlinePlayers()) suggestions.add(p.getName());
-							return suggestions;
-						}
-						case 2: {
-							for (Economy econ : Economy.getEconomies()) suggestions.add(econ.getName());
-							return suggestions;
-						}
-					}
-					
-					return suggestions;
-				}
-			}
-			
-			return suggestions;
-		}
-		
-		
-		
-		public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
-			switch (cmd.getName()) {
-				case "ehelp": {
-					List<String> commandInfo = new ArrayList<>();
-					for (String name : plugin.getDescription().getCommands().keySet()) {
-						PluginCommand pcmd = plugin.getCommand(name);
-						
-						if (pcmd.getPermission() != null && !(sender.hasPermission(pcmd.getPermission()))) continue;
-
-						if (sender.isOp()) {
-							commandInfo.add(ChatColor.GOLD + pcmd.getUsage() + ChatColor.WHITE + " - " + ChatColor.GREEN + pcmd.getDescription() + ChatColor.WHITE + " | " + ChatColor.BLUE + (pcmd.getPermission() == null ? "No Permissions" : pcmd.getPermission()));
-						} else {
-							commandInfo.add(ChatColor.GOLD + pcmd.getUsage() + ChatColor.WHITE + " - " + ChatColor.GREEN + pcmd.getDescription());
-						}
-					}
-
-					String msg = get("constants.commands") + "\n\n" + String.join("\n", commandInfo.toArray(new String[]{}));
-
-					sender.sendMessage(msg);
-					break;
-				}
-				case "balance": {
-					if (!(sender instanceof Player)) return false;
-					Player p = (Player) sender;
-					if (Economy.getEconomies().size() < 1) {
-						p.sendMessage(getMessage("error.economy.none"));
-						return true;
-					}
-					NovaPlayer np = new NovaPlayer(p);
-					
-					List<String> balanceInfo = new ArrayList<>();
-
-					for (Economy econ : Economy.getEconomies()) {
-						balanceInfo.add(ChatColor.GOLD + econ.getName() + ChatColor.AQUA + " - " + ChatColor.GREEN + econ.getSymbol() + Math.floor(np.getBalance(econ) * 100) / 100);
-					}
-
-					p.sendMessage(get("command.balance.balances") + "\n" + String.join("\n", balanceInfo.toArray(new String[]{})));
-					break;
-				}
-				case "novaconomyreload": {
-					sender.sendMessage(get("command.reload.reloading"));
-					plugin.reloadConfig();
-					plugin.reloadValues();
-					Novaconomy.updateInterest();
-					sender.sendMessage(get("command.reload.success"));
-					break;
-				}
-				case "convert": {
-					if (!(sender instanceof Player)) return false;
-					Player p = (Player) sender;
-
-					if (Economy.getEconomies().size() < 1) {
-						p.sendMessage(getMessage("error.economy.none"));
-						return true;
-					}
-					NovaPlayer np = new NovaPlayer(p);
-					try {
-						if (args.length < 1) {
-							p.sendMessage(getMessage("error.economy.transfer_from"));
-							return false;
-						}
-		
-						if (Economy.getEconomy(args[0]) == null) {
-							p.sendMessage(getMessage("error.economy.transfer_from"));
-							return false;
-						}
-		
-						Economy from = Economy.getEconomy(args[0]);
-		
-						if (args.length < 2) {
-							p.sendMessage(getMessage("error.economy.transfer_to"));
-							return false;
-						}
-		
-						if (Economy.getEconomy(args[1]) == null) {
-							p.sendMessage(getMessage("error.economy.transfer_to"));
-							return false;
-						}
-		
-						Economy to = Economy.getEconomy(args[1]);
-		
-						if (args.length < 3) {
-							p.sendMessage(getMessage("error.economy.transfer_amount"));
-							return false;
-						}
-
-						double amount = Double.parseDouble(args[2]);
-
-						if (amount <= 0) {
-							p.sendMessage(getMessage("error.economy.transfer_amount"));
-							return false;
-						}
-
-						if (np.getBalance(from) < amount) {
-							p.sendMessage(String.format(getMessage("error.economy.invalid_amount"), ChatColor.RED + get("constants.convert")));
-							return false;
-						}
-
-						double toBal = from.convertAmount(to, amount);
-
-						np.remove(from, amount);
-						np.add(to, toBal);
-						p.sendMessage(String.format(getMessage("success.economy.convert"), (from.getSymbol() + "") + amount + "", (to.getSymbol() + "") + Math.floor(toBal * 100) / 100) + "");
-					
-					} catch (NumberFormatException e) {
-						p.sendMessage(getMessage("error.economy.transfer_amount"));
-						return false;
-					} catch (IllegalArgumentException e) {
-						p.sendMessage(getMessage("error.economy.transfer_same"));
-						return false;
-					}
-					break;
-				}
-				case "pay": {
-					if (!(sender instanceof Player)) return false;
-					Player p = (Player) sender;
-					if (Economy.getEconomies().size() < 1) {
-						p.sendMessage(getMessage("error.economy.none"));
-						return true;
-					}
-					NovaPlayer np = new NovaPlayer(p);
-					try {
-
-						if (args.length < 1) {
-							p.sendMessage(getMessage("error.argument.player"));
-							return false;
-						}
-		
-						if (Bukkit.getPlayer(args[0]) == null) {
-							p.sendMessage(getMessage("error.player.offline"));
-							return false;
-						}
-		
-						Player target = Bukkit.getPlayer(args[0]);
-						NovaPlayer nt = new NovaPlayer(target);
-						
-						if (target.getUniqueId().equals(p.getUniqueId())) {
-							p.sendMessage(getMessage("error.economy.pay_self"));
-							return false;
-						}
-						
-						if (args.length < 2) {
-							p.sendMessage(getMessage("error.argument.economy"));
-							return false;
-						}
-
-						if (Economy.getEconomy(args[1]) == null) {
-							p.sendMessage(getMessage("error.argument.economy"));
-							return false;
-						}
-
-						Economy econ = Economy.getEconomy(args[1]);
-						
-						if (args.length < 3) {
-							p.sendMessage(getMessage("error.argument.pay_amount"));
-							return false;
-						}
-
-						double amount = Double.parseDouble(args[2]);
-						
-						if (np.getBalance(econ) < amount) {
-							p.sendMessage(getMessage("error.economy.invalid_amount_pay"));
-							return false;
-						}
-
-						PlayerPayEvent e = new PlayerPayEvent(p, target, econ, amount, nt.getBalance(econ), nt.getBalance(econ) + amount);
-
-						Bukkit.getPluginManager().callEvent(e);
-
-						if (!(e.isCancelled())) {
-							np.remove(econ, amount);
-							nt.add(econ, amount);
-
-							target.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(String.format(getMessage("success.economy.receive_actionbar"), Math.floor(e.getAmount() * 100) / 100, e.getPayer().getName())));
-							target.sendMessage(String.format(getMessage("success.economy.receive"), econ.getSymbol() + Math.floor(e.getAmount() * 100) / 100 + "", e.getPayer().getName() + ""));
-							target.playSound(target.getLocation(), Sound.ENTITY_ARROW_HIT_PLAYER, 3F, 2F);
-						}
-					} catch (NumberFormatException e) {
-						p.sendMessage(getMessage("error.argument.pay_amount"));
-						return false;
-					}
-					break;
-				}
-				case "economy": {
-					if (args.length < 1) {
-						sender.sendMessage(getMessage("error.argument"));
-						return false;
-					}
-
-					switch (args[0].toLowerCase()) {
-						case "create": {
-							if (!(sender.hasPermission("novaconomy.economy.create"))) {
-								sender.sendMessage(getMessage("error.permission.argument"));
-								return true;
-							}
-							try {
-								if (args.length < 2) {
-									sender.sendMessage(getMessage("error.argument.name"));
-									return false;
-								}
-		
-								for (Economy econ : Economy.getEconomies()) 
-									if (econ.getName().equals(args[1])) {
-										sender.sendMessage(getMessage("error.economy.exists"));
-										return false;
-									}
-		
-								String name = args[1];
-		
-								if (args.length < 3) {
-									sender.sendMessage(getMessage("error.argument.symbol"));
-									return false;
-								}
-		
-								if (args[2].length() > 1) {
-									sender.sendMessage(getMessage("error.argument.symbol"));
-									return false;
-								}
-		
-								char symbol = args[2].charAt(0);
-		
-								if (args.length < 4) {
-									sender.sendMessage(getMessage("error.argument.icon"));
-									return false;
-								}
-
-								Material icon = Material.valueOf(args[3].replaceAll("minecraft:", "").toUpperCase());
-
-								if (args.length < 5) {
-									sender.sendMessage(getMessage("error.argument.scale"));
-									return false;
-								}
-
-								double scale = Double.parseDouble(args[4]);
-								
-								boolean naturalIncrease = true;
-								
-								if (!(args.length < 6)) {
-									if (!(args[5].equalsIgnoreCase("true")) && !(args[5].equalsIgnoreCase("false"))) {
-										sender.sendMessage(getMessage("error.argument.bool"));
-										return false;
-									}
-
-									naturalIncrease = Boolean.parseBoolean(args[5]);
-								}
-								
-								Economy.builder().setName(name).setSymbol(symbol).setIcon(icon).setIncreaseNaturally(naturalIncrease).setConversionScale(scale).build();
-								
-								sender.sendMessage(getMessage("success.economy.create"));
-							} catch (IllegalArgumentException e) {
-								sender.sendMessage(getMessage("error.argument.icon"));
-								return false;
-							}
-							break;
-						}
-						case "delete": {
-							if (!(sender.hasPermission("novaconomy.economy.delete"))) {
-								sender.sendMessage(getMessage("error.permission.argument"));
-								return true;
-							}
-							if (args.length < 2) {
-								sender.sendMessage(getMessage("error.argument.economy"));
-								return false;
-							}
-
-							if (Economy.getEconomy(args[1]) == null) {
-								sender.sendMessage(getMessage("error.economy.inexistent"));
-								return false;
-							}
-
-							Economy econ = Economy.getEconomy(args[1]);
-							String name = econ.getName();
-							
-							sender.sendMessage(ChatColor.GREEN + "Deleting " + name + "...");
-							Economy.removeEconomy(econ);
-							sender.sendMessage(ChatColor.GREEN + "Successfully deleted " + name + "!");
-							break;
-						}
-						case "info": {
-							if (!(sender.hasPermission("novaconomy.economy.info"))) {
-								sender.sendMessage(getMessage("error.permission.argument"));
-								return true;
-							}
-							if (args.length < 2) {
-								sender.sendMessage(getMessage("error.argument.economy"));
-								return false;
-							}
-
-							if (Economy.getEconomy(args[1]) == null) {
-								sender.sendMessage(getMessage("error.economy.inexistent"));
-								return false;
-							}
-
-							Economy econ = Economy.getEconomy(args[1]);
-
-							String[] components = {
-								String.format(get("constants.economy.info"), econ.getName()),
-								String.format(get("constants.economy.natural_increase"), econ.hasNaturalIncrease() + ""),
-								String.format(get("constants.economy.symbol"), econ.getSymbol() + ""),
-								String.format(get("constants.economy.scale"), Math.floor(econ.getConversionScale() * 100) / 100 + ""),
-							};
-
-							sender.sendMessage(String.join("\n", components));
-							break;
-						}
-						case "addbal": {
-							if (!(sender.hasPermission("novaconomy.economy.addbalance"))) {
-								sender.sendMessage(getMessage("error.permission.argument"));
-								return true;
-							}
-							try {
-								if (args.length < 2) {
-									sender.sendMessage(getMessage("error.argument.economy"));
-									return false;
-								}
-		
-								if (Economy.getEconomy(args[1]) == null) {
-									sender.sendMessage(getMessage("error.economy.inexistent"));
-									return false;
-								}
-		
-								Economy econ = Economy.getEconomy(args[1]);
-		
-								if (args.length < 3) {
-									sender.sendMessage(getMessage("error.argument.player"));
-									return false;
-								}
-		
-								if (Bukkit.getPlayer(args[2]) == null) {
-									sender.sendMessage(getMessage("error.player.offline"));
-									return false;
-								}
-		
-								Player target = Bukkit.getPlayer(args[2]);
-								NovaPlayer nt = new NovaPlayer(target);
-		
-								if (args.length < 4) {
-									sender.sendMessage(getMessage("error.argument.amount"));
-									return false;
-								}
-
-								double add = Double.parseDouble(args[3]);
-
-								if (add <= 0) {
-									sender.sendMessage(getMessage("error.argument.amount"));
-									return false;
-								}
-
-								nt.add(econ, add);
-								sender.sendMessage(String.format(getMessage("success.economy.addbalance"),  econ.getSymbol() + "", args[3], target.getName()));
-							} catch (NumberFormatException e) {
-								sender.sendMessage(getMessage("error.argument.amount"));
-							}
-							break;
-						}
-						case "removebal": {	
-							if (!(sender.hasPermission("novaconomy.economy.removebalance"))) {
-								sender.sendMessage(getMessage("error.permission.argument"));
-								return true;
-							}
-							try {
-								if (args.length < 2) {
-									sender.sendMessage(getMessage("error.argument.economy"));
-									return false;
-								}
-		
-								if (Economy.getEconomy(args[1]) == null) {
-									sender.sendMessage(getMessage("error.economy.inexistent"));
-									return false;
-								}
-		
-								Economy econ = Economy.getEconomy(args[1]);
-		
-								if (args.length < 3) {
-									sender.sendMessage(getMessage("error.argument.player"));
-									return false;
-								}
-		
-								if (Bukkit.getPlayer(args[2]) == null) {
-									sender.sendMessage(getMessage("error.player.offline"));
-									return false;
-								}
-		
-								Player target = Bukkit.getPlayer(args[2]);
-								NovaPlayer nt = new NovaPlayer(target);
-		
-								if (args.length < 4) {
-									sender.sendMessage(getMessage("error.argument.amount"));
-									return false;
-								}
-
-								double remove = Double.parseDouble(args[3]);
-
-								if (remove <= 0) {
-									sender.sendMessage(getMessage("error.argument.amount"));
-									return false;
-								}
-
-								nt.remove(econ, remove);
-								sender.sendMessage(String.format(getMessage("success.economy.removebalance"), econ.getSymbol() + "", args[3], target.getName()));
-							} catch (NumberFormatException e) {
-								sender.sendMessage(getMessage("error.argument.amount"));
-								return false;
-							}
-							break;
-						}
-						case "setbal": {
-							if (!(sender.hasPermission("novaconomy.economy.addbalance")) && !(sender.hasPermission("novaconomy.economy.removebalance"))) {
-								sender.sendMessage(getMessage("error.permission.argument"));
-								return true;
-							}
-							try {
-								if (args.length < 2) {
-									sender.sendMessage(getMessage("error.argument.economy"));
-									return false;
-								}
-		
-								if (Economy.getEconomy(args[1]) == null) {
-									sender.sendMessage(getMessage("error.economy.inexistent"));
-									return false;
-								}
-		
-								Economy econ = Economy.getEconomy(args[1]);
-		
-								if (args.length < 3) {
-									sender.sendMessage(getMessage("error.argument.player"));
-									return false;
-								}
-		
-								if (Bukkit.getPlayer(args[2]) == null) {
-									sender.sendMessage(getMessage("error.player.offline"));
-									return false;
-								}
-		
-								Player target = Bukkit.getPlayer(args[2]);
-								NovaPlayer nt = new NovaPlayer(target);
-		
-								if (args.length < 4) {
-									sender.sendMessage(getMessage("error.argument.amount"));
-									return false;
-								}
-
-								double newBal = Double.parseDouble(args[3]);
-
-								if (newBal < 0) {
-									sender.sendMessage(getMessage("error.argument.amount"));
-									return false;
-								}
-
-								nt.setBalance(econ, newBal);
-								sender.sendMessage(String.format(getMessage("success.economy.setbalance"), target.getName(), econ.getName(), newBal + ""));
-							} catch (NumberFormatException e) {
-								sender.sendMessage(getMessage("error.argument.amount"));
-								return false;
-							}
-							break;
-						}
-						case "interest": {
-							if (args.length < 2) {
-								sender.sendMessage(getMessage("error.argument"));
-								return false;
-							}
-							
-							switch (args[1].toLowerCase()) {
-								case "enable": {
-									NovaConfig.getConfiguration().setInterestEnabled(true);
-									sender.sendMessage(getMessage("success.economy.enable_interest"));
-									break;
-								}
-								case "disable": {
-									NovaConfig.getConfiguration().setInterestEnabled(false);
-									sender.sendMessage(getMessage("success.economy.disable_interest"));
-									break;
-								}
-								default: {
-									sender.sendMessage(getMessage("error.argument"));
-									return false;
-								}
-							}
-							break;
-						}
-						default: {
-							sender.sendMessage(getMessage("error.argument"));
-							return false;
-						}
-					}
-					
-					break;
-				}
-				default: {
-					return true;
-				}
-			}
-
-			return true;
-		}
-
-
 	}
+
+	private static String getServerVersion() {
+		return  Bukkit.getServer().getClass().getPackage().getName().split("\\.")[3].substring(1);
+	}
+
+	private static Wrapper getWrapper() {
+		try {
+			return (Wrapper) Class.forName(Novaconomy.class.getPackage().getName() + ".Wrapper" + getServerVersion()).newInstance();
+		} catch (Exception e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
+	
+
 	
 	private static BukkitRunnable INTEREST_RUNNABLE = new BukkitRunnable() {
 		public void run() {
@@ -880,7 +366,7 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 
 		getLogger().info("Loaded Files...");
 
-		new Commands(this);
+		getCommandWrapper();
 		new Events(this);
 
 		reloadValues();
@@ -906,142 +392,7 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 	private static final int PLUGIN_ID = 15322;
 
 	private void reloadValues() {
-		// Config Checks
-		FileConfiguration config = getConfig();
-		
-		if (!(config.isBoolean("Notifications"))) {
-			config.set("Notifications", true);
-		}
-
-		if (!(config.isString("Language"))) {
-			config.set("Language", "en");
-		}
-		
-		// Natural Causes
-		if (!(config.isConfigurationSection("NaturalCauses"))) {
-			config.createSection("NaturalCauses");
-		}
-
-		ConfigurationSection naturalC = config.getConfigurationSection("NaturalCauses");
-
-		if (!(naturalC.isBoolean("KillIncrease"))) {
-			naturalC.set("KillIncrease", true);
-		}
-		
-		if (!(naturalC.isInt("KillIncreaseChance"))) {
-			naturalC.set("KillIncreaseChance", 100);
-		}
-
-		if (!(naturalC.isBoolean("FishingIncrease"))) {
-			naturalC.set("FishingIncrease", true);
-		}
-
-		if (!(naturalC.isInt("FishingIncreaseChance"))) {
-			naturalC.set("FishingIncreaseChance", 70);
-		}
-
-		if (!(naturalC.isBoolean("MiningIncrease"))) {
-			naturalC.set("MiningIncrease", true);
-		}
-
-		if (!(naturalC.isInt("MiningIncreaseChance"))) {
-			naturalC.set("MiningIncreaseChance", 30);
-		}
-
-		if (!(naturalC.isBoolean("FarmingIncrease"))) {
-			naturalC.set("FarmingIncrease", true);
-		}
-
-		if (!(naturalC.isInt("FarmingIncreaseChance"))) {
-			naturalC.set("FarmingIncreaseChance", 40);
-		}
-
-		if (!(naturalC.isBoolean("DeathDecrease"))) {
-			naturalC.set("DeathDecrease", true);
-		}
-		
-		if (!(naturalC.isDouble("DeathDivider")) && !(naturalC.isInt("DeathDivider"))) {
-			naturalC.set("DeathDivider", 2);
-		}
-
-		// Interest
-		if (!(config.isConfigurationSection("Interest"))) {
-			config.createSection("Interest");
-		}
-
-		ConfigurationSection interest = config.getConfigurationSection("Interest");
-
-		if (!(interest.isBoolean("Enabled"))) {
-			interest.set("Enabled", true);
-		}
-
-		if (!(interest.isInt("IntervalTicks")) && !(interest.isLong("IntervalTicks"))) {
-			interest.set("IntervalTicks", 1728000);
-		}
-
-		if (!(interest.isDouble("ValueMultiplier")) && !(interest.isInt("ValueMultiplier"))) {
-			interest.set("ValueMultiplier", 1.03D);
-		}
-	}
-	
-	private static void updateInterest() {
-		Novaconomy plugin = getPlugin(Novaconomy.class);
-		
-		config = plugin.getConfig();
-		interest = config.getConfigurationSection("Interest");
-		ncauses = config.getConfigurationSection("NaturalCauses");
-		
-		if (!(INTEREST_RUNNABLE.isCancelled())) INTEREST_RUNNABLE.cancel();
-		
-		INTEREST_RUNNABLE = new BukkitRunnable() {
-			public void run() {
-				if (!(NovaConfig.getConfiguration().isInterestEnabled())) cancel();
-				
-				Map<NovaPlayer, Map<Economy, Double>> previousBals = new HashMap<>();
-				Map<NovaPlayer, Map<Economy, Double>> amounts = new HashMap<>();
-				
-				for (OfflinePlayer p : Bukkit.getOfflinePlayers()) {
-					NovaPlayer np = new NovaPlayer(p);
-					
-					Map<Economy, Double> previousBal = new HashMap<>();
-					Map<Economy, Double> amount = new HashMap<>();
-					for (Economy econ : Economy.getInterestEconomies()) {
-						double balance = np.getBalance(econ);
-						double add = (balance * (NovaConfig.getConfiguration().getInterestMultiplier() - 1)) / econ.getConversionScale();
-						
-						previousBal.put(econ, balance);
-						amount.put(econ, add);
-					}
-					
-					previousBals.put(np, previousBal);
-					amounts.put(np, amount);
-				}
-				
-				InterestEvent event = new InterestEvent(previousBals, amounts);
-				Bukkit.getPluginManager().callEvent(event);
-				if (!(event.isCancelled())) {
-					for (NovaPlayer np : previousBals.keySet()) {
-						int i = 0;
-						for (Economy econ : previousBals.get(np).keySet()) {
-							np.add(econ, amounts.get(np).get(econ));
-							i++;
-						}
-						
-						if (np.getPlayer().isOnline() && NovaConfig.getConfiguration().hasNotifications()) {
-							np.getOnlinePlayer().sendMessage(String.format(getMessage("notification.interest"), i + "", (i == 1 ? get("constants.economy") : get("constants.economies"))));
-						}
-					}
-				}
-			}
-			
-		};
-		
-		new BukkitRunnable() {
-			public void run() {
-				INTEREST_RUNNABLE.runTaskTimer(plugin, plugin.getIntervalTicks(), plugin.getIntervalTicks());
-			}
-		}.runTask(plugin);
-
+		NovaConfig.loadConfig();
 	}
 	
 	public static File getPlayerDirectory() {

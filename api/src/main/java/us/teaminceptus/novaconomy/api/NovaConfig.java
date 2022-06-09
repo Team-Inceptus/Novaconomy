@@ -1,11 +1,13 @@
 package us.teaminceptus.novaconomy.api;
 
 import org.bukkit.Bukkit;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.Plugin;
 
 import java.io.File;
+import java.lang.reflect.Method;
 
 /**
  * Configuration used for API
@@ -61,6 +63,103 @@ public interface NovaConfig  {
      * @return File related to economies.yml
      */
     static File getEconomiesFile() { return new File(getDataFolder(), "economies.yml"); }
+
+    /**
+     * Reloads the Interest Runnable with new values from the configuration.
+     */
+    static void reloadInterest() {
+        Plugin plugin = getPlugin();
+        Class<?> clazz = plugin.getClass();
+        try {
+            Method m = clazz.getDeclaredMethod("updateInterest");
+            m.setAccessible(true);
+            m.invoke(null);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Loads the configuration's values.
+     */
+    static void loadConfig() {
+        // Config Checks
+        FileConfiguration config = getPlugin().getConfig();
+
+        if (!(config.isBoolean("Notifications"))) {
+            config.set("Notifications", true);
+        }
+
+        if (!(config.isString("Language"))) {
+            config.set("Language", "en");
+        }
+
+        // Natural Causes
+        if (!(config.isConfigurationSection("NaturalCauses"))) {
+            config.createSection("NaturalCauses");
+        }
+
+        ConfigurationSection naturalC = config.getConfigurationSection("NaturalCauses");
+
+        if (!(naturalC.isBoolean("KillIncrease"))) {
+            naturalC.set("KillIncrease", true);
+        }
+
+        if (!(naturalC.isInt("KillIncreaseChance"))) {
+            naturalC.set("KillIncreaseChance", 100);
+        }
+
+        if (!(naturalC.isBoolean("FishingIncrease"))) {
+            naturalC.set("FishingIncrease", true);
+        }
+
+        if (!(naturalC.isInt("FishingIncreaseChance"))) {
+            naturalC.set("FishingIncreaseChance", 70);
+        }
+
+        if (!(naturalC.isBoolean("MiningIncrease"))) {
+            naturalC.set("MiningIncrease", true);
+        }
+
+        if (!(naturalC.isInt("MiningIncreaseChance"))) {
+            naturalC.set("MiningIncreaseChance", 30);
+        }
+
+        if (!(naturalC.isBoolean("FarmingIncrease"))) {
+            naturalC.set("FarmingIncrease", true);
+        }
+
+        if (!(naturalC.isInt("FarmingIncreaseChance"))) {
+            naturalC.set("FarmingIncreaseChance", 40);
+        }
+
+        if (!(naturalC.isBoolean("DeathDecrease"))) {
+            naturalC.set("DeathDecrease", true);
+        }
+
+        if (!(naturalC.isDouble("DeathDivider")) && !(naturalC.isInt("DeathDivider"))) {
+            naturalC.set("DeathDivider", 2);
+        }
+
+        // Interest
+        if (!(config.isConfigurationSection("Interest"))) {
+            config.createSection("Interest");
+        }
+
+        ConfigurationSection interest = config.getConfigurationSection("Interest");
+
+        if (!(interest.isBoolean("Enabled"))) {
+            interest.set("Enabled", true);
+        }
+
+        if (!(interest.isInt("IntervalTicks")) && !(interest.isLong("IntervalTicks"))) {
+            interest.set("IntervalTicks", 1728000);
+        }
+
+        if (!(interest.isDouble("ValueMultiplier")) && !(interest.isInt("ValueMultiplier"))) {
+            interest.set("ValueMultiplier", 1.03D);
+        }
+    }
 
     /**
      * Fetches the current language set.

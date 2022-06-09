@@ -22,7 +22,6 @@ import java.util.stream.Collectors;
 
 /**
  * Represents an Economy
- *
  */
 public final class Economy implements ConfigurationSerializable {
 
@@ -174,12 +173,6 @@ public final class Economy implements ConfigurationSerializable {
         if (section != null) return (Economy) section.get("economy");
         else return null;
     }
-
-    /**
-     * Get the Symbol of this Economy
-     * @return {@link Character} representing this icon
-     */
-    public char getSymbol() { return this.symbol; }
 
     /**
      * Whether or not this economy will naturally increase (not the same as Interest)
@@ -412,5 +405,13 @@ public final class Economy implements ConfigurationSerializable {
                 ", conversionScale=" + conversionScale +
                 ", interestEnabled=" + interestEnabled +
                 '}';
+    }
+
+    /**
+     * Fetches the economy's symbol.
+     * @return Symbol of Economy
+     */
+    public char getSymbol() {
+        return this.symbol;
     }
 }
