@@ -1,36 +1,7 @@
 name: Novaconomy
-version: 1.0.0
-main: us.teaminceptus.novaconomy.Novaconomy	
-commands:
-  ehelp:
-    usage: /ehelp
-    description: Economy help
-    aliases: [nhelp, novahelp, econhelp]
-  economy:
-    usage: /economy <create|delete|addbal|removebal|info> <args...>
-    description: Manage economies or their balances
-    aliases: [econ, novaecon, novaconomy]
-    permission: novaconomy.economy
-  balance:
-    usage: /balance
-    description: Access your balances from all economies
-    aliases: [bal, novabal]
-    permission: novaconomy.user.balance
-  convert:
-    usage: /convert <econ-from> <econ-to> <amount>
-    description: Convert one balance in an economy to another balance
-    alias: conv
-    permission: novaconomy.user.convert
-  pay:
-    usage: /pay <player> <economy> <amount>
-    description: Pay another user
-    aliases: [givemoney, givebal]
-    permission: novaconomy.user.pay
-  novaconomyreload:
-    usage: /novareload
-    description: Reload Novaconomy Configuration
-    aliases: [novareload, nvreload]
-    permission: novaconomy.admin.reloadconfig
+version: 1.2.0
+api-version: 1.13
+main: us.teaminceptus.novaconomy.Novaconomy
 permissions:
   novaconomy.*:
     description: Access to all Novaconomy Actions
