@@ -2,7 +2,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>us.teaminceptus</groupId>
     <artifactId>novaconomy-parent</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>1.1.1-SNAPSHOT</version>
 
     <name>Novaconomy-Parent</name>
     <description>Multi-Economy Plugin</description>
@@ -27,8 +27,44 @@
 
     <modules>
         <module>api</module>
+        <module>abstraction</module>
         <module>plugin</module>
+
+        <module>1_8_R1</module>
+        <module>1_8_R2</module>
+        <module>1_8_R3</module>
+
+        <module>1_9_R1</module>
+        <module>1_9_R2</module>
+
+        <module>1_10_R1</module>
+        <module>1_11_R1</module>
+        <module>1_12_R1</module>
+
+        <module>1_13_R1</module>
+        <module>1_13_R2</module>
+
+        <module>1_14_R1</module>
+        <module>1_15_R1</module>
+
+        <module>1_16_R1</module>
+        <module>1_16_R2</module>
+        <module>1_16_R3</module>
+
+        <module>1_17_R1</module>
+
+        <module>1_18_R1</module>
+        <module>1_18_R2</module>
+
+        <module>1_19_R1</module>
     </modules>
+
+    <pluginRepositories>
+        <pluginRepository>
+            <id>maven-snapshots</id>
+            <url>https://repository.apache.org/content/repositories/snapshots/</url>
+        </pluginRepository>
+    </pluginRepositories>
 
     <build>
         <finalName>${project.name}-${project.version}</finalName>
@@ -42,22 +78,65 @@
                     <target>8</target>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.3.1-SNAPSHOT</version>
+                <configuration>
+                    <createDependencyReducedPom>false</createDependencyReducedPom>
+                    <filters>
+                        <filter>
+                            <artifact>*:*</artifact>
+                            <excludes>
+                                <exclude>META-INF/**/*</exclude>
+                            </excludes>
+                        </filter>
+                    </filters>
+                    <relocations>
+                        <relocation>
+                            <pattern>com.jeff_media.updatechecker</pattern>
+                            <shadedPattern>us.teaminceptus.updatechecker</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>org.bstats</pattern>
+                            <shadedPattern>us.teaminceptus.bstats</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>revxrsal.commands</pattern>
+                            <shadedPattern>us.teaminceptus.lamp.commands</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>org.intellij.lang.annotations</pattern>
+                            <shadedPattern>us.teaminceptus.jetbrains.annotations</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>org.jetbrains.annotations</pattern>
+                            <shadedPattern>us.teaminceptus.jetbrains.annotations</shadedPattern>
+                        </relocation>
+                    </relocations>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 
 	<repositories>
         <repository>
             <id>spigot-repo</id>
+            <name>Spigot API Repository</name>
             <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
         </repository>
+        <repository>
+            <id>nms-repo</id>
+            <name>NMS Repository</name>
+            <url>https://repo.codemc.org/repository/nms/</url>
+        </repository>
 	</repositories>
-
-	<dependencies>
-        <dependency>
-            <groupId>org.spigotmc</groupId>
-            <artifactId>spigot-api</artifactId>
-            <version>1.12.2-R0.1-SNAPSHOT</version>
-            <scope>provided</scope>
-        </dependency>
-	</dependencies>
 </project>
