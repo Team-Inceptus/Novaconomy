@@ -17,6 +17,7 @@ import us.teaminceptus.novaconomy.api.NovaPlayer;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -32,6 +33,8 @@ public final class Economy implements ConfigurationSerializable {
     private final boolean hasNaturalIncrease;
     private final double conversionScale;
 
+    private final UUID uid;
+
     private boolean interestEnabled;
 
     private Economy(String section, String name, ItemStack icon, char symbol, boolean naturalIncrease, double conversionScale) {
@@ -41,6 +44,7 @@ public final class Economy implements ConfigurationSerializable {
         this.icon = icon;
         this.hasNaturalIncrease = naturalIncrease;
         this.conversionScale = conversionScale;
+        this.uid = UUID.nameUUIDFromBytes(name.getBytes(StandardCharsets.UTF_8));
     }
 
     // Implementation & Recommended Implementation
@@ -241,6 +245,15 @@ public final class Economy implements ConfigurationSerializable {
      */
     public double convertAmount(Economy to, double fromAmount) throws IllegalArgumentException {
         return convertAmount(this, to, fromAmount);
+    }
+
+    /**
+     * Get the Economy's unique identifier.
+     * @return Unique Identifier
+     */
+    @NotNull
+    public UUID getUniqueId() {
+        return this.uid;
     }
 
     @Override
