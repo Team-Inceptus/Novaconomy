@@ -2,6 +2,7 @@ package us.teaminceptus.novaconomy;
 
 import com.jeff_media.updatechecker.UpdateCheckSource;
 import com.jeff_media.updatechecker.UpdateChecker;
+import com.sun.javaws.jnl.LDUpdater;
 import org.bukkit.plugin.Plugin;
 import us.teaminceptus.novaconomy.abstraction.CommandWrapper;
 import us.teaminceptus.novaconomy.abstraction.Wrapper;
@@ -99,7 +100,7 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 
 				InterestEvent event = new InterestEvent(previousBals, amounts);
 				Bukkit.getPluginManager().callEvent(event);
-				if (!(event.isCancelled())) {
+				if (!event.isCancelled()) {
 					for (NovaPlayer np : previousBals.keySet()) {
 						int i = 0;
 						for (Economy econ : previousBals.get(np).keySet()) {
@@ -144,29 +145,8 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 			if (en.getHealth() - e.getFinalDamage() > 0) return;
 
 			NovaPlayer np = new NovaPlayer(p);
-			
-			List<String> added = new ArrayList<>();
 
-			int size = Economy.getNaturalEconomies().size();
-			
-			for (Economy econ : Economy.getNaturalEconomies()) {
-				double divider = r.nextInt(2) + 1.5;
-				double increase = (en.getMaxHealth() / divider) / econ.getConversionScale();
-				
-				double previousBal = np.getBalance(econ);
-				
-				PlayerChangeBalanceEvent event = new PlayerChangeBalanceEvent(p, econ, increase, previousBal, previousBal + increase, true);
-
-				Bukkit.getPluginManager().callEvent(event);
-				if (!(event.isCancelled())) {
-					np.add(econ, increase);
-					
-					String message = ChatColor.GREEN + "+" + Math.floor(increase * 100) / 100 + econ.getSymbol() + (size == 1 ? "" : ", ");
-					added.add(message);
-				}
-			}
-			
-			if (plugin.hasNotifications()) getWrapper().sendActionbar(p, String.join("\n", added.toArray(new String[0])));
+			update(p, np, en.getMaxHealth());
 		}
 		
 		@EventHandler
@@ -181,26 +161,7 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 			
 			if (!(ores.contains(b.getType()))) return;
 
-			List<String> added = new ArrayList<>();
-			
-			for (Economy econ : Economy.getNaturalEconomies()) {
-				double divider = r.nextInt(2) + 1.25;
-				double increase = ((e.getExpToDrop() + r.nextInt(3) + 1) / divider) / econ.getConversionScale();
-				
-				double previousBal = np.getBalance(econ);
-				
-				PlayerChangeBalanceEvent event = new PlayerChangeBalanceEvent(p, econ, increase, previousBal, previousBal + increase, true);
-				
-				Bukkit.getPluginManager().callEvent(event);
-				if (!(event.isCancelled())) {
-					np.add(econ, increase);
-					
-					String message = ChatColor.GREEN + "+" + Math.floor(increase * 100) / 100 + econ.getSymbol() + ", ";
-					added.add(message);
-				}
-			}
-			
-			if (plugin.hasNotifications()) getWrapper().sendActionbar(p, String.join("\n", added.toArray(new String[0])));
+			update(p, np, e.getExpToDrop());
 		}
 		
 		@EventHandler
@@ -212,27 +173,31 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 			
 			Player p = e.getPlayer();
 			NovaPlayer np = new NovaPlayer(p);
-			
+
+			update(p, np, e.getExpToDrop());
+		}
+
+		private void update(Player p, NovaPlayer np, double amount) {
 			List<String> added = new ArrayList<>();
-			
+
 			for (Economy econ : Economy.getNaturalEconomies()) {
 				double divider = r.nextInt(2) + 1;
-				double increase = ((e.getExpToDrop() + r.nextInt(8) + 1) / divider) / econ.getConversionScale();
-				
+				double increase = ((amount + r.nextInt(8) + 1) / divider) / econ.getConversionScale();
+
 				double previousBal = np.getBalance(econ);
-				
+
 				PlayerChangeBalanceEvent event = new PlayerChangeBalanceEvent(p, econ, increase, previousBal, previousBal + increase, true);
-				
+
 				Bukkit.getPluginManager().callEvent(event);
-				if (!(event.isCancelled())) {
+				if (!event.isCancelled()) {
 					np.add(econ, increase);
-					
-					String message = ChatColor.GREEN + "+" + Math.floor(increase * 100) / 100 + econ.getSymbol() + ", ";
+
+					String message = ChatColor.GREEN + "+" + (Math.floor(increase * 100) / 100 + econ.getSymbol() + "").replace("D", "") + ", ";
 					added.add(message);
 				}
-				
+
 			}
-			
+
 			if (plugin.hasNotifications()) getWrapper().sendActionbar(p, String.join("\n", added.toArray(new String[0])));
 		}
 		
@@ -285,8 +250,6 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 		}
 	}
 	
-
-	
 	private static BukkitRunnable INTEREST_RUNNABLE = new BukkitRunnable() {
 		public void run() {
 			if (!(NovaConfig.getConfiguration().isInterestEnabled())) cancel();
@@ -313,7 +276,7 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 			
 			InterestEvent event = new InterestEvent(previousBals, amounts);
 			Bukkit.getPluginManager().callEvent(event);
-			if (!(event.isCancelled())) {
+			if (!event.isCancelled()) {
 				for (NovaPlayer np : previousBals.keySet()) {
 					int i = 0;
 					for (Economy econ : previousBals.get(np).keySet()) {
