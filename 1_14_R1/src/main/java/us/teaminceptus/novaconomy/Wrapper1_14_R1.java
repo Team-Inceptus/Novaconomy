@@ -3,7 +3,14 @@ package us.teaminceptus.novaconomy;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.TextComponent;
+import net.minecraft.server.v1_14_R1.ItemStack;
+import net.minecraft.server.v1_14_R1.NBTTagCompound;
+import org.bukkit.NamespacedKey;
+import org.bukkit.craftbukkit.v1_14_R1.inventory.CraftItemStack;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataContainer;
+import org.bukkit.persistence.PersistentDataType;
 import us.teaminceptus.novaconomy.abstraction.Wrapper;
 
 public final class Wrapper1_14_R1 implements Wrapper {
@@ -19,6 +26,22 @@ public final class Wrapper1_14_R1 implements Wrapper {
     @Override
     public void sendActionbar(Player p, BaseComponent component) {
         p.spigot().sendMessage(ChatMessageType.ACTION_BAR, component);
+    }
+
+    @Override
+    public String getNBTString(org.bukkit.inventory.ItemStack item, String key) {
+        ItemMeta meta = item.getItemMeta();
+
+        PersistentDataContainer c = meta.getPersistentDataContainer();
+        return c.get(new NamespacedKey(Wrapper.getPlugin(), key), PersistentDataType.STRING);
+    }
+
+    @Override
+    public void setNBTString(org.bukkit.inventory.ItemStack item, String key, String value) {
+        ItemMeta meta = item.getItemMeta();
+
+        PersistentDataContainer c = meta.getPersistentDataContainer();
+        c.set(new NamespacedKey(Wrapper.getPlugin(), key), PersistentDataType.STRING, value);
     }
 
 }
