@@ -15,11 +15,11 @@ jobs:
     name: Maven Setup
     steps:
       - uses: actions/checkout@v3
-      - name: Set up JDK 17
+      - name: Set up JDK 8
         uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '8'
           cache: 'maven'
       - name: Maven Setup
         run: mvn -B package
