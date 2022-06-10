@@ -161,6 +161,8 @@ public interface NovaConfig  {
         }
     }
 
+    // Impl
+
     /**
      * Fetches the current language set.
      * @return Langauge set
