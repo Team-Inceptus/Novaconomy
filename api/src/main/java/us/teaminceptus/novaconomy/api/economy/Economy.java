@@ -287,6 +287,19 @@ public final class Economy implements ConfigurationSerializable {
     }
 
     /**
+     * Attempts to lookup an Economy by its unique id.
+     * @param uid UUID to find
+     * @return Economy found, or null if not found or if UUID is null
+     */
+    @Nullable
+    public static Economy getById(@Nullable UUID uid) {
+        if (uid == null) return null;
+
+        for (Economy econ : Economy.getEconomies()) if (econ.getUniqueId().equals(uid)) return econ;
+        return null;
+    }
+
+    /**
      * Fetch a Builder used for creating economies
      * @return {@link Builder} Class
      */
