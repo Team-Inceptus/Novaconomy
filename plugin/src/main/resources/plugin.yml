@@ -37,7 +37,7 @@ permissions:
     description: Access to add balance to others
     default: op
     children:
-      novaconomy.economy: true
+      novaconomy.economy.setbalance: true
   novaconomy.economy.info:
     description: Access to query about economies
     default: true
@@ -47,14 +47,29 @@ permissions:
     description: Access to remove balance from others
     default: op
     children:
+      novaconomy.economy.setbalance: true
+  novaconomy.economy.setbalance:
+    description: Access to change balance from others
+    default: op
+    children:
+      novaconomy.economy: true
+  novaconomy.economy.check:
+    description: Access to creating checks without withdraw
+    default: op
+    children:
       novaconomy.economy: true
   # User
   novaconomy.user:
     description: Access to all User commands
     default: true
   novaconomy.user.balance:
-    description: Access to check balance
+    description: Access to viewing balance
     defualt: true
+    children:
+      novaconomy.user: true
+  novaconomy.user.check:
+    description: Access to creating checks
+    default: true
     children:
       novaconomy.user: true
   novaconomy.user.convert:
