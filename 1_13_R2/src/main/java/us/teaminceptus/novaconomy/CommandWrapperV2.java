@@ -141,7 +141,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
         }
 
         @Subcommand({"setbalance", "setbal"})
-        @CommandPermission("novaconomy.economy")
+        @CommandPermission("novaconomy.economy.setbalance")
         public void setBalance(CommandSender sender, @Named("economy") Economy econ, @Named("target") Player target, @Named("amount") @Range(min = 0) double amount) {
             wrapper.setBalance(sender, econ, target, amount);
         }
@@ -154,8 +154,14 @@ public final class CommandWrapperV2 implements CommandWrapper {
 
         @Subcommand({"removebalance", "removebal"})
         @CommandPermission("novaconomy.economy.removebalance")
-        public void removeBalance(CommandSender sender, @Named("economy") Economy econ, @Named("target") Player target, @Named("amount") double remove) {
+        public void removeBalance(CommandSender sender, @Named("economy") Economy econ, @Named("target") Player target, @Named("amount") @Range(min = 0) double remove) {
             wrapper.removeBalance(sender, econ, target, remove);
+        }
+
+        @Subcommand({"check", "createcheck"})
+        @CommandPermission("novaconomy.economy.check")
+        public void createCheck(Player p, @Named("economy") Economy econ, @Named("amount") @Range(min = 1) double amount) {
+            wrapper.createCheck(p, econ, amount);
         }
 
     }

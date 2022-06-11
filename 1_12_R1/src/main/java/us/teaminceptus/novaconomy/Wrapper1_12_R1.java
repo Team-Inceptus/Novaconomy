@@ -25,17 +25,18 @@ public final class Wrapper1_12_R1 implements Wrapper {
     public String getNBTString(org.bukkit.inventory.ItemStack item, String key) {
         ItemStack nmsitem = CraftItemStack.asNMSCopy(item);
         NBTTagCompound tag = nmsitem.hasTag() ? nmsitem.getTag() : new NBTTagCompound();
+        NBTTagCompound novaconomy = tag.getCompound("Novaconomy");
 
-        return tag.getString(key);
+        return novaconomy.getString(key);
     }
 
     @Override
     public void setNBTString(org.bukkit.inventory.ItemStack item, String key, String value) {
         ItemStack nmsitem = CraftItemStack.asNMSCopy(item);
         NBTTagCompound tag = nmsitem.hasTag() ? nmsitem.getTag() : new NBTTagCompound();
+        NBTTagCompound novaconomy = tag.getCompound("Novaconomy");
 
-        tag.setString(key, value);
-
+        novaconomy.setString(key, value);
         nmsitem.setTag(tag);
     }
 
