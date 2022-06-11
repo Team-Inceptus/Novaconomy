@@ -13,6 +13,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
@@ -52,9 +53,9 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
         }
     }
 
-    private boolean economyCount(Player p) {
+    private boolean economyCount(CommandSender sender) {
         if (Economy.getEconomies().size() < 1) {
-            p.sendMessage(getMessage("error.economy.none"));
+            sender.sendMessage(getMessage("error.economy.none"));
             return false;
         }
 
@@ -177,6 +178,8 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                     sender.sendMessage(getMessage("error.argument"));
                     return false;
                 }
+
+                if (!economyCount(sender)) return false;
 
                 switch (args[0].toLowerCase()) {
                     case "create": {
@@ -317,6 +320,40 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                         interest(sender, args[1].equalsIgnoreCase("enable"));
                         break;
                     }
+                    case "check":
+                    case "createcheck": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+                        if (!economyCount(p)) return false;
+
+                        if (args.length < 2) {
+                            sender.sendMessage(getMessage("error.argument.economy"));
+                            return false;
+                        }
+
+                        if (Economy.getEconomy(args[1]) == null) {
+                            sender.sendMessage(getMessage("error.economy.inexistent"));
+                            return false;
+                        }
+
+                        Economy econ = Economy.getEconomy(args[1]);
+
+                        try {
+                            if (args.length < 3) {
+                                sender.sendMessage(getMessage("error.argument.amount"));
+                                return false;
+                            }
+
+                            double amount = Double.parseDouble(args[2]);
+
+                            createCheck(p, econ, amount);
+                        } catch (NumberFormatException e) {
+                            sender.sendMessage(getMessage("error.argument.amount"));
+                            return false;
+                        }
+
+                        break;
+                    }
                 }
             }
         }
@@ -350,36 +387,36 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
             case "economy": {
                 switch (args.length) {
                     case 1: {
-                        suggestions.addAll(Arrays.asList("info"));
+                        suggestions.add("info");
 
-                        if (sender.hasPermission("novaconomy.economy")) suggestions.addAll(Arrays.asList("create", "delete", "addbal", "setbalance", "removebal", "addbalance", "removebalance", "setbal"));
+                        if (sender.hasPermission("novaconomy.economy")) suggestions.addAll(Arrays.asList("check", "createcheck", "create", "delete", "addbal", "setbalance", "removebal", "addbalance", "removebalance", "setbal"));
                         return suggestions;
                     }
                     case 2: {
-                        if (!(args[0].equalsIgnoreCase("create"))) {
+                        if (!(args[0].equalsIgnoreCase("create")))
                             for (Economy econ : Economy.getEconomies()) suggestions.add(econ.getName());
-                        }
+
                         return suggestions;
                     }
                     case 3: {
-                        if (args[0].toLowerCase().contains("bal")) {
+                        if (args[0].toLowerCase().contains("bal"))
                             for (Player p : Bukkit.getOnlinePlayers()) suggestions.add(p.getName());
-                        } else if (args[0].equalsIgnoreCase("create")) {
+                        else if (args[0].equalsIgnoreCase("create"))
                             suggestions.addAll(Arrays.asList("$", "%", "Q", "L", "P", "A", "a", "r", "R", "C", "c", "D", "d", "W", "w", "B", "b"));
-                        }
+
 
                         return suggestions;
                     }
                     case 4: {
-                        if (args[0].equalsIgnoreCase("create")) {
+                        if (args[0].equalsIgnoreCase("create"))
                             for (Material m : Material.values()) suggestions.add("minecraft:" + m.name().toLowerCase());
-                        }
+
                         return suggestions;
                     }
                     case 6: {
-                        if (args[0].equalsIgnoreCase("create")) {
+                        if (args[0].equalsIgnoreCase("create"))
                             suggestions.addAll(Arrays.asList("true", "false"));
-                        }
+
 
                         return suggestions;
                     }
@@ -389,14 +426,13 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
             }
             case "pay": {
                 switch (args.length) {
-                    case 1: {
+                    case 1:
                         for (Player p : Bukkit.getOnlinePlayers()) suggestions.add(p.getName());
                         return suggestions;
-                    }
-                    case 2: {
+
+                    case 2:
                         for (Economy econ : Economy.getEconomies()) suggestions.add(econ.getName());
                         return suggestions;
-                    }
                 }
 
                 return suggestions;
