@@ -1,0 +1,14 @@
+# Novaconomy v${project.version}
+#
+# Created by GamerCoder215
+
+# Represents Core Functionality Settings
+
+# Override the Command Version.
+#
+# Use 1 for normal command support (supports all versions)
+# Use 2 for brigader support (colored inputs, supports 1.13.2+)
+# Use auto to automatically recognize
+#
+# If a version is invalid or not supported, it will default to auto
+CommandVersion: auto
