@@ -86,6 +86,11 @@ public interface CommandWrapper {
     }
 
     default void balance(Player p) {
+        if (!p.hasPermission("novaconomy.user.balance")) {
+            p.sendMessage(getMessage("error.permission"));
+            return;
+        }
+
         NovaPlayer np = new NovaPlayer(p);
         List<String> balanceInfo = new ArrayList<>();
 
@@ -97,6 +102,11 @@ public interface CommandWrapper {
     }
 
     default void reloadConfig(CommandSender sender) {
+        if (!sender.hasPermission("novaconomy.admin.reloadconfig")) {
+            sender.sendMessage(getMessage("error.permission"));
+            return;
+        }
+
         sender.sendMessage(get("command.reload.reloading"));
         Plugin plugin = getPlugin();
         plugin.reloadConfig();
@@ -106,6 +116,11 @@ public interface CommandWrapper {
     }
 
     default void convert(Player p, Economy from, Economy to, double amount) {
+        if (!p.hasPermission("novaconomy.user.convert")) {
+            p.sendMessage(getMessage("error.permission"));
+            return;
+        }
+
         if (to.equals(from)) {
             p.sendMessage(getMessage("error.economy.transfer_same"));
             return;
@@ -162,6 +177,11 @@ public interface CommandWrapper {
     }
 
     default void addBalance(CommandSender sender, Economy econ, Player target, double add) {
+        if (!sender.hasPermission("novaconomy.economy.addbalance")) {
+            sender.sendMessage(getMessage("error.permission.argument"));
+            return;
+        }
+
         NovaPlayer nt = new NovaPlayer(target);
 
         if (add <= 0) {
@@ -174,6 +194,11 @@ public interface CommandWrapper {
     }
 
     default void removeBalance(CommandSender sender, Economy econ, Player target, double remove) {
+        if (!sender.hasPermission("novaconomy.economy.removebalance")) {
+            sender.sendMessage(getMessage("error.permission.argument"));
+            return;
+        }
+
         NovaPlayer nt = new NovaPlayer(target);
 
         if (remove <= 0) {
@@ -186,6 +211,11 @@ public interface CommandWrapper {
     }
 
     default void setBalance(CommandSender sender, Economy econ, Player target, double balance) {
+        if (!sender.hasPermission("novaconomy.economy.setbalance")) {
+            sender.sendMessage(getMessage("error.permission.argument"));
+            return;
+        }
+
         NovaPlayer nt = new NovaPlayer(target);
 
         if (balance <= 0) {
@@ -198,9 +228,29 @@ public interface CommandWrapper {
     }
 
     default void interest(CommandSender sender, boolean enabled) {
+        if (!sender.hasPermission("novaconomy.economy")) {
+            sender.sendMessage(getMessage("error.permission.argument"));
+            return;
+        }
+
         NovaConfig.getConfiguration().setInterestEnabled(enabled);
         String key = "success.economy." + (enabled ? "enable" : "disable" ) + "_interest";
         sender.sendMessage(getMessage(key));
+    }
+
+    default void createCheck(Player p, Economy econ, double amount) {
+        if (!p.hasPermission("novaconomy.economy.check")) {
+            p.sendMessage(getMessage("error.permission.argument"));
+            return;
+        }
+
+        if (amount < 1) {
+            p.sendMessage(getMessage("error.argument.amount"));
+            return;
+        }
+
+        p.getInventory().addItem(getWrapper().createCheck(econ, amount));
+        p.sendMessage(String.format(getMessage("success.economy.check"), amount + "", econ.getSymbol() + ""));
     }
 
     default void removeEconomy(CommandSender sender, Economy econ) {
