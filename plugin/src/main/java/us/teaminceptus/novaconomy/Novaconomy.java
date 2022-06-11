@@ -2,6 +2,7 @@ package us.teaminceptus.novaconomy;
 
 import com.jeff_media.updatechecker.UpdateCheckSource;
 import com.jeff_media.updatechecker.UpdateChecker;
+import org.apache.commons.lang.Validate;
 import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -16,10 +17,13 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerFishEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -129,6 +133,23 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 			Bukkit.getPluginManager().registerEvents(this, plugin);
 			this.plugin = plugin;
 		}
+
+		@EventHandler
+		public void claimCheck(PlayerInteractEvent e) {
+			if (e.getItem() == null) return;
+			if (e.getAction() != Action.RIGHT_CLICK_AIR && e.getAction() != Action.RIGHT_CLICK_BLOCK) return;
+			Player p = e.getPlayer();
+			Wrapper wrapper = getWrapper();
+			if (!(e.getItem().getType() == Material.PAPER)) return;
+			ItemStack item = e.getItem();
+
+			try {
+				String value = wrapper.getNBTString(item, "economy");
+				Validate.notNull(value);
+				double amount = Double.parseDouble(wrapper.getNBTString(item, "amount"));
+				Validate.notNull(value);
+			} catch (IllegalArgumentException | NullPointerException ignored) {}
+		}
 		
 		@EventHandler
 		public void moneyIncrease(EntityDamageByEntityEvent e) {
@@ -140,9 +161,7 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 			LivingEntity en = (LivingEntity) e.getEntity();
 			if (en.getHealth() - e.getFinalDamage() > 0) return;
 
-			NovaPlayer np = new NovaPlayer(p);
-
-			update(p, np, en.getMaxHealth());
+			update(p, en.getMaxHealth());
 		}
 		
 		@EventHandler
@@ -153,11 +172,10 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 			
 			Block b = e.getBlock();
 			Player p = e.getPlayer();
-			NovaPlayer np = new NovaPlayer(p);
 			
 			if (!(ores.contains(b.getType()))) return;
 
-			update(p, np, e.getExpToDrop());
+			update(p, e.getExpToDrop());
 		}
 		
 		@EventHandler
@@ -168,12 +186,11 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 			if (e.getState() != PlayerFishEvent.State.CAUGHT_FISH) return;
 			
 			Player p = e.getPlayer();
-			NovaPlayer np = new NovaPlayer(p);
-
-			update(p, np, e.getExpToDrop());
+			update(p, e.getExpToDrop());
 		}
 
-		private void update(Player p, NovaPlayer np, double amount) {
+		private void update(Player p, double amount) {
+			NovaPlayer np = new NovaPlayer(p);
 			List<String> added = new ArrayList<>();
 
 			for (Economy econ : Economy.getNaturalEconomies()) {
@@ -221,12 +238,25 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 	}
 
 	private static final Set<Material> ores = new HashSet<Material>() {{
-		addAll(Arrays.stream(Material.values()).filter(m -> m.name().endsWith("ORE")).collect(Collectors.toSet()));
+		addAll(Arrays.stream(Material.values()).filter(m -> m.name().endsWith("ORE") || m.name().equalsIgnoreCase("ANCIENT_DEBRIS")).collect(Collectors.toSet()));
 	}};
 
 	private static CommandWrapper getCommandWrapper() {
 		try {
-			return (CommandWrapper) Class.forName(Novaconomy.class.getPackage().getName() + ".CommandWrapperV" + getWrapper().getCommandVersion()).getConstructor(Plugin.class).newInstance(JavaPlugin.getPlugin(Novaconomy.class));
+			final int wrapperVersion;
+			String dec = "auto";
+			String k = "CommandVersion";
+
+			if (funcConfig.isInt(k)) {
+				int i = funcConfig.getInt(k, 3);
+				dec = i > 2 || i < 1 ? "auto" : i + "";
+			} else
+				dec = !funcConfig.getString(k, "auto").equalsIgnoreCase("auto") ? "auto" : funcConfig.getString(k, "auto");
+
+			if (dec.equalsIgnoreCase("auto")) wrapperVersion = getWrapper().getCommandVersion();
+			else wrapperVersion = Integer.parseInt(dec);
+
+			return (CommandWrapper) Class.forName(Novaconomy.class.getPackage().getName() + ".CommandWrapperV" + wrapperVersion).getConstructor(Plugin.class).newInstance(JavaPlugin.getPlugin(Novaconomy.class));
 		} catch (Exception e) {
 			e.printStackTrace();
 			return null;
@@ -288,10 +318,23 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 		}
 		
 	};
+
+	private static FileConfiguration funcConfig;
 	
 	public void onEnable() {
 		saveDefaultConfig();
 		saveConfig();
+
+		File functionality = new File(getDataFolder(), "functionality.yml");
+		if (!functionality.exists()) saveResource("functionality.yml", false);
+
+		funcConfig = YamlConfiguration.loadConfiguration(functionality);
+
+		if (!funcConfig.isSet("CommandVersion")) {
+			funcConfig.set("CommandVersion", "auto");
+		}
+
+		try { funcConfig.save(functionality); } catch (IOException e) { e.printStackTrace(); }
 
 		for (Language l : Language.values()) {
 			File f = new File(getDataFolder(), "novaconomy" + ( l.getIdentifier().length() == 0 ? "" : "_" + l.getIdentifier() ) + ".properties");
