@@ -5,12 +5,16 @@
 Novaconomy gives you the freedom to create **multiple** economies of your own choice, just like in real life!
 With the freedom to have your own symbols, icons, conversion rates, and even interest, you'll have all you need to have a proper Economy!
 
+
+
 ## Future Features
-- Maven/Gradle Integration
-- Vault API Hook
+- Treasury API Hook
 
 ## Novaconomy API
 [![](https://jitpack.io/v/Team-Inceptus/Novaconomy.svg)](https://jitpack.io/#Team-Inceptus/Novaconomy)
+[![](https://jitci.com/gh/Team-Inceptus/Novaconomy/svg)](https://jitci.com/gh/Team-Inceptus/Novaconomy)
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/Team-Inceptus/Novaconomy)
+![GitHub last commit](https://img.shields.io/github/last-commit/Team-Inceptus/Novaconomy)
 
 Published as a JitPack repository
 <details>
