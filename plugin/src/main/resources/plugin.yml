@@ -19,6 +19,7 @@ permissions:
     defualt: op
     children:
       novaconomy.admin: true
+
   # Economy
   novaconomy.economy:
     description: Access to all Economy actions
@@ -58,6 +59,7 @@ permissions:
     default: op
     children:
       novaconomy.economy: true
+
   # User
   novaconomy.user:
     description: Access to all User commands
@@ -82,6 +84,29 @@ permissions:
     default: true
     children:
       novaconomy.user: true
+
+  # User Business
+  novaconomy.user.business:
+    description: Base Novaconomy Businesses Permission
+    default: true
+    children:
+      novaconomy.user: true
+  novaconomy.user.business.create:
+    description: Access to creating Novaconomy Businesses
+    default: true
+    children:
+      novaconomy.user.business: true
+  novaconomy.user.business.resources:
+    description: Access to modifying Business Resources
+    default: true
+    children:
+      novaconomy.user.business: true
+  novaconomy.user.business.query:
+    description: Access information about other businesses
+    default: true
+    children:
+      novaconomy.user.business: true
+
   
   
     
