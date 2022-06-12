@@ -247,6 +247,8 @@ public final class Economy implements ConfigurationSerializable {
         return convertAmount(this, to, fromAmount);
     }
 
+
+
     /**
      * Get the Economy's unique identifier.
      * @return Unique Identifier
