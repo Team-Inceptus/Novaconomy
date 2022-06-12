@@ -5,9 +5,13 @@ import net.minecraft.server.v1_8_R2.ChatComponentText;
 import net.minecraft.server.v1_8_R2.ItemStack;
 import net.minecraft.server.v1_8_R2.NBTTagCompound;
 import net.minecraft.server.v1_8_R2.PacketPlayOutChat;
+import org.bukkit.Material;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.craftbukkit.v1_8_R2.entity.CraftPlayer;
 import org.bukkit.craftbukkit.v1_8_R2.inventory.CraftItemStack;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.SkullMeta;
 import us.teaminceptus.novaconomy.abstraction.Wrapper;
 
 public final class Wrapper1_8_R2 implements Wrapper {
@@ -40,5 +44,27 @@ public final class Wrapper1_8_R2 implements Wrapper {
 
         novaconomy.setString(key, value);
         nmsitem.setTag(tag);
+    }
+
+    @Override
+    public void openBook(Player p, org.bukkit.inventory.ItemStack book) {
+        ((CraftPlayer) p).getHandle().openBook(CraftItemStack.asNMSCopy(book));
+    }
+
+    @Override
+    public org.bukkit.inventory.ItemStack getGUIBackground() {
+        org.bukkit.inventory.ItemStack item = new org.bukkit.inventory.ItemStack(Material.STAINED_GLASS_PANE, 1, (short)15);
+        ItemMeta meta = item.getItemMeta();
+        meta.setDisplayName(" ");
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    @Override
+    public org.bukkit.inventory.ItemStack createSkull(OfflinePlayer p) {
+        org.bukkit.inventory.ItemStack item = new org.bukkit.inventory.ItemStack(Material.SKULL_ITEM, 1, (short) 3);
+        SkullMeta meta = (SkullMeta) item.getItemMeta();
+        meta.setOwner(p.getName());
+        return item;
     }
 }
