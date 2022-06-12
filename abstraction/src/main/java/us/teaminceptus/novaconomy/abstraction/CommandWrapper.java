@@ -6,10 +6,13 @@ import org.bukkit.Material;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.plugin.Plugin;
 import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.NovaPlayer;
+import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.events.player.PlayerPayEvent;
 
@@ -26,6 +29,7 @@ public interface CommandWrapper {
         put("convert", Arrays.asList("conv"));
         put("pay", Arrays.asList("givemoney", "novapay", "econpay", "givebal"));
         put("novaconomyreload", Arrays.asList("novareload", "nreload", "econreload"));
+        put("business", Arrays.asList("nbusiness"));
     }};
 
     Map<String, String> COMMAND_PERMISSION = new HashMap<String, String>() {{
@@ -34,6 +38,7 @@ public interface CommandWrapper {
        put("convert", "novaconomy.user.convert");
        put("pay", "novaconomy.user.pay");
        put("novaconomyreload", "novaconomy.admin.reloadconfig");
+       put("business", "novaconomy.user.business");
     }};
 
     Map<String, String> COMMAND_DESCRIPTION = new HashMap<String, String>() {{
@@ -43,6 +48,7 @@ public interface CommandWrapper {
        put("convert", "Convert one balance in an economy to another balance");
        put("pay", "Pay another user");
        put("novaconomyreload", "Reload Novaconomy Configuration");
+       put("business", "Manage your Novaconomy Business");
     }};
 
     Map<String, String> COMMAND_USAGE = new HashMap<String, String>() {{
@@ -52,6 +58,7 @@ public interface CommandWrapper {
        put("convert", "/convert <econ-from> <econ-to> <amount>");
        put("pay", "/pay <player> <economy> <amount>");
        put("novaconomyreload", "/novareload");
+       put("business", "/business <create|delete|edit|stock> <args...>");
     }};
 
     static Plugin getPlugin() {
@@ -146,7 +153,7 @@ public interface CommandWrapper {
     }
 
     default void createEconomy(CommandSender sender, String name, char symbol, Material icon, double scale, boolean naturalIncrease) {
-        if (!(sender.hasPermission("novaconomy.economy.create"))) {
+        if (!sender.hasPermission("novaconomy.economy.create")) {
             sender.sendMessage(getMessage("error.permission.argument"));
             return;
         }
@@ -267,6 +274,11 @@ public interface CommandWrapper {
     }
 
     default void pay(Player p, Player target, Economy econ, double amount) {
+        if (!p.hasPermission("novaconomy.user.pay")) {
+            p.sendMessage(getMessage("error.permission"));
+            return;
+        }
+
         if (target.getUniqueId().equals(p.getUniqueId())) {
             p.sendMessage(getMessage("error.economy.pay_self"));
             return;
@@ -291,6 +303,50 @@ public interface CommandWrapper {
             getWrapper().sendActionbar(p, String.format(getMessage("success.economy.receive_actionbar"), Math.floor(e.getAmount() * 100) / 100, e.getPayer().getName()));
             target.sendMessage(String.format(getMessage("success.economy.receive"), econ.getSymbol() + Math.floor(e.getAmount() * 100) / 100 + "", e.getPayer().getName() + ""));
         }
+    }
+
+    default void handbook(Player p) {
+        ItemStack book = new ItemStack(Material.WRITTEN_BOOK);
+        BookMeta bMeta = (BookMeta) book.getItemMeta();
+        bMeta.setAuthor("GamerCoder215");
+
+        // TODO Create Handbook Messages
+
+        book.setItemMeta(bMeta);
+
+        getWrapper().openBook(p, book);
+    }
+
+    default void createBusiness(Player p, String name, Material icon) {
+        if (!p.hasPermission("novaconomy.economy.create")) {
+            p.sendMessage(getMessage("error.permission.argument"));
+            return;
+        }
+
+        if (Business.exists(name)) {
+            p.sendMessage(getMessage("error.business.exists"));
+            return;
+        }
+
+        Business.builder().setName(name).setOwner(p).setIcon(icon).build();
+        p.sendMessage(String.format(getMessage("success.business.create"), name));
+    }
+
+    default void businessInfo(Player p) {
+        Business b = Business.getByOwner(p);
+        if (b == null) {
+            p.sendMessage(getMessage("error.business.not_an_owner"));
+            return;
+        }
+        p.openInventory(getWrapper().generateBusinessData(b));
+    }
+
+    default void businessQuery(Player p, Business b) {
+        if (!p.hasPermission("novaconomy.user.business.query")) {
+            p.sendMessage(getMessage("error.permission.argument"));
+            return;
+        }
+        p.openInventory(getWrapper().generateBusinessData(b));
     }
 
     static String getServerVersion() {
