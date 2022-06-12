@@ -10,6 +10,7 @@ import revxrsal.commands.bukkit.BukkitCommandHandler;
 import revxrsal.commands.bukkit.annotation.CommandPermission;
 import revxrsal.commands.exception.CommandErrorException;
 import us.teaminceptus.novaconomy.abstraction.CommandWrapper;
+import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 
 import java.util.ArrayList;
@@ -33,10 +34,21 @@ public final class CommandWrapperV2 implements CommandWrapper {
             });
             handler.getAutoCompleter().registerParameterSuggestions(Economy.class, SuggestionProvider.of(toStringList(Economy::getName, Economy.getEconomies())));
 
+            handler.registerValueResolver(Material.class, ctx -> Material.matchMaterial(ctx.popForParameter()));
+            handler.getAutoCompleter().registerParameterSuggestions(Material.class, SuggestionProvider.of(toStringList(m -> m.name().toLowerCase(), Material.values())));
+
+            handler.registerValueResolver(Business.class, ctx -> {
+                Business b = Business.getByName(ctx.popForParameter());
+                if (b == null) throw new CommandErrorException(getMessage("error.argument.business"));
+                return b;
+            });
+            handler.getAutoCompleter().registerParameterSuggestions(Business.class, SuggestionProvider.of(toStringList(Business::getName, Business.getBusinesses())));
+
             handler.getAutoCompleter().registerParameterSuggestions(boolean.class, SuggestionProvider.of("true", "false"));
 
             handler.register(this);
             new EconomyCommands(this);
+            new BusinessCommands(this);
 
             handler.registerBrigadier();
         }
@@ -99,6 +111,41 @@ public final class CommandWrapperV2 implements CommandWrapper {
         CommandWrapper.super.convert(p, from, to, amount);
     }
 
+    @Command({"novaconomyreload", "novareload", "nreload", "econreload"})
+    @Usage("/novareload")
+    @Description("Reload Novaconomy Configuration")
+    @CommandPermission("novaconomy.admin.reloadconfig")
+    public void reloadConfig(CommandSender sender) {
+        CommandWrapper.super.reloadConfig(sender);
+    }
+
+    @Command({"business", "nbusiness"})
+    @Description("Manage your Novaconomy Business")
+    @Usage("/business <create|info|delete|edit|stock|query> <args...>")
+    private static final class BusinessCommands {
+
+        private final CommandWrapperV2 wrapper;
+
+        private BusinessCommands(CommandWrapperV2 wrapper) {
+            this.wrapper = wrapper;
+
+            BukkitCommandHandler handler = CommandWrapperV2.handler;
+            handler.register(this);
+        }
+
+        @Subcommand({"info", "information"})
+        public void businessInfo(Player p) {
+            wrapper.businessInfo(p);
+        }
+
+        @Subcommand("query")
+        @CommandPermission("novaconomy.user.business.query")
+        public void businessQuery(Player p, @Named("business") Business b) {
+            wrapper.businessQuery(p, b);
+        }
+
+    }
+
     @Command({"economy", "econ", "novaecon", "novaconomy", "necon"})
     @Description("Manage economies or their balances")
     @Usage("/economy <create|delete|addbal|removebal|info> <args...>")
@@ -110,9 +157,6 @@ public final class CommandWrapperV2 implements CommandWrapper {
             this.wrapper = wrapper;
 
             BukkitCommandHandler handler = CommandWrapperV2.handler;
-
-            handler.registerValueResolver(Material.class, ctx -> Material.matchMaterial(ctx.popForParameter()));
-            handler.getAutoCompleter().registerParameterSuggestions(Material.class, SuggestionProvider.of(toStringList(m -> m.name().toLowerCase(), Material.values())));
 
             handler.getAutoCompleter().registerSuggestion("symbol", SuggestionProvider.of("$", "%", "Q", "L", "P", "A", "a", "r", "R", "C", "c", "D", "d", "W", "w", "B", "b"));
             handler.getAutoCompleter().registerSuggestion("interest", SuggestionProvider.of("enable", "disable"));
@@ -162,6 +206,12 @@ public final class CommandWrapperV2 implements CommandWrapper {
         @CommandPermission("novaconomy.economy.check")
         public void createCheck(Player p, @Named("economy") Economy econ, @Named("amount") @Range(min = 1) double amount) {
             wrapper.createCheck(p, econ, amount);
+        }
+
+        @Subcommand("info")
+        @CommandPermission("novaconomy.economy.info")
+        public void info(CommandSender sender, @Named("economy") Economy econ) {
+            wrapper.economyInfo(sender, econ);
         }
 
     }
