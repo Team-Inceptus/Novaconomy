@@ -7,6 +7,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.Plugin;
 
 import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Method;
 
 /**
@@ -77,6 +78,38 @@ public interface NovaConfig  {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    static File getBusinessFile() {
+        return new File(getDataFolder(), "businesses.yml");
+    }
+
+    static FileConfiguration getBusinessConfiguration() {
+        return YamlConfiguration.loadConfiguration(getBusinessFile());
+    }
+
+    /**
+     * Fetches the Functionality Configuration File.
+     * @return Functionality File
+     */
+    static File getFunctionalityFile() {
+        return new File(getDataFolder(), "functionality.yml");
+    }
+
+    /**
+     * Loads the Functionality Configuration.
+     * @return Loaded Functionality Configuration
+     */
+    static FileConfiguration loadFunctionalityFile() {
+        if (!getFunctionalityFile().exists()) getPlugin().saveResource("functionality.yml", false);
+
+        FileConfiguration config = YamlConfiguration.loadConfiguration(getFunctionalityFile());
+
+        if (!config.isSet("CommandVersion")) config.set("CommandVersion", "auto");
+
+        try { config.save(getFunctionalityFile()); } catch (IOException e) { e.printStackTrace(); }
+
+        return config;
     }
 
     /**
