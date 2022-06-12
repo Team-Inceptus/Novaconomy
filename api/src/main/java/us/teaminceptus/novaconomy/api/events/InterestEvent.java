@@ -113,10 +113,16 @@ public class InterestEvent extends Event implements Cancellable {
         this.isCancelled = cancelled;
     }
 
+    @Override
     public HandlerList getHandlers() {
         return HANDLERS;
     }
 
+    /**
+     * Fetch the Event Handlers.
+     * @return Event Handlers
+     * @see HandlerList
+     */
     public static HandlerList getHanderList() {
         return HANDLERS;
     }

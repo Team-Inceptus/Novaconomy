@@ -29,13 +29,17 @@ public abstract class PlayerEconomyEvent extends PlayerEvent {
         this.econ = econ;
     }
 
+    @Override
     public HandlerList getHandlers() {
         return HANDLERS;
     }
 
-    public static HandlerList getHanderList() {
-        return HANDLERS;
-    }
+    /**
+     * Fetches the Event Handlers.
+     * @return Event Handlers
+     * @see HandlerList
+     */
+    public static HandlerList getHanderList() { return HANDLERS; }
 
     /**
      * Fetch the amount involved in this event
