@@ -1,13 +1,16 @@
 package us.teaminceptus.novaconomy;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import net.md_5.bungee.api.chat.BaseComponent;
-import net.minecraft.server.v1_9_R2.ChatComponentText;
-import net.minecraft.server.v1_9_R2.ItemStack;
-import net.minecraft.server.v1_9_R2.NBTTagCompound;
-import net.minecraft.server.v1_9_R2.PacketPlayOutChat;
+import net.minecraft.server.v1_9_R2.*;
+import org.bukkit.Material;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.craftbukkit.v1_9_R2.entity.CraftPlayer;
 import org.bukkit.craftbukkit.v1_9_R2.inventory.CraftItemStack;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.SkullMeta;
 import us.teaminceptus.novaconomy.abstraction.Wrapper;
 
 public final class Wrapper1_9_R2 implements Wrapper {
@@ -40,6 +43,39 @@ public final class Wrapper1_9_R2 implements Wrapper {
 
         novaconomy.setString(key, value);
         nmsitem.setTag(tag);
+    }
+
+    @Override
+    public void openBook(Player p, org.bukkit.inventory.ItemStack book) {
+        int slot = p.getInventory().getHeldItemSlot();
+        org.bukkit.inventory.ItemStack old = p.getInventory().getItem(slot);
+        p.getInventory().setItem(slot, book);
+
+        ByteBuf buf = Unpooled.buffer(256);
+        buf.setByte(0, 0);
+        buf.writerIndex(1);
+
+        PacketPlayOutCustomPayload packet = new PacketPlayOutCustomPayload("MC|BOpen", new PacketDataSerializer(buf));
+        PlayerConnection pc = ((CraftPlayer) p).getHandle().playerConnection;
+        pc.sendPacket(packet);
+        p.getInventory().setItem(slot, old);
+    }
+
+    @Override
+    public org.bukkit.inventory.ItemStack getGUIBackground() {
+        org.bukkit.inventory.ItemStack item = new org.bukkit.inventory.ItemStack(Material.STAINED_GLASS_PANE, 1, (short)15);
+        ItemMeta meta = item.getItemMeta();
+        meta.setDisplayName(" ");
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    @Override
+    public org.bukkit.inventory.ItemStack createSkull(OfflinePlayer p) {
+        org.bukkit.inventory.ItemStack item = new org.bukkit.inventory.ItemStack(Material.SKULL_ITEM, 1, (short) 3);
+        SkullMeta meta = (SkullMeta) item.getItemMeta();
+        meta.setOwner(p.getName());
+        return item;
     }
 
 }
