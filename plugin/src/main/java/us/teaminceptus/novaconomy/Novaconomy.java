@@ -12,6 +12,7 @@ import org.bukkit.block.Block;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.bukkit.configuration.serialization.ConfigurationSerialization;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
@@ -32,9 +33,12 @@ import us.teaminceptus.novaconomy.abstraction.Wrapper;
 import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.NovaPlayer;
+import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.events.InterestEvent;
 import us.teaminceptus.novaconomy.api.events.player.PlayerChangeBalanceEvent;
+import us.teaminceptus.novaconomy.api.util.Price;
+import us.teaminceptus.novaconomy.api.util.Product;
 
 import java.io.File;
 import java.io.IOException;
@@ -244,7 +248,7 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 	private static CommandWrapper getCommandWrapper() {
 		try {
 			final int wrapperVersion;
-			String dec = "auto";
+			String dec;
 			String k = "CommandVersion";
 
 			if (funcConfig.isInt(k)) {
@@ -320,21 +324,19 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 	};
 
 	private static FileConfiguration funcConfig;
-	
+
+	private static final List<Class<? extends ConfigurationSerializable>> SERIALIZABLE = new ArrayList<Class<? extends ConfigurationSerializable>>() {{
+		add(Economy.class);
+		add(Business.class);
+		add(Price.class);
+		add(Product.class);
+	}};
+
 	public void onEnable() {
 		saveDefaultConfig();
 		saveConfig();
 
-		File functionality = new File(getDataFolder(), "functionality.yml");
-		if (!functionality.exists()) saveResource("functionality.yml", false);
-
-		funcConfig = YamlConfiguration.loadConfiguration(functionality);
-
-		if (!funcConfig.isSet("CommandVersion")) {
-			funcConfig.set("CommandVersion", "auto");
-		}
-
-		try { funcConfig.save(functionality); } catch (IOException e) { e.printStackTrace(); }
+		funcConfig = NovaConfig.loadFunctionalityFile();
 
 		for (Language l : Language.values()) {
 			File f = new File(getDataFolder(), "novaconomy" + ( l.getIdentifier().length() == 0 ? "" : "_" + l.getIdentifier() ) + ".properties");
@@ -346,7 +348,7 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 			getLogger().info("Loaded Language " + l.name() + "...");
 		}
 
-		ConfigurationSerialization.registerClass(Economy.class);
+		SERIALIZABLE.forEach(ConfigurationSerialization::registerClass);
 
 		playerDir = new File(getDataFolder(), "players");
 		File economyFile = new File(getDataFolder(), "economies.yml");
