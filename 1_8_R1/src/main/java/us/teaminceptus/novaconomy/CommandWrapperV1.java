@@ -7,6 +7,7 @@ import org.bukkit.command.*;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import us.teaminceptus.novaconomy.abstraction.CommandWrapper;
+import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 
 import java.lang.reflect.Constructor;
@@ -317,7 +318,7 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                             return false;
                         }
 
-                        interest(sender, args[1].equalsIgnoreCase("enable"));
+                        interest(sender, args[1].equalsIgnoreCase("enable") || args[1].equalsIgnoreCase("true"));
                         break;
                     }
                     case "check":
@@ -354,7 +355,53 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
 
                         break;
                     }
+                    default: {
+                        sender.sendMessage(getMessage("error.argument"));
+                        return false;
+                    }
                 }
+                break;
+            }
+            case "business": {
+                if (args.length < 1) {
+                    sender.sendMessage(getMessage("error.argument"));
+                    return false;
+                }
+
+
+
+                switch (args[0].toLowerCase()) {
+                    case "information":
+                    case "info": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+                        businessInfo(p);
+                        break;
+                    }
+                    case "query": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
+                        if (args.length < 2) {
+                            sender.sendMessage(getMessage("error.argument.business"));
+                            return false;
+                        }
+
+                        if (Business.getByName(args[1]) == null) {
+                            sender.sendMessage(getMessage("error.business.inexistent"));
+                            return false;
+                        }
+
+                        Business b = Business.getByName(args[1]);
+                        businessQuery(p, b);
+                        break;
+                    }
+                    default: {
+                        sender.sendMessage(getMessage("error.argument"));
+                        return false;
+                    }
+                }
+                break;
             }
         }
         return true;
