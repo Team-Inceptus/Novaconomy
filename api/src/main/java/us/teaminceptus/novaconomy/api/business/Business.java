@@ -1,14 +1,19 @@
 package us.teaminceptus.novaconomy.api.business;
 
 import org.apache.commons.lang.Validate;
+import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
+import org.bukkit.enchantments.Enchantment;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.api.NovaConfig;
+import us.teaminceptus.novaconomy.api.util.BusinessProduct;
 import us.teaminceptus.novaconomy.api.util.Product;
 
 import java.io.IOException;
@@ -28,7 +33,7 @@ public final class Business implements ConfigurationSerializable {
 
     private final Material icon;
 
-    private final List<Product> products = new ArrayList<>();
+    private final List<BusinessProduct> products = new ArrayList<>();
 
     private final List<ItemStack> resources = new ArrayList<>();
 
@@ -37,7 +42,7 @@ public final class Business implements ConfigurationSerializable {
         this.name = name;
         this.icon = icon;
         this.owner = owner;
-        if (products != null)  this.products.addAll(products);
+        if (products != null) products.forEach(p -> this.products.add(new BusinessProduct(p, this)));
         if (resources != null) this.resources.addAll(resources);
     }
 
@@ -73,7 +78,7 @@ public final class Business implements ConfigurationSerializable {
      * @return Products to add
      */
     @NotNull
-    public List<Product> getProducts() { return this.products; }
+    public List<BusinessProduct> getProducts() { return this.products; }
 
     @Override
     public Map<String, Object> serialize() {
@@ -120,11 +125,11 @@ public final class Business implements ConfigurationSerializable {
 
     /**
      * Removes an Array of Products from this Business.
-     * @param products Products to Remove
+     * @param products Business Products to Remove
      * @return this Business, for chaining
      */
     @NotNull
-    public Business removeProduct(@Nullable Product... products) {
+    public Business removeProduct(@Nullable BusinessProduct... products) {
         if (products == null) return this;
         if (products.length < 1) return this;
         return removeProduct(Arrays.asList(products));
@@ -161,8 +166,9 @@ public final class Business implements ConfigurationSerializable {
      * @return this Business, for chaining
      */
     @NotNull
-    public Business removeProduct(@Nullable Collection<? extends Product> products) {
+    public Business removeProduct(@Nullable Collection<? extends BusinessProduct> products) {
         if (products == null) return this;
+        products.forEach(p -> { if (p.getBusiness().equals(this)) this.products.remove(p); });
         this.products.removeAll(products);
         saveBusiness();
         return this;
@@ -185,8 +191,15 @@ public final class Business implements ConfigurationSerializable {
      * @return Business Icon
      */
     @NotNull
-    public Material getIcon() {
-        return icon;
+    public ItemStack getIcon() {
+        ItemStack item = new ItemStack(icon);
+        ItemMeta meta = item.getItemMeta();
+        meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+        meta.addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1, true);
+        meta.setDisplayName(ChatColor.YELLOW + this.name);
+        item.setItemMeta(meta);
+
+        return item;
     }
 
     /**
@@ -197,7 +210,7 @@ public final class Business implements ConfigurationSerializable {
     @NotNull
     public Business addProduct(@Nullable Collection<? extends Product> products) {
         if (products == null) return this;
-        this.products.addAll(products);
+        products.forEach(p -> this.products.add(new BusinessProduct(p, this)));
         saveBusiness();
         return this;
     }
@@ -287,6 +300,19 @@ public final class Business implements ConfigurationSerializable {
     public static boolean exists(@Nullable String name) {
         if (name == null) return false;
         return getByName(name) != null;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Business business = (Business) o;
+        return id.equals(business.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, name, owner, icon);
     }
 
     /**
