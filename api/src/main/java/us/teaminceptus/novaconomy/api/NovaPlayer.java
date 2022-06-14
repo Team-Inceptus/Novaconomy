@@ -16,10 +16,10 @@ import java.io.IOException;
  */
 public final class NovaPlayer {
 
-    private final OfflinePlayer player;
+    private final OfflinePlayer p;
 
-    private final File playerFile;
-    private final FileConfiguration playerConfig;
+    private final File pFile;
+    private final FileConfiguration pConfig;
 
     /**
      * Creates a new Player.
@@ -28,23 +28,23 @@ public final class NovaPlayer {
      */
     public NovaPlayer(OfflinePlayer p) throws IllegalArgumentException {
         if (p == null) throw new IllegalArgumentException("player is null");
-        this.player = p;
+        this.p = p;
 
         if (!(NovaConfig.getPlayerDirectory().exists())) {
             NovaConfig.getPlayerDirectory().mkdir();
         }
 
-        this.playerFile = new File(NovaConfig.getPlayerDirectory(), p.getUniqueId() + ".yml");
+        this.pFile = new File(NovaConfig.getPlayerDirectory(), p.getUniqueId() + ".yml");
 
-        if (!(this.playerFile.exists())) {
+        if (!(this.pFile.exists())) {
             try {
-                this.playerFile.createNewFile();
+                this.pFile.createNewFile();
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
 
-        this.playerConfig = YamlConfiguration.loadConfiguration(playerFile);
+        this.pConfig = YamlConfiguration.loadConfiguration(pFile);
 
         reloadValues();
     }
@@ -54,7 +54,7 @@ public final class NovaPlayer {
      * @return ({@link FileConfiguration} representing player config
      */
     public FileConfiguration getPlayerConfig() {
-        return this.playerConfig;
+        return this.pConfig;
     }
 
     /**
@@ -62,7 +62,7 @@ public final class NovaPlayer {
      * @return OfflinePlayer of this object
      */
     public OfflinePlayer getPlayer() {
-        return this.player;
+        return this.p;
     }
 
     /**
@@ -70,7 +70,7 @@ public final class NovaPlayer {
      * @return Player if online, else null
      */
     public Player getOnlinePlayer() {
-        if (this.player.isOnline()) return this.player.getPlayer();
+        if (this.p.isOnline()) return this.p.getPlayer();
         else return null;
     }
 
@@ -82,7 +82,7 @@ public final class NovaPlayer {
      */
     public double getBalance(Economy econ) throws IllegalArgumentException {
         if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
-        return this.playerConfig.getConfigurationSection("economies").getConfigurationSection(econ.getName().toLowerCase()).getDouble("balance");
+        return this.pConfig.getConfigurationSection("economies").getConfigurationSection(econ.getName().toLowerCase()).getDouble("balance");
     }
 
     /**
@@ -95,10 +95,10 @@ public final class NovaPlayer {
         if (newBal < 0) throw new IllegalArgumentException("Balance cannot be negative");
         if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
 
-        this.playerConfig.getConfigurationSection("economies").getConfigurationSection(econ.getName().toLowerCase()).set("balance", newBal);
+        this.pConfig.getConfigurationSection("economies").getConfigurationSection(econ.getName().toLowerCase()).set("balance", newBal);
 
         try {
-            this.playerConfig.save(this.playerFile);
+            this.pConfig.save(this.pFile);
         } catch (IOException e) {
             NovaConfig.getPlugin().getLogger().info("Error saving player file");
             e.printStackTrace();
@@ -129,36 +129,33 @@ public final class NovaPlayer {
         setBalance(econ, getBalance(econ) - remove);
     }
 
+    /**
+     * Whether this Nova Player is online.
+     * @return true if online, else false
+     */
+    public boolean isOnline() {
+        return p.isOnline();
+    }
+
     private void reloadValues() {
-        OfflinePlayer p = player;
+        OfflinePlayer p = this.p;
 
         // General Info
-        if (!(playerConfig.isString("name"))) {
-            playerConfig.set("name", p.getName());
-        }
-
-        if (!(playerConfig.isBoolean("op"))) {
-            playerConfig.set("op", p.isOp());
-        }
+        if (!pConfig.isString("name")) pConfig.set("name", p.getName());
+        if (!pConfig.isBoolean("op")) pConfig.set("op", p.isOp());
 
         // Economies
-        if (!(playerConfig.isConfigurationSection("economies"))) {
-            playerConfig.createSection("economies");
-        }
+        if (!(pConfig.isConfigurationSection("economies"))) pConfig.createSection("economies");
 
-        ConfigurationSection economies = playerConfig.getConfigurationSection("economies");
+        ConfigurationSection economies = pConfig.getConfigurationSection("economies");
 
         if (Economy.getEconomies().size() > 0)
             for (Economy e : Economy.getEconomies()) {
-                if (!(economies.isConfigurationSection(e.getName().toLowerCase()))) {
-                    economies.createSection(e.getName().toLowerCase());
-                }
+                String path = e.getName().toLowerCase();
+                if (!economies.isConfigurationSection(path)) economies.createSection(path);
+                ConfigurationSection econ = economies.getConfigurationSection(path);
 
-                ConfigurationSection econ = economies.getConfigurationSection(e.getName().toLowerCase());
-
-                if (!(econ.isDouble("balance"))) {
-                    econ.set("balance", 0D);
-                }
+                if (!econ.isDouble("balance")) econ.set("balance", 0D);
             }
     }
 }
