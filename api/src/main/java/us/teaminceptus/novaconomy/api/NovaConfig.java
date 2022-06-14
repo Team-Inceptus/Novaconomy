@@ -24,6 +24,18 @@ public interface NovaConfig  {
     }
 
     /**
+     * Reloads Novaconomy's Language Files.
+     */
+    static void reloadLanguages() {
+        for (Language l : Language.values()) {
+            String fName = "novaconomy" + (l.getIdentifier().length() == 0 ? "" : "_" + l.getIdentifier()) + ".properties";
+            File f = new File(getDataFolder(), fName);
+
+            if (!f.exists()) getPlugin().saveResource(fName, false);
+        }
+    }
+
+    /**
      * Whether or not Notifications is turned on inside of the configuration.
      * @return true if notifications, else false
      */
