@@ -22,7 +22,7 @@ jobs:
           java-version: '17'
           cache: 'maven'
       - name: Maven Setup
-        run: mvn -B package
+        run: mvn -B package install
       - name: Maven Information
         run: mvn dependency:tree -Ddetail=true
 
