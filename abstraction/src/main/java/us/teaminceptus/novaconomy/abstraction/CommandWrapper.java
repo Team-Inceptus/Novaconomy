@@ -105,7 +105,7 @@ public interface CommandWrapper {
             balanceInfo.add(ChatColor.GOLD + econ.getName() + ChatColor.AQUA + " - " + ChatColor.GREEN + econ.getSymbol() + Math.floor(np.getBalance(econ) * 100) / 100);
         }
 
-        p.sendMessage(get("command.balance.balances") + "\n" + String.join("\n", balanceInfo.toArray(new String[]{})));
+        p.sendMessage(get("command.balance.balances") + "\n" + String.join("\n", balanceInfo.toArray(new String[0])));
     }
 
     default void reloadConfig(CommandSender sender) {
@@ -119,6 +119,7 @@ public interface CommandWrapper {
         plugin.reloadConfig();
         NovaConfig.loadConfig();
         NovaConfig.reloadInterest();
+        NovaConfig.reloadLanguages();
         sender.sendMessage(get("command.reload.success"));
     }
 
