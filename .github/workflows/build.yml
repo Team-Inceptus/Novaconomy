@@ -21,10 +21,10 @@ jobs:
           distribution: 'temurin'
           java-version: '8'
           cache: 'maven'
-      - name: Information
-        run: mvn dependency:tree -Ddetail=true
       - name: Maven Setup
         run: mvn -B package
+      - name: Maven Information
+        run: mvn dependency:tree -Ddetail=true
 
   build:
     runs-on: ubuntu-latest
