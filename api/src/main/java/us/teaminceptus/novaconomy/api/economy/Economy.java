@@ -294,7 +294,7 @@ public final class Economy implements ConfigurationSerializable {
      * @return Economy found, or null if not found or if UUID is null
      */
     @Nullable
-    public static Economy getById(@Nullable UUID uid) {
+    public static Economy getEconomy(@Nullable UUID uid) {
         if (uid == null) return null;
 
         for (Economy econ : Economy.getEconomies()) if (econ.getUniqueId().equals(uid)) return econ;
