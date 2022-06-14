@@ -1,5 +1,6 @@
 package us.teaminceptus.novaconomy.api.util;
 
+import com.google.common.collect.Maps;
 import org.apache.commons.lang.Validate;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.bukkit.inventory.ItemStack;
@@ -13,7 +14,7 @@ import java.util.Map;
 /**
  * Represents a Business Product
  */
-public final class Product implements ConfigurationSerializable {
+public class Product implements ConfigurationSerializable {
 
     private ItemStack item;
 
@@ -83,6 +84,15 @@ public final class Product implements ConfigurationSerializable {
     @NotNull
     public Economy getEconomy() {
         return price.getEconomy();
+    }
+
+    /**
+     * Converts this Product to an immutable Map Entry.
+     * @return Immutable Map Entry
+     */
+    @NotNull
+    public Map.Entry<ItemStack, Price> toEntry() {
+        return Maps.immutableEntry(this.item, this.price);
     }
 
     /**
