@@ -6,7 +6,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
-import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
@@ -19,9 +18,12 @@ import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.util.BusinessProduct;
-import us.teaminceptus.novaconomy.api.util.Price;
+import us.teaminceptus.novaconomy.api.util.Product;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public interface Wrapper {
@@ -38,9 +40,9 @@ public interface Wrapper {
 
     String getNBTString(ItemStack item, String key);
 
-    void setNBT(ItemStack item, String key, String value);
+    ItemStack setNBT(ItemStack item, String key, String value);
 
-    void setNBT(ItemStack item, String key, ItemStack value);
+    ItemStack setNBT(ItemStack item, String key, ItemStack value);
 
     ItemStack getNBTItem(ItemStack item, String key);
 
@@ -49,17 +51,54 @@ public interface Wrapper {
     ItemStack getGUIBackground();
 
     ItemStack createSkull(OfflinePlayer p);
-
-    <T extends ConfigurationSerializable> T getNBTSerializable(ItemStack item, String key, Class<T> clazz);
-
-    void setNBT(ItemStack item, String key, ConfigurationSerializable serializable);
+    
+    default ItemStack setID(ItemStack item, String id) {
+        return setNBT(item, "id", id);
+    }
 
     double getNBTDouble(ItemStack item, String key);
 
-    void setNBT(ItemStack item, String key, double value);
+    ItemStack setNBT(ItemStack item, String key, double value);
+
+    ItemStack setNBT(ItemStack item, String key, boolean value);
+
+    boolean getNBTBoolean(ItemStack item, String key);
+
+    ItemStack normalize(ItemStack item);
+
+    default String getID(ItemStack item) { return getNBTString(item, "id"); }
 
     static Plugin getPlugin() {
         return Bukkit.getPluginManager().getPlugin("Novaconomy");
+    }
+
+    default ItemStack setNBT(ItemStack item, String key, Product p) {
+        ItemStack newItem = setNBT(item, key + "-product:amount", p.getPrice().getAmount());
+        newItem = setNBT(newItem, key + "-product:economy", p.getEconomy().getUniqueId().toString());
+        newItem = setNBT(newItem, key + "-product:item", normalize(p.getItem()));
+
+        if (p instanceof BusinessProduct) {
+            BusinessProduct bp = (BusinessProduct) p;
+            newItem = setNBT(newItem, key + "-bproduct:business", bp.getBusiness().getUniqueId().toString());
+        }
+
+        return newItem;
+    }
+
+    default Product getNBTProduct(ItemStack item, String key) {
+        double amount = getNBTDouble(item, key + "-product:amount");
+        Economy econ = Economy.getEconomy(UUID.fromString(getNBTString(item, key + "-product:economy")));
+        ItemStack product = normalize(getNBTItem(item, key + "-product:item"));
+
+        Product p = new Product(product, econ, amount);
+        try {
+            UUID business = UUID.fromString(getNBTString(item, key + "-bproduct:business"));
+
+            if (Business.exists(business)) return new BusinessProduct(p, Business.getById(business));
+            else return p;
+        } catch (IllegalArgumentException e) {
+            return p;
+        }
     }
 
     // Util
@@ -73,8 +112,8 @@ public interface Wrapper {
         meta.setDisplayName("" + ChatColor.YELLOW + amount + econ.getSymbol());
         meta.setLore(Collections.singletonList(ChatColor.GOLD + "" + amount + " " + econ.getName() + "(s)"));
 
-        setNBT(item, "economy", econ.getUniqueId().toString());
-        setNBT(item, "amount", amount + "");
+        item = setNBT(item, "economy", econ.getUniqueId().toString());
+        item = setNBT(item, "amount", amount);
 
         item.setItemMeta(meta);
         return item;
@@ -92,45 +131,56 @@ public interface Wrapper {
         ItemStack icon = new ItemStack(b.getIcon());
         ItemMeta iMeta = icon.getItemMeta();
         iMeta.setDisplayName(ChatColor.GOLD + b.getName());
-        iMeta.setLore(Collections.singletonList(ChatColor.YELLOW + "" + b.getUniqueId()));
+        iMeta.setLore(Collections.singletonList(ChatColor.YELLOW + "ID: " + b.getUniqueId()));
         icon.setItemMeta(iMeta);
         inv.setItem(14, icon);
 
-        AtomicInteger slot = new AtomicInteger(28);
+        AtomicInteger slot = new AtomicInteger(19);
         List<BusinessProduct> bProducts = b.getProducts();
-        Map<ItemStack, List<Price>> products = new HashMap<>();
+
+        for (int i = 46; i < 53; i++) inv.setItem(i, null);
 
         bProducts.forEach(p -> {
+            if (slot.get() == 26) slot.set(28);
             if (slot.get() == 35) slot.set(37);
             if (slot.get() == 44) slot.set(46);
             if (slot.get() >= 53) return;
 
             ItemStack item = p.getItem().clone();
-            Price price = p.getPrice();
-
-            if (products.containsKey(item)) {
-                List<Price> prices = new ArrayList<>(products.get(item));
-                prices.add(price);
-                products.put(item, prices);
-            } else products.put(item, new ArrayList<Price>() {{ add(price); }});
+            if (item.getType() == Material.AIR) return;
 
             ItemStack product = item.clone();
 
-            setNBT(product, "product", p);
-            setNBT(product, "id", "product:buy");
+            product = setNBT(product, "product", p);
+            product = setID(product, "product:buy");
 
-            ItemMeta meta = product.getItemMeta();
+            ItemMeta meta = product.hasItemMeta() ? product.getItemMeta() : Bukkit.getItemFactory().getItemMeta(product.getType());
 
             List<String> lore = meta.hasLore() ? meta.getLore() : new ArrayList<>();
             lore.add(" ");
 
             AtomicInteger i = new AtomicInteger(0);
-            products.get(item).forEach(pr ->
-                lore.add(String.format(get("constants.business.price"), i.incrementAndGet(), pr.getAmount(), p.getEconomy().getSymbol() ))
-            );
+            lore.add(String.format(get("constants.business.price"), String.format("%,.2f",p.getPrice().getAmount()).replace("D", ""), p.getEconomy().getSymbol() + ""));
+
+            boolean stock = true;
+
+            lore.add(" ");
+            if (!b.isInStock(item)) {
+                lore.add(ChatColor.RED + get("constants.business.no_stock"));
+                stock = false;
+            } else {
+                AtomicInteger index = new AtomicInteger(0);
+                b.getResources().forEach(res -> {
+                    if (item.isSimilar(res)) index.getAndAdd(res.getAmount());
+                });
+
+                lore.add(String.format(get("constants.business.stock_left"), index.get()));
+            }
 
             meta.setLore(lore);
             product.setItemMeta(meta);
+
+            product = setNBT(product, "product:in_stock", stock);
 
             inv.setItem(slot.get(), product);
             slot.incrementAndGet();
@@ -152,13 +202,9 @@ public interface Wrapper {
 
         if (size < 27) return inv;
 
-        for (int i = 0; i < 9; i++) {
-            inv.setItem(i, guiBG);
-        }
+        for (int i = 0; i < 9; i++) inv.setItem(i, guiBG);
 
-        for (int i = size - 9; i < size; i++) {
-            inv.setItem(i, guiBG);
-        }
+        for (int i = size - 9; i < size; i++) inv.setItem(i, guiBG);
 
         if (size >= 27) {
             inv.setItem(9, guiBG);
@@ -199,6 +245,10 @@ public interface Wrapper {
     }
 
     static String getMessage(String key) { return get("plugin.prefix") + get(key); }
+
+    default boolean isLegacy() {
+        return getCommandVersion() == 1;
+    }
 
     class CancelHolder implements InventoryHolder {
 

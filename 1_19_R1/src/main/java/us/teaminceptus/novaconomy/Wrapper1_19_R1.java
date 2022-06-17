@@ -1,6 +1,5 @@
 package us.teaminceptus.novaconomy;
 
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.TextComponent;
@@ -8,14 +7,12 @@ import net.minecraft.nbt.*;
 import net.minecraft.world.item.ItemStack;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
-import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.bukkit.craftbukkit.v1_19_R1.inventory.CraftItemStack;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import us.teaminceptus.novaconomy.abstraction.Wrapper;
 
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -46,7 +43,7 @@ public final class Wrapper1_19_R1 implements Wrapper {
     }
 
     @Override
-    public void setNBT(org.bukkit.inventory.ItemStack item, String key, String value) {
+    public org.bukkit.inventory.ItemStack setNBT(org.bukkit.inventory.ItemStack item, String key, String value) {
         ItemStack nmsitem = CraftItemStack.asNMSCopy(item);
         CompoundTag tag = nmsitem.getOrCreateTag();
         CompoundTag novaconomy = tag.getCompound(ROOT);
@@ -54,6 +51,7 @@ public final class Wrapper1_19_R1 implements Wrapper {
         novaconomy.putString(key, value);
         tag.put(ROOT, novaconomy);
         nmsitem.setTag(tag);
+        return CraftItemStack.asBukkitCopy(nmsitem);
     }
 
     @Override
@@ -75,29 +73,11 @@ public final class Wrapper1_19_R1 implements Wrapper {
         org.bukkit.inventory.ItemStack item = new org.bukkit.inventory.ItemStack(Material.PLAYER_HEAD);
         SkullMeta meta = (SkullMeta) item.getItemMeta();
         meta.setOwningPlayer(p);
+        item.setItemMeta(meta);
 
         return item;
     }
 
-    @Override
-    @SuppressWarnings("rawtypes")
-    public <T extends ConfigurationSerializable> T getNBTSerializable(org.bukkit.inventory.ItemStack item, String key, Class<T> clazz) {
-        try {
-            ItemStack nmsitem = CraftItemStack.asNMSCopy(item);
-            CompoundTag tag = nmsitem.getOrCreateTag();
-            CompoundTag novaconomy = tag.getCompound(ROOT);
-
-            Map map = (Map) getData(novaconomy);
-
-            Method m = clazz.getDeclaredMethod("deserialize", Map.class);
-            return clazz.cast(m.invoke(null, map));
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
-    }
-
-    @SuppressWarnings({"unchecked", "rawtypes"})
     private Object getData(Tag b) {
         switch (b.getId()) {
             case 1: return ((ByteTag) b).getAsByte();
@@ -109,7 +89,7 @@ public final class Wrapper1_19_R1 implements Wrapper {
             case 7: return ((ByteArrayTag) b).getAsByteArray();
             case 8: return b.getAsString();
             case 9: {
-                List l = new ArrayList<>();
+                List<Object> l = new ArrayList<>();
 
                 ListTag list = (ListTag) b;
                 for (Tag nbtBase : list) l.add(getData(nbtBase));
@@ -130,30 +110,16 @@ public final class Wrapper1_19_R1 implements Wrapper {
     }
 
     @Override
-    public void setNBT(org.bukkit.inventory.ItemStack item, String key, ConfigurationSerializable serializable) {
-        try {
-            ItemStack nmsitem = CraftItemStack.asNMSCopy(item);
-            CompoundTag tag = nmsitem.getOrCreateTag();
-            CompoundTag novaconomy = tag.getCompound(ROOT);
-
-            CompoundTag cmp = TagParser.parseTag(serializable.serialize().toString());
-            novaconomy.put(key, cmp);
-            tag.put(ROOT, novaconomy);
-            nmsitem.setTag(tag);
-        } catch (CommandSyntaxException e) {
-            e.printStackTrace();
-        }
-    }
-
-    @Override
-    public void setNBT(org.bukkit.inventory.ItemStack item, String key, org.bukkit.inventory.ItemStack value) {
+    public org.bukkit.inventory.ItemStack setNBT(org.bukkit.inventory.ItemStack item, String key, org.bukkit.inventory.ItemStack value) {
         ItemStack nmsitem = CraftItemStack.asNMSCopy(item);
         CompoundTag tag = nmsitem.getOrCreateTag();
         CompoundTag novaconomy = tag.getCompound(ROOT);
 
-        novaconomy.put(key, CraftItemStack.asNMSCopy(value).getTag());
+        ItemStack nmsvalue = CraftItemStack.asNMSCopy(value);
+        novaconomy.put(key, nmsvalue.save(nmsvalue.getOrCreateTag()));
         tag.put(ROOT, novaconomy);
         nmsitem.setTag(tag);
+        return CraftItemStack.asBukkitCopy(nmsitem);
     }
 
     @Override
@@ -176,7 +142,7 @@ public final class Wrapper1_19_R1 implements Wrapper {
     }
 
     @Override
-    public void setNBT(org.bukkit.inventory.ItemStack item, String key, double value) {
+    public org.bukkit.inventory.ItemStack setNBT(org.bukkit.inventory.ItemStack item, String key, double value) {
         ItemStack nmsitem = CraftItemStack.asNMSCopy(item);
         CompoundTag tag = nmsitem.getOrCreateTag();
         CompoundTag novaconomy = tag.getCompound(ROOT);
@@ -184,6 +150,38 @@ public final class Wrapper1_19_R1 implements Wrapper {
         novaconomy.putDouble(key, value);
         tag.put(ROOT, novaconomy);
         nmsitem.setTag(tag);
+        return CraftItemStack.asBukkitCopy(nmsitem);
+    }
+
+    @Override
+    public org.bukkit.inventory.ItemStack setNBT(org.bukkit.inventory.ItemStack item, String key, boolean value) {
+        ItemStack nmsitem = CraftItemStack.asNMSCopy(item);
+        CompoundTag tag = nmsitem.hasTag() ? nmsitem.getTag() : new CompoundTag();
+        CompoundTag novaconomy = tag.getCompound(ROOT);
+
+        novaconomy.putBoolean(key, value);
+        tag.put(ROOT, novaconomy);
+        return CraftItemStack.asBukkitCopy(nmsitem);
+    }
+
+    @Override
+    public boolean getNBTBoolean(org.bukkit.inventory.ItemStack item, String key) {
+        ItemStack nmsitem = CraftItemStack.asNMSCopy(item);
+        CompoundTag tag = nmsitem.getOrCreateTag();
+        CompoundTag novaconomy = tag.getCompound(ROOT);
+
+        return novaconomy.getBoolean(key);
+    }
+
+    @Override
+    public org.bukkit.inventory.ItemStack normalize(org.bukkit.inventory.ItemStack item) {
+        ItemStack nmsitem = CraftItemStack.asNMSCopy(item);
+        CompoundTag tag = nmsitem.getOrCreateTag();
+
+        tag.remove("id");
+        tag.remove("Count");
+        nmsitem.setTag(tag);
+        return CraftItemStack.asBukkitCopy(nmsitem);
     }
 
 }
