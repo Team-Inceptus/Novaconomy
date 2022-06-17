@@ -116,6 +116,12 @@ public final class Price implements ConfigurationSerializable {
     }
 
     /**
+     * Fetches the Price's Symbol.
+     * @return Price Symbol
+     */
+    public char getPriceSymbol() { return this.econ.getSymbol(); }
+
+    /**
      * Removes this amount from this Price's current amount.
      * @param amount Amount to remove
      * @return this Price, for chaining
@@ -130,7 +136,7 @@ public final class Price implements ConfigurationSerializable {
     public Map<String, Object> serialize() {
         return new HashMap<String, Object>() {{
             put("amount", amount);
-            put("economy", econ);
+            put("economy", econ.getName().toLowerCase());
         }};
     }
 
@@ -145,7 +151,7 @@ public final class Price implements ConfigurationSerializable {
         if (serial == null) return null;
 
         try {
-            return new Price((Economy) serial.get("economy"), (double) serial.get("amount"));
+            return new Price(Economy.getEconomy((String) serial.get("economy")), (double) serial.get("amount"));
         } catch (ClassCastException | NullPointerException e) {
             throw new IllegalArgumentException(e);
         }

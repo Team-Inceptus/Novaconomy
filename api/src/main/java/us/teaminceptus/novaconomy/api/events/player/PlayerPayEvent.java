@@ -9,7 +9,7 @@ import us.teaminceptus.novaconomy.api.economy.Economy;
  */
 public class PlayerPayEvent extends PlayerChangeBalanceEvent {
 
-    private Player payer;
+    private final Player payer;
 
     /**
      * Represents an Event when a Player pays another Player

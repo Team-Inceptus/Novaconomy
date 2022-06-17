@@ -25,14 +25,23 @@ public interface NovaConfig  {
 
     /**
      * Reloads Novaconomy's Language Files.
+     * @param replace if should replace files (defaults to false)
      */
-    static void reloadLanguages() {
+    static void reloadLanguages(boolean replace) {
         for (Language l : Language.values()) {
             String fName = "novaconomy" + (l.getIdentifier().length() == 0 ? "" : "_" + l.getIdentifier()) + ".properties";
             File f = new File(getDataFolder(), fName);
 
+            if (replace && f.exists()) f.delete();
+
             if (!f.exists()) getPlugin().saveResource(fName, false);
         }
+    }
+    /**
+     * Reloads Novaconomy's Language Files.
+     */
+    static void reloadLanguages() {
+        reloadLanguages(false);
     }
 
     /**
@@ -93,10 +102,17 @@ public interface NovaConfig  {
     }
 
     static File getBusinessFile() {
-        return new File(getDataFolder(), "businesses.yml");
+        File f = new File(getDataFolder(), "businesses.yml");
+        if (!f.exists()) getPlugin().saveResource("businesses.yml", false);
+
+        return f;
     }
 
-    static FileConfiguration getBusinessConfiguration() {
+    /**
+     * Loads the businesses.yml file.
+     * @return Businesses File
+     */
+    static FileConfiguration loadBusinesses() {
         return YamlConfiguration.loadConfiguration(getBusinessFile());
     }
 

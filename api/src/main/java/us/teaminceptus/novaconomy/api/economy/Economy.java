@@ -236,6 +236,12 @@ public final class Economy implements ConfigurationSerializable {
     }
 
     /**
+     * Gets the Economy Icon's Type.
+     * @return Icon Material Type
+     */
+    public Material getIconType() { return this.icon.getType(); }
+
+    /**
      * Convert this economy to another economy
      * @param to The New Economy to convert to
      * @param fromAmount How much amount is to be converted

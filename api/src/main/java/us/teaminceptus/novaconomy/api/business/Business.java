@@ -19,6 +19,8 @@ import us.teaminceptus.novaconomy.api.util.Product;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Represents a Novaconomy Business
@@ -37,13 +39,14 @@ public final class Business implements ConfigurationSerializable {
 
     private final List<ItemStack> resources = new ArrayList<>();
 
-    private Business(String name, Material icon, OfflinePlayer owner, Collection<Product> products, Collection<ItemStack> resources) {
+    private Business(String name, Material icon, OfflinePlayer owner, Collection<Product> products, Collection<ItemStack> resources, boolean save) {
         this.id = UUID.nameUUIDFromBytes(name.getBytes(StandardCharsets.UTF_8));
         this.name = name;
         this.icon = icon;
         this.owner = owner;
         if (products != null) products.forEach(p -> this.products.add(new BusinessProduct(p, this)));
         if (resources != null) this.resources.addAll(resources);
+        if (save) saveBusiness();
     }
 
     /**
@@ -82,12 +85,19 @@ public final class Business implements ConfigurationSerializable {
 
     @Override
     public Map<String, Object> serialize() {
+        Map<String, ItemStack> map = new HashMap<>();
+        AtomicInteger index = new AtomicInteger(0);
+        resources.forEach(i -> map.put(index.getAndIncrement() + "", i));
+
+        List<Product> p = new ArrayList<>();
+        products.forEach(pr -> p.add(new Product(pr.getItem(), pr.getPrice())));
+
         return new HashMap<String, Object>() {{
             put("name", name);
             put("owner", owner);
-            put("products", products);
-            put("resources", resources);
             put("icon", icon.name());
+            put("resources", map);
+            put("products", p);
         }};
     }
 
@@ -113,14 +123,55 @@ public final class Business implements ConfigurationSerializable {
 
     /**
      * Adds a Collection of Resources available for purchase from this Business.
-     * @param items Items to add
+     * @param resources Items to add
      * @return this Business, fo rchaining
      */
     @NotNull
-    public Business addResource(@Nullable Collection<ItemStack> items) {
-        if (items == null) return this;
-        this.resources.addAll(items);
+    public Business addResource(@Nullable Collection<? extends ItemStack> resources) {
+        if (resources == null) return this;
+
+        List<ItemStack> items = new ArrayList<>(resources);
+        Map<Integer, ItemStack> res = new HashMap<>();
+        AtomicInteger rIndex = new AtomicInteger();
+        items.forEach(i -> {
+            if (this.resources.contains(i)) {
+                int index = this.resources.indexOf(i);
+                if (this.resources.get(index).getAmount() < this.resources.get(index).getMaxStackSize()) {
+                    ItemStack clone = i.clone();
+                    clone.setAmount(i.getAmount() + 1);
+                    res.put(rIndex.get(), clone);
+                } else res.put(rIndex.get(), i);
+            } else res.put(rIndex.get(), i);
+            rIndex.getAndIncrement();
+        });
+
+        this.resources.addAll(res.values());
+        saveBusiness();
         return this;
+    }
+
+    /**
+     * Whether this item is in stock.
+     * @param item Item to test
+     * @return true if item is in stock, else false
+     */
+    public boolean isInStock(@Nullable ItemStack item) {
+        if (item == null) return false;
+        for (ItemStack i : resources) if (i.isSimilar(item)) return true;
+
+        return false;
+    }
+
+    /**
+     * Whether a Resource matching this Material is in stock.
+     * @param m Material to use
+     * @return true if material matches an item in stock, else false
+     */
+    public boolean isInStock(@Nullable Material m) {
+        if (m == null) return false;
+        for (ItemStack i : resources) if (i.getType() == m) return true;
+
+        return false;
     }
 
     /**
@@ -155,7 +206,16 @@ public final class Business implements ConfigurationSerializable {
     @NotNull
     public Business removeResource(@Nullable Collection<? extends ItemStack> resources) {
         if (resources == null) return this;
-        this.resources.removeAll(resources);
+        resources.forEach(i -> {
+            if (this.resources.contains(i)) {
+                int index = this.resources.indexOf(i);
+                if (this.resources.get(index).getAmount() > this.resources.get(index).getMaxStackSize()) {
+                    ItemStack clone = i.clone();
+                    clone.setAmount(clone.getAmount() - 1);
+                    this.resources.set(index, clone);
+                } else this.resources.remove(i);
+            }
+        });
         saveBusiness();
         return this;
     }
@@ -172,6 +232,41 @@ public final class Business implements ConfigurationSerializable {
         this.products.removeAll(products);
         saveBusiness();
         return this;
+    }
+
+    /**
+     * Whether this Item is a Registered Product.
+     * @param i Item to test
+     * @return true if item is product, else false
+     */
+    public boolean isProduct(@Nullable ItemStack i) {
+        if (i == null) return false;
+        ItemStack item = i.clone();
+        AtomicBoolean state = new AtomicBoolean(false);
+        for (BusinessProduct p : this.products) {
+            ItemStack pr = p.getItem();
+
+            if (!pr.hasItemMeta() && !item.hasItemMeta() && item.getType() == pr.getType()) { state.set(true); break; }
+            if (pr.isSimilar(item)) { state.set(true); break; }
+
+        }
+
+        return state.get();
+    }
+
+    /**
+     * Whether one of the products has this Material as its product.
+     * @param m Material to test
+     * @return true if product has material, else false
+     */
+    public boolean isProduct(@Nullable Material m) {
+        if (m == null) return false;
+        AtomicBoolean state = new AtomicBoolean(false);
+        this.products.forEach(p -> {
+            if (p.getItem().getType() == m) state.set(true);
+        });
+
+        return state.get();
     }
 
     /**
@@ -225,12 +320,14 @@ public final class Business implements ConfigurationSerializable {
     public static Business deserialize(@Nullable Map<String, Object> serial) {
         if (serial == null) return null;
 
+        Map<String, ItemStack> res = (Map<String, ItemStack>) serial.get("resources");
+        List<ItemStack> resources = new ArrayList<>(res.values());
+
         return new Business(
                 (String) serial.get("name"),
                 Material.valueOf((String) serial.get("icon")),
                 (OfflinePlayer) serial.get("owner"),
-                (List<Product>) serial.get("products"),
-                (List<ItemStack>) serial.get("resources")
+                (List<Product>) serial.get("products"), resources, false
         );
     }
 
@@ -238,8 +335,7 @@ public final class Business implements ConfigurationSerializable {
      * Saves this Business to the Businesses File.
      */
     public void saveBusiness() {
-        FileConfiguration config = NovaConfig.getBusinessConfiguration();
-
+        FileConfiguration config = NovaConfig.loadBusinesses();
         config.set(this.id.toString(), this);
 
         try { config.save(NovaConfig.getBusinessFile()); } catch (IOException e) { e.printStackTrace(); }
@@ -252,7 +348,7 @@ public final class Business implements ConfigurationSerializable {
     @NotNull
     public static List<Business> getBusinesses() {
         List<Business> businesses = new ArrayList<>();
-        FileConfiguration config = NovaConfig.getBusinessConfiguration();
+        FileConfiguration config = NovaConfig.loadBusinesses();
 
         config.getKeys(false).forEach(s -> businesses.add((Business) config.get(s)));
 
@@ -369,17 +465,19 @@ public final class Business implements ConfigurationSerializable {
         /**
          * Builds a Novaconomy Business.
          * @return Built Novaconomy Business
-         * @throws IllegalArgumentException if a part is missing, null, or Business exists
+         * @throws IllegalArgumentException if a part is missing or is null
+         * @throws UnsupportedOperationException if Business exists
          */
         @NotNull
-        public Business build() throws IllegalArgumentException {
+        public Business build() throws IllegalArgumentException, UnsupportedOperationException {
             Validate.notNull(owner, "Owner cannot be null");
             Validate.notNull(name, "Name cannot be null");
             Validate.notNull(icon, "Icon cannot be null");
 
-            Business b = new Business(name, icon, owner, null, null);
+            Business b = new Business(name, icon, owner, null, null, false);
 
-            Validate.isTrue(NovaConfig.getBusinessConfiguration().isSet(b.id.toString()), "Business already exists");
+            if (Business.exists(name)) throw new UnsupportedOperationException("Business already exists");
+
             b.saveBusiness();
 
             return b;

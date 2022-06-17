@@ -12,9 +12,9 @@ import us.teaminceptus.novaconomy.api.economy.Economy;
 public class PlayerChangeBalanceEvent extends PlayerEconomyEvent implements Cancellable {
 
     private boolean isCancelled;
-    private boolean isNatural;
-    private double newBal;
-    private double previousBal;
+    private final boolean isNatural;
+    private final double newBal;
+    private final double previousBal;
 
     /**
      * Called when a Player's Balance Changes

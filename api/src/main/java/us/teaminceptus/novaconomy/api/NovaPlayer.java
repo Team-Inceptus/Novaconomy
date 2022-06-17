@@ -5,7 +5,9 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
+import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.api.economy.Economy;
+import us.teaminceptus.novaconomy.api.util.Product;
 
 import java.io.File;
 import java.io.IOException;
@@ -30,18 +32,14 @@ public final class NovaPlayer {
         if (p == null) throw new IllegalArgumentException("player is null");
         this.p = p;
 
-        if (!(NovaConfig.getPlayerDirectory().exists())) {
-            NovaConfig.getPlayerDirectory().mkdir();
-        }
+        if (!(NovaConfig.getPlayerDirectory().exists())) NovaConfig.getPlayerDirectory().mkdir();
 
         this.pFile = new File(NovaConfig.getPlayerDirectory(), p.getUniqueId() + ".yml");
 
-        if (!(this.pFile.exists())) {
-            try {
-                this.pFile.createNewFile();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+        if (!(this.pFile.exists())) try {
+            this.pFile.createNewFile();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
 
         this.pConfig = YamlConfiguration.loadConfiguration(pFile);
@@ -95,7 +93,7 @@ public final class NovaPlayer {
         if (newBal < 0) throw new IllegalArgumentException("Balance cannot be negative");
         if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
 
-        this.pConfig.getConfigurationSection("economies").getConfigurationSection(econ.getName().toLowerCase()).set("balance", newBal);
+        this.pConfig.set("economies." + econ.getName().toLowerCase() + ".balance", newBal);
 
         try {
             this.pConfig.save(this.pFile);
@@ -127,6 +125,16 @@ public final class NovaPlayer {
         if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
 
         setBalance(econ, getBalance(econ) - remove);
+    }
+
+    /**
+     * Whether this Nova Player can afford a Product.
+     * @param p Product to buy
+     * @return true if can afford, else false
+     */
+    public boolean canAfford(@Nullable Product p) {
+        if (p == null) return false;
+        return getBalance(p.getEconomy()) >= p.getPrice().getAmount();
     }
 
     /**
