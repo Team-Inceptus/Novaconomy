@@ -66,6 +66,10 @@ public final class CommandWrapperV2 implements CommandWrapper {
         return list;
     }
 
+    private static String get(String key) {
+        return CommandWrapper.get(key);
+    }
+
     private static @SafeVarargs <T> List<String> toStringList(Function<T, String> func, T... elements) {
         return toStringList(func, Arrays.asList(elements));
     }
@@ -81,6 +85,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
         return true;
     }
 
+    @Override
     @Command({"ehelp", "nhelp", "novahelp", "econhelp", "economyhelp"})
     @Description("Economy help")
     @Usage("/ehelp")
@@ -88,6 +93,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
         CommandWrapper.super.help(sender);
     }
 
+    @Override
     @Command({"balance", "bal", "novabal"})
     @Description("Access your balances from all economies")
     @Usage("/balance")
@@ -96,21 +102,24 @@ public final class CommandWrapperV2 implements CommandWrapper {
         if (economyCount(p)) CommandWrapper.super.balance(p);
     }
 
+    @Override
     @Command({"pay", "econpay", "novapay", "givemoney", "givebal"})
     @Description("Pay another user")
     @CommandPermission("novaconomy.user.pay")
-    public void pay(Player p, @Named("target") Player target, @Named("economy") Economy econ, @Named("amount") @Range(min = 0.01) double amount) {
-        CommandWrapper.super.pay(p, target, econ, amount);
+    public void pay(Player p, Player target, Economy economy, @Range(min = 0.01) double amount) {
+        CommandWrapper.super.pay(p, target, economy, amount);
     }
 
+    @Override
     @Command({"convert", "conv"})
     @Description("Convert one balance in an economy to another balance")
     @Usage("/convert <econ-from> <econ-to> <amount>")
     @CommandPermission("novaconomy.user.convert")
-    public void convert(Player p, @Named("from-economy") Economy from, @Named("to-economy") Economy to, @Named("amount") @Range(min = 0.01) double amount) {
+    public void convert(Player p, @Named("from-economy") Economy from, @Named("to-economy") Economy to, @Range(min = 0.01) double amount) {
         CommandWrapper.super.convert(p, from, to, amount);
     }
 
+    @Override
     @Command({"novaconomyreload", "novareload", "nreload", "econreload"})
     @Usage("/novareload")
     @Description("Reload Novaconomy Configuration")
@@ -119,9 +128,16 @@ public final class CommandWrapperV2 implements CommandWrapper {
         CommandWrapper.super.reloadConfig(sender);
     }
 
+    @Override
+    @Command({"loadlanguages", "loadl", "loadmessages"})
+    @Usage("/loadlanguages")
+    @Description("Load Default Messages from Plugin JAR")
+    @CommandPermission("novaconomy.admin.reloadconfig")
+    public void loadLanguages(CommandSender sender) { CommandWrapper.super.loadLanguages(sender); }
+
     @Command({"business", "nbusiness"})
     @Description("Manage your Novaconomy Business")
-    @Usage("/business <create|info|delete|edit|stock|query> <args...>")
+    @Usage("/business <create|info|delete|addproduct|stock|query|...> <args...>")
     private static final class BusinessCommands {
 
         private final CommandWrapperV2 wrapper;
@@ -134,15 +150,21 @@ public final class CommandWrapperV2 implements CommandWrapper {
         }
 
         @Subcommand({"info", "information"})
-        public void businessInfo(Player p) {
-            wrapper.businessInfo(p);
-        }
+        public void businessInfo(Player p) { wrapper.businessInfo(p); }
 
         @Subcommand("query")
         @CommandPermission("novaconomy.user.business.query")
-        public void businessQuery(Player p, @Named("business") Business b) {
-            wrapper.businessQuery(p, b);
-        }
+        public void businessQuery(Player p, Business business) { wrapper.businessQuery(p, business); }
+
+        @Subcommand("create")
+        @CommandPermission("novaconomy.user.business.create")
+        public void businessCreate(Player p, String name, Material icon) { wrapper.createBusiness(p, name, icon);}
+
+        @Subcommand({"addproduct", "addp"})
+        public void addProduct(Player p, double price) { wrapper.addProduct(p, price); }
+
+        @Subcommand({"addresource", "stock", "addr", "addstock"})
+        public void addResource(Player p) { wrapper.addResource(p); }
 
     }
 
@@ -158,7 +180,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
 
             BukkitCommandHandler handler = CommandWrapperV2.handler;
 
-            handler.getAutoCompleter().registerSuggestion("symbol", SuggestionProvider.of("$", "%", "Q", "L", "P", "A", "a", "r", "R", "C", "c", "D", "d", "W", "w", "B", "b"));
+            handler.getAutoCompleter().registerSuggestion("symbol", SuggestionProvider.of("'$'", "'%'", "Q", "L", "P", "A", "a", "r", "R", "C", "c", "D", "d", "W", "w", "B", "b"));
             handler.getAutoCompleter().registerSuggestion("interest", SuggestionProvider.of("enable", "disable"));
 
             handler.register(this);
@@ -167,14 +189,14 @@ public final class CommandWrapperV2 implements CommandWrapper {
         @Subcommand({"create", "make"})
         @AutoComplete("* @symbol *")
         @CommandPermission("novaconomy.economy.create")
-        public void createEconomy(CommandSender sender, @Named("name") String name, @Named("symbol") String symbol, @Named("icon") Material icon, @Named("scale") @Default("1") @Range(min = 0.01, max = Integer.MAX_VALUE) double scale, @Named("natural-increase") @Default("true") boolean naturalIncrease) {
-            wrapper.createEconomy(sender, name, symbol.charAt(0), icon, scale, naturalIncrease);
+        public void createEconomy(CommandSender sender, String name, String symbol,Material icon, @Default("1") @Range(min = 0.01, max = Integer.MAX_VALUE) double scale, @Named("natural-increase") @Default("true") boolean naturalIncrease) {
+            wrapper.createEconomy(sender, name, symbol.contains("\"") || symbol.contains("'") ? symbol.charAt(1) : symbol.charAt(0), icon, scale, naturalIncrease);
         }
 
         @Subcommand({"remove", "delete", "removeeconomy", "deleteeconomy"})
         @CommandPermission("novaconomy.economy.delete")
-        public void removeEconomy(CommandSender sender, @Named("economy") Economy econ) {
-            wrapper.removeEconomy(sender, econ);
+        public void removeEconomy(CommandSender sender, Economy economy) {
+            wrapper.removeEconomy(sender, economy);
         }
 
         @Subcommand("interest")
@@ -186,32 +208,30 @@ public final class CommandWrapperV2 implements CommandWrapper {
 
         @Subcommand({"setbalance", "setbal"})
         @CommandPermission("novaconomy.economy.setbalance")
-        public void setBalance(CommandSender sender, @Named("economy") Economy econ, @Named("target") Player target, @Named("amount") @Range(min = 0) double amount) {
-            wrapper.setBalance(sender, econ, target, amount);
+        public void setBalance(CommandSender sender, Economy economy, Player target, @Range(min = 0) double amount) {
+            wrapper.setBalance(sender, economy, target, amount);
         }
 
         @Subcommand({"addbalance", "addbal"})
         @CommandPermission("novaconomy.economy.addbalance")
-        public void addBalance(CommandSender sender, @Named("economy") Economy econ, @Named("target") Player target, @Named("amount") @Range(min = 0) double add) {
-            wrapper.addBalance(sender, econ, target, add);
+        public void addBalance(CommandSender sender, Economy economy, Player target, @Range(min = 0) double amount) {
+            wrapper.addBalance(sender, economy, target, amount);
         }
 
         @Subcommand({"removebalance", "removebal"})
         @CommandPermission("novaconomy.economy.removebalance")
-        public void removeBalance(CommandSender sender, @Named("economy") Economy econ, @Named("target") Player target, @Named("amount") @Range(min = 0) double remove) {
-            wrapper.removeBalance(sender, econ, target, remove);
+        public void removeBalance(CommandSender sender, Economy economy, Player target, @Range(min = 0) double amount) {
+            wrapper.removeBalance(sender, economy, target, amount);
         }
 
         @Subcommand({"check", "createcheck"})
         @CommandPermission("novaconomy.economy.check")
-        public void createCheck(Player p, @Named("economy") Economy econ, @Named("amount") @Range(min = 1) double amount) {
-            wrapper.createCheck(p, econ, amount);
-        }
+        public void createCheck(Player p, Economy economy, @Named("amount") @Range(min = 1) double amount) { wrapper.createCheck(p, economy, amount); }
 
         @Subcommand("info")
         @CommandPermission("novaconomy.economy.info")
-        public void info(CommandSender sender, @Named("economy") Economy econ) {
-            wrapper.economyInfo(sender, econ);
+        public void info(CommandSender sender, Economy economy) {
+            wrapper.economyInfo(sender, economy);
         }
 
     }

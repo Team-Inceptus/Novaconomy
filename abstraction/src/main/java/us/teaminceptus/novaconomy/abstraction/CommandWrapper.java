@@ -1,21 +1,31 @@
 package us.teaminceptus.novaconomy.abstraction;
 
+import org.apache.commons.lang.WordUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
+import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.InventoryHolder;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BookMeta;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.util.ChatPaginator;
 import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.NovaPlayer;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.events.player.PlayerPayEvent;
+import us.teaminceptus.novaconomy.api.util.BusinessProduct;
 
+import java.io.File;
 import java.util.*;
 
 public interface CommandWrapper {
@@ -30,6 +40,7 @@ public interface CommandWrapper {
         put("pay", Arrays.asList("givemoney", "novapay", "econpay", "givebal"));
         put("novaconomyreload", Arrays.asList("novareload", "nreload", "econreload"));
         put("business", Arrays.asList("nbusiness"));
+        put("loadlanguages", Arrays.asList("loadl", "loadmessages"));
     }};
 
     Map<String, String> COMMAND_PERMISSION = new HashMap<String, String>() {{
@@ -39,6 +50,7 @@ public interface CommandWrapper {
        put("pay", "novaconomy.user.pay");
        put("novaconomyreload", "novaconomy.admin.reloadconfig");
        put("business", "novaconomy.user.business");
+       put("loadlanguages", "novaconomy.admin.reloadconfig");
     }};
 
     Map<String, String> COMMAND_DESCRIPTION = new HashMap<String, String>() {{
@@ -49,6 +61,7 @@ public interface CommandWrapper {
        put("pay", "Pay another user");
        put("novaconomyreload", "Reload Novaconomy Configuration");
        put("business", "Manage your Novaconomy Business");
+       put("loadlanguages", "Load Default /Messages from Plugin JAR");
     }};
 
     Map<String, String> COMMAND_USAGE = new HashMap<String, String>() {{
@@ -59,6 +72,7 @@ public interface CommandWrapper {
        put("pay", "/pay <player> <economy> <amount>");
        put("novaconomyreload", "/novareload");
        put("business", "/business <create|delete|edit|stock> <args...>");
+       put("loadlanguages", "/loadlanguages");
     }};
 
     static Plugin getPlugin() {
@@ -101,11 +115,10 @@ public interface CommandWrapper {
         NovaPlayer np = new NovaPlayer(p);
         List<String> balanceInfo = new ArrayList<>();
 
-        for (Economy econ : Economy.getEconomies()) {
-            balanceInfo.add(ChatColor.GOLD + econ.getName() + ChatColor.AQUA + " - " + ChatColor.GREEN + econ.getSymbol() + Math.floor(np.getBalance(econ) * 100) / 100);
-        }
+        for (Economy econ : Economy.getEconomies())
+            balanceInfo.add(ChatColor.GOLD + econ.getName() + ChatColor.AQUA + " - " + ChatColor.GREEN + String.format("%,.2f", Math.floor(np.getBalance(econ) * 100) / 100) + econ.getSymbol());
 
-        p.sendMessage(get("command.balance.balances") + "\n" + String.join("\n", balanceInfo.toArray(new String[0])));
+        p.sendMessage(get("command.balance.balances") + "\n\n" + String.join("\n", balanceInfo.toArray(new String[0])));
     }
 
     default void reloadConfig(CommandSender sender) {
@@ -120,6 +133,8 @@ public interface CommandWrapper {
         NovaConfig.loadConfig();
         NovaConfig.reloadInterest();
         NovaConfig.reloadLanguages();
+        YamlConfiguration.loadConfiguration(new File(plugin.getDataFolder(), "businesses.yml"));
+        YamlConfiguration.loadConfiguration(new File(plugin.getDataFolder(), "functionality.yml"));
         sender.sendMessage(get("command.reload.success"));
     }
 
@@ -218,6 +233,15 @@ public interface CommandWrapper {
         sender.sendMessage(String.format(getMessage("success.economy.removebalance"),  econ.getSymbol() + "", remove, target.getName()));
     }
 
+    default void loadLanguages(CommandSender sender) {
+        if (!sender.hasPermission("novaconomy.admin.reloadconfig")) {
+            sender.sendMessage(getMessage("error.permission"));
+            return;
+        }
+
+        NovaConfig.reloadLanguages(true);
+    }
+
     default void setBalance(CommandSender sender, Economy econ, Player target, double balance) {
         if (!sender.hasPermission("novaconomy.economy.setbalance")) {
             sender.sendMessage(getMessage("error.permission.argument"));
@@ -269,9 +293,9 @@ public interface CommandWrapper {
 
         String name = econ.getName();
 
-        sender.sendMessage(ChatColor.GREEN + "Deleting " + name + "...");
+        sender.sendMessage(String.format(getMessage("command.economy.delete.deleting"), name));
         Economy.removeEconomy(econ);
-        sender.sendMessage(ChatColor.GREEN + "Successfully deleted " + name + "!");
+        sender.sendMessage(String.format(getMessage("success.economy.delete"), name));
     }
 
     default void pay(Player p, Player target, Economy econ, double amount) {
@@ -318,21 +342,6 @@ public interface CommandWrapper {
         getWrapper().openBook(p, book);
     }
 
-    default void createBusiness(Player p, String name, Material icon) {
-        if (!p.hasPermission("novaconomy.economy.create")) {
-            p.sendMessage(getMessage("error.permission.argument"));
-            return;
-        }
-
-        if (Business.exists(name)) {
-            p.sendMessage(getMessage("error.business.exists"));
-            return;
-        }
-
-        Business.builder().setName(name).setOwner(p).setIcon(icon).build();
-        p.sendMessage(String.format(getMessage("success.business.create"), name));
-    }
-
     default void businessInfo(Player p) {
         Business b = Business.getByOwner(p);
         if (b == null) {
@@ -348,6 +357,155 @@ public interface CommandWrapper {
             return;
         }
         p.openInventory(getWrapper().generateBusinessData(b));
+    }
+
+    default void addProduct(Player p, double price) {
+        if (Economy.getEconomies().size() < 1) {
+            p.sendMessage(getMessage("error.economy.none"));
+            return;
+        }
+
+        Business b = Business.getByOwner(p);
+        if (b == null) {
+            p.sendMessage(getMessage("error.business.not_an_owner"));
+            return;
+        }
+
+        if (b.getProducts().size() >= 28) {
+            p.sendMessage(getMessage("error.business.too_many_products"));
+            return;
+        }
+
+        if (p.getItemInHand() == null) {
+            p.sendMessage(getMessage("error.argument.item"));
+            return;
+        }
+
+        ItemStack pr = p.getItemInHand().clone();
+        ItemStack product = p.getItemInHand().clone();
+
+        for (BusinessProduct prod : b.getProducts()) if (prod.getItem().isSimilar(pr)) {
+            p.sendMessage(getMessage("error.business.exists_product"));
+            return;
+        }
+
+        Wrapper wr = getWrapper();
+
+        List<String> sortedList = new ArrayList<>();
+        Economy.getEconomies().forEach(econ -> sortedList.add(econ.getName()));
+        sortedList.sort(String.CASE_INSENSITIVE_ORDER);
+        Economy econ = Economy.getEconomy(sortedList.get(0));
+
+        Inventory inv = wr.genGUI(36, pr.hasItemMeta() && pr.getItemMeta().hasDisplayName() ? pr.getItemMeta().getDisplayName() : WordUtils.capitalizeFully(pr.getType().name().replace('_', ' ')));
+
+        List<String> prLore = new ArrayList<>();
+        prLore.add(String.format(get("constants.business.price"), price, econ.getSymbol()));
+
+        ItemStack economyWheel = new ItemStack(econ.getIconType());
+        economyWheel = wr.setNBT(economyWheel, "economy", econ.getName().toLowerCase());
+        wr.setID(economyWheel, "economy:wheel:add_product");
+
+        ItemMeta eMeta = economyWheel.getItemMeta();
+        eMeta.setDisplayName(ChatColor.GOLD + econ.getName());
+        economyWheel.setItemMeta(eMeta);
+        inv.setItem(22, economyWheel);
+
+        pr = getWrapper().setNBT(pr, "price", price);
+        ItemMeta meta = pr.getItemMeta();
+        meta.setLore(prLore);
+        pr.setItemMeta(meta);
+        inv.setItem(13, pr);
+
+        ItemStack confirm = new ItemStack(Material.BEACON);
+        ItemMeta cMeta = confirm.getItemMeta();
+        cMeta.setDisplayName(get("constants.confirm"));
+        confirm.setItemMeta(cMeta);
+        confirm = wr.setID(confirm, "business:add_product");
+        confirm = wr.setNBT(confirm, "item", product);
+        confirm = wr.setNBT(confirm, "price", price);
+        confirm = wr.setNBT(confirm, "economy", econ.getName().toLowerCase());
+        inv.setItem(23, confirm);
+
+        p.openInventory(inv);
+    }
+
+    default void createBusiness(Player p, String name, Material icon) {
+        if (!p.hasPermission("novaconomy.user.business.create")) {
+            p.sendMessage(getMessage("error.permission.argument"));
+            return;
+        }
+
+        try {
+            Business.builder().setOwner(p).setName(name).setIcon(icon).build();
+            p.sendMessage(String.format(getMessage("success.business.create"), name));
+        } catch (IllegalArgumentException e) {
+            p.sendMessage(getMessage("error.argument"));
+        } catch (UnsupportedOperationException e) {
+            p.sendMessage(getMessage("error.business.exists"));
+        }
+    }
+
+    default void addResource(Player p) {
+        if (Economy.getEconomies().size() < 1) {
+            p.sendMessage(getMessage("error.economy.none"));
+            return;
+        }
+
+        Business b = Business.getByOwner(p);
+        if (b == null) {
+            p.sendMessage(getMessage("error.business.not_an_owner"));
+            return;
+        }
+
+        Inventory inv = Bukkit.createInventory(new ReturnItemsHolder(p, "business:add_resource"), 54, get("constants.business.add_stock"));
+
+        ItemStack confirm = new ItemStack(Material.BEACON);
+        confirm = getWrapper().setID(confirm, "business:add_resource");
+
+        ItemMeta cMeta = confirm.getItemMeta();
+        cMeta.setDisplayName(get("constants.confirm"));
+        cMeta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+        cMeta.addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1, true);
+        List<String> lore = new ArrayList<>();
+        for (int i = 1; i < 4; i++) lore.add(get("constants.business.add_resource." + i));
+
+        cMeta.setLore(Arrays.asList(ChatPaginator.wordWrap(String.join("\n\n", lore), 30)));
+        confirm.setItemMeta(cMeta);
+        inv.setItem(49, confirm);
+
+        p.openInventory(inv);
+    }
+
+    class ReturnItemsHolder implements InventoryHolder {
+
+        private final Player p;
+        private final List<String> ignoreIds;
+
+        private boolean added;
+
+        public ReturnItemsHolder(Player p, String... ignoreIds) {
+            this.p = p;
+            this.ignoreIds = Arrays.asList(ignoreIds);
+            this.added = false;
+        }
+
+
+        @Override
+        public Inventory getInventory() {
+            return null;
+        }
+
+        public Player player() {
+            return this.p;
+        }
+
+        public boolean added() {
+            return this.added;
+        }
+
+        public void added(boolean added) { this.added = added; }
+
+        public List<String> ignoreIds() { return this.ignoreIds; }
     }
 
     static String getServerVersion() {

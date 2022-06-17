@@ -14,12 +14,11 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
 
-    private Plugin plugin;
+    private final Plugin plugin;
 
     public CommandWrapperV1(Plugin plugin) {
         this.plugin = plugin;
