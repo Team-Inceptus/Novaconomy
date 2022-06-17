@@ -5,7 +5,10 @@ import com.jeff_media.updatechecker.UpdateChecker;
 import org.apache.commons.lang.Validate;
 import org.apache.commons.lang.WordUtils;
 import org.bstats.bukkit.Metrics;
-import org.bukkit.*;
+import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.Material;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.block.Block;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -22,10 +25,11 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.player.PlayerFishEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.*;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -53,7 +57,9 @@ import java.util.stream.Collectors;
  * @see NovaConfig
  */
 public class Novaconomy extends JavaPlugin implements NovaConfig {
-	
+
+	public static final Random r = new Random();
+	private static final Wrapper wr = getWrapper();
 	private static File playerDir;
 	private static FileConfiguration economiesFile;
 	
@@ -70,8 +76,6 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 
 	public static String getMessage(String key) { return prefix + get(key); }
 
-	private static final Random r = new Random();
-
 	private static void updateInterest() {
 		Novaconomy plugin = getPlugin(Novaconomy.class);
 
@@ -82,6 +86,7 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 		if (INTEREST_RUNNABLE.getTaskId() != -1) INTEREST_RUNNABLE.cancel();
 
 		INTEREST_RUNNABLE = new BukkitRunnable() {
+			@Override
 			public void run() {
 				if (!(NovaConfig.getConfiguration().isInterestEnabled())) cancel();
 
@@ -107,24 +112,22 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 
 				InterestEvent event = new InterestEvent(previousBals, amounts);
 				Bukkit.getPluginManager().callEvent(event);
-				if (!event.isCancelled()) {
-					for (NovaPlayer np : previousBals.keySet()) {
-						int i = 0;
-						for (Economy econ : previousBals.get(np).keySet()) {
-							np.add(econ, amounts.get(np).get(econ));
-							i++;
-						}
-
-						if (np.isOnline() && NovaConfig.getConfiguration().hasNotifications()) {
-							np.getOnlinePlayer().sendMessage(String.format(getMessage("notification.interest"), i + "", (i == 1 ? get("constants.economy") : get("constants.economies"))));
-						}
+				if (!event.isCancelled()) for (NovaPlayer np : previousBals.keySet()) {
+					int i = 0;
+					for (Economy econ : previousBals.get(np).keySet()) {
+						np.add(econ, amounts.get(np).get(econ));
+						i++;
 					}
+
+					if (np.isOnline() && NovaConfig.getConfiguration().hasNotifications())
+						np.getOnlinePlayer().sendMessage(String.format(getMessage("notification.interest"), i + "", (i == 1 ? get("constants.economy") : get("constants.economies"))));
 				}
 			}
 
 		};
 
 		new BukkitRunnable() {
+			@Override
 			public void run() {
 				INTEREST_RUNNABLE.runTaskTimer(plugin, plugin.getIntervalTicks(), plugin.getIntervalTicks());
 			}
@@ -134,7 +137,7 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 
 	private class Events implements Listener {
 		
-		private Novaconomy plugin;
+		private final Novaconomy plugin;
 		
 		protected Events(Novaconomy plugin) {
 			Bukkit.getPluginManager().registerEvents(this, plugin);
@@ -146,7 +149,7 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 			if (e.getItem() == null) return;
 			if (e.getAction() != Action.RIGHT_CLICK_AIR && e.getAction() != Action.RIGHT_CLICK_BLOCK) return;
 			Player p = e.getPlayer();
-			Wrapper wrapper = getWrapper();
+			Wrapper wrapper = wr;
 			if (!(e.getItem().getType() == Material.PAPER)) return;
 			ItemStack item = e.getItem();
 
@@ -212,13 +215,16 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 				if (!event.isCancelled()) {
 					np.add(econ, increase);
 
-					String message = ChatColor.GREEN + "+" + (Math.floor(increase * 100) / 100 + econ.getSymbol() + "").replace("D", "") + ", ";
+					String message = COLORS.get(r.nextInt(COLORS.size())) + "+" + (Math.floor(increase * 100) / 100 + econ.getSymbol() + "").replace("D", "") + econ.getSymbol() + ", ";
 					added.add(message);
 				}
-
 			}
 
-			if (plugin.hasNotifications()) getWrapper().sendActionbar(p, String.join("\n", added.toArray(new String[0])));
+			int lastI = added.size() - 1;
+			String last = added.get(lastI);
+			added.set(lastI, last.substring(0, last.length() - 1));
+
+			if (plugin.hasNotifications()) wr.sendActionbar(p, String.join("\n", added.toArray(new String[0])));
 		}
 		
 		@EventHandler
@@ -246,86 +252,255 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 
 		@EventHandler
 		public void click(InventoryClickEvent e) {
-			if (e.getClickedInventory().getHolder() != null && e.getClickedInventory().getHolder() instanceof Wrapper.CancelHolder) e.setCancelled(true);
+			Inventory inv = e.getClickedInventory();
+			if (inv == null) return;
+			if (inv instanceof PlayerInventory) return;
+			if (inv.getHolder() != null && inv.getHolder() instanceof Wrapper.CancelHolder) e.setCancelled(true);
 
 			if (e.getCurrentItem() == null) return;
 			ItemStack item = e.getCurrentItem();
 
+			if (item.isSimilar(wr.getGUIBackground())) e.setCancelled(true);
+
 			if (!item.hasItemMeta()) return;
 
-			String id = getWrapper().getNBTString(item, "id");
-			if (id.length() > 0 && CLICK_ITEMS.containsKey(id)) {
-				if (!e.isCancelled()) e.setCancelled(true);
-				CLICK_ITEMS.get(id).accept(e);
+			String id = wr.getNBTString(item, "id");
+			if (!e.isCancelled()) e.setCancelled(true);
+			if (id.length() > 0 && CLICK_ITEMS.containsKey(id)) CLICK_ITEMS.get(id).accept(e);
+		}
+
+		@EventHandler
+		public void close(InventoryCloseEvent e) {
+			Inventory inv = e.getInventory();
+			if (inv == null) return;
+
+			if (inv.getHolder() != null) {
+				InventoryHolder holder = inv.getHolder();
+				if (holder instanceof CommandWrapper.ReturnItemsHolder) {
+					CommandWrapper.ReturnItemsHolder h = (CommandWrapper.ReturnItemsHolder) holder;
+					Player p = h.player();
+
+					if (h.added()) return;
+
+					for (ItemStack i : inv.getContents()) {
+						if (i == null) continue;
+						if (h.ignoreIds().contains(wr.getID(i))) continue;
+
+						if (p.getInventory().firstEmpty() == -1) p.getWorld().dropItemNaturally(p.getLocation(), i);
+						else p.getInventory().addItem(i);
+					}
+				}
 			}
 		}
 	}
+
+	private static final List<ChatColor> COLORS = Arrays.stream(ChatColor.values()).filter(ChatColor::isColor).collect(Collectors.toList());
 	
 	private static final Map<String, Consumer<InventoryClickEvent>> CLICK_ITEMS = new HashMap<String, Consumer<InventoryClickEvent>>() {{
-		put("economy_scroll", e -> {
-			ItemStack item = e.getCurrentItem();
-			List<Economy> economies = Economy.getEconomies().stream().sorted().collect(Collectors.toList());
-			Inventory inv = e.getClickedInventory();
+			put("economy_scroll", e -> {
+				ItemStack item = e.getCurrentItem();
+				List<Economy> economies = Economy.getEconomies().stream().sorted().collect(Collectors.toList());
+				Inventory inv = e.getClickedInventory();
 
-			String econ = ChatColor.stripColor(item.getItemMeta().getDisplayName());
-			int index = economies.indexOf(Economy.getEconomy(econ)) + 1;
-			Economy newEcon = economies.get(index >= economies.size() ? 0 : index);
+				String econ = ChatColor.stripColor(item.getItemMeta().getDisplayName());
+				int index = economies.indexOf(Economy.getEconomy(econ)) + 1;
+				Economy newEcon = economies.get(index >= economies.size() ? 0 : index);
 
-			inv.setItem(e.getSlot(), newEcon.getIcon());
-		});
+				inv.setItem(e.getSlot(), newEcon.getIcon());
+			});
 
-		put("business", e -> {
-			ItemStack item = e.getCurrentItem();
-			String name = ChatColor.stripColor(item.getItemMeta().getDisplayName()).toLowerCase();
-			Business b = Business.getByName(name);
-			e.getWhoClicked().openInventory(getWrapper().generateBusinessData(b));
-		});
+			put("business", e -> {
+				ItemStack item = e.getCurrentItem();
+				String name = ChatColor.stripColor(item.getItemMeta().getDisplayName()).toLowerCase();
+				Business b = Business.getByName(name);
+				e.getWhoClicked().openInventory(wr.generateBusinessData(b));
+			});
 
-		put("product:buy", e -> {
-			ItemStack item = e.getCurrentItem();
-			BusinessProduct p = getWrapper().getNBTSerializable(item, "product", BusinessProduct.class);
+			put("product:buy", e -> {
+				ItemStack item = e.getCurrentItem();
+				String name = item.hasItemMeta() && item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : WordUtils.capitalizeFully(item.getType().name().replace('_', ' '));
+				HumanEntity p = e.getWhoClicked();
 
-			String name = item.hasItemMeta() && item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : WordUtils.capitalizeFully(item.getType().name());
-			Inventory inv = getWrapper().genGUI(27, "Purchase \"" + ChatColor.DARK_GRAY + name + ChatColor.DARK_GRAY + "\" for " + ChatColor.GOLD + String.format("%,.2f", p.getPrice().getAmount()) + p.getEconomy().getSymbol() +
-					ChatColor.DARK_GRAY + "?", new Wrapper.CancelHolder());
+				if (!wr.getNBTBoolean(item, "product:in_stock")) {
+					p.sendMessage(String.format(Novaconomy.get("error.business.not_in_stock"), name));
+					return;
+				}
 
-			for (int i = 10; i < 17; i++) inv.setItem(i, getWrapper().getGUIBackground());
+				List<BusinessProduct> products = new ArrayList<>();
 
-			inv.setItem(13, p.getItem());
+				BusinessProduct pr = (BusinessProduct) wr.getNBTProduct(item, "product");
 
-			ItemStack yes = Items.yes("buy_product").clone();
-			getWrapper().setNBT(yes, "product", p);
-			getWrapper().setNBT(yes, "price", p.getPrice().getAmount());
-			inv.setItem(21, yes);
+				Inventory inv = wr.genGUI(27, "Purchase \"" + ChatColor.RESET + name + ChatColor.RESET + "\"?", new Wrapper.CancelHolder());
 
-			ItemStack cancel = Items.cancel("no_product").clone();
-			getWrapper().setNBT(cancel, "product", p);
-			inv.setItem(23, cancel);
+				for (int i = 10; i < 17; i++) inv.setItem(i, wr.getGUIBackground());
 
-			e.getWhoClicked().openInventory(inv);
-		});
+				inv.setItem(13, item);
 
-		put("no:close", e -> {
-			HumanEntity en = e.getWhoClicked();
-			en.closeInventory();
-		});
+				ItemStack yes = Items.yes("buy_product").clone();
+				yes = wr.setNBT(yes, "product", pr);
+				yes = wr.setNBT(yes, "price", pr.getPrice().getAmount());
+				inv.setItem(21, yes);
 
-		put("yes:buy_product", e -> {
-			if (!(e.getWhoClicked() instanceof Player)) return;
-			ItemStack item = e.getCurrentItem();
-			Player p = (Player) e.getWhoClicked();
+				ItemStack cancel = Items.cancel("no_product").clone();
+				inv.setItem(23, cancel);
 
+				p.openInventory(inv);
+			});
 
+			put("no:close", e -> {
+				HumanEntity en = e.getWhoClicked();
+				en.closeInventory();
+			});
 
-			ItemStack product = getWrapper().getNBTItem(item, "product");
+			put("no:no_product", e -> {
+				HumanEntity en = e.getWhoClicked();
+				en.closeInventory();
+				en.sendMessage(Novaconomy.get("cancel.business.purchase"));
+			});
 
+			put("economy:wheel", e -> {
+				int slot = e.getRawSlot();
+				ItemStack item = e.getCurrentItem().clone();
 
-		});
-	}};
+				List<String> sortedList = new ArrayList<>();
+				Economy.getEconomies().forEach(econ -> sortedList.add(econ.getName()));
+				sortedList.sort(String.CASE_INSENSITIVE_ORDER);
 
-	private static final Set<Material> ores = new HashSet<Material>() {{
-		addAll(Arrays.stream(Material.values()).filter(m -> m.name().endsWith("ORE") || m.name().equalsIgnoreCase("ANCIENT_DEBRIS")).collect(Collectors.toSet()));
-	}};
+				Economy econ = Economy.getEconomy(wr.getNBTString(item, "economy"));
+				int nextI = sortedList.indexOf(econ.getName()) + 1;
+				Economy next = sortedList.size() == 1 ? econ : Economy.getEconomy(sortedList.get(nextI == sortedList.size() ? 0 : nextI));
+
+				item.setType(next.getIcon().getType());
+				item = wr.setNBT(item, "economy", next.getName().toLowerCase());
+
+				ItemMeta meta = item.getItemMeta();
+				meta.setDisplayName(ChatColor.GOLD + next.getName());
+				item.setItemMeta(meta);
+
+				e.getView().setItem(slot, item);
+			});
+
+			put("economy:wheel:add_product", e -> {
+				get("economy:wheel").accept(e);
+
+				int slot = e.getRawSlot();
+				ItemStack item = e.getCurrentItem();
+				Economy econ = Economy.getEconomy(wr.getNBTString(item, "economy"));
+
+				Inventory inv = e.getClickedInventory();
+
+				ItemStack confirm = inv.getItem(23);
+				confirm = wr.setNBT(confirm, "economy", econ.getName().toLowerCase());
+				inv.setItem(23, confirm);
+
+				ItemStack display = inv.getItem(13);
+				ItemMeta dMeta = display.getItemMeta();
+				dMeta.setLore(Collections.singletonList(String.format(Novaconomy.get("constants.business.price"), wr.getNBTDouble(display, "price"), econ.getSymbol())));
+				display.setItemMeta(dMeta);
+				inv.setItem(13, display);
+			});
+
+			put("yes:buy_product", e -> {
+				if (!(e.getWhoClicked() instanceof Player)) return;
+
+				ItemStack item = e.getCurrentItem();
+				Player p = (Player) e.getWhoClicked();
+
+				if (p.getInventory().firstEmpty() == -1) {
+					p.sendMessage(Novaconomy.get("error.player.full_inventory"));
+					return;
+				}
+
+				NovaPlayer np = new NovaPlayer(p);
+				BusinessProduct bP = (BusinessProduct) wr.getNBTProduct(item, "product");
+
+				if (!np.canAfford(bP)) {
+					p.sendMessage(String.format(Novaconomy.get("error.economy.invalid_amount"), Novaconomy.get("constants.purchase")));
+					p.closeInventory();
+					return;
+				}
+
+				ItemStack product = bP.getItem();
+
+				Economy econ = bP.getEconomy();
+				double amount = bP.getPrice().getAmount();
+
+				np.remove(econ, amount);
+				bP.getBusiness().removeResource(product);
+				p.getInventory().addItem(product);
+				String material = product.hasItemMeta() && product.getItemMeta().hasDisplayName() ? product.getItemMeta().getDisplayName() : WordUtils.capitalizeFully(product.getType().name().replace('_', ' '));
+
+				p.sendMessage(String.format(Novaconomy.get("success.business.purchase"), material, bP.getBusiness().getName()));
+				p.closeInventory();
+
+				NovaPlayer owner = new NovaPlayer(bP.getBusiness().getOwner());
+				owner.add(econ, amount);
+
+				if (owner.isOnline() && NovaConfig.getConfiguration().hasNotifications()) {
+					String name = p.getDisplayName() == null ? p.getName() : p.getDisplayName();
+					owner.getOnlinePlayer().sendMessage(String.format(Novaconomy.get("notification.business.purchase"), name, material));
+				}
+			});
+
+			put("business:add_product", e -> {
+				if (!(e.getWhoClicked() instanceof Player)) return;
+				Player p = (Player) e.getWhoClicked();
+				Business b = Business.getByOwner(p);
+				ItemStack item = e.getCurrentItem();
+
+				double price = wr.getNBTDouble(item, "price");
+				Economy econ = Economy.getEconomy(wr.getNBTString(item, "economy"));
+				ItemStack product = wr.normalize(wr.getNBTItem(item, "item"));
+
+				b.addProduct(new Product(product, econ, price));
+
+				String name = product.hasItemMeta() && product.getItemMeta().hasDisplayName() ? product.getItemMeta().getDisplayName() : WordUtils.capitalizeFully(product.getType().name().replace('_', ' '));
+				p.sendMessage(String.format(getMessage("success.business.add_product"), name));
+				p.closeInventory();
+			});
+
+			put("business:add_resource", e -> {
+				if (!(e.getWhoClicked() instanceof Player)) return;
+				Player p = (Player) e.getWhoClicked();
+				Business b = Business.getByOwner(p);
+				InventoryView view = e.getView();
+				Inventory inv = view.getTopInventory();
+				CommandWrapper.ReturnItemsHolder h = (CommandWrapper.ReturnItemsHolder) inv.getHolder();
+				h.added(true);
+
+				List<ItemStack> res = new ArrayList<>();
+				for (ItemStack i : inv.getContents()) {
+					if (i == null) continue;
+					res.add(i.clone());
+				}
+
+				List<ItemStack> extra = new ArrayList<>();
+				List<ItemStack> resources = new ArrayList<>();
+
+				// Remove Non-Products
+				for (ItemStack item : res) {
+					if (item == null) continue;
+					if (wr.getID(item).equalsIgnoreCase("business:add_resource")) continue;
+
+					if (b.isProduct(item)) resources.add(item);
+					else extra.add(item);
+				}
+
+				Bukkit.broadcastMessage(resources.size() + "");
+
+				b.addResource(resources);
+				extra.forEach(i -> {
+					if (p.getInventory().firstEmpty() == -1) p.getWorld().dropItemNaturally(p.getLocation(), i);
+					else p.getInventory().addItem(i);
+				});
+
+				p.sendMessage(String.format(getMessage("success.business.add_resource"), b.getName()));
+				p.closeInventory();
+			});
+		}
+	};
+
+	private static final Set<Material> ores = new HashSet<>(Arrays.stream(Material.values()).filter(m -> m.name().endsWith("ORE") || m.name().equalsIgnoreCase("ANCIENT_DEBRIS")).collect(Collectors.toSet()));
 
 	private static CommandWrapper getCommandWrapper() {
 		try {
@@ -339,7 +514,7 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 			} else
 				dec = !funcConfig.getString(k, "auto").equalsIgnoreCase("auto") ? "auto" : funcConfig.getString(k, "auto");
 
-			if (dec.equalsIgnoreCase("auto")) wrapperVersion = getWrapper().getCommandVersion();
+			if (dec.equalsIgnoreCase("auto")) wrapperVersion = wr.getCommandVersion();
 			else wrapperVersion = Integer.parseInt(dec);
 
 			return (CommandWrapper) Class.forName(Novaconomy.class.getPackage().getName() + ".CommandWrapperV" + wrapperVersion).getConstructor(Plugin.class).newInstance(JavaPlugin.getPlugin(Novaconomy.class));
@@ -363,6 +538,7 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 	}
 	
 	private static BukkitRunnable INTEREST_RUNNABLE = new BukkitRunnable() {
+		@Override
 		public void run() {
 			if (!(NovaConfig.getConfiguration().isInterestEnabled())) cancel();
 			
@@ -388,18 +564,15 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 			
 			InterestEvent event = new InterestEvent(previousBals, amounts);
 			Bukkit.getPluginManager().callEvent(event);
-			if (!event.isCancelled()) {
-				for (NovaPlayer np : previousBals.keySet()) {
-					int i = 0;
-					for (Economy econ : previousBals.get(np).keySet()) {
-						np.add(econ, amounts.get(np).get(econ));
-						i++;
-					}
-					
-					if (np.isOnline() && NovaConfig.getConfiguration().hasNotifications()) {
-						np.getOnlinePlayer().sendMessage(String.format(getMessage("notification.interest"), i + "", i == 1 ? get("constants.economy") : get("constants.economies")));
-					}
+			if (!event.isCancelled()) for (NovaPlayer np : previousBals.keySet()) {
+				int i = 0;
+				for (Economy econ : previousBals.get(np).keySet()) {
+					np.add(econ, amounts.get(np).get(econ));
+					i++;
 				}
+
+				if (np.isOnline() && NovaConfig.getConfiguration().hasNotifications())
+					np.getOnlinePlayer().sendMessage(String.format(getMessage("notification.interest"), i + "", i == 1 ? get("constants.economy") : get("constants.economies")));
 			}
 		}
 		
@@ -412,16 +585,23 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 		add(Business.class);
 		add(Price.class);
 		add(Product.class);
+		add(BusinessProduct.class);
 	}};
 
+	@Override
 	public void onEnable() {
 		saveDefaultConfig();
 		saveConfig();
 
 		funcConfig = NovaConfig.loadFunctionalityFile();
+		File businesses = new File(getDataFolder(), "businesses.yml");
+		if (!businesses.exists()) saveResource("businesses.yml", false);
+
 		NovaConfig.reloadLanguages();
-		getLogger().info("Loaded Languages...");
+		getLogger().info("Loaded Languages & Configuration...");
 		SERIALIZABLE.forEach(ConfigurationSerialization::registerClass);
+
+		NovaConfig.loadBusinesses();
 
 		playerDir = new File(getDataFolder(), "players");
 		File economyFile = new File(getDataFolder(), "economies.yml");
@@ -467,6 +647,8 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 	}
 
 	private static final int PLUGIN_ID = 15322;
+
+	public static boolean isLegacy() { return wr.isLegacy(); }
 
 	private void reloadValues() {
 		NovaConfig.loadConfig();
