@@ -3,27 +3,36 @@ package us.teaminceptus.novaconomy;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
-import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import us.teaminceptus.novaconomy.abstraction.Wrapper;
 
-import static us.teaminceptus.novaconomy.Novaconomy.get;
-
 import java.util.List;
+
+import static us.teaminceptus.novaconomy.Novaconomy.get;
 
 public final class Items {
 
     private static final String REMOVE_STRS = "!,.?/\\[]{}()*&^%$#@-=+";
 
     public static ItemStack yes(String id) {
-        return itemBuilder(Material.WOOL, 5).setName(get("constants.yes")).setId("yes:" + id).build();
+        return itemBuilder(limeWool()).setName(ChatColor.GREEN + get("constants.yes")).setId("yes:" + id).build();
     }
 
     public static ItemStack cancel(String id) {
-        return itemBuilder(Material.WOOL, 14).setName(get("constants.cancel")).setId("no:" + id).build();
+        return itemBuilder(redWool()).setName(ChatColor.RED + get("constants.cancel")).setId("no:" + id).build();
+    }
+
+    private static ItemStack limeWool() {
+        if (Novaconomy.isLegacy()) return new ItemStack(Material.matchMaterial("WOOL"), 5);
+        else return new ItemStack(Material.matchMaterial("LIME_WOOL"));
+    }
+
+    private static ItemStack redWool() {
+        if (Novaconomy.isLegacy()) return new ItemStack(Material.matchMaterial("WOOL"), 14);
+        else return new ItemStack(Material.matchMaterial("RED_WOOL"));
     }
 
     public static ItemStack cancel() {
@@ -64,7 +73,7 @@ public final class Items {
             String localizedName = ChatColor.stripColor(display).toLowerCase().replace(' ', '_');
             for (Character c : REMOVE_STRS.toCharArray()) localizedName.replace(c.toString(), "");
 
-            getWrapper().setNBT(item, "id", localizedName);
+            getWrapper().setID(item, localizedName);
             item.setItemMeta(meta);
             return this;
         }
@@ -74,8 +83,8 @@ public final class Items {
             return this;
         }
 
-        public Builder setId(String localized) {
-            getWrapper().setNBT(item, "id", localized);
+        public Builder setId(String id) {
+            item = getWrapper().setID(item,  id);
             return this;
         }
 
@@ -87,12 +96,7 @@ public final class Items {
         }
 
         public Builder setNBT(String key, String value) {
-            getWrapper().setNBT(item, key, value);
-            return this;
-        }
-
-        public Builder setNBT(String key, ConfigurationSerializable serializable) {
-            getWrapper().setNBT(item, key, serializable);
+            item = getWrapper().setNBT(item, key, value);
             return this;
         }
 
