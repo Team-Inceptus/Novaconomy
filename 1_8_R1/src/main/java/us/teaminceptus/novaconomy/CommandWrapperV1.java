@@ -85,6 +85,10 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                 reloadConfig(sender);
                 break;
             }
+            case "overridelanguages": {
+                loadLanguages(sender);
+                break;
+            }
             case "convert": {
                 if (!(sender instanceof Player)) return false;
                 Player p = (Player) sender;
@@ -320,8 +324,7 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                         interest(sender, args[1].equalsIgnoreCase("enable") || args[1].equalsIgnoreCase("true"));
                         break;
                     }
-                    case "check":
-                    case "createcheck": {
+                    case "check": case "createcheck": {
                         if (!(sender instanceof Player)) return false;
                         Player p = (Player) sender;
                         if (!economyCount(p)) return false;
@@ -367,11 +370,8 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                     return false;
                 }
 
-
-
                 switch (args[0].toLowerCase()) {
-                    case "information":
-                    case "info": {
+                    case "information": case "info": {
                         if (!(sender instanceof Player)) return false;
                         Player p = (Player) sender;
                         businessInfo(p);
@@ -395,6 +395,61 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                         businessQuery(p, b);
                         break;
                     }
+                    case "create": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
+                        if (args.length < 2) {
+                            sender.sendMessage(getMessage("error.argument.name"));
+                            return false;
+                        }
+
+                        if (args.length < 3) {
+                            sender.sendMessage(getMessage("error.argument.icon"));
+                            return false;
+                        }
+
+                        Material icon = Material.matchMaterial(args[2]);
+
+                        if (icon == null) {
+                            sender.sendMessage(getMessage("error.argument.icon"));
+                            return false;
+                        }
+
+                        createBusiness(p, args[2], icon);
+                        break;
+                    }
+                    case "addproduct": case "addp": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
+                        if (args.length < 2) {
+                            sender.sendMessage(getMessage("error.argument.amount"));
+                            return false;
+                        }
+
+                        try {
+                            double amount = Double.parseDouble(args[1]);
+                            addProduct(p, amount);
+                        } catch (IllegalArgumentException e) {
+                            sender.sendMessage(getMessage("error.argument.amount"));
+                            return false;
+                        }
+                        break;
+                    }
+                    case "addresource": case "stock": case "addr": case "addstock": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+                        addResource(p);
+                        break;
+                    }
+                    case "removeprodct": case "removep": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+                        removeProduct(p);
+                        break;
+                    }
+
                     default: {
                         sender.sendMessage(getMessage("error.argument"));
                         return false;
@@ -406,6 +461,7 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
         return true;
     }
 
+    @Override
     public List<String> onTabComplete(CommandSender sender, Command cmd, String label, String[] args) {
         List<String> suggestions = new ArrayList<>();
 
@@ -482,6 +538,22 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                 }
 
                 return suggestions;
+            }
+            case "business": {
+                switch (args.length) {
+                    case 1:
+                        suggestions.addAll(Arrays.asList("info", "information", "query", "create", "addproduct", "addp", "removeproduct", "removep",
+                                "addresource", "stock", "addr", "addstock"));
+                        return suggestions;
+
+                    case 2:
+                        if (args[0].equalsIgnoreCase("query")) for (Business b : Business.getBusinesses()) suggestions.add(b.getName());
+                        return suggestions;
+                    case 3:
+                        if (args[0].equalsIgnoreCase("create")) for (Material m : Material.values()) suggestions.add(m.name().toLowerCase());
+
+                        return suggestions;
+                }
             }
         }
 
