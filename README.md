@@ -8,8 +8,9 @@ With the freedom to have your own symbols, icons, conversion rates, and even int
 <h2 style="text-decoration: underline;">📓Changelog</h2>
 
 ### 📈 1.2.0 Update: Business is Boomin
+
 Capitalism at its finest: Create, sell, and capitalize on your own merchandise! Create up to 28 products with
-unlimited
+unlimited stock and set the prices to whatever you want!
 -----
 ## 🔮 Future Features
 - Treasury API Hook
