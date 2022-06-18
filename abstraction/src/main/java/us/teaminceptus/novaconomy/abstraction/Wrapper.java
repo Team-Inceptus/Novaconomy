@@ -66,6 +66,8 @@ public interface Wrapper {
 
     ItemStack normalize(ItemStack item);
 
+    default boolean hasID(ItemStack item) { return getID(item) != null && getID(item).length() > 0; }
+
     default String getID(ItemStack item) { return getNBTString(item, "id"); }
 
     static Plugin getPlugin() {
@@ -108,13 +110,13 @@ public interface Wrapper {
         Validate.isTrue(amount > 0, "Amount must be greater than 0");
 
         ItemStack item = new ItemStack(Material.PAPER);
-        ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName("" + ChatColor.YELLOW + amount + econ.getSymbol());
-        meta.setLore(Collections.singletonList(ChatColor.GOLD + "" + amount + " " + econ.getName() + "(s)"));
-
+        item = setID(item, "economy:check");
         item = setNBT(item, "economy", econ.getUniqueId().toString());
         item = setNBT(item, "amount", amount);
 
+        ItemMeta meta = item.getItemMeta();
+        meta.setDisplayName("" + ChatColor.YELLOW + amount + econ.getSymbol());
+        meta.setLore(Collections.singletonList(ChatColor.GOLD + "" + amount + " " + econ.getName() + "(s)"));
         item.setItemMeta(meta);
         return item;
     }
