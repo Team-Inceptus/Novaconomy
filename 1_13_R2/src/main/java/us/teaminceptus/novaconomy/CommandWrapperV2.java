@@ -129,8 +129,8 @@ public final class CommandWrapperV2 implements CommandWrapper {
     }
 
     @Override
-    @Command({"loadlanguages", "loadl", "loadmessages"})
-    @Usage("/loadlanguages")
+    @Command({"overridelanguages", "overl", "overridemessages"})
+    @Usage("/overridelanguages")
     @Description("Load Default Messages from Plugin JAR")
     @CommandPermission("novaconomy.admin.reloadconfig")
     public void loadLanguages(CommandSender sender) { CommandWrapper.super.loadLanguages(sender); }
@@ -161,10 +161,13 @@ public final class CommandWrapperV2 implements CommandWrapper {
         public void businessCreate(Player p, String name, Material icon) { wrapper.createBusiness(p, name, icon);}
 
         @Subcommand({"addproduct", "addp"})
-        public void addProduct(Player p, double price) { wrapper.addProduct(p, price); }
+        public void addProduct(Player p, @Range(min = 0.01) double price) { wrapper.addProduct(p, price); }
 
         @Subcommand({"addresource", "stock", "addr", "addstock"})
         public void addResource(Player p) { wrapper.addResource(p); }
+
+        @Subcommand({"removeproduct", "removep"})
+        public void removeProduct(Player p) { wrapper.removeProduct(p); }
 
     }
 
