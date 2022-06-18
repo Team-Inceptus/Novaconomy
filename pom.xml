@@ -84,11 +84,32 @@
                 <version>3.3.1-SNAPSHOT</version>
                 <configuration>
                     <createDependencyReducedPom>false</createDependencyReducedPom>
+
                     <filters>
                         <filter>
                             <artifact>*:*</artifact>
                             <excludes>
                                 <exclude>META-INF/**/*</exclude>
+                            </excludes>
+                        </filter>
+                        <filter>
+                            <artifact>com.github.cryptomorin:XSeries</artifact>
+                            <excludes>
+                                <exclude>com/cryptomorin/xseries/XBiome*</exclude>
+                                <exclude>com/cryptomorin/xseries/NMSExtras*</exclude>
+                                <exclude>com/cryptomorin/xseries/NoteBlockMusic*</exclude>
+                                <exclude>com/cryptomorin/xseries/SkullCacheListener*</exclude>
+                                <exclude>com/cryptomorin/xseries/XEntity*</exclude>
+                                <exclude>com/cryptomorin/xseries/XBlock*</exclude>
+                                <exclude>com/cryptomorin/xseries/XMaterial*</exclude>
+                                <exclude>com/cryptomorin/xseries/XPotion*</exclude>
+                                <exclude>com/cryptomorin/xseries/XTag*</exclude>
+                                <exclude>com/cryptomorin/xseries/XItemStack*</exclude>
+                                <exclude>com/cryptomorin/xseries/XEnchantment*</exclude>
+                                <exclude>com/cryptomorin/xseries/ReflectionUtils*</exclude>
+                                <exclude>com/cryptomorin/xseries/SkullUtils*</exclude>
+                                <exclude>com/cryptomorin/xseries/particles/**</exclude>
+                                <exclude>com/cryptomorin/xseries/messages/**</exclude>
                             </excludes>
                         </filter>
                     </filters>
@@ -112,6 +133,10 @@
                         <relocation>
                             <pattern>org.jetbrains.annotations</pattern>
                             <shadedPattern>us.teaminceptus.jetbrains.annotations</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>com.cryptomorin.xseries</pattern>
+                            <shadedPattern>us.teaminceptus.xseries</shadedPattern>
                         </relocation>
                     </relocations>
                 </configuration>
