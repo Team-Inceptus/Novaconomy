@@ -31,8 +31,15 @@ public enum Language {
     /**
      * Represents Portuguese / Português
      */
-    PORTUGUESE("_pt")
-    ;
+    PORTUGUESE("_pt"),
+    /**
+     * Represents Japanese / 日本
+     */
+    JAPANESE("_ja"),
+    /**
+     * Represents Chinese Simplified / 中国人
+     */
+    CHINESE("_zh");
 
     private final String id;
 
@@ -73,13 +80,11 @@ public enum Language {
      * @return Found language, or English if not found
      */
     public static Language getById(String id) {
-        if (id.equalsIgnoreCase("en")) return Language.ENGLISH;
+        if (id.equalsIgnoreCase("en")) return ENGLISH;
 
-        for (Language l : values()) {
-            if (l.id.replace("_", "").equalsIgnoreCase(id)) return l;
-        }
+        for (Language l : values()) if (l.id.replace("_", "").equalsIgnoreCase(id)) return l;
 
-        return Language.ENGLISH;
+        return ENGLISH;
     }
 
     /**
