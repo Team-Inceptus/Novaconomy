@@ -6,11 +6,10 @@ Novaconomy gives you the freedom to create **multiple** economies of your own ch
 With the freedom to have your own symbols, icons, conversion rates, and even interest, you'll have all you need to have a proper Economy!
 
 <h2 style="text-decoration: underline;">📓Changelog</h2>
-
 ### 📈 1.2.0 Update: Business is Boomin
-
 Capitalism at its finest: Create, sell, and capitalize on your own merchandise! Create up to 28 products with
 unlimited stock and set the prices to whatever you want!
+
 -----
 ## 🔮 Future Features
 - Treasury API Hook
@@ -88,3 +87,5 @@ Published as a JitPack repository
 ![Screenshot7](https://cdn.discordapp.com/attachments/860730694551863328/949806779343200326/2022-03-05_17.08.31.png)
 
 ![Screenshot8](https://cdn.discordapp.com/attachments/860730694551863328/949806779775205396/2022-03-05_17.08.18.png)
+
+-----
