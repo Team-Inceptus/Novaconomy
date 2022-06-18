@@ -44,7 +44,11 @@ import us.teaminceptus.novaconomy.api.NovaPlayer;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.events.InterestEvent;
+import us.teaminceptus.novaconomy.api.events.business.BusinessProductAddEvent;
+import us.teaminceptus.novaconomy.api.events.business.BusinessProductRemoveEvent;
+import us.teaminceptus.novaconomy.api.events.business.BusinessStockEvent;
 import us.teaminceptus.novaconomy.api.events.player.PlayerChangeBalanceEvent;
+import us.teaminceptus.novaconomy.api.events.player.PlayerPurchaseProductEvent;
 import us.teaminceptus.novaconomy.api.util.BusinessProduct;
 import us.teaminceptus.novaconomy.api.util.Price;
 import us.teaminceptus.novaconomy.api.util.Product;
@@ -464,6 +468,9 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 					bOwner.sendMessage(String.format(Novaconomy.get("notification.business.purchase"), name, material));
 					XSound.ENTITY_ARROW_HIT_PLAYER.play(bOwner, 3F, 2F);
 				}
+
+				PlayerPurchaseProductEvent event = new PlayerPurchaseProductEvent(p, bP);
+				Bukkit.getPluginManager().callEvent(event);
 			});
 
 			put("business:add_product", e -> {
@@ -476,11 +483,17 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 				Economy econ = Economy.getEconomy(wr.getNBTString(item, "economy"));
 				ItemStack product = wr.normalize(wr.getNBTItem(item, "item"));
 
-				b.addProduct(new Product(product, econ, price));
+				Product pr = new Product(product, econ, price);
 
-				String name = product.hasItemMeta() && product.getItemMeta().hasDisplayName() ? product.getItemMeta().getDisplayName() : WordUtils.capitalizeFully(product.getType().name().replace('_', ' '));
-				p.sendMessage(String.format(getMessage("success.business.add_product"), name));
-				p.closeInventory();
+				BusinessProductAddEvent event = new BusinessProductAddEvent(new BusinessProduct(pr, b));
+				Bukkit.getPluginManager().callEvent(event);
+				if (!event.isCancelled()) {
+					String name = product.hasItemMeta() && product.getItemMeta().hasDisplayName() ? product.getItemMeta().getDisplayName() : WordUtils.capitalizeFully(product.getType().name().replace('_', ' '));
+					p.sendMessage(String.format(getMessage("success.business.add_product"), name));
+					p.closeInventory();
+					Product added = new Product(pr.getItem(), pr.getPrice());
+					b.addProduct(added);
+				}
 			});
 
 			put("business:add_resource", e -> {
@@ -518,6 +531,9 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 
 				p.sendMessage(String.format(getMessage("success.business.add_resource"), b.getName()));
 				p.closeInventory();
+
+				BusinessStockEvent event = new BusinessStockEvent(b, p, extra, resources);
+				Bukkit.getPluginManager().callEvent(event);
 			});
 
 			put("product:remove", e -> {
@@ -545,6 +561,9 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 				});
 
 				p.closeInventory();
+
+				BusinessProductRemoveEvent event = new BusinessProductRemoveEvent(pr);
+				Bukkit.getPluginManager().callEvent(event);
 			});
 		}
 	};

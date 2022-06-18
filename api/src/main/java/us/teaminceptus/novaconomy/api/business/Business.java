@@ -1,6 +1,7 @@
 package us.teaminceptus.novaconomy.api.business;
 
 import org.apache.commons.lang.Validate;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
@@ -13,6 +14,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.api.NovaConfig;
+import us.teaminceptus.novaconomy.api.events.business.BusinessCreateEvent;
 import us.teaminceptus.novaconomy.api.util.BusinessProduct;
 import us.teaminceptus.novaconomy.api.util.Product;
 
@@ -498,6 +500,8 @@ public final class Business implements ConfigurationSerializable {
 
             b.saveBusiness();
 
+            BusinessCreateEvent event = new BusinessCreateEvent(b);
+            Bukkit.getPluginManager().callEvent(event);
             return b;
         }
 
