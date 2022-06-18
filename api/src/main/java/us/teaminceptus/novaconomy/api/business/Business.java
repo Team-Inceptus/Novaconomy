@@ -228,9 +228,10 @@ public final class Business implements ConfigurationSerializable {
     @NotNull
     public Business removeProduct(@Nullable Collection<? extends BusinessProduct> products) {
         if (products == null) return this;
-        products.forEach(p -> { if (p.getBusiness().equals(this)) this.products.remove(p); });
-        this.products.removeAll(products);
-        saveBusiness();
+
+        products.forEach(pr -> {
+            if (isProduct(pr.getItem())) this.products.remove(getProduct(pr.getItem()));
+        });
         return this;
     }
 
@@ -248,7 +249,6 @@ public final class Business implements ConfigurationSerializable {
 
             if (!pr.hasItemMeta() && !item.hasItemMeta() && item.getType() == pr.getType()) { state.set(true); break; }
             if (pr.isSimilar(item)) { state.set(true); break; }
-
         }
 
         return state.get();
@@ -267,6 +267,24 @@ public final class Business implements ConfigurationSerializable {
         });
 
         return state.get();
+    }
+
+    /**
+     * Fetches a BusinessProduct by its Item.
+     * @param item Item to fetch
+     * @return Business Product found, or null if not found or if item is null
+     */
+    @Nullable
+    public BusinessProduct getProduct(@Nullable ItemStack item) {
+        if (item == null) return null;
+        if (!isProduct(item)) return null;
+        for (BusinessProduct p : this.products) {
+            ItemStack pr = p.getItem();
+            if (!pr.hasItemMeta() && !item.hasItemMeta() && item.getType() == pr.getType()) return p;
+            if (pr.isSimilar(item)) return p;
+        }
+
+        return null;
     }
 
     /**
