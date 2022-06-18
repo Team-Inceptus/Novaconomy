@@ -23,10 +23,10 @@ import us.teaminceptus.novaconomy.api.NovaPlayer;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.events.player.PlayerPayEvent;
-import us.teaminceptus.novaconomy.api.util.BusinessProduct;
 
 import java.io.File;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public interface CommandWrapper {
 
@@ -40,7 +40,7 @@ public interface CommandWrapper {
         put("pay", Arrays.asList("givemoney", "novapay", "econpay", "givebal"));
         put("novaconomyreload", Arrays.asList("novareload", "nreload", "econreload"));
         put("business", Arrays.asList("nbusiness"));
-        put("loadlanguages", Arrays.asList("loadl", "loadmessages"));
+        put("overridelanguages", Arrays.asList("overl", "overridemessages"));
     }};
 
     Map<String, String> COMMAND_PERMISSION = new HashMap<String, String>() {{
@@ -50,7 +50,7 @@ public interface CommandWrapper {
        put("pay", "novaconomy.user.pay");
        put("novaconomyreload", "novaconomy.admin.reloadconfig");
        put("business", "novaconomy.user.business");
-       put("loadlanguages", "novaconomy.admin.reloadconfig");
+       put("overridelanguages", "novaconomy.admin.reloadconfig");
     }};
 
     Map<String, String> COMMAND_DESCRIPTION = new HashMap<String, String>() {{
@@ -61,7 +61,7 @@ public interface CommandWrapper {
        put("pay", "Pay another user");
        put("novaconomyreload", "Reload Novaconomy Configuration");
        put("business", "Manage your Novaconomy Business");
-       put("loadlanguages", "Load Default /Messages from Plugin JAR");
+       put("overridelanguages", "Load Default /Messages from Plugin JAR");
     }};
 
     Map<String, String> COMMAND_USAGE = new HashMap<String, String>() {{
@@ -72,7 +72,7 @@ public interface CommandWrapper {
        put("pay", "/pay <player> <economy> <amount>");
        put("novaconomyreload", "/novareload");
        put("business", "/business <create|delete|edit|stock> <args...>");
-       put("loadlanguages", "/loadlanguages");
+       put("overridelanguages", "/overridelanguages");
     }};
 
     static Plugin getPlugin() {
@@ -240,6 +240,7 @@ public interface CommandWrapper {
         }
 
         NovaConfig.reloadLanguages(true);
+        sender.sendMessage(getMessage("success.override_languages"));
     }
 
     default void setBalance(CommandSender sender, Economy econ, Player target, double balance) {
@@ -382,12 +383,15 @@ public interface CommandWrapper {
         }
 
         ItemStack pr = p.getItemInHand().clone();
-        ItemStack product = p.getItemInHand().clone();
+        pr.setAmount(1);
 
-        for (BusinessProduct prod : b.getProducts()) if (prod.getItem().isSimilar(pr)) {
+        if (b.isProduct(pr)) {
             p.sendMessage(getMessage("error.business.exists_product"));
             return;
         }
+
+        ItemStack product = p.getItemInHand().clone();
+        product.setAmount(1);
 
         Wrapper wr = getWrapper();
 
@@ -472,6 +476,38 @@ public interface CommandWrapper {
         cMeta.setLore(Arrays.asList(ChatPaginator.wordWrap(String.join("\n\n", lore), 30)));
         confirm.setItemMeta(cMeta);
         inv.setItem(49, confirm);
+
+        p.openInventory(inv);
+    }
+
+    default void removeProduct(Player p) {
+        if (Economy.getEconomies().size() < 1) {
+            p.sendMessage(getMessage("error.economy.none"));
+            return;
+        }
+
+        Business b = Business.getByOwner(p);
+        if (b == null) {
+            p.sendMessage(getMessage("error.business.not_an_owner"));
+            return;
+        }
+
+        if (b.getProducts().size() < 1) {
+            p.sendMessage(getMessage("error.business.no_products"));
+            return;
+        }
+
+        Wrapper wr = getWrapper();
+        Inventory inv = wr.genGUI(54, get("constants.business.remove_product"));
+        Inventory bData = wr.generateBusinessData(b);
+
+        List<ItemStack> items =  Arrays.stream(bData.getContents())
+                .filter(Objects::nonNull)
+                .filter(wr::hasID)
+                .collect(Collectors.toList());
+
+        items.replaceAll(item -> wr.setID(item, "product:remove"));
+        items.forEach(inv::addItem);
 
         p.openInventory(inv);
     }
