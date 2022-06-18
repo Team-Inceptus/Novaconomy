@@ -55,6 +55,11 @@
             <version>1.8-R0.1-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>com.github.cryptomorin</groupId>
+            <artifactId>XSeries</artifactId>
+            <version>8.8.0</version>
+        </dependency>
         <!-- Abstraction -->
         <dependency>
             <groupId>${project.groupId}</groupId>
