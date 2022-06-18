@@ -15,7 +15,8 @@ Notifications: true
 # - fr (French / Français)
 # - de (German / Deutsch)
 # - pt (Portuguese / Português)
-#
+# - ja (Japanese / 日本)
+# - zh (Chinese / 中国人)
 Language: en
 
 # Natural Causes to gain or lose money
