@@ -343,6 +343,27 @@ public interface CommandWrapper {
         getWrapper().openBook(p, book);
     }
 
+    default void deleteBusiness(Player p, boolean confirm) {
+        Business b = Business.getByOwner(p);
+        if (b == null) {
+            p.sendMessage(getMessage("error.business.not_an_owner"));
+            return;
+        }
+
+        if (confirm) Business.remove(b);
+        else p.sendMessage(String.format(getMessage("constants.confirm_command"), "/business delete confirm"));
+    }
+
+    default void removeBusiness(CommandSender sender, Business b, boolean confirm) {
+        if (!sender.hasPermission("novaconomy.admin.delete_business")) {
+            sender.sendMessage(getMessage("error.permission"));
+            return;
+        }
+
+        if (confirm) Business.remove(b);
+        else sender.sendMessage(String.format(getMessage("constants.confirm_command"), "/business remove confirm"));
+    }
+
     default void businessInfo(Player p) {
         Business b = Business.getByOwner(p);
         if (b == null) {

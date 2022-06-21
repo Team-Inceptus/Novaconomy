@@ -14,9 +14,16 @@ permissions:
   novaconomy.admin:
     description: Access to all Admin Actions
     default: op
+
   novaconomy.admin.reloadconfig:
     description: Reload Novaconomy configuration
     defualt: op
+    children:
+      novaconomy.admin: true
+
+  novaconomy.admin.delete_business:
+    description: Delete businesses that aren't yours
+    default: op
     children:
       novaconomy.admin: true
 

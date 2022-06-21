@@ -409,6 +409,18 @@ public final class Business implements ConfigurationSerializable {
     }
 
     /**
+     * Deletes a Business.
+     * @param b Business to remove
+     */
+    public static void remove(@Nullable Business b) {
+        if (b == null) return;
+        FileConfiguration config = NovaConfig.loadBusinesses();
+
+        config.set(b.id.toString(), null);
+        try { config.save(NovaConfig.getBusinessFile()); } catch (IOException e) { e.printStackTrace(); }
+    }
+
+    /**
      * Checks whether this Business exists.
      * @param name Business name
      * @return true if business exists, else false
@@ -440,6 +452,8 @@ public final class Business implements ConfigurationSerializable {
         if (uid == null) return false;
         return getById(uid) != null;
     }
+
+
 
     /**
      * Represents a Business Builder
