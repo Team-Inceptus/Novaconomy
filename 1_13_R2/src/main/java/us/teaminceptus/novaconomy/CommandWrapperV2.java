@@ -169,6 +169,12 @@ public final class CommandWrapperV2 implements CommandWrapper {
         @Subcommand({"removeproduct", "removep"})
         public void removeProduct(Player p) { wrapper.removeProduct(p); }
 
+        @Subcommand("delete")
+        public void deleteBusiness(Player p, @Default String confirm) { wrapper.deleteBusiness(p, confirm.equalsIgnoreCase("confirm")); }
+
+        @Subcommand("remove")
+        public void removeBusiness(CommandSender sender, Business b, @Default String confirm) { wrapper.removeBusiness(sender, b, confirm.equalsIgnoreCase("confirm"));}
+
     }
 
     @Command({"economy", "econ", "novaecon", "novaconomy", "necon"})
