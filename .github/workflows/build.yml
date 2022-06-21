@@ -128,9 +128,14 @@ jobs:
           java-version: '16'
           cache: 'maven'
 
+      - name: Extract Development
+        id: project
+        run: echo ::set-output name=dev::$(mvn help:evaluate -Dexpression=devekionebt -q -DforceStdout)
+
       - name: Build JavaDocs
-        run: |
-          mvn package -pl "api"
+        if: ${{ !steps.project.outputs.dev }}
+        run: mvn package -pl "api"
 
       - name: Deploy JavaDoc
+        if: ${{ !steps.project.outputs.dev }}
         run: bash javadoc.sh
