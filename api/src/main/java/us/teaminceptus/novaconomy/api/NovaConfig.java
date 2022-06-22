@@ -9,6 +9,7 @@ import org.bukkit.plugin.Plugin;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.util.logging.Logger;
 
 /**
  * Configuration used for API
@@ -97,7 +98,7 @@ public interface NovaConfig  {
             m.setAccessible(true);
             m.invoke(null);
         } catch (Exception e) {
-            e.printStackTrace();
+            getPlugin().getLogger().severe(e.getMessage());
         }
     }
 
@@ -106,6 +107,14 @@ public interface NovaConfig  {
         if (!f.exists()) getPlugin().saveResource("businesses.yml", false);
 
         return f;
+    }
+
+    /**
+     * Fetches the Plugin's Logger.
+     * @return Plugin Logger
+     */
+    static Logger getLogger() {
+        return getPlugin().getLogger();
     }
 
     /**
@@ -135,7 +144,7 @@ public interface NovaConfig  {
 
         if (!config.isSet("CommandVersion")) config.set("CommandVersion", "auto");
 
-        try { config.save(getFunctionalityFile()); } catch (IOException e) { e.printStackTrace(); }
+        try { config.save(getFunctionalityFile()); } catch (IOException e) { getPlugin().getLogger().severe(e.getMessage()); }
 
         return config;
     }
@@ -147,79 +156,47 @@ public interface NovaConfig  {
         // Config Checks
         FileConfiguration config = getPlugin().getConfig();
 
-        if (!(config.isBoolean("Notifications"))) {
-            config.set("Notifications", true);
-        }
+        if (!(config.isBoolean("Notifications"))) config.set("Notifications", true);
 
-        if (!(config.isString("Language"))) {
-            config.set("Language", "en");
-        }
+        if (!(config.isString("Language"))) config.set("Language", "en");
 
         // Natural Causes
-        if (!(config.isConfigurationSection("NaturalCauses"))) {
-            config.createSection("NaturalCauses");
-        }
+        if (!(config.isConfigurationSection("NaturalCauses"))) config.createSection("NaturalCauses");
 
         ConfigurationSection naturalC = config.getConfigurationSection("NaturalCauses");
 
-        if (!(naturalC.isBoolean("KillIncrease"))) {
-            naturalC.set("KillIncrease", true);
-        }
+        if (!(naturalC.isBoolean("KillIncrease"))) naturalC.set("KillIncrease", true);
 
-        if (!(naturalC.isInt("KillIncreaseChance"))) {
-            naturalC.set("KillIncreaseChance", 100);
-        }
+        if (!(naturalC.isInt("KillIncreaseChance"))) naturalC.set("KillIncreaseChance", 100);
 
-        if (!(naturalC.isBoolean("FishingIncrease"))) {
-            naturalC.set("FishingIncrease", true);
-        }
+        if (!(naturalC.isBoolean("FishingIncrease"))) naturalC.set("FishingIncrease", true);
 
-        if (!(naturalC.isInt("FishingIncreaseChance"))) {
-            naturalC.set("FishingIncreaseChance", 70);
-        }
+        if (!(naturalC.isInt("FishingIncreaseChance"))) naturalC.set("FishingIncreaseChance", 70);
 
-        if (!(naturalC.isBoolean("MiningIncrease"))) {
-            naturalC.set("MiningIncrease", true);
-        }
+        if (!(naturalC.isBoolean("MiningIncrease"))) naturalC.set("MiningIncrease", true);
 
-        if (!(naturalC.isInt("MiningIncreaseChance"))) {
-            naturalC.set("MiningIncreaseChance", 30);
-        }
+        if (!(naturalC.isInt("MiningIncreaseChance"))) naturalC.set("MiningIncreaseChance", 30);
 
-        if (!(naturalC.isBoolean("FarmingIncrease"))) {
-            naturalC.set("FarmingIncrease", true);
-        }
+        if (!(naturalC.isBoolean("FarmingIncrease"))) naturalC.set("FarmingIncrease", true);
 
-        if (!(naturalC.isInt("FarmingIncreaseChance"))) {
-            naturalC.set("FarmingIncreaseChance", 40);
-        }
+        if (!(naturalC.isInt("FarmingIncreaseChance"))) naturalC.set("FarmingIncreaseChance", 40);
 
-        if (!(naturalC.isBoolean("DeathDecrease"))) {
-            naturalC.set("DeathDecrease", true);
-        }
+        if (!(naturalC.isBoolean("DeathDecrease"))) naturalC.set("DeathDecrease", true);
 
-        if (!(naturalC.isDouble("DeathDivider")) && !(naturalC.isInt("DeathDivider"))) {
-            naturalC.set("DeathDivider", 2);
-        }
+        if (!(naturalC.isDouble("DeathDivider")) && !(naturalC.isInt("DeathDivider"))) naturalC.set("DeathDivider", 2);
 
         // Interest
-        if (!(config.isConfigurationSection("Interest"))) {
-            config.createSection("Interest");
-        }
+        if (!(config.isConfigurationSection("Interest"))) config.createSection("Interest");
 
         ConfigurationSection interest = config.getConfigurationSection("Interest");
 
-        if (!(interest.isBoolean("Enabled"))) {
-            interest.set("Enabled", true);
-        }
+        if (!(interest.isBoolean("Enabled"))) interest.set("Enabled", true);
 
-        if (!(interest.isInt("IntervalTicks")) && !(interest.isLong("IntervalTicks"))) {
+        if (!(interest.isInt("IntervalTicks")) && !(interest.isLong("IntervalTicks")))
             interest.set("IntervalTicks", 1728000);
-        }
 
-        if (!(interest.isDouble("ValueMultiplier")) && !(interest.isInt("ValueMultiplier"))) {
+        if (!(interest.isDouble("ValueMultiplier")) && !(interest.isInt("ValueMultiplier")))
             interest.set("ValueMultiplier", 1.03D);
-        }
     }
 
     // Impl

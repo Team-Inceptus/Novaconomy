@@ -122,7 +122,7 @@ public final class Economy implements ConfigurationSerializable {
         try {
             config.save(NovaConfig.getEconomiesFile());
         } catch (IOException e) {
-            e.printStackTrace();
+            NovaConfig.getLogger().severe(e.getMessage());
         }
     }
 
@@ -153,15 +153,15 @@ public final class Economy implements ConfigurationSerializable {
             try {
                 playerConfig.save(new File(NovaConfig.getPlugin().getDataFolder().getPath() + "/players", p.getUniqueId() + ".yml"));
             } catch (IOException e) {
-                e.printStackTrace();
+                NovaConfig.getLogger().severe(e.getMessage());
             }
         }
 
         try {
             config.save(new File(NovaConfig.getPlugin().getDataFolder(), "economies.yml"));
         } catch (IOException e) {
-            NovaConfig.getPlugin().getLogger().info("Error removing economy " + econ.getName());
-            e.printStackTrace();
+            NovaConfig.getLogger().info("Error removing economy " + econ.getName());
+            NovaConfig.getLogger().severe(e.getMessage());
         }
     }
 
@@ -422,7 +422,7 @@ public final class Economy implements ConfigurationSerializable {
             try {
                 config.save(NovaConfig.getEconomiesFile());
             } catch (IOException e) {
-                e.printStackTrace();
+                NovaConfig.getLogger().severe(e.getMessage());
             }
             return econ;
         }

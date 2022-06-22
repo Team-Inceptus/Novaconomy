@@ -358,7 +358,7 @@ public final class Business implements ConfigurationSerializable {
         FileConfiguration config = NovaConfig.loadBusinesses();
         config.set(this.id.toString(), this);
 
-        try { config.save(NovaConfig.getBusinessFile()); } catch (IOException e) { e.printStackTrace(); }
+        try { config.save(NovaConfig.getBusinessFile()); } catch (IOException e) { NovaConfig.getLogger().severe(e.getMessage()); }
     }
 
     /**
@@ -417,7 +417,7 @@ public final class Business implements ConfigurationSerializable {
         FileConfiguration config = NovaConfig.loadBusinesses();
 
         config.set(b.id.toString(), null);
-        try { config.save(NovaConfig.getBusinessFile()); } catch (IOException e) { e.printStackTrace(); }
+        try { config.save(NovaConfig.getBusinessFile()); } catch (IOException e) { NovaConfig.getLogger().severe(e.getMessage()); }
     }
 
     /**

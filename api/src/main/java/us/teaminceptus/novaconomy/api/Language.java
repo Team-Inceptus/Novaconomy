@@ -4,6 +4,7 @@ import org.bukkit.ChatColor;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.util.Properties;
 
@@ -65,11 +66,14 @@ public enum Language {
 
         try {
             Properties p = new Properties();
-            p.load(Files.newInputStream(new File(NovaConfig.getDataFolder(), "novaconomy" + id + ".properties").toPath()));
+            File f = new File(NovaConfig.getDataFolder(), "novaconomy" + id + ".properties");
+            InputStream str = Files.newInputStream(f.toPath());
+            p.load(str);
+            str.close();
 
             return ChatColor.translateAlternateColorCodes('&', p.getProperty(key, "Unknown Value"));
         } catch (IOException e) {
-            e.printStackTrace();
+            NovaConfig.getLogger().severe(e.getMessage());
             return null;
         }
     }

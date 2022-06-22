@@ -39,7 +39,7 @@ public final class NovaPlayer {
         if (!(this.pFile.exists())) try {
             this.pFile.createNewFile();
         } catch (IOException e) {
-            e.printStackTrace();
+            NovaConfig.getLogger().severe(e.getMessage());
         }
 
         this.pConfig = YamlConfiguration.loadConfiguration(pFile);
@@ -98,8 +98,8 @@ public final class NovaPlayer {
         try {
             this.pConfig.save(this.pFile);
         } catch (IOException e) {
-            NovaConfig.getPlugin().getLogger().info("Error saving player file");
-            e.printStackTrace();
+            NovaConfig.getLogger().info("Error saving player file");
+            NovaConfig.getLogger().severe(e.getMessage());
         }
     }
 

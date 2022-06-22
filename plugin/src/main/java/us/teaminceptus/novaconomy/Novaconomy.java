@@ -590,9 +590,9 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 			} catch (IllegalArgumentException e) { tempV = wr.getCommandVersion(); }
 
 			wrapperVersion = tempV;
-			return (CommandWrapper) Class.forName(Novaconomy.class.getPackage().getName() + ".CommandWrapperV" + wrapperVersion).getConstructor(Plugin.class).newInstance(JavaPlugin.getPlugin(Novaconomy.class));
+			return (CommandWrapper) Class.forName(Novaconomy.class.getPackage().getName() + ".CommandWrapperV" + wrapperVersion).getConstructor(Plugin.class).newInstance(NovaConfig.getPlugin());
 		} catch (Exception e) {
-			e.printStackTrace();
+			NovaConfig.getLogger().severe(e.getMessage());
 			return null;
 		}
 	}
@@ -605,7 +605,7 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 		try {
 			return (Wrapper) Class.forName(Novaconomy.class.getPackage().getName() + ".Wrapper" + getServerVersion()).newInstance();
 		} catch (Exception e) {
-			e.printStackTrace();
+			NovaConfig.getLogger().severe(e.getMessage());
 			return null;
 		}
 	}
@@ -684,7 +684,7 @@ public class Novaconomy extends JavaPlugin implements NovaConfig {
 			if (!(playerDir.exists())) playerDir.mkdir();
 		} catch (IOException e) {
 			getLogger().severe("Error loading files & folders");
-			e.printStackTrace();
+			getLogger().severe(e.getMessage());
 		}
 
 		economiesFile = YamlConfiguration.loadConfiguration(economyFile);

@@ -8,6 +8,7 @@ import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import us.teaminceptus.novaconomy.abstraction.Wrapper;
+import us.teaminceptus.novaconomy.api.NovaConfig;
 
 import java.util.List;
 
@@ -128,7 +129,7 @@ public final class Items {
         try {
             return (Wrapper) Class.forName(Novaconomy.class.getPackage().getName() + ".Wrapper" + getServerVersion()).newInstance();
         } catch (Exception e) {
-            e.printStackTrace();
+            NovaConfig.getLogger().severe(e.getMessage());
             return null;
         }
     }
