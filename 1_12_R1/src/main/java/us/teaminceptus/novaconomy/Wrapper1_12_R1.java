@@ -14,6 +14,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import us.teaminceptus.novaconomy.abstraction.Wrapper;
+import us.teaminceptus.novaconomy.api.NovaConfig;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -120,7 +121,7 @@ public final class Wrapper1_12_R1 implements Wrapper {
 
                     return f.get(b);
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    NovaConfig.getLogger().severe(e.getMessage());
                     return null;
                 }
             }
