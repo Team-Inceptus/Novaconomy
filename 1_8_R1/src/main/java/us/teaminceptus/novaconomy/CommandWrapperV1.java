@@ -7,6 +7,7 @@ import org.bukkit.command.*;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import us.teaminceptus.novaconomy.abstraction.CommandWrapper;
+import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 
@@ -35,7 +36,7 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
             if (aliases != null && aliases.length > 0) cmd.setAliases(Arrays.asList(aliases));
             return cmd;
         } catch (Exception e) {
-            e.printStackTrace();
+            NovaConfig.getLogger().severe(e.getMessage());
             return null;
         }
     }
@@ -49,7 +50,7 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
             CommandMap map = (CommandMap) bukkitmap.get(srv);
             map.register(cmd.getName(), cmd);
         } catch (Exception e) {
-            e.printStackTrace();
+            NovaConfig.getLogger().severe(e.getMessage());
         }
     }
 
@@ -568,6 +569,12 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
             String usage = COMMAND_USAGE.get(cmd);
 
             PluginCommand pcmd = createCommand(cmd, aliases.toArray(new String[0]));
+
+            if (pcmd == null) {
+                NovaConfig.getLogger().severe("Error loading command: " + cmd + " ; !! PLEASE REPORT !!");
+                continue;
+            }
+
             pcmd.setExecutor(this);
             pcmd.setUsage(usage);
             pcmd.setTabCompleter(this);
