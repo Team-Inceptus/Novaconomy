@@ -130,7 +130,7 @@ jobs:
 
       - name: Extract Development
         id: project
-        run: echo ::set-output name=dev::$(mvn help:evaluate -Dexpression=devekionebt -q -DforceStdout)
+        run: echo ::set-output name=dev::$(mvn help:evaluate -Dexpression=development -q -DforceStdout)
 
       - name: Build JavaDocs
         if: ${{ !steps.project.outputs.dev }}

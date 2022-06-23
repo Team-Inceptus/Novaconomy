@@ -67,7 +67,7 @@ public enum Language {
         try {
             Properties p = new Properties();
             File f = new File(NovaConfig.getDataFolder(), "novaconomy" + id + ".properties");
-            InputStream str = Files.newInputStream(f.toPath());
+            InputStream str = Files.newInputStream(f.toPath()); 
             p.load(str);
             str.close();
 
