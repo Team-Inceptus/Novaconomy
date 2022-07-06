@@ -52,6 +52,25 @@ NaturalCauses:
   # If DeathDecrease is set to true, their balance is divided by this number.
   DeathDivider: 2
 
+  # Modifiers for Natural Causes Events
+  Modifiers:
+
+    # In sections, write your item type (i.e. DIAMOND_ORE, case insensitive) with your currency amount and symbol in front or back.
+
+    Mining:
+      # DIAMOND_ORE: 120$
+
+    # For all Entity Types: https://hub.spigotmc.org/javadocs/spigot/org/bukkit/entity/EntityType.html
+    Killing:
+      # zombie: [D100, 150$]
+      # skeleton[maxhealth>100, name=]: [D150, 400$] - Supports NBT Queries
+
+    Fishing:
+      # cod: [E30, 50$]
+
+
+
+
 # Interest Section
 Interest:
 
