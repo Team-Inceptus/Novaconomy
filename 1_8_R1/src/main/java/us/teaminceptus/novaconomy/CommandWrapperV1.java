@@ -450,6 +450,28 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                         removeProduct(p);
                         break;
                     }
+                    case "delete": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+                        deleteBusiness(p, args.length < 2 && args[1].equalsIgnoreCase("confirm"));
+                        break;
+                    }
+                    case "remove": {
+                        if (args.length < 2) {
+                            sender.sendMessage(getMessage("error.argument.business"));
+                            return false;
+                        }
+
+                        if (Business.getByName(args[1]) == null) {
+                            sender.sendMessage(getMessage("error.business.inexistent"));
+                            return false;
+                        }
+
+                        Business b = Business.getByName(args[1]);
+
+                        removeBusiness(sender, b, args.length < 3 && args[2].equalsIgnoreCase("confirm"));
+                        break;
+                    }
 
                     default: {
                         sender.sendMessage(getMessage("error.argument"));
