@@ -13,7 +13,6 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.util.ChatPaginator;
@@ -331,18 +330,6 @@ public interface CommandWrapper {
         }
     }
 
-    default void handbook(Player p) {
-        ItemStack book = new ItemStack(Material.WRITTEN_BOOK);
-        BookMeta bMeta = (BookMeta) book.getItemMeta();
-        bMeta.setAuthor("GamerCoder215");
-
-        // TODO Create Handbook Messages
-
-        book.setItemMeta(bMeta);
-
-        getWrapper().openBook(p, book);
-    }
-
     default void deleteBusiness(Player p, boolean confirm) {
         Business b = Business.getByOwner(p);
         if (b == null) {
@@ -352,6 +339,17 @@ public interface CommandWrapper {
 
         if (confirm) Business.remove(b);
         else p.sendMessage(String.format(getMessage("constants.confirm_command"), "/business delete confirm"));
+    }
+
+    default void exchange(Player p, double amount) {
+        if (amount <= 0) {
+            p.sendMessage(getMessage("error.argument.amount"));
+            return;
+        }
+
+        Inventory inv = getWrapper().genGUI(36, getMessage("constants.economy.exchange"));
+
+
     }
 
     default void removeBusiness(CommandSender sender, Business b, boolean confirm) {
