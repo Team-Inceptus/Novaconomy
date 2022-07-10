@@ -53,6 +53,7 @@ NaturalCauses:
   DeathDivider: 2
 
   # Modifiers for Natural Causes Events
+  # NBT Queries are only currently supported by the Killing category.
   Modifiers:
 
     # In sections, write your item type (i.e. DIAMOND_ORE, case insensitive) with your currency amount and symbol in front or back.
@@ -63,10 +64,16 @@ NaturalCauses:
     # For all Entity Types: https://hub.spigotmc.org/javadocs/spigot/org/bukkit/entity/EntityType.html
     Killing:
       # zombie: [D100, 150$]
-      # skeleton[maxhealth>100, name=]: [D150, 400$] - Supports NBT Queries
+      # skeleton[maxhealth>100]: [D150, 400$] - Supports NBT Queries
 
+    # Fishing Modifiers look at the entity or item you caught.
+    # For all Entity Types: https://hub.spigotmc.org/javadocs/spigot/org/bukkit/entity/EntityType.html
+    # For all Materials: https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Material.html
     Fishing:
       # cod: [E30, 50$]
+
+    Farming:
+      # wheat: [F10, 20$]
 
 
 
