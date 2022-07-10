@@ -30,6 +30,8 @@
         </developer>
     </developers>
 
+    <inceptionYear>2022</inceptionYear>
+
     <modules>
         <module>api</module>
         <module>abstraction</module>
