@@ -14,7 +14,7 @@ import java.util.List;
 
 import static us.teaminceptus.novaconomy.Novaconomy.get;
 
-public final class Items {
+final class Items {
 
     private static final String REMOVE_STRS = "!,.?/\\[]{}()*&^%$#@-=+";
 
