@@ -53,6 +53,7 @@ public final class Economy implements ConfigurationSerializable {
      * Serialization inside a YML File
      * @return Serialized Economy
      */
+    @Override
     @NotNull
     public Map<String, Object> serialize() {
         Map<String, Object> serial = new HashMap<>();
@@ -308,6 +309,17 @@ public final class Economy implements ConfigurationSerializable {
     }
 
     /**
+     * Fetches an Economy by its unique symbol.
+     * @param symbol Symbol to find
+     * @return Economy found, or null if not found
+     */
+    @Nullable
+    public static Economy getEconomy(char symbol) {
+        for (Economy econ : Economy.getEconomies()) if (econ.getSymbol() == symbol) return econ;
+        return null;
+    }
+
+    /**
      * Fetch a Builder used for creating economies
      * @return {@link Builder} Class
      */
@@ -404,13 +416,16 @@ public final class Economy implements ConfigurationSerializable {
          * Builds this economy
          * @return Created Economy
          * @throws IllegalArgumentException if name is null (icon's default is Gold Ingot)
-         * @throws UnsupportedOperationException if already exists
+         * @throws UnsupportedOperationException if already exists or symbol is taken
          */
         public Economy build() throws IllegalArgumentException, UnsupportedOperationException {
             if (this.name == null) throw new IllegalArgumentException("Name cannot be null");
 
             if (NovaConfig.getEconomiesConfig().getConfigurationSection(this.name.toLowerCase()) != null)
                 throw new UnsupportedOperationException("Economy already exists");
+
+            for (Economy econ : Economy.getEconomies()) if (econ.getSymbol() == this.symbol) throw new UnsupportedOperationException("Symbol is taken");
+
 
             FileConfiguration config = NovaConfig.getEconomiesConfig();
             ConfigurationSection es = config.createSection(this.name.toLowerCase());
