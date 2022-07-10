@@ -179,7 +179,12 @@ public interface CommandWrapper {
                 return;
             }
 
-        Economy.builder().setName(name).setSymbol(symbol).setIcon(icon).setIncreaseNaturally(naturalIncrease).setConversionScale(scale).build();
+        try {
+            Economy.builder().setName(name).setSymbol(symbol).setIcon(icon).setIncreaseNaturally(naturalIncrease).setConversionScale(scale).build();
+        } catch (UnsupportedOperationException e) {
+            sender.sendMessage(getMessage("error.economy.exists"));
+            return;
+        }
         sender.sendMessage(getMessage("success.economy.create"));
     }
 
