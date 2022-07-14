@@ -101,7 +101,7 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                         return false;
                     }
 
-                    if (Economy.getEconomy(args[0]) == null) {
+                    if (!Economy.exists(args[0])) {
                         p.sendMessage(getMessage("error.economy.transfer_from"));
                         return false;
                     }
@@ -113,7 +113,7 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                         return false;
                     }
 
-                    if (Economy.getEconomy(args[1]) == null) {
+                    if (!Economy.exists(args[1])) {
                         p.sendMessage(getMessage("error.economy.transfer_to"));
                         return false;
                     }
@@ -156,7 +156,7 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                         return false;
                     }
 
-                    if (Economy.getEconomy(args[1]) == null) {
+                    if (!Economy.exists(args[1])) {
                         p.sendMessage(getMessage("error.argument.economy"));
                         return false;
                     }
@@ -239,7 +239,7 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                             return false;
                         }
 
-                        if (Economy.getEconomy(args[1]) == null) {
+                        if (!Economy.exists(args[1])) {
                             sender.sendMessage(getMessage("error.economy.inexistent"));
                             return false;
                         }
@@ -254,7 +254,7 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                             return false;
                         }
 
-                        if (Economy.getEconomy(args[1]) == null) {
+                        if (!Economy.exists(args[1])) {
                             sender.sendMessage(getMessage("error.economy.inexistent"));
                             return false;
                         }
@@ -276,7 +276,7 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                                 return false;
                             }
 
-                            if (Economy.getEconomy(args[1]) == null) {
+                            if (!Economy.exists(args[1])) {
                                 sender.sendMessage(getMessage("error.economy.inexistent"));
                                 return false;
                             }
@@ -335,7 +335,7 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                             return false;
                         }
 
-                        if (Economy.getEconomy(args[1]) == null) {
+                        if (!Economy.exists(args[1])) {
                             sender.sendMessage(getMessage("error.economy.inexistent"));
                             return false;
                         }
