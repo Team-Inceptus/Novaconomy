@@ -180,6 +180,35 @@ public final class Economy implements ConfigurationSerializable {
     }
 
     /**
+     * Whether this Economy exists.
+     * @param name Name of the Economy
+     * @return true if economy exists, else false
+     */
+    public static boolean exists(@Nullable String name) {
+        if (name == null) return false;
+        return getEconomy(name) != null;
+    }
+
+    /**
+     * Whetehr an economy with this UUID exists.
+     * @param uid UUID of the Economy
+     * @return true if economy exists, else false
+     */
+    public static boolean exists(@Nullable UUID uid) {
+        if (uid == null) return false;
+        return getEconomy(uid) != null;
+    }
+
+    /**
+     * Whether an Economy with this symbol exists.
+     * @param c Symbol of the economy
+     * @return true if economy exists, else false
+     */
+    public static boolean exists(char c) {
+        return getEconomy(c) != null;
+    }
+
+    /**
      * Whether or not this economy will naturally increase (not the same as Interest)
      * <p>
      * An economy increasing naturally means that it increases from NaturalCauses (i.e. Mining, Fishing). Specific events can be turned off in the configuration.
