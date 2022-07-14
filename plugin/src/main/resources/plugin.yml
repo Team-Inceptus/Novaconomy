@@ -2,6 +2,7 @@ name: Novaconomy
 version: 1.2.0
 api-version: 1.13
 main: us.teaminceptus.novaconomy.Novaconomy
+softdepend: [PlaceholderAPI]
 permissions:
   novaconomy.*:
     description: Access to all Novaconomy Actions

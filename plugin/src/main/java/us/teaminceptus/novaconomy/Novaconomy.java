@@ -146,9 +146,9 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 			char s1 = s.charAt(0);
 			char s2 = s.charAt(s.length() - 1);
 
-			if (Economy.getEconomy(s1) == null || Economy.getEconomy(s2) == null) return null;
+			if (!Economy.exists(s1) || !Economy.exists(s2)) return null;
 
-			Economy econ = Economy.getEconomy(s1) == null ? Economy.getEconomy(s2) : Economy.getEconomy(s1);
+			Economy econ = Economy.exists(s1) ? Economy.getEconomy(s1) : Economy.getEconomy(s2);
 			double amountD = Double.parseDouble(s.replaceAll("[" + s1 + s2 + "]", ""));
 			return Collections.singletonMap(econ, amountD);
 		}
@@ -889,6 +889,14 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		add(Product.class);
 		add(BusinessProduct.class);
 	}};
+
+	private void loadPlaceholders() {
+		if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
+			getLogger().info("Placeholder API Found! Hooking...");
+			new Placeholders();
+			getLogger().info("Hooked into Placeholder API!");
+		}
+	}
 
 	/**
 	 * Called when the Plugin enables
