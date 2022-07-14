@@ -453,7 +453,15 @@ public final class Business implements ConfigurationSerializable {
         return getById(uid) != null;
     }
 
-
+    /**
+     * Checks whether this Business exists.
+     * @param p Owner of Business
+     * @return true if business exists, else false
+     */
+    public static boolean exists(@Nullable OfflinePlayer p) {
+        if (p == null) return false;
+        return getByOwner(p) != null;
+    }
 
     /**
      * Represents a Business Builder
