@@ -299,7 +299,7 @@ public final class Economy implements ConfigurationSerializable {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Economy economy = (Economy) o;
-        return economy.getName().equals(this.getName());
+        return economy.getName().equals(this.getName()) || economy.getUniqueId().equals(this.getUniqueId());
     }
 
     @Override
