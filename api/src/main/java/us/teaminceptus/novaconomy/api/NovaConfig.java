@@ -5,6 +5,7 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.Plugin;
+import us.teaminceptus.novaconomy.api.economy.Economy;
 
 import java.io.File;
 import java.io.IOException;
@@ -144,6 +145,9 @@ public interface NovaConfig  {
 
         if (!config.isSet("CommandVersion")) config.set("CommandVersion", "auto");
 
+        if (!config.isDouble("MaxConvertAmount")) config.set("MaxConvertAmount", -1);
+        if (!config.isConfigurationSection("EconomyMaxConvertAmounts")) config.createSection("EconomyMaxConvertAmounts");
+
         try { config.save(getFunctionalityFile()); } catch (IOException e) { getPlugin().getLogger().severe(e.getMessage()); }
 
         return config;
@@ -157,7 +161,6 @@ public interface NovaConfig  {
         FileConfiguration config = getPlugin().getConfig();
 
         if (!(config.isBoolean("Notifications"))) config.set("Notifications", true);
-
         if (!(config.isString("Language"))) config.set("Language", "en");
 
         // Natural Causes
@@ -166,23 +169,18 @@ public interface NovaConfig  {
         ConfigurationSection naturalC = config.getConfigurationSection("NaturalCauses");
 
         if (!(naturalC.isBoolean("KillIncrease"))) naturalC.set("KillIncrease", true);
-
         if (!(naturalC.isInt("KillIncreaseChance"))) naturalC.set("KillIncreaseChance", 100);
 
         if (!(naturalC.isBoolean("FishingIncrease"))) naturalC.set("FishingIncrease", true);
-
         if (!(naturalC.isInt("FishingIncreaseChance"))) naturalC.set("FishingIncreaseChance", 70);
 
         if (!(naturalC.isBoolean("MiningIncrease"))) naturalC.set("MiningIncrease", true);
-
         if (!(naturalC.isInt("MiningIncreaseChance"))) naturalC.set("MiningIncreaseChance", 30);
 
         if (!(naturalC.isBoolean("FarmingIncrease"))) naturalC.set("FarmingIncrease", true);
-
         if (!(naturalC.isInt("FarmingIncreaseChance"))) naturalC.set("FarmingIncreaseChance", 40);
 
         if (!(naturalC.isBoolean("DeathDecrease"))) naturalC.set("DeathDecrease", true);
-
         if (!(naturalC.isDouble("DeathDivider")) && !(naturalC.isInt("DeathDivider"))) naturalC.set("DeathDivider", 2);
 
         // Interest
@@ -347,5 +345,14 @@ public interface NovaConfig  {
      * @param enabled true if enabled, else false
      */
     void setInterestEnabled(boolean enabled);
+
+    /**
+     * Fetches the maximum amount of money a player can convert FROM.
+     * <br><br>
+     * This value does not control how much money a player will receive after converting.
+     * @param econ Economy to test against
+     * @return Maximum amount
+     */
+    double getMaxConvertAmount(Economy econ);
 
 }
