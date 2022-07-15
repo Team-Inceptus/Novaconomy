@@ -12,7 +12,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Represents a Business Product
+ * Represents a Sellable Product
  */
 public class Product implements ConfigurationSerializable {
 
