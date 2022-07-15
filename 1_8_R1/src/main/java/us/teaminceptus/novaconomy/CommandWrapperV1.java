@@ -133,6 +133,24 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                 }
                 break;
             }
+            case "exchange": {
+                if (!(sender instanceof Player)) return false;
+                Player p = (Player) sender;
+
+                try {
+                    if (args.length < 1) {
+                        p.sendMessage(getMessage("error.economy.transfer_amount"));
+                        return false;
+                    }
+
+                    double amount = Double.parseDouble(args[0]);
+                    exchange(p, amount);
+                } catch (NumberFormatException e) {
+                    p.sendMessage(getMessage("error.economy.transfer_amount"));
+                    return false;
+                }
+                break;
+            }
             case "pay": {
                 if (!(sender instanceof Player)) return false;
                 Player p = (Player) sender;

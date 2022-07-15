@@ -36,6 +36,7 @@ public interface CommandWrapper {
         put("economy", Arrays.asList("econ", "novaecon", "novaconomy", "necon"));
         put("balance", Arrays.asList("bal", "novabal", "nbal"));
         put("convert", Arrays.asList("conv"));
+        put("exchange", Arrays.asList("convertgui", "convgui", "exch"));
         put("pay", Arrays.asList("givemoney", "novapay", "econpay", "givebal"));
         put("novaconomyreload", Arrays.asList("novareload", "nreload", "econreload"));
         put("business", Arrays.asList("nbusiness"));
@@ -46,6 +47,7 @@ public interface CommandWrapper {
        put("economy", "novaconomy.economy");
        put("balance", "novaconomy.user.balance");
        put("convert", "novaconomy.user.convert");
+       put("exchange", "novaconomy.user.convert");
        put("pay", "novaconomy.user.pay");
        put("novaconomyreload", "novaconomy.admin.reloadconfig");
        put("business", "novaconomy.user.business");
@@ -57,6 +59,7 @@ public interface CommandWrapper {
        put("economy", "Manage economies or their balances");
        put("balance", "Access your balances from all economies");
        put("convert", "Convert one balance in an economy to another balance");
+       put("exchange", "Convert one balance in an economy to another balance (with a GUI)");
        put("pay", "Pay another user");
        put("novaconomyreload", "Reload Novaconomy Configuration");
        put("business", "Manage your Novaconomy Business");
@@ -68,6 +71,7 @@ public interface CommandWrapper {
        put("economy", "/economy <create|delete|addbal|removebal|info> <args...>");
        put("balance", "/balance");
        put("convert", "/convert <econ-from> <econ-to> <amount>");
+       put("exchange", "/exchange <amount>");
        put("pay", "/pay <player> <economy> <amount>");
        put("novaconomyreload", "/novareload");
        put("business", "/business <create|delete|edit|stock> <args...>");
@@ -155,6 +159,12 @@ public interface CommandWrapper {
             return;
         }
 
+        double max = NovaConfig.getConfiguration().getMaxConvertAmount(from);
+        if (max >= 0 && amount > max) {
+            p.sendMessage(String.format(getMessage("error.economy.transfer_max"), String.format("%,.2f", max) + from.getSymbol(), String.format("%,.2f", amount) + from.getSymbol()));
+            return;
+        }
+
         if (np.getBalance(from) < amount) {
             p.sendMessage(String.format(getMessage("error.economy.invalid_amount"), ChatColor.RED + get("constants.convert")));
             return;
@@ -165,6 +175,80 @@ public interface CommandWrapper {
         np.remove(from, amount);
         np.add(to, toBal);
         p.sendMessage(String.format(getMessage("success.economy.convert"), (from.getSymbol() + "") + amount + "", (to.getSymbol() + "") + Math.floor(toBal * 100) / 100) + "");
+    }
+
+    default void exchange(Player p, double amount) {
+        if (!p.hasPermission("novaconomy.user.convert")) {
+            p.sendMessage(getMessage("error.permission"));
+            return;
+        }
+
+        if (Economy.getEconomies().size() < 2) {
+            p.sendMessage(getMessage("error.economy.none"));
+            return;
+        }
+
+        if (amount <= 0) {
+            p.sendMessage(getMessage("error.argument.amount"));
+            return;
+        }
+
+        double max = NovaConfig.loadFunctionalityFile().getDouble("MaxConvertAmount");
+        if (max >= 0 && amount > max) {
+            p.sendMessage(String.format(getMessage("error.economy.transfer_max"), String.format("%,.2f", max),   String.format("%,.2f", amount)));
+            return;
+        }
+
+        Wrapper wr = getWrapper();
+        Inventory inv = wr.genGUI(36, getMessage("constants.economy.exchange"));
+
+        List<Economy> economies = Economy.getEconomies().stream().sorted(Comparator.comparing(Economy::getName)).collect(Collectors.toList());
+
+        Economy economy1 = economies.get(0);
+        ItemStack econ1 = new ItemStack(economy1.getIcon());
+        ItemMeta e1Meta = econ1.getItemMeta();
+        e1Meta.setLore(Collections.singletonList(ChatColor.YELLOW + "" + amount + "" + economy1.getSymbol()));
+        econ1.setItemMeta(e1Meta);
+        wr.setID(econ1, "exchange:1");
+        wr.setNBT(econ1, "economy", economy1.getUniqueId().toString());
+        wr.setNBT(econ1, "amount", amount);
+        inv.setItem(12, econ1);
+
+        Economy economy2 = economies.get(1);
+        ItemStack econ2 = new ItemStack(economy2.getIcon());
+        ItemMeta e2Meta = econ1.getItemMeta();
+        e2Meta.setLore(Collections.singletonList(ChatColor.YELLOW + "" + economy1.convertAmount(economy2, amount) + "" + economy1.getSymbol()));
+        econ1.setItemMeta(e2Meta);
+        wr.setID(econ2, "exchange:2");
+        wr.setNBT(econ2, "economy", economy2.getUniqueId().toString());
+        wr.setNBT(econ2, "amount", Math.floor(economy1.convertAmount(economy2, amount) * 100) / 100);
+        inv.setItem(14, econ2);
+
+        ItemStack yes = new ItemStack(limeWool());
+        ItemMeta yMeta = yes.getItemMeta();
+        yMeta.setDisplayName(ChatColor.GREEN + get("constants.yes"));
+        yes.setItemMeta(yMeta);
+        wr.setID(yes, "yes:exchange");
+        inv.setItem(28, yes);
+
+        ItemStack no = new ItemStack(redWool());
+        ItemMeta nMeta = no.getItemMeta();
+        nMeta.setDisplayName(ChatColor.RED + get("constants.cancel"));
+        no.setItemMeta(nMeta);
+        wr.setID(no, "no:exchange");
+        inv.setItem(30, no);
+
+        p.openInventory(inv);
+    }
+
+    static ItemStack limeWool() {
+        if (getWrapper().isLegacy()) return new ItemStack(Material.matchMaterial("WOOL"), 5);
+        else return new ItemStack(Material.matchMaterial("LIME_WOOL"));
+    }
+
+    static ItemStack redWool() {
+        if (getWrapper().isLegacy()) return new ItemStack(Material.matchMaterial("WOOL"), 14);
+        else return new ItemStack(Material.matchMaterial("RED_WOOL"));
     }
 
     default void createEconomy(CommandSender sender, String name, char symbol, Material icon, double scale, boolean naturalIncrease) {
@@ -178,6 +262,11 @@ public interface CommandWrapper {
                 sender.sendMessage(getMessage("error.economy.exists"));
                 return;
             }
+
+        if (scale <= 0) {
+            sender.sendMessage(getMessage("error.argument.scale"));
+            return;
+        }
 
         try {
             Economy.builder().setName(name).setSymbol(symbol).setIcon(icon).setIncreaseNaturally(naturalIncrease).setConversionScale(scale).build();
@@ -344,17 +433,6 @@ public interface CommandWrapper {
 
         if (confirm) Business.remove(b);
         else p.sendMessage(String.format(getMessage("constants.confirm_command"), "/business delete confirm"));
-    }
-
-    default void exchange(Player p, double amount) {
-        if (amount <= 0) {
-            p.sendMessage(getMessage("error.argument.amount"));
-            return;
-        }
-
-        Inventory inv = getWrapper().genGUI(36, getMessage("constants.economy.exchange"));
-
-
     }
 
     default void removeBusiness(CommandSender sender, Business b, boolean confirm) {
@@ -574,7 +652,7 @@ public interface CommandWrapper {
 
     static Wrapper getWrapper() {
         try {
-            return (Wrapper) Class.forName("us.teaminceptus.novaconomy.Wrapper" + getServerVersion()).newInstance();
+            return (Wrapper) Class.forName("us.teaminceptus.novaconomy.Wrapper" + getServerVersion()).getConstructor().newInstance();
         } catch (Exception e) {
             return null;
         }

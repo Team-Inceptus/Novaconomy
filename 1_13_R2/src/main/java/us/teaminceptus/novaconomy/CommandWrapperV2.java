@@ -106,27 +106,28 @@ public final class CommandWrapperV2 implements CommandWrapper {
     @Command({"pay", "econpay", "novapay", "givemoney", "givebal"})
     @Description("Pay another user")
     @CommandPermission("novaconomy.user.pay")
-    public void pay(Player p, Player target, Economy economy, @Range(min = 0.01) double amount) {
-        CommandWrapper.super.pay(p, target, economy, amount);
-    }
+    public void pay(Player p, Player target, Economy economy, @Range(min = 0.01) double amount) { CommandWrapper.super.pay(p, target, economy, amount); }
 
     @Override
     @Command({"convert", "conv"})
     @Description("Convert one balance in an economy to another balance")
     @Usage("/convert <econ-from> <econ-to> <amount>")
     @CommandPermission("novaconomy.user.convert")
-    public void convert(Player p, @Named("from-economy") Economy from, @Named("to-economy") Economy to, @Range(min = 0.01) double amount) {
-        CommandWrapper.super.convert(p, from, to, amount);
-    }
+    public void convert(Player p, @Named("from-economy") Economy from, @Named("to-economy") Economy to, @Range(min = 0.01) double amount) { CommandWrapper.super.convert(p, from, to, amount); }
 
     @Override
     @Command({"novaconomyreload", "novareload", "nreload", "econreload"})
     @Usage("/novareload")
     @Description("Reload Novaconomy Configuration")
     @CommandPermission("novaconomy.admin.reloadconfig")
-    public void reloadConfig(CommandSender sender) {
-        CommandWrapper.super.reloadConfig(sender);
-    }
+    public void reloadConfig(CommandSender sender) { CommandWrapper.super.reloadConfig(sender); }
+
+    @Override
+    @Command({"exchange", "convertgui", "convgui", "exch"})
+    @Usage("/exchange <amount>")
+    @Description("Convert one balance in an economy to another balance (with a GUI)")
+    @CommandPermission("novaconomy.user.convert")
+    public void exchange(Player p, @Range(min = 0.01) double amount) { CommandWrapper.super.exchange(p, amount); }
 
     @Override
     @Command({"overridelanguages", "overl", "overridemessages"})
