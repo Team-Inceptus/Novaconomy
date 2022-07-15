@@ -127,7 +127,7 @@ final class Items {
 
     private static Wrapper getWrapper() {
         try {
-            return (Wrapper) Class.forName(Novaconomy.class.getPackage().getName() + ".Wrapper" + getServerVersion()).newInstance();
+            return (Wrapper) Class.forName(Novaconomy.class.getPackage().getName() + ".Wrapper" + getServerVersion()).getConstructor().newInstance();
         } catch (Exception e) {
             NovaConfig.getLogger().severe(e.getMessage());
             return null;
