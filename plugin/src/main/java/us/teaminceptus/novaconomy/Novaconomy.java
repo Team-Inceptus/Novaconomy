@@ -58,6 +58,7 @@ import us.teaminceptus.novaconomy.api.util.Product;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -67,6 +68,11 @@ import java.util.stream.Collectors;
  * @see NovaConfig
  */
 public final class Novaconomy extends JavaPlugin implements NovaConfig {
+
+	private static final String ECON_TAG = "economy";
+	private static final String AMOUNT_TAG = "amount";
+	private static final String PRICE_TAG = "price";
+	private static final String PRODUCT_TAG = "product";
 
 	/**
 	 * Main Novaconomy Constructor
@@ -333,8 +339,8 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 			if (!w.hasID(item)) return;
 			if (!w.getID(item).equalsIgnoreCase("economy:check")) return;
 
-			Economy econ = Economy.getEconomy(UUID.fromString(wrapper.getNBTString(item, "economy")));
-			double amount = wrapper.getNBTDouble(item, "amount");
+			Economy econ = Economy.getEconomy(UUID.fromString(wrapper.getNBTString(item, ECON_TAG)));
+			double amount = wrapper.getNBTDouble(item, AMOUNT_TAG);
 
 			np.add(econ, amount);
 			new BukkitRunnable() {
@@ -548,7 +554,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 	}
 
 	private static final List<ChatColor> COLORS = Arrays.stream(ChatColor.values()).filter(ChatColor::isColor).collect(Collectors.toList());
-	
+
 	private static final Map<String, Consumer<InventoryClickEvent>> CLICK_ITEMS = new HashMap<String, Consumer<InventoryClickEvent>>() {{
 			put("economy_scroll", e -> {
 				ItemStack item = e.getCurrentItem();
@@ -580,7 +586,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				}
 
 				List<BusinessProduct> products = new ArrayList<>();
-				BusinessProduct pr = (BusinessProduct) w.getNBTProduct(item, "product");
+				BusinessProduct pr = (BusinessProduct) w.getNBTProduct(item, PRODUCT_TAG);
 
 				Inventory inv = w.genGUI(27, WordUtils.capitalizeFully(Novaconomy.get("constants.purchase")) + " \"" + ChatColor.RESET + name + ChatColor.RESET + "\"?", new Wrapper.CancelHolder());
 				for (int i = 10; i < 17; i++) inv.setItem(i, w.getGUIBackground());
@@ -588,8 +594,8 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				inv.setItem(13, item);
 
 				ItemStack yes = Items.yes("buy_product").clone();
-				yes = w.setNBT(yes, "product", pr);
-				yes = w.setNBT(yes, "price", pr.getPrice().getAmount());
+				yes = w.setNBT(yes, PRODUCT_TAG, pr);
+				yes = w.setNBT(yes, PRICE_TAG, pr.getPrice().getAmount());
 				inv.setItem(21, yes);
 
 				ItemStack cancel = Items.cancel("no_product").clone();
@@ -619,12 +625,12 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				Economy.getEconomies().forEach(econ -> sortedList.add(econ.getName()));
 				sortedList.sort(String.CASE_INSENSITIVE_ORDER);
 
-				Economy econ = Economy.getEconomy(w.getNBTString(item, "economy"));
+				Economy econ = Economy.getEconomy(w.getNBTString(item, ECON_TAG));
 				int nextI = sortedList.indexOf(econ.getName()) + 1;
 				Economy next = sortedList.size() == 1 ? econ : Economy.getEconomy(sortedList.get(nextI == sortedList.size() ? 0 : nextI));
 
 				item.setType(next.getIcon().getType());
-				item = w.setNBT(item, "economy", next.getName().toLowerCase());
+				item = w.setNBT(item, ECON_TAG, next.getName().toLowerCase());
 
 				ItemMeta meta = item.getItemMeta();
 				meta.setDisplayName(ChatColor.GOLD + next.getName());
@@ -639,17 +645,17 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
 				int slot = e.getRawSlot();
 				ItemStack item = e.getCurrentItem();
-				Economy econ = Economy.getEconomy(w.getNBTString(item, "economy"));
+				Economy econ = Economy.getEconomy(w.getNBTString(item, ECON_TAG));
 
 				Inventory inv = e.getClickedInventory();
 
 				ItemStack confirm = inv.getItem(23);
-				confirm = w.setNBT(confirm, "economy", econ.getName().toLowerCase());
+				confirm = w.setNBT(confirm, ECON_TAG, econ.getName().toLowerCase());
 				inv.setItem(23, confirm);
 
 				ItemStack display = inv.getItem(13);
 				ItemMeta dMeta = display.getItemMeta();
-				dMeta.setLore(Collections.singletonList(String.format(Novaconomy.get("constants.business.price"), w.getNBTDouble(display, "price"), econ.getSymbol())));
+				dMeta.setLore(Collections.singletonList(String.format(Novaconomy.get("constants.business.price"), w.getNBTDouble(display, PRICE_TAG), econ.getSymbol())));
 				display.setItemMeta(dMeta);
 				inv.setItem(13, display);
 			});
@@ -666,7 +672,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				}
 
 				NovaPlayer np = new NovaPlayer(p);
-				BusinessProduct bP = (BusinessProduct) w.getNBTProduct(item, "product");
+				BusinessProduct bP = (BusinessProduct) w.getNBTProduct(item, PRODUCT_TAG);
 
 				if (!np.canAfford(bP)) {
 					p.sendMessage(String.format(Novaconomy.get("error.economy.invalid_amount"), Novaconomy.get("constants.purchase")));
@@ -708,8 +714,8 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				Business b = Business.getByOwner(p);
 				ItemStack item = e.getCurrentItem();
 
-				double price = w.getNBTDouble(item, "price");
-				Economy econ = Economy.getEconomy(w.getNBTString(item, "economy"));
+				double price = w.getNBTDouble(item, PRICE_TAG);
+				Economy econ = Economy.getEconomy(w.getNBTString(item, ECON_TAG));
 				ItemStack product = w.normalize(w.getNBTItem(item, "item"));
 
 				Product pr = new Product(product, econ, price);
@@ -771,7 +777,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				Business b = Business.getByOwner(p);
 				ItemStack item = e.getCurrentItem();
 
-				BusinessProduct pr = (BusinessProduct) w.getNBTProduct(item, "product");
+				BusinessProduct pr = (BusinessProduct) w.getNBTProduct(item, PRODUCT_TAG);
 				ItemStack product = pr.getItem();
 
 				b.removeProduct(pr);
@@ -794,7 +800,76 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				BusinessProductRemoveEvent event = new BusinessProductRemoveEvent(pr);
 				Bukkit.getPluginManager().callEvent(event);
 			});
+
+			put("exchange:1", e -> EXCHANGE_BICONSUMER.accept(e, 12));
+			put("exchange:2", e -> EXCHANGE_BICONSUMER.accept(e, 14));
+
+			put("yes:exchange", e -> {
+				if (!(e.getWhoClicked() instanceof Player)) return;
+				Player p = (Player) e.getWhoClicked();
+				NovaPlayer np = new NovaPlayer(p);
+				Inventory inv = e.getView().getTopInventory();
+
+				ItemStack takeItem = inv.getItem(12);
+				Economy takeEcon = Economy.getEconomy(UUID.fromString(w.getNBTString(takeItem, ECON_TAG)));
+				double take = w.getNBTDouble(takeItem, AMOUNT_TAG);
+
+				double max = NovaConfig.getConfiguration().getMaxConvertAmount(takeEcon);
+				if (max >= 0 && take > max) {
+					p.sendMessage(String.format(getMessage("error.economy.transfer_max"), String.format("%,.2f", max) + takeEcon.getSymbol(), String.format("%,.2f", take) + takeEcon.getSymbol()));
+					p.closeInventory();
+					return;
+				}
+
+				ItemStack giveItem = inv.getItem(14);
+				Economy giveEcon = Economy.getEconomy(UUID.fromString(w.getNBTString(giveItem, ECON_TAG)));
+				double give = w.getNBTDouble(inv.getItem(14), AMOUNT_TAG);
+
+				double takeBal = np.getBalance(takeEcon);
+				PlayerChangeBalanceEvent event1 = new PlayerChangeBalanceEvent(p, takeEcon, take, takeBal, takeBal - take, false);
+				Bukkit.getPluginManager().callEvent(event1);
+				if (!event1.isCancelled()) np.remove(takeEcon, take);
+
+				double giveBal = np.getBalance(giveEcon);
+				PlayerChangeBalanceEvent event2 = new PlayerChangeBalanceEvent(p, giveEcon, give, giveBal, giveBal + give, false);
+				Bukkit.getPluginManager().callEvent(event2);
+				if (!event2.isCancelled()) np.add(giveEcon, give);
+
+				XSound.ENTITY_ARROW_HIT_PLAYER.play(p, 3F, 2F);
+				p.closeInventory();
+				p.sendMessage(String.format(getMessage("success.economy.convert"), take + "" + takeEcon.getSymbol(), give + "" + giveEcon.getSymbol()));
+			});
 		}
+	};
+
+	private static final BiConsumer<InventoryClickEvent, Integer> EXCHANGE_BICONSUMER = (e, i) -> {
+		if (!(e.getWhoClicked() instanceof Player)) return;
+		ItemStack item = e.getCurrentItem();
+		Inventory inv = e.getView().getTopInventory();
+		Economy econ = Economy.getEconomy(UUID.fromString(w.getNBTString(item, ECON_TAG)));
+		int oIndex = i == 14 ? 12 : 14;
+		Economy econ2 = Economy.getEconomy(UUID.fromString(w.getNBTString(inv.getItem(oIndex), ECON_TAG)));
+
+		List<Economy> economies = Economy.getEconomies().stream()
+				.filter(economy -> !economy.equals(econ) && !economy.equals(econ2))
+				.sorted(Comparator.comparing(Economy::getName))
+				.collect(Collectors.toList());
+		if (economies.size() == 0) return;
+
+		Economy next = economies.get(economies.indexOf(econ) + 1 >= economies.size() ? 0 : economies.indexOf(econ) + 1);
+		ItemStack newItem = new ItemStack(next.getIcon());
+
+		ItemMeta meta = newItem.getItemMeta();
+		double amount = i == 12 ? w.getNBTDouble(item, AMOUNT_TAG) : Math.floor(econ.convertAmount(next, w.getNBTDouble(inv.getItem(oIndex), AMOUNT_TAG) * 100) / 100);
+		meta.setLore(Collections.singletonList(ChatColor.YELLOW + "" + amount + "" + next.getSymbol()));
+		newItem.setItemMeta(meta);
+
+		w.setID(newItem, "exchange:" + (i == 14 ? "2" : "1"));
+		w.setNBT(newItem, ECON_TAG, next.getUniqueId().toString());
+		w.setNBT(newItem, AMOUNT_TAG, amount);
+
+		inv.setItem(oIndex, newItem);
+		XSound.BLOCK_NOTE_BLOCK_PLING.play(e.getWhoClicked(), 3F, 2F);
 	};
 
 	private static final Set<Material> ores = new HashSet<>(Arrays.stream(Material.values()).filter(m -> m.name().endsWith("ORE") || m.name().equalsIgnoreCase("ANCIENT_DEBRIS")).collect(Collectors.toSet()));
@@ -832,7 +907,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
 	private static Wrapper getWrapper() {
 		try {
-			return (Wrapper) Class.forName(Novaconomy.class.getPackage().getName() + ".Wrapper" + getServerVersion()).newInstance();
+			return (Wrapper) Class.forName(Novaconomy.class.getPackage().getName() + ".Wrapper" + getServerVersion()).getConstructor().newInstance();
 		} catch (Exception e) {
 			NovaConfig.getLogger().severe(e.getMessage());
 			return null;
@@ -1022,6 +1097,12 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
 	@Override
 	public void setInterestEnabled(boolean enabled) { interest.set("Enabled", enabled); saveConfig(); }
+
+	@Override
+	public double getMaxConvertAmount(Economy econ) {
+		if (funcConfig.getConfigurationSection("EconomyMaxConvertAmounts").contains(econ.getName())) return funcConfig.getDouble("EconomyMaxConvertAmounts." + econ.getName());
+		return funcConfig.getDouble("MaxConvertAmount", -1);
+	}
 
 	@Override
 	public boolean hasMiningIncrease() { return ncauses.getBoolean("MiningIncrease"); }
