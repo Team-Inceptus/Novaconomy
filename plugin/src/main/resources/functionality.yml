@@ -12,3 +12,17 @@
 #
 # If a version is invalid or not supported, it will default to auto
 CommandVersion: auto
+
+# Maximum amount of money a player can convert FROM.
+# This value does not control how much money the player will receive after converting.
+# Set to any negative (e.g. -1) for no limit.
+MaxConvertAmount: -1
+
+# MaxConvertAmount for specific Economies
+# If one is not set then it will default to MaxConvertAmount
+# Economy names are case-sensitive
+EconomyMaxConvertAmounts:
+
+  # Dollars: -1
+
+  # Coins: 150
