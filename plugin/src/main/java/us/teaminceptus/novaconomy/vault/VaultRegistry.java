@@ -1,6 +1,7 @@
 package us.teaminceptus.novaconomy.vault;
 
 import org.bukkit.Bukkit;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.ServicePriority;
 import us.teaminceptus.novaconomy.Novaconomy;
@@ -23,17 +24,28 @@ public class VaultRegistry {
      */
     public VaultRegistry(Novaconomy plugin) {
         this.plugin = plugin;
+        reloadVault();
+    }
+
+    public static void reloadVault() {
+        Plugin plugin = NovaConfig.getPlugin();
         if (Economy.getEconomies().size() == 0) {
             plugin.getLogger().info("No Economies Created - Vault will not be used");
             return;
         }
 
         RegisteredServiceProvider<net.milkbowl.vault.economy.Economy> rsp = Bukkit.getServer().getServicesManager().getRegistration(net.milkbowl.vault.economy.Economy.class);
-        if (rsp != null) {
+        if (rsp != null && !(rsp.getProvider() instanceof VaultEconomy)) {
             plugin.getLogger().info("Other Economy Registration Found - Vault will not be used");
             return;
         }
 
+        if (rsp.getProvider() instanceof VaultEconomy) Bukkit.getServer().getServicesManager().unregister(net.milkbowl.vault.economy.Economy.class);
+        inject();
+    }
+
+    private static void inject() {
+        Plugin plugin = NovaConfig.getPlugin();
         Object o = NovaConfig.loadFunctionalityFile().get("VaultEconomy", -1);
         if (o instanceof Integer) {
             plugin.getLogger().info("VaultEconomy is disabled in the config - Vault will not be used");
