@@ -355,4 +355,9 @@ public interface NovaConfig  {
      */
     double getMaxConvertAmount(Economy econ);
 
+    /**
+     * Reloads API Hooks (Placeholders, Vault, etc.).
+     */
+    void reloadHooks();
+
 }
