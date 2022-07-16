@@ -1,6 +1,7 @@
 package us.teaminceptus.novaconomy;
 
 import com.cryptomorin.xseries.XSound;
+import com.google.gson.Gson;
 import com.jeff_media.updatechecker.UpdateCheckSource;
 import com.jeff_media.updatechecker.UpdateChecker;
 import org.apache.commons.lang.WordUtils;
@@ -54,10 +55,16 @@ import us.teaminceptus.novaconomy.api.events.player.PlayerPurchaseProductEvent;
 import us.teaminceptus.novaconomy.api.util.BusinessProduct;
 import us.teaminceptus.novaconomy.api.util.Price;
 import us.teaminceptus.novaconomy.api.util.Product;
+import us.teaminceptus.novaconomy.treasury.TreasuryRegistry;
 import us.teaminceptus.novaconomy.vault.VaultRegistry;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.*;
 import java.util.function.BiConsumer;
@@ -101,6 +108,65 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 	public static String get(String key) {
 		String lang = NovaConfig.getConfiguration().getLanguage();
 		return Language.getById(lang).getMessage(key);
+	}
+
+	/**
+	 * Performs an API request to turn an OfflinePlayer's name to an OfflinePlayer object.
+	 * @param name OfflinePlayer Name
+	 * @return OfflinePlayer Object
+	 */
+	public static OfflinePlayer getPlayer(String name) {
+		if (Bukkit.getOnlineMode()) try {
+			URL url = new URL("https://api.mojang.com/users/profiles/minecraft/" + name);
+			HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+
+			connection.setRequestMethod("GET");
+			connection.setRequestProperty("User-Agent", "Java 8 Novaconomy Bot");
+
+			int responseCode = connection.getResponseCode();
+
+			if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_ACCEPTED) {
+				BufferedReader input = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+				StringBuilder builder = new StringBuilder();
+				String inputLine;
+				while ((inputLine = input.readLine()) != null) builder.append(inputLine);
+
+				Gson g = new Gson();
+				return Bukkit.getOfflinePlayer(untrimUUID(g.fromJson(builder.toString(), APIPlayer.class).id));
+			}
+
+		} catch (IOException e) {
+			Bukkit.getLogger().severe(e.getClass().getName());
+			Bukkit.getLogger().severe(e.getMessage());
+			for (StackTraceElement s : e.getStackTrace()) Bukkit.getLogger().severe(s.toString());
+		}
+		else return Bukkit.getPlayer(UUID.nameUUIDFromBytes(("OfflinePlayer:" + name).getBytes(StandardCharsets.UTF_8)));
+		return null;
+	}
+
+
+	private static class APIPlayer {
+
+		public final String name;
+		public final String id;
+
+		public APIPlayer(String name, String id) {
+			this.name = name;
+			this.id = id;
+		}
+
+	}
+
+	private static UUID untrimUUID(String oldUUID) {
+		String p1 = oldUUID.substring(0, 8);
+		String p2 = oldUUID.substring(8, 12);
+		String p3 = oldUUID.substring(12, 16);
+		String p4 = oldUUID.substring(16, 20);
+		String p5 = oldUUID.substring(20, 32);
+
+		String newUUID = p1 + "-" + p2 + "-" + p3 + "-" + p4 + "-" + p5;
+
+		return UUID.fromString(newUUID);
 	}
 
 	private static class ModifierReader {
@@ -979,6 +1045,17 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 			getLogger().info("Vault Found! Hooking...");
 			new VaultRegistry(this);
 			getLogger().info("Hooked into Vault API!");
+		} else
+			getLogger().warning("Novaconomy Now Supports Vault! Specify a currency to hook with in functionality.yml!");
+	}
+
+	private static TreasuryRegistry registry;
+
+	private void loadTreasury() {
+		if (Bukkit.getPluginManager().getPlugin("Treasury") != null) {
+			getLogger().info("Treasury Found! Hooking...");
+			registry = new TreasuryRegistry(this);
+			getLogger().info("Hooked into Treasury API!");
 		}
 	}
 
@@ -1034,6 +1111,8 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
 		// Vault + Treasury
 		loadVault();
+		loadTreasury();
+		getLogger().info("Loaded Optional Hooks...");
 
 		// Update Checker
 		new UpdateChecker(this, UpdateCheckSource.SPIGOT, "100503")
@@ -1119,6 +1198,13 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 	public double getMaxConvertAmount(Economy econ) {
 		if (funcConfig.getConfigurationSection("EconomyMaxConvertAmounts").contains(econ.getName())) return funcConfig.getDouble("EconomyMaxConvertAmounts." + econ.getName());
 		return funcConfig.getDouble("MaxConvertAmount", -1);
+	}
+
+	@Override
+	public void reloadHooks() {
+		VaultRegistry.reloadVault();
+		registry.reloadTreasury();
+		getLogger().info("Reloaded API Hooks");
 	}
 
 	@Override
