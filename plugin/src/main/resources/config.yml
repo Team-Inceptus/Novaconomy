@@ -93,3 +93,48 @@ Interest:
   #
   # Ex: 5% increase = 1.05 | 20% increase = 1.2
   ValueMultiplier: 1.03
+
+
+# Taxes Section
+Taxes:
+
+  # The maximum amount a player can withdraw from the bank.
+  MaxWithdrawl:
+
+    # All Economies default to this number if one is not specified
+    Global: 100
+
+    # Coins: 150
+
+  # List of Player Names, Vault Groups, or Permissions to exempt from taxes.
+  # Other Valid Types:
+  # - OPS: Operators will be ignored
+  # - NONOPS: Non-Operators will be ignored
+  #
+  # Selectors like "my.plugin.permission.*" and RegEx are supported.
+  Ignore:
+    - OPS
+    # - cooldude124
+    # - my.plugin.taxes.none
+    # - MyVaultGroup
+
+
+  # Automatic Taxes Configuration
+  Automatic:
+    # How often, in ticks, taxes should be automatically taken
+    #
+    # 20 ticks = 1 second
+    Interval: 1728000
+
+    # Whether Taxes will be automatically taken
+    Enabled: true
+
+  # Minimum Amount that can be taken/donated
+  Minimums:
+    # All Economies default to this number if one is not specified
+    Global: 0
+
+    # Coins: 100
+
+
+
