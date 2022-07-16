@@ -498,6 +498,10 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                 }
                 break;
             }
+            default: {
+                sender.sendMessage(getMessage("error.argument"));
+                return false;
+            }
         }
         return true;
     }
@@ -596,9 +600,8 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                         return suggestions;
                 }
             }
+            default: return suggestions;
         }
-
-        return suggestions;
     }
 
     @Override
