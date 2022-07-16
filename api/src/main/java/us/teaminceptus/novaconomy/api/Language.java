@@ -64,17 +64,16 @@ public enum Language {
     public String getMessage(String key) {
         if (key == null) return null;
 
-        try {
-            Properties p = new Properties();
-            File f = new File(NovaConfig.getDataFolder(), "novaconomy" + id + ".properties");
-            InputStream str = Files.newInputStream(f.toPath()); 
+        Properties p = new Properties();
+        File f = new File(NovaConfig.getDataFolder(), "novaconomy" + id + ".properties");
+
+        try (InputStream str = Files.newInputStream(f.toPath())) {
             p.load(str);
             str.close();
-
             return ChatColor.translateAlternateColorCodes('&', p.getProperty(key, "Unknown Value"));
         } catch (IOException e) {
             NovaConfig.getLogger().severe(e.getMessage());
-            return null;
+            return "Unknwon Value";
         }
     }
 
