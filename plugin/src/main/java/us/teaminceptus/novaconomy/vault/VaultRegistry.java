@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
  */
 public class VaultRegistry {
 
-    private Novaconomy plugin;
+    private final Novaconomy plugin;
 
     /**
      * Constructs the VaultRegistry.
