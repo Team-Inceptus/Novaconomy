@@ -10,6 +10,7 @@ import us.teaminceptus.novaconomy.api.economy.Economy;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.logging.Logger;
 
 /**
@@ -160,41 +161,67 @@ public interface NovaConfig  {
         // Config Checks
         FileConfiguration config = getPlugin().getConfig();
 
-        if (!(config.isBoolean("Notifications"))) config.set("Notifications", true);
-        if (!(config.isString("Language"))) config.set("Language", "en");
+        if (!config.isBoolean("Notifications")) config.set("Notifications", true);
+        if (!config.isString("Language")) config.set("Language", "en");
 
         // Natural Causes
-        if (!(config.isConfigurationSection("NaturalCauses"))) config.createSection("NaturalCauses");
+        if (!config.isConfigurationSection("NaturalCauses")) config.createSection("NaturalCauses");
+        ConfigurationSection nc = config.getConfigurationSection("NaturalCauses");
 
-        ConfigurationSection naturalC = config.getConfigurationSection("NaturalCauses");
+        if (!nc.isBoolean("KillIncrease")) nc.set("KillIncrease", true);
+        if (!nc.isInt("KillIncreaseChance")) nc.set("KillIncreaseChance", 100);
 
-        if (!(naturalC.isBoolean("KillIncrease"))) naturalC.set("KillIncrease", true);
-        if (!(naturalC.isInt("KillIncreaseChance"))) naturalC.set("KillIncreaseChance", 100);
+        if (!nc.isBoolean("FishingIncrease")) nc.set("FishingIncrease", true);
+        if (!nc.isInt("FishingIncreaseChance")) nc.set("FishingIncreaseChance", 70);
 
-        if (!(naturalC.isBoolean("FishingIncrease"))) naturalC.set("FishingIncrease", true);
-        if (!(naturalC.isInt("FishingIncreaseChance"))) naturalC.set("FishingIncreaseChance", 70);
+        if (!nc.isBoolean("MiningIncrease")) nc.set("MiningIncrease", true);
+        if (!nc.isInt("MiningIncreaseChance")) nc.set("MiningIncreaseChance", 30);
 
-        if (!(naturalC.isBoolean("MiningIncrease"))) naturalC.set("MiningIncrease", true);
-        if (!(naturalC.isInt("MiningIncreaseChance"))) naturalC.set("MiningIncreaseChance", 30);
+        if (!nc.isBoolean("FarmingIncrease")) nc.set("FarmingIncrease", true);
+        if (!nc.isInt("FarmingIncreaseChance")) nc.set("FarmingIncreaseChance", 40);
 
-        if (!(naturalC.isBoolean("FarmingIncrease"))) naturalC.set("FarmingIncrease", true);
-        if (!(naturalC.isInt("FarmingIncreaseChance"))) naturalC.set("FarmingIncreaseChance", 40);
+        if (!nc.isBoolean("DeathDecrease")) nc.set("DeathDecrease", true);
+        if (!nc.isDouble("DeathDivider") && !(nc.isInt("DeathDivider"))) nc.set("DeathDivider", 2);
 
-        if (!(naturalC.isBoolean("DeathDecrease"))) naturalC.set("DeathDecrease", true);
-        if (!(naturalC.isDouble("DeathDivider")) && !(naturalC.isInt("DeathDivider"))) naturalC.set("DeathDivider", 2);
+        if (!nc.isConfigurationSection("Modifiers")) nc.createSection("Modifiers");
+        if (!nc.isConfigurationSection("Modifiers.Killing")) nc.createSection("Modifiers.Killing");
+        if (!nc.isConfigurationSection("Modifiers.Fishing")) nc.createSection("Modifiers.Fishing");
+        if (!nc.isConfigurationSection("Modifiers.Mining")) nc.createSection("Modifiers.Mining");
+        if (!nc.isConfigurationSection("Modifiers.Farming")) nc.createSection("Modifiers.Farming");
+        if (!nc.isConfigurationSection("Modifiers.Death")) nc.createSection("Modifiers.Death");
 
         // Interest
-        if (!(config.isConfigurationSection("Interest"))) config.createSection("Interest");
+        if (!config.isConfigurationSection("Interest")) config.createSection("Interest");
+        if (!config.isBoolean("Interest.Enabled")) config.set("Interest.Enabled", true);
+        if (!config.isInt("Interest.IntervalTicks") && !(config.isLong("Interest.IntervalTicks"))) config.set("Interest.IntervalTicks", 1728000);
+        if (!config.isDouble("Interest.ValueMultiplier") && !(config.isInt("Interest.ValueMultiplier"))) config.set("Interest.ValueMultiplier", 1.03D);
+        
+        // Taxes
+        if (!config.isConfigurationSection("Taxes")) config.createSection("Taxes");
+        ConfigurationSection taxes = config.getConfigurationSection("Taxes");
 
-        ConfigurationSection interest = config.getConfigurationSection("Interest");
+        if (!taxes.isList("Ignore")) config.set("Ignore", Arrays.asList("OPS"));
 
-        if (!(interest.isBoolean("Enabled"))) interest.set("Enabled", true);
+        if (!taxes.isConfigurationSection("MaxWithdrawl")) taxes.createSection("MaxWithdrawl");
+        if (!taxes.isInt("MaxWithdraw.Global")) taxes.set("MaxWithdraw.Global", 100);
+        if (!taxes.isList("MaxWithdraw.Bypass")) taxes.set("MaxWithdraw.Bypass", Arrays.asList("OPS"));
+        for (Economy econ : Economy.getEconomies()) {
+            String id = "MaxWithdraw." + econ.getName();
+            if (taxes.isSet(id) && !taxes.isDouble(id)) taxes.set(id, null);
+        }
 
-        if (!(interest.isInt("IntervalTicks")) && !(interest.isLong("IntervalTicks")))
-            interest.set("IntervalTicks", 1728000);
+        if (!taxes.isConfigurationSection("Automatic")) taxes.createSection("Automatic");
+        if (!taxes.isLong("Automatic.Interval")) taxes.set("Automatic.Interval", 1728000);
+        if (!taxes.isBoolean("Automatic.Enabled")) taxes.set("Automatic.Enabled", false);
 
-        if (!(interest.isDouble("ValueMultiplier")) && !(interest.isInt("ValueMultiplier")))
-            interest.set("ValueMultiplier", 1.03D);
+        if (!taxes.isConfigurationSection("Minimums")) taxes.createSection("Minimums");
+        if (!taxes.isDouble("Minimums.Global")) taxes.set("Minimums.Global", 0.0D);
+        for (Economy econ : Economy.getEconomies()) {
+            String id = "Minimums." + econ.getName();
+            if (taxes.isSet(id) && !taxes.isDouble(id)) taxes.set(id, null);
+        }
+
+        getPlugin().saveConfig();
     }
 
     // Impl
