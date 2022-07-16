@@ -26,3 +26,8 @@ EconomyMaxConvertAmounts:
   # Dollars: -1
 
   # Coins: 150
+
+
+# Specify an Economy that the plugin will register into Vault
+# Put "-1" for no Vault registration
+VaultEconomy: -1
