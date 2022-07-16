@@ -16,7 +16,13 @@ public class BusinessStockEvent extends BusinessEvent {
     private final List<ItemStack> extra;
     private final List<ItemStack> added;
 
-
+    /**
+     * Constructs a new BusinessStockEvent
+     * @param business Business being stocked
+     * @param p Player stocking the Business
+     * @param extra Extra items that weren't stocked
+     * @param added Items being added to the Business
+     */
     public BusinessStockEvent(@NotNull Business business, Player p, List<ItemStack> extra, List<ItemStack> added) {
         super(business);
         this.p = p;
