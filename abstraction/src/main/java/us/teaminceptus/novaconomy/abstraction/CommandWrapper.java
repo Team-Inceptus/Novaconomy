@@ -654,7 +654,7 @@ public interface CommandWrapper {
         try {
             return (Wrapper) Class.forName("us.teaminceptus.novaconomy.Wrapper" + getServerVersion()).getConstructor().newInstance();
         } catch (Exception e) {
-            return null;
+            throw new IllegalStateException("Wrapper not Found: " + getServerVersion());
         }
     }
 }

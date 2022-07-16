@@ -8,7 +8,6 @@ import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import us.teaminceptus.novaconomy.abstraction.Wrapper;
-import us.teaminceptus.novaconomy.api.NovaConfig;
 
 import java.util.List;
 
@@ -129,8 +128,7 @@ final class Items {
         try {
             return (Wrapper) Class.forName(Novaconomy.class.getPackage().getName() + ".Wrapper" + getServerVersion()).getConstructor().newInstance();
         } catch (Exception e) {
-            NovaConfig.getLogger().severe(e.getMessage());
-            return null;
+            throw new IllegalStateException("Wrapper not Found: " + getServerVersion());
         }
     }
 

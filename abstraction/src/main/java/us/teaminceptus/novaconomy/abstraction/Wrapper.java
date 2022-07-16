@@ -238,7 +238,7 @@ public interface Wrapper {
     static Wrapper getWrapper() {
         try {
             return (Wrapper) Class.forName("us.teaminceptus.novaconomy.Wrapper" + getServerVersion()).getConstructor().newInstance();
-        } catch (Exception e) { NovaConfig.getLogger().severe(e.getMessage()); return null; }
+        } catch (Exception e) { throw new IllegalStateException("Wrapper not Found: " + getServerVersion()); }
     }
 
     static String get(String key) {

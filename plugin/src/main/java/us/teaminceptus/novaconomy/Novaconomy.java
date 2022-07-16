@@ -54,9 +54,11 @@ import us.teaminceptus.novaconomy.api.events.player.PlayerPurchaseProductEvent;
 import us.teaminceptus.novaconomy.api.util.BusinessProduct;
 import us.teaminceptus.novaconomy.api.util.Price;
 import us.teaminceptus.novaconomy.api.util.Product;
+import us.teaminceptus.novaconomy.vault.VaultRegistry;
 
 import java.io.File;
 import java.io.IOException;
+import java.security.SecureRandom;
 import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -78,9 +80,9 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 	 * Main Novaconomy Constructor
 	 * <strong>DO NOT INSTANTIATE THIS WAY</strong>
 	 */
-	public Novaconomy() {}
+	public Novaconomy() { /* Constructor should only be called by Bukkit Plugin Class Loader */}
 
-	private static final Random r = new Random();
+	private static final SecureRandom r = new SecureRandom();
 	private static final Wrapper w = getWrapper();
 	private static File playerDir;
 	private static FileConfiguration economiesFile;
@@ -909,8 +911,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		try {
 			return (Wrapper) Class.forName(Novaconomy.class.getPackage().getName() + ".Wrapper" + getServerVersion()).getConstructor().newInstance();
 		} catch (Exception e) {
-			NovaConfig.getLogger().severe(e.getMessage());
-			return null;
+			throw new IllegalStateException("Wrapper not Found: " + getServerVersion());
 		}
 	}
 	
@@ -973,6 +974,14 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		}
 	}
 
+	private void loadVault() {
+		if (Bukkit.getPluginManager().getPlugin("Vault") != null) {
+			getLogger().info("Vault Found! Hooking...");
+			new VaultRegistry(this);
+			getLogger().info("Hooked into Vault API!");
+		}
+	}
+
 	/**
 	 * Called when the Plugin enables
 	 */
@@ -1020,6 +1029,13 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
 		getLogger().info("Loaded Core Functionality...");
 
+		// Placeholders
+		loadPlaceholders();
+
+		// Vault + Treasury
+		loadVault();
+
+		// Update Checker
 		new UpdateChecker(this, UpdateCheckSource.SPIGOT, "100503")
 				.setDownloadLink("https://www.spigotmc.org/resources/novaconomy.100503/")
 				.setNotifyOpsOnJoin(true)
@@ -1028,6 +1044,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				.checkEveryXHours(1)
 				.checkNow();
 
+		// bStats
 		Metrics metrics = new Metrics(this, PLUGIN_ID);
 
 		metrics.addCustomChart(new SimplePie("used_language", () -> Language.getById(this.getLanguage()).name()));
