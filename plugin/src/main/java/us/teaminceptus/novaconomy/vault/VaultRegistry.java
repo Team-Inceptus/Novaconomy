@@ -17,6 +17,10 @@ public class VaultRegistry {
 
     private Novaconomy plugin;
 
+    /**
+     * Constructs the VaultRegistry.
+     * @param plugin Plugin to use
+     */
     public VaultRegistry(Novaconomy plugin) {
         this.plugin = plugin;
         if (Economy.getEconomies().size() == 0) {
