@@ -2,7 +2,6 @@ package us.teaminceptus.novaconomy.api.events.player;
 
 import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
-
 import us.teaminceptus.novaconomy.api.economy.Economy;
 
 /**
@@ -58,10 +57,12 @@ public class PlayerChangeBalanceEvent extends PlayerEconomyEvent implements Canc
         return this.newBal;
     }
 
+    @Override
     public boolean isCancelled() {
         return this.isCancelled;
     }
 
+    @Override
     public void setCancelled(boolean isCancelled) {
         this.isCancelled = isCancelled;
     }

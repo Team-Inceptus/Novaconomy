@@ -1,28 +1,30 @@
 package us.teaminceptus.novaconomy.api.events.player;
 
-import org.bukkit.entity.Player;
+import org.bukkit.OfflinePlayer;
+import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
-import org.bukkit.event.player.PlayerEvent;
 import org.jetbrains.annotations.NotNull;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 
 /**
  * Called when a Player does not have enough to pay their automatic tax
  */
-public class PlayerMissTaxEvent extends PlayerEvent {
+public class PlayerMissTaxEvent extends Event {
 
     private final double needed;
     private final Economy econ;
+
+    private final OfflinePlayer p;
     private static final HandlerList HANDLERS = new HandlerList();
 
     /**
      * Constructs a new PlayerMissTaxEvent
-     * @param player Player involved
+     * @param p OfflinePlayer involved
      * @param needed Amount needed to be taken
      * @param econ Economy related to the amount
      */
-    public PlayerMissTaxEvent(Player player, double needed, Economy econ) {
-        super(player);
+    public PlayerMissTaxEvent(OfflinePlayer p, double needed, Economy econ) {
+        this.p = p;
         this.needed = needed;
         this.econ = econ;
     }
@@ -48,6 +50,13 @@ public class PlayerMissTaxEvent extends PlayerEvent {
     public Economy getEconomy() {
         return this.econ;
     }
+
+    /**
+     * Fetches the OfflinePlayer involved in this event
+     * @return OfflinePlayer involved
+     */
+    @NotNull
+    public OfflinePlayer getPlayer() { return this.p; }
 
     /**
      * Fetches the Event handlers

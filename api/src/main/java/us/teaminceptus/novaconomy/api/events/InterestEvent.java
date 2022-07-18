@@ -1,14 +1,13 @@
 package us.teaminceptus.novaconomy.api.events;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
-
 import us.teaminceptus.novaconomy.api.NovaPlayer;
 import us.teaminceptus.novaconomy.api.economy.Economy;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Called when Interest happens
@@ -23,8 +22,8 @@ public class InterestEvent extends Event implements Cancellable {
     private static final HandlerList HANDLERS = new HandlerList();
 
     /**
-     * Represents an Event when Interest is called
-     * <p>
+     * Constructs an InterestEvent.
+     * <br><br>
      * This Event will calculate {@link InterestEvent#getNewBalance(NovaPlayer)} on its own
      * @param previousBalances A Map of Players to the economies affected and their previous balances
      * @param interestAmount A Map of Players to the economies affected and the amount added
@@ -38,9 +37,8 @@ public class InterestEvent extends Event implements Cancellable {
         for (Map.Entry<NovaPlayer, Map<Economy, Double>> entry : previousBalances.entrySet()) {
             Map<Economy, Double> balEntry = new HashMap<>();
 
-            for (Map.Entry<Economy, Double> econEntry : entry.getValue().entrySet()) {
+            for (Map.Entry<Economy, Double> econEntry : entry.getValue().entrySet())
                 balEntry.put(econEntry.getKey(), econEntry.getValue() + interestAmount.get(entry.getKey()).get(econEntry.getKey()));
-            }
 
             newBalances.put(entry.getKey(), balEntry);
         }
@@ -105,10 +103,12 @@ public class InterestEvent extends Event implements Cancellable {
         return this.interestAmount.get(np);
     }
 
+    @Override
     public boolean isCancelled() {
         return this.isCancelled;
     }
 
+    @Override
     public void setCancelled(boolean cancelled) {
         this.isCancelled = cancelled;
     }

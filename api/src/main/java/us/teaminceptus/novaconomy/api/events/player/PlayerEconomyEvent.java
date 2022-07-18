@@ -3,7 +3,6 @@ package us.teaminceptus.novaconomy.api.events.player;
 import org.bukkit.entity.Player;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.player.PlayerEvent;
-
 import us.teaminceptus.novaconomy.api.economy.Economy;
 
 /**
@@ -20,7 +19,7 @@ public abstract class PlayerEconomyEvent extends PlayerEvent {
     /**
      * Represents an Economy-Related Event
      * @param who Player involved
-     * @param amount Amount added
+     * @param amount Amount involved
      * @param econ Economy involved
      */
     public PlayerEconomyEvent(Player who, double amount, Economy econ) {

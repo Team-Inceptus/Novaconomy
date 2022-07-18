@@ -1,7 +1,6 @@
 package us.teaminceptus.novaconomy.api.events.player;
 
 import org.bukkit.entity.Player;
-
 import us.teaminceptus.novaconomy.api.economy.Economy;
 
 /**
