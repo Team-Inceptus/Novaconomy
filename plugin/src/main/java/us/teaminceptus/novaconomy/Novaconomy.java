@@ -1088,12 +1088,10 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 			getLogger().warning("Novaconomy Now Supports Vault! Specify a currency to hook with in functionality.yml!");
 	}
 
-	private static TreasuryRegistry registry;
-
 	private void loadTreasury() {
 		if (Bukkit.getPluginManager().getPlugin("Treasury") != null) {
 			getLogger().info("Treasury Found! Hooking...");
-			registry = new TreasuryRegistry(this);
+			new TreasuryRegistry(this);
 			getLogger().info("Hooked into Treasury API!");
 		}
 	}
@@ -1251,7 +1249,6 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 	@Override
 	public void reloadHooks() {
 		VaultRegistry.reloadVault();
-		registry.reloadTreasury();
 		getLogger().info("Reloaded API Hooks");
 	}
 

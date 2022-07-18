@@ -12,7 +12,6 @@ import me.lokka30.treasury.api.economy.response.EconomyException;
 import me.lokka30.treasury.api.economy.response.EconomySubscriber;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
-import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.Novaconomy;
@@ -34,14 +33,12 @@ public final class TreasuryRegistry implements EconomyProvider {
 
     public TreasuryRegistry(Novaconomy plugin) {
         this.plugin = plugin;
-        reloadTreasury();
-    }
 
-    public void reloadTreasury() {
-        Plugin plugin = NovaConfig.getPlugin();
         ServiceRegistry r = ServiceRegistry.INSTANCE;
-        r.registerService(EconomyProvider.class, this, plugin.getName(), ServicePriority.HIGH);
-        plugin.getLogger().info("Injected Novaconomy EconomyProvider into Treasury");
+        if (!r.serviceFor(EconomyProvider.class).isPresent()) {
+            r.registerService(EconomyProvider.class, this, plugin.getName(), ServicePriority.HIGH);
+            plugin.getLogger().info("Injected Novaconomy EconomyProvider into Treasury");
+        }
     }
 
     @Override
