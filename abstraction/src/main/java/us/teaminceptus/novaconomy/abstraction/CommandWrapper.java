@@ -134,7 +134,7 @@ public interface CommandWrapper {
         Plugin plugin = getPlugin();
         plugin.reloadConfig();
         NovaConfig.loadConfig();
-        NovaConfig.reloadInterest();
+        NovaConfig.reloadRunnables();
         NovaConfig.reloadLanguages();
         YamlConfiguration.loadConfiguration(new File(plugin.getDataFolder(), "businesses.yml"));
         YamlConfiguration.loadConfiguration(new File(plugin.getDataFolder(), "functionality.yml"));
