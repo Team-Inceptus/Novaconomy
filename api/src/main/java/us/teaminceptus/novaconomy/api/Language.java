@@ -40,7 +40,11 @@ public enum Language {
     /**
      * Represents Chinese Simplified / 中国人
      */
-    CHINESE("_zh");
+    CHINESE("_zh"),
+    /**
+     * Represents Italian / Italiano
+     */
+    ITALIAN("_it");
 
     private final String id;
 
@@ -84,7 +88,6 @@ public enum Language {
      */
     public static Language getById(String id) {
         if (id.equalsIgnoreCase("en")) return ENGLISH;
-
         for (Language l : values()) if (l.id.replace("_", "").equalsIgnoreCase(id)) return l;
 
         return ENGLISH;
