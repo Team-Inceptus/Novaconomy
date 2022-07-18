@@ -27,5 +27,5 @@ echo "novaconomy.teaminceptus.us" > CNAME
 git add .
 git branch -D gh-pages
 git branch -m gh-pages
-git commit -m "Update JavaDocs"
+git commit -m "Update JavaDocs ($1)"
 git push -f origin gh-pages

@@ -138,4 +138,4 @@ jobs:
 
       - name: Deploy JavaDoc
         if: ${{ !steps.project.outputs.dev }}
-        run: bash javadoc.sh
+        run: bash javadoc.sh ${GITHUB_SHA::7}
