@@ -46,11 +46,13 @@ import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.NovaPlayer;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.economy.Economy;
+import us.teaminceptus.novaconomy.api.events.AutomaticTaxEvent;
 import us.teaminceptus.novaconomy.api.events.InterestEvent;
 import us.teaminceptus.novaconomy.api.events.business.BusinessProductAddEvent;
 import us.teaminceptus.novaconomy.api.events.business.BusinessProductRemoveEvent;
 import us.teaminceptus.novaconomy.api.events.business.BusinessStockEvent;
 import us.teaminceptus.novaconomy.api.events.player.PlayerChangeBalanceEvent;
+import us.teaminceptus.novaconomy.api.events.player.PlayerMissTaxEvent;
 import us.teaminceptus.novaconomy.api.events.player.PlayerPurchaseProductEvent;
 import us.teaminceptus.novaconomy.api.util.BusinessProduct;
 import us.teaminceptus.novaconomy.api.util.Price;
@@ -67,6 +69,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -327,7 +330,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 	 */
 	public static String getMessage(String key) { return prefix + get(key); }
 
-	private static void updateInterest() {
+	private static void updateRunnables() {
 		Novaconomy plugin = getPlugin(Novaconomy.class);
 
 		config = plugin.getConfig();
@@ -335,55 +338,32 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		ncauses = config.getConfigurationSection("NaturalCauses");
 
 		if (INTEREST_RUNNABLE.getTaskId() != -1) INTEREST_RUNNABLE.cancel();
+		if (TAXES_RUNNABLE.getTaskId() != -1) TAXES_RUNNABLE.cancel();
 
 		INTEREST_RUNNABLE = new BukkitRunnable() {
 			@Override
 			public void run() {
 				if (!(NovaConfig.getConfiguration().isInterestEnabled())) cancel();
-
-				Map<NovaPlayer, Map<Economy, Double>> previousBals = new HashMap<>();
-				Map<NovaPlayer, Map<Economy, Double>> amounts = new HashMap<>();
-
-				for (OfflinePlayer p : Bukkit.getOfflinePlayers()) {
-					NovaPlayer np = new NovaPlayer(p);
-
-					Map<Economy, Double> previousBal = new HashMap<>();
-					Map<Economy, Double> amount = new HashMap<>();
-					for (Economy econ : Economy.getInterestEconomies()) {
-						double balance = np.getBalance(econ);
-						double add = (balance * (NovaConfig.getConfiguration().getInterestMultiplier() - 1)) / econ.getConversionScale();
-
-						previousBal.put(econ, balance);
-						amount.put(econ, add);
-					}
-
-					previousBals.put(np, previousBal);
-					amounts.put(np, amount);
-				}
-
-				InterestEvent event = new InterestEvent(previousBals, amounts);
-				Bukkit.getPluginManager().callEvent(event);
-				if (!event.isCancelled()) for (NovaPlayer np : previousBals.keySet()) {
-					int i = 0;
-					for (Economy econ : previousBals.get(np).keySet()) {
-						np.add(econ, amounts.get(np).get(econ));
-						i++;
-					}
-
-					if (np.isOnline() && NovaConfig.getConfiguration().hasNotifications())
-						np.getOnlinePlayer().sendMessage(String.format(getMessage("notification.interest"), i + "", (i == 1 ? get("constants.economy") : get("constants.economies"))));
-				}
+				runInterest();
 			}
 
+		};
+
+		TAXES_RUNNABLE = new BukkitRunnable() {
+			@Override
+			public void run() {
+				if (!(NovaConfig.getConfiguration().hasAutomaticTaxes())) cancel();
+				runTaxes();
+			}
 		};
 
 		new BukkitRunnable() {
 			@Override
 			public void run() {
-				INTEREST_RUNNABLE.runTaskTimer(plugin, plugin.getIntervalTicks(), plugin.getIntervalTicks());
+				INTEREST_RUNNABLE.runTaskTimer(plugin, plugin.getInterestTicks(), plugin.getInterestTicks());
+				TAXES_RUNNABLE.runTaskTimer(plugin, plugin.getTaxesTicks(), plugin.getTaxesTicks());
 			}
 		}.runTask(plugin);
-
 	}
 
 	@SuppressWarnings("unchecked")
@@ -418,7 +398,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 					else p.setItemInHand(null);
 				}
 			}.runTask(plugin);
-			XSound.ENTITY_ARROW_HIT_PLAYER.play(p);
+			XSound.ENTITY_ARROW_HIT_PLAYER.play(p, 3F, 2F);
 		}
 		
 		@EventHandler
@@ -980,46 +960,105 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 			throw new IllegalStateException("Wrapper not Found: " + getServerVersion());
 		}
 	}
+
+	private static void runInterest() {
+		Map<NovaPlayer, Map<Economy, Double>> previousBals = new HashMap<>();
+		Map<NovaPlayer, Map<Economy, Double>> amounts = new HashMap<>();
+
+		for (OfflinePlayer p : Bukkit.getOfflinePlayers()) {
+			NovaPlayer np = new NovaPlayer(p);
+
+			Map<Economy, Double> previousBal = new HashMap<>();
+			Map<Economy, Double> amount = new HashMap<>();
+			for (Economy econ : Economy.getInterestEconomies()) {
+				double balance = np.getBalance(econ);
+				double add = (balance * (NovaConfig.getConfiguration().getInterestMultiplier() - 1)) / econ.getConversionScale();
+
+				previousBal.put(econ, balance);
+				amount.put(econ, add);
+			}
+
+			previousBals.put(np, previousBal);
+			amounts.put(np, amount);
+		}
+
+		InterestEvent event = new InterestEvent(previousBals, amounts);
+		Bukkit.getPluginManager().callEvent(event);
+		if (!event.isCancelled()) for (NovaPlayer np : previousBals.keySet()) {
+			int i = 0;
+			for (Economy econ : previousBals.get(np).keySet()) {
+				np.add(econ, amounts.get(np).get(econ));
+				i++;
+			}
+
+			if (np.isOnline() && NovaConfig.getConfiguration().hasNotifications())
+				np.getOnlinePlayer().sendMessage(String.format(getMessage("notification.interest"), i + " ", i == 1 ? get("constants.economy") : get("constants.economies")));
+		}
+	}
 	
 	private static BukkitRunnable INTEREST_RUNNABLE = new BukkitRunnable() {
 		@Override
 		public void run() {
-			if (!(NovaConfig.getConfiguration().isInterestEnabled())) cancel();
-			
-			Map<NovaPlayer, Map<Economy, Double>> previousBals = new HashMap<>();
-			Map<NovaPlayer, Map<Economy, Double>> amounts = new HashMap<>();
-			
-			for (OfflinePlayer p : Bukkit.getOfflinePlayers()) {
-				NovaPlayer np = new NovaPlayer(p);
-				
-				Map<Economy, Double> previousBal = new HashMap<>();
-				Map<Economy, Double> amount = new HashMap<>();
-				for (Economy econ : Economy.getInterestEconomies()) {
-					double balance = np.getBalance(econ);
-					double add = (balance * (NovaConfig.getConfiguration().getInterestMultiplier() - 1)) / econ.getConversionScale();
-					
-					previousBal.put(econ, balance);
-					amount.put(econ, add);
-				}
-				
-				previousBals.put(np, previousBal);
-				amounts.put(np, amount);
-			}
-			
-			InterestEvent event = new InterestEvent(previousBals, amounts);
-			Bukkit.getPluginManager().callEvent(event);
-			if (!event.isCancelled()) for (NovaPlayer np : previousBals.keySet()) {
-				int i = 0;
-				for (Economy econ : previousBals.get(np).keySet()) {
-					np.add(econ, amounts.get(np).get(econ));
-					i++;
-				}
+			if (!NovaConfig.getConfiguration().isInterestEnabled()) { cancel(); return; }
+			runInterest();
+		}
+	};
 
-				if (np.isOnline() && NovaConfig.getConfiguration().hasNotifications())
-					np.getOnlinePlayer().sendMessage(String.format(getMessage("notification.interest"), i + "", i == 1 ? get("constants.economy") : get("constants.economies")));
+	private static void runTaxes() {
+		Map<NovaPlayer, Map<Economy, Double>> previousBals = new HashMap<>();
+		Map<NovaPlayer, Map<Economy, Double>> amounts = new HashMap<>();
+
+		for (OfflinePlayer p : Bukkit.getOfflinePlayers()) {
+			NovaPlayer np = new NovaPlayer(p);
+
+			Map<Economy, Double> previousBal = new HashMap<>();
+			Map<Economy, Double> amount = new HashMap<>();
+
+			for (Economy econ : Economy.getEconomies()) {
+				double balance = np.getBalance(econ);
+				previousBal.put(econ, balance);
+
+				double remove = NovaConfig.getConfiguration().getMinimumPayment(econ);
+				amount.put(econ, remove);
 			}
 		}
-		
+
+		AutomaticTaxEvent event = new AutomaticTaxEvent(previousBals, amounts);
+		Bukkit.getPluginManager().callEvent(event);
+
+		if (!event.isCancelled()) for (NovaPlayer np : previousBals.keySet()) {
+			AtomicBoolean missed = new AtomicBoolean(false);
+			Map<Economy, Double> missedMap = new HashMap<>();
+
+			int i = 0;
+			for (Economy econ : previousBals.get(np).keySet()) {
+				double amount = amounts.get(np).get(econ);
+
+				if (np.getBalance(econ) < amount) {
+					missed.set(true);
+					missedMap.put(econ, amount);
+					np.remove(econ, np.getBalance(econ));
+
+					PlayerMissTaxEvent event2 = new PlayerMissTaxEvent(np.getPlayer(), amount - np.getBalance(econ), econ);
+					Bukkit.getPluginManager().callEvent(event2);
+					return;
+				} else np.remove(econ, amount);
+				i++;
+			}
+
+			if (missed.get() && np.isOnline() && NovaConfig.getConfiguration().hasNotifications())
+				np.getOnlinePlayer().sendMessage(String.format(getMessage("notification.tax.missed"), i + " ", i == 1 ? get("constants.economy") : get("constants.economies")));
+			else if (np.isOnline() && NovaConfig.getConfiguration().hasNotifications())
+				np.getOnlinePlayer().sendMessage(String.format(getMessage("notification.tax"), i + " ", i == 1 ? get("constants.economy") : get("constants.economies")));
+		}
+	}
+
+	private static BukkitRunnable TAXES_RUNNABLE = new BukkitRunnable() {
+		@Override
+		public void run() {
+			if (!NovaConfig.getConfiguration().hasAutomaticTaxes()) { cancel(); return; }
+			runTaxes();
+		}
 	};
 
 	private static FileConfiguration funcConfig;
@@ -1041,7 +1080,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 	}
 
 	private void loadVault() {
-		if (Bukkit.getPluginManager().getPlugin("Vault") != null) {
+		if (hasVault()) {
 			getLogger().info("Vault Found! Hooking...");
 			new VaultRegistry(this);
 			getLogger().info("Hooked into Vault API!");
@@ -1068,8 +1107,16 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		saveConfig();
 
 		funcConfig = NovaConfig.loadFunctionalityFile();
+
 		File businesses = new File(getDataFolder(), "businesses.yml");
 		if (!businesses.exists()) saveResource("businesses.yml", false);
+
+		File globalF = new File(getDataFolder(), "global.yml");
+		if (!globalF.exists()) saveResource("businesses.yml", false);
+
+		FileConfiguration global = YamlConfiguration.loadConfiguration(globalF);
+		for (Economy econ : Economy.getEconomies()) if (!global.isSet("Bank." + econ.getName())) config.set("Bank." + econ.getName(), 0);
+		try { global.save(globalF); } catch (IOException e) { getLogger().severe(e.getMessage()); for (StackTraceElement s : e.getStackTrace()) getLogger().severe(s.toString()); }
 
 		NovaConfig.reloadLanguages();
 		getLogger().info("Loaded Languages & Configuration...");
@@ -1102,7 +1149,8 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
 		reloadValues();
 		
-		INTEREST_RUNNABLE.runTaskTimer(this, getIntervalTicks(), getIntervalTicks());
+		INTEREST_RUNNABLE.runTaskTimer(this, getInterestTicks(), getInterestTicks());
+		TAXES_RUNNABLE.runTaskTimer(this, getTaxesTicks(), getTaxesTicks());
 
 		getLogger().info("Loaded Core Functionality...");
 
@@ -1186,7 +1234,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 	}
 	
 	@Override
-	public long getIntervalTicks() { return interest.getLong("IntervalTicks"); }
+	public long getInterestTicks() { return interest.getLong("IntervalTicks"); }
 
 	@Override
 	public boolean isInterestEnabled() { return interest.getBoolean("Enabled"); }
@@ -1207,6 +1255,60 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		getLogger().info("Reloaded API Hooks");
 	}
 
+	private boolean isIncludedIn(List<String> list, OfflinePlayer p) {
+		if (list == null || list.size() < 1) return false;
+		AtomicBoolean b = new AtomicBoolean(false);
+
+		for (String s : list)
+			if (s.equals(p.getName()) || (s.equalsIgnoreCase("OPS") && p.isOp()) || (s.equalsIgnoreCase("NONOPS") && !p.isOp())) {
+				b.set(true);
+				break;
+			}
+
+		if (p.isOnline()) {
+			Player op = p.getPlayer();
+			if (op.getEffectivePermissions().stream().filter(perm -> list.contains(perm.getPermission()) && perm.getValue()).count() > 1) b.set(true);
+			if (hasVault() && VaultChat.isInGroup(list, op)) b.set(true);
+		}
+
+		return b.get();
+	}
+
+	static boolean hasVault() {
+		return Bukkit.getPluginManager().getPlugin("Vault") != null;
+	}
+
+	@Override
+	public double getMaxWithdrawlAmount(Economy econ) {
+		ConfigurationSection sec = config.getConfigurationSection("Taxes.MaxWithdrawl");
+		return sec.contains(econ.getName()) ? sec.getDouble(econ.getName()) : sec.getDouble("Global", 100);
+	}
+
+	@Override
+	public boolean canBypassWithdrawl(OfflinePlayer p) {
+		return isIncludedIn(config.getStringList("Taxes.MaxWithdrawl.Bypass"), p);
+	}
+
+	@Override
+	public boolean canIgnoreTaxes(OfflinePlayer p) {
+		return isIncludedIn(config.getStringList("Taxes.Ignore"), p);
+	}
+
+	@Override
+	public boolean hasAutomaticTaxes() {
+		return config.getBoolean("Taxes.Automatic.Enabled");
+	}
+
+	@Override
+	public long getTaxesTicks() {
+		return config.getLong("Taxes.Automatic.Interval");
+	}
+
+	@Override
+	public double getMinimumPayment(Economy econ) {
+		return config.getDouble("Taxes.Minimum." + econ.getName(), config.getDouble("Taxes.Minimum.Global", 0));
+	}
+
 	@Override
 	public boolean hasMiningIncrease() { return ncauses.getBoolean("MiningIncrease"); }
 
@@ -1218,7 +1320,6 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
 	@Override
 	public String getLanguage() { return config.getString("Language"); }
-
 
 	@Override
 	public boolean hasDeathDecrease() { return ncauses.getBoolean("DeathDecrease"); }
@@ -1294,6 +1395,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 	@Override
 	public void setKillIncrease(boolean increase) {
 		ncauses.set("KillIncrease", increase);
+		saveConfig();
 	}
 
 	@Override

@@ -58,7 +58,7 @@ public interface NovaConfig  {
      * Fetch how often Interest is Applied.
      * @return how often interest is applied, in ticks
      */
-    long getIntervalTicks();
+    long getInterestTicks();
 
     /**
      * Fetches the plugin instance.
@@ -91,13 +91,13 @@ public interface NovaConfig  {
     static File getEconomiesFile() { return new File(getDataFolder(), "economies.yml"); }
 
     /**
-     * Reloads the Interest Runnable with new values from the configuration.
+     * Reloads the Interest and Taxes Runnables with new values from the configuration.
      */
-    static void reloadInterest() {
+    static void reloadRunnables() {
         Plugin plugin = getPlugin();
         Class<?> clazz = plugin.getClass();
         try {
-            Method m = clazz.getDeclaredMethod("updateInterest");
+            Method m = clazz.getDeclaredMethod("updateRunnables");
             m.setAccessible(true);
             m.invoke(null);
         } catch (Exception e) {
@@ -437,7 +437,7 @@ public interface NovaConfig  {
      * Fetches how often, in ticks, taxes should be automatically withdrawled from the player's balance.
      * @return Withdrawl interval
      */
-    long getTaxesInterval();
+    long getTaxesTicks();
 
     /**
      * Fetches the Minimum amount of money a player must be taxed.
