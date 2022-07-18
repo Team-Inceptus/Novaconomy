@@ -596,9 +596,9 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                         return suggestions;
                     case 3:
                         if (args[0].equalsIgnoreCase("create")) for (Material m : Material.values()) suggestions.add(m.name().toLowerCase());
-
                         return suggestions;
                 }
+                return suggestions;
             }
             default: return suggestions;
         }
