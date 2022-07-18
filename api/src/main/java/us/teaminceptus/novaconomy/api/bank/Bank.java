@@ -21,7 +21,9 @@ public final class Bank {
     private static final Logger LGR = NovaConfig.getLogger();
     private static final FileConfiguration global;
     private static final File globalF;
-    private static final ConfigurationSection bank;
+    private static final ConfigurationSection bankSection;
+
+    private Bank() { throw new UnsupportedOperationException("Do not instantiate!"); }
 
     static {
         globalF = new File(NovaConfig.getDataFolder(), "global.yml");
@@ -29,9 +31,9 @@ public final class Bank {
         global = YamlConfiguration.loadConfiguration(globalF);
 
         if (!global.isConfigurationSection("Bank")) global.createSection("Bank");
-        bank = global.getConfigurationSection("Bank");
+        bankSection = global.getConfigurationSection("Bank");
 
-        for (Economy econ : Economy.getEconomies()) if (!bank.isSet(econ.getName())) bank.set(econ.getName(), 0);
+        for (Economy econ : Economy.getEconomies()) if (!bankSection.isSet(econ.getName())) bankSection.set(econ.getName(), 0);
     }
 
     /**
@@ -41,7 +43,7 @@ public final class Bank {
     @NotNull
     public static Map<Economy, Double> getBalances() {
         Map<Economy, Double> bal = new HashMap<>();
-        bank.getValues(false).forEach((k, v) -> bal.put(Economy.getEconomy(k), (Double) v));
+        bankSection.getValues(false).forEach((k, v) -> bal.put(Economy.getEconomy(k), (Double) v));
         return bal;
     }
 
@@ -60,7 +62,7 @@ public final class Bank {
      */
     public static void setBalance(@NotNull Economy econ, double amount) throws IllegalArgumentException {
         Preconditions.checkNotNull(econ, "Economy cannot be null");
-        bank.set(econ.getName(), amount);
+        bankSection.set(econ.getName(), amount);
         save();
     }
 
