@@ -24,7 +24,7 @@ class TreasuryPlayerAccount implements PlayerAccount {
         treasuryTrans.put(p.getPlayer().getUniqueId(), new ArrayList<>());
     }
 
-    private Map<UUID, List<EconomyTransaction>> treasuryTrans = new HashMap<>();
+    private final Map<UUID, List<EconomyTransaction>> treasuryTrans = new HashMap<>();
 
     @Override
     public @NotNull UUID getUniqueId() {

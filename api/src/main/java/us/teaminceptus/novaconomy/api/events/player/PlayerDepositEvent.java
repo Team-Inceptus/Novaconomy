@@ -8,7 +8,7 @@ import us.teaminceptus.novaconomy.api.economy.Economy;
  */
 public class PlayerDepositEvent extends PlayerEconomyEvent {
 
-    private long timestamp;
+    private final long timestamp;
     private double amount;
 
     /**

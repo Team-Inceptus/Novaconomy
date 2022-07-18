@@ -9,7 +9,7 @@ import us.teaminceptus.novaconomy.api.economy.Economy;
  */
 public class PlayerWithdrawlEvent extends PlayerEconomyEvent {
 
-    private long timestamp;
+    private final long timestamp;
 
     /**
      * Constructs a new PlayerWithdrawlEvent
