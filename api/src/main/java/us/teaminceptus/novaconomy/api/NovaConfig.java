@@ -1,6 +1,7 @@
 package us.teaminceptus.novaconomy.api;
 
 import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -386,5 +387,63 @@ public interface NovaConfig  {
      * Reloads API Hooks (Placeholders, Vault, etc.).
      */
     void reloadHooks();
+
+    /**
+     * Fetches the maxmimum amount of money a player can withdrawl from the global bank on a daily basis.
+     * @param econ Economy to test against
+     * @return Maximum amount
+     */
+    double getMaxWithdrawlAmount(Economy econ);
+
+    /**
+     * Whether this OfflinePlayer can bypass the max withdrawl amount.
+     * @param p Player to test against
+     * @return true if they can, else false
+     */
+    boolean canBypassWithdrawl(OfflinePlayer p);
+
+    /**
+     * Whether this NovaPlayer can bypass the max withdrawl amount.
+     * @param np NovaPlayer to test against
+     * @return true if they can, else false
+     */
+    default boolean canBypassWithdrawl(NovaPlayer np) {
+        return canBypassWithdrawl(np.getPlayer());
+    }
+
+    /**
+     * Whether this OfflinePlayer does not automatically pay taxes.
+     * @param p Player to test against
+     * @return true if they can, else false
+     */
+   boolean canIgnoreTaxes(OfflinePlayer p);
+
+    /**
+     * Whether this NovaPlayer does not automatically pay taxes.
+     * @param np NovaPlayer to test against
+     * @return true if they can, else false
+     */
+    default boolean canIgnoreTaxes(NovaPlayer np) {
+        return canIgnoreTaxes(np.getPlayer());
+    }
+
+    /**
+     * Whether automatic tax payments are enabled.
+     * @return true if enabled, else false
+     */
+    boolean hasAutomaticTaxes();
+
+    /**
+     * Fetches how often, in ticks, taxes should be automatically withdrawled from the player's balance.
+     * @return Withdrawl interval
+     */
+    long getTaxesInterval();
+
+    /**
+     * Fetches the Minimum amount of money a player must be taxed.
+     * @param econ Economy to test against
+     * @return Minimum amount
+     */
+    double getMinimumPayment(Economy econ);
 
 }

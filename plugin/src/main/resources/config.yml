@@ -17,6 +17,7 @@ Notifications: true
 # - pt (Portuguese / Português)
 # - ja (Japanese / 日本)
 # - zh (Chinese / 中国人)
+# - it (Italian / Italiano)
 Language: en
 
 # Natural Causes to gain or lose money
@@ -103,7 +104,7 @@ Interest:
 # Taxes Section
 Taxes:
 
-  # The maximum amount a player can withdraw from the bank.
+  # The maximum amount a player can withdraw from the bank every 24 hours
   MaxWithdrawl:
 
     # All Economies default to this number if one is not specified
