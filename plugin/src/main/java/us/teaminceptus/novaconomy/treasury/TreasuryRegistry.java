@@ -40,19 +40,13 @@ public final class TreasuryRegistry implements EconomyProvider {
     public void reloadTreasury() {
         Plugin plugin = NovaConfig.getPlugin();
         ServiceRegistry r = ServiceRegistry.INSTANCE;
-        if (r.serviceFor(EconomyProvider.class).isPresent() && !(r.serviceFor(EconomyProvider.class).get().get() instanceof TreasuryRegistry)) {
-            plugin.getLogger().info("Other EconomyProvider Registration Found - Treasury will not be used");
-            return;
-        }
-
-        if (r.serviceFor(EconomyProvider.class).get().get() instanceof TreasuryRegistry) r.unregister(EconomyProvider.class, this);
         r.registerService(EconomyProvider.class, this, plugin.getName(), ServicePriority.HIGH);
         plugin.getLogger().info("Injected Novaconomy EconomyProvider into Treasury");
     }
 
     @Override
     public @NotNull Set<OptionalEconomyApiFeature> getSupportedOptionalEconomyApiFeatures() {
-        return Collections.singleton(OptionalEconomyApiFeature.TRANSACTION_EVENTS);
+        return Collections.emptySet();
     }
 
     @Override
@@ -71,23 +65,23 @@ public final class TreasuryRegistry implements EconomyProvider {
     }
 
     @Override
-    public void retrievePlayerAccountIds(@NotNull EconomySubscriber<Collection<UUID>> subscription) {
-        subscription.succeed(Arrays.stream(Bukkit.getOfflinePlayers()).map(OfflinePlayer::getUniqueId).collect(Collectors.toSet()));
+    public void retrievePlayerAccountIds(@NotNull EconomySubscriber<Collection<UUID>> sub) {
+        sub.succeed(Arrays.stream(Bukkit.getOfflinePlayers()).map(OfflinePlayer::getUniqueId).collect(Collectors.toSet()));
     }
 
     @Override
-    public void hasAccount(@NotNull String identifier, @NotNull EconomySubscriber<Boolean> subscription) {
-        subscription.succeed(getPlayer(identifier) != null);
+    public void hasAccount(@NotNull String identifier, @NotNull EconomySubscriber<Boolean> sub) {
+        sub.succeed(getPlayer(identifier) != null);
     }
 
     @Override
-    public void retrieveAccount(@NotNull String identifier, @NotNull EconomySubscriber<Account> subscription) {
-        subscription.succeed(new TreasuryPlayerAccount(new NovaPlayer(getPlayer(identifier))));
+    public void retrieveAccount(@NotNull String identifier, @NotNull EconomySubscriber<Account> sub) {
+        sub.succeed(new TreasuryPlayerAccount(new NovaPlayer(getPlayer(identifier))));
     }
 
     @Override
-    public void createAccount(@Nullable String name, @NotNull String identifier, @NotNull EconomySubscriber<Account> subscription) {
-        retrieveAccount(identifier, subscription);
+    public void createAccount(@Nullable String name, @NotNull String identifier, @NotNull EconomySubscriber<Account> sub) {
+        retrieveAccount(identifier, sub);
     }
 
     @Override
@@ -102,7 +96,15 @@ public final class TreasuryRegistry implements EconomyProvider {
 
     @Override
     public @NotNull Currency getPrimaryCurrency() {
-        return null;
+        Object o = NovaConfig.loadFunctionalityFile().get("VaultEconomy", -1);
+        if (o instanceof String) {
+            String s = (String) o;
+            return new TreasuryCurrency(Economy.getEconomy(s));
+        } else {
+            Optional<Economy> first = Economy.getEconomies().stream().sorted(Comparator.comparing(Economy::getName)).findFirst();
+            if (!first.isPresent()) throw new RuntimeException(new EconomyException(FailureReason.of("No economies creatded")));
+            return new TreasuryCurrency(first.get());
+        }
     }
 
     @Override

@@ -28,7 +28,7 @@ class TreasuryPlayerAccount implements PlayerAccount {
 
     @Override
     public @NotNull UUID getUniqueId() {
-        return null;
+        return np.getPlayer().getUniqueId();
     }
 
     @Override
