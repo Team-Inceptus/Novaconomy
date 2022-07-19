@@ -5,26 +5,26 @@ import org.jetbrains.annotations.NotNull;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 
 /**
- * Called after a Player withdrawls from the Global Bank
+ * Called after a Player withdraws from the Global Bank
  */
-public class PlayerWithdrawlEvent extends PlayerEconomyEvent {
+public class PlayerWithdrawEvent extends PlayerEconomyEvent {
 
     private final long timestamp;
 
     /**
-     * Constructs a new PlayerWithdrawlEvent
+     * Constructs a new PlayerWithdrawEvent
      * @param who       Player involved
-     * @param amount    Amount withdrawln
+     * @param amount    Amount withdrawn
      * @param econ      Economy involved
-     * @param timestamp Timestamp of the withdrawl
+     * @param timestamp Timestamp of the withdraw
      */
-    public PlayerWithdrawlEvent(Player who, double amount, Economy econ, long timestamp) {
+    public PlayerWithdrawEvent(Player who, double amount, Economy econ, long timestamp) {
         super(who, amount, econ);
         this.timestamp = timestamp;
     }
 
     /**
-     * Fetches the system milliseconds timestamp of the withdrawl
+     * Fetches the system milliseconds timestamp of the withdraw
      * @return System Milliseconds
      */
     @NotNull
