@@ -17,8 +17,6 @@
 
         <sonar.organization>team-inceptus</sonar.organization>
         <sonar.host.url>https://sonarcloud.io</sonar.host.url>
-
-        <development>false</development>
     </properties>
 
     <developers>
