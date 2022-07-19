@@ -35,7 +35,7 @@ import org.bukkit.event.player.PlayerFishEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.*;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.material.Crops;
+import org.bukkit.permissions.PermissionAttachmentInfo;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -72,7 +72,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import java.util.function.Predicate;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -174,29 +174,24 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
 	private static class ModifierReader {
 
-		private static Map<String, Map.Entry<Map<String, Predicate<?>>, Set<Map<Economy, Double>>>> getAllModifiers() throws IllegalArgumentException {
-			Map<String, Map.Entry<Map<String, Predicate<?>>, Set<Map<Economy, Double>>>> mods = new HashMap<>();
+		private static Map<String, Map<String, Set<Map<Economy, Double>>>> getAllModifiers() throws IllegalArgumentException {
+			Map<String, Map<String, Set<Map<Economy, Double>>>> mods = new HashMap<>();
 			FileConfiguration config = NovaConfig.getPlugin().getConfig();
 
-			if (config.isConfigurationSection("Modifiers")) {
-				ConfigurationSection modifiers = config.getConfigurationSection("Modifiers");
+			if (config.isConfigurationSection("NaturalCauses.Modifiers")) {
+				ConfigurationSection modifiers = config.getConfigurationSection("NaturalCauses.Modifiers");
 
 				modifiers.getKeys(false).forEach(s -> {
 					ConfigurationSection modifier = modifiers.getConfigurationSection(s);
-					Map<String, Predicate<?>> key = new HashMap<>();
-					Set<Map<Economy, Double>> value = new HashSet<>();
+					Map<String, Set<Map<Economy, Double>>> map = new HashMap<>();
 
 					modifier.getValues(false).forEach((k, v) -> {
-
-						if (s.equalsIgnoreCase("Killing")) key.put(k.toUpperCase(), readEntityModifier(k));
-						else key.put(k.toUpperCase(), o -> true);
-
+						Set<Map<Economy, Double>> value = new HashSet<>();
 						if (!(v instanceof String)) return;
 						String amount = (String) v;
 
 						if (amount.contains("[") && amount.contains("]")) {
 							amount = amount.replaceAll("[\\[\\]]", "").replace(" ", "");
-
 							String[] amounts = amount.split(",");
 							for (String am : amounts) {
 								if (readString(am) == null) throw new IllegalArgumentException("No valid amount found for " + k + ": " + amount);
@@ -206,16 +201,18 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 							if (readString(amount) == null) throw new IllegalArgumentException("No valid amount found for " + k + ": " + amount);
 							value.add(readString(amount));
 						}
+
+						map.put(k, value);
 					});
 
-					mods.put(s, new AbstractMap.SimpleEntry<>(key, value));
+					mods.put(s, map);
 				});
 			}
 
 			return mods;
 		}
 
-		private static Map.Entry<Map<String, Predicate<?>>, Set<Map<Economy, Double>>> getModifier(String mod) {
+		private static Map<String, Set<Map<Economy, Double>>> getModifier(String mod) {
 			return getAllModifiers().get(mod);
 		}
 
@@ -223,102 +220,14 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 			char s1 = s.charAt(0);
 			char s2 = s.charAt(s.length() - 1);
 
-			if (!Economy.exists(s1) || !Economy.exists(s2)) return null;
+			if (!Economy.exists(s1) && !Economy.exists(s2)) return null;
 
+			String remove = Economy.exists(s1) ? s1 + "" : s2 + "";
 			Economy econ = Economy.exists(s1) ? Economy.getEconomy(s1) : Economy.getEconomy(s2);
-			double amountD = Double.parseDouble(s.replaceAll("[" + s1 + s2 + "]", ""));
+			double amountD = Double.parseDouble(s.replaceAll("[" + remove + "]", ""));
 			return Collections.singletonMap(econ, amountD);
 		}
 
-		private static Predicate<LivingEntity> readEntityModifier(String s) throws IllegalArgumentException {
-			boolean hasNBT = s.contains("[");
-			String type = hasNBT ? s.split("\\[")[0] : s;
-			Predicate<LivingEntity> p = (l) -> l.getType().name().equalsIgnoreCase(type);
-			if (hasNBT) {
-				String nbt = s.split("\\[")[1].split("]")[0].replace(" ", "");
-
-				if (nbt.contains(" ")) throw new IllegalArgumentException("NBT Query cannot contain spaces");
-
-				Map<String, String> map = new HashMap<>();
-				Map<String, Operator> ops = new HashMap<>();
-				for (String entry : nbt.split(",")) {
-					String[] entries = entry.split("(!=)|(=>)|(<=)|(=)|(>)|(<)");
-
-					if (entries.length != 2) throw new IllegalArgumentException("Invalid Query: " + entry);
-
-					if (entries[0].equalsIgnoreCase("dimension")) {
-						map.put("dimension", entries[1]);
-						continue;
-					}
-
-					if (entries[0].equalsIgnoreCase("cause")) {
-						map.put("cause", entries[1]);
-						continue;
-					}
-
-					if (entries[0].equalsIgnoreCase("player")) {
-						map.put("player", entries[1]);
-						continue;
-					}
-
-					final Operator o;
-					if (entry.contains("!=")) o = Operator.NOT_EQUAL;
-					else if (entry.contains("=>")) o = Operator.GREATER_EQUAL;
-					else if (entry.contains("<=")) o = Operator.LESS_EQUAL;
-					else if (entry.contains("=")) o = Operator.EQUAL;
-					else if (entry.contains(">")) o = Operator.GREATER;
-					else if (entry.contains("<")) o = Operator.LESS;
-					else o = Operator.EQUAL;
-
-					ops.put(entries[0].toLowerCase(), o);
-					map.put(entries[0].toLowerCase(), entries[1]);
-				}
-
-				if (map.containsKey("dimension")) p = p.and(l -> l.getWorld().getName().equals(map.get("dimension")));
-				if (map.containsKey("cause")) p = p.and(l -> l.getLastDamageCause() != null && l.getLastDamageCause().getCause().name().equals(map.get("cause")));
-				if (map.containsKey("player")) p = p.and(l -> l.getKiller().getName().equals(map.get("player")));
-
-				if (map.containsKey("maxhealth")) {
-					Operator o = ops.get("maxhealth");
-					double hp = Double.parseDouble(map.get("maxhealth"));
-
-					p = p.and(l -> o.test(l.getMaxHealth(), hp));
-				}
-
-			}
-
-			return p;
-		}
-
-	}
-
-	private enum Operator {
-		EQUAL {
-			@Override
-			public boolean test(double a, double b) { return a == b; }
-		},
-		NOT_EQUAL {
-			@Override
-			public boolean test(double a, double b) { return a != b; }
-		},
-		LESS {
-			@Override
-			public boolean test(double a, double b) { return a < b; }
-		},
-		LESS_EQUAL {
-			@Override
-			public boolean test(double a, double b) { return a <= b; }
-		},
-		GREATER {
-			@Override
-			public boolean test(double a, double b) { return a > b; }
-		},
-		GREATER_EQUAL {
-			@Override
-			public boolean test(double a, double b) { return a >= b; }
-		};
-
-		public abstract boolean test(double a, double b);
 	}
 
 
@@ -337,22 +246,21 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		interest = config.getConfigurationSection("Interest");
 		ncauses = config.getConfigurationSection("NaturalCauses");
 
-		if (INTEREST_RUNNABLE.getTaskId() != -1) INTEREST_RUNNABLE.cancel();
-		if (TAXES_RUNNABLE.getTaskId() != -1) TAXES_RUNNABLE.cancel();
+		try { if (INTEREST_RUNNABLE.getTaskId() != -1) INTEREST_RUNNABLE.cancel(); } catch (IllegalStateException ignored) {}
+		try { if (TAXES_RUNNABLE.getTaskId() != -1) TAXES_RUNNABLE.cancel(); } catch (IllegalStateException ignored) {}
 
 		INTEREST_RUNNABLE = new BukkitRunnable() {
 			@Override
 			public void run() {
-				if (!(NovaConfig.getConfiguration().isInterestEnabled())) cancel();
+				if (!(NovaConfig.getConfiguration().isInterestEnabled())) { cancel(); return; }
 				runInterest();
 			}
-
 		};
 
 		TAXES_RUNNABLE = new BukkitRunnable() {
 			@Override
 			public void run() {
-				if (!(NovaConfig.getConfiguration().hasAutomaticTaxes())) cancel();
+				if (!(NovaConfig.getConfiguration().hasAutomaticTaxes())) { cancel(); return; }
 				runTaxes();
 			}
 		};
@@ -366,7 +274,8 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		}.runTask(plugin);
 	}
 
-	@SuppressWarnings("unchecked")
+	private static final Set<Material> ores = new HashSet<>(Arrays.stream(Material.values()).filter(m -> m.name().endsWith("ORE") || m.name().equalsIgnoreCase("ANCIENT_DEBRIS")).collect(Collectors.toSet()));
+
 	private class Events implements Listener {
 		
 		private final Novaconomy plugin;
@@ -411,19 +320,21 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 			LivingEntity en = (LivingEntity) e.getEntity();
 			if (en.getHealth() - e.getFinalDamage() > 0) return;
 
-			if (ModifierReader.getModifier("Killing") != null) {
-				Map.Entry<Map<String, Predicate<?>>, Set<Map<Economy, Double>>> entry = ModifierReader.getModifier("Killing");
-				if (entry.getKey().containsKey(en.getType().name()) && ((Predicate<LivingEntity>) entry.getKey().get(en.getType().name())).test(en)) {
+			if (ModifierReader.getModifier("Killing") != null && r.nextInt(100) < getKillChance()) {
+				Map<String, Set<Map<Economy, Double>>> entry = ModifierReader.getModifier("Killing");
+				if (entry.containsKey(en.getType().name())) {
+					Set<Map<Economy, Double>> value = entry.get(en.getType().name());
 					List<String> msgs = new ArrayList<>();
-					for (Map<Economy, Double> map : entry.getValue())
+					for (Map<Economy, Double> map : value)
 						for (Economy econ : map.keySet()) {
 							double amount = map.get(econ);
-							msgs.add(callAddBalanceEvent(p, econ, amount));
+							if (amount <= 0) continue;
+							msgs.add(callAddBalanceEvent(p, econ, amount, false));
 						}
 
 					sendUpdateActionbar(p, msgs);
 				} else update(p, en.getMaxHealth());
-			} else update(p, en.getMaxHealth());
+			}
 		}
 		
 		@EventHandler
@@ -434,35 +345,38 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 			
 			Block b = e.getBlock();
 			Player p = e.getPlayer();
-			int add = e.getExpToDrop() == 0 ? r.nextInt(3) : e.getExpToDrop();
+			int add = e.getExpToDrop() == 0 && ores.contains(b.getType()) ? r.nextInt(3) : e.getExpToDrop();
 			
-			if (ores.contains(b.getType()) && ModifierReader.getModifier("Mining") != null) {
-				Map.Entry<Map<String, Predicate<?>>, Set<Map<Economy, Double>>> entry = ModifierReader.getModifier("Mining");
-				if (entry.getKey().containsKey(b.getType().name())) {
+			if (!w.isAgeable(b) && ModifierReader.getModifier("Mining") != null && r.nextInt(100) < getMiningChance()) {
+				Map<String, Set<Map<Economy, Double>>> entry = ModifierReader.getModifier("Mining");
+				if (entry.containsKey(b.getType().name())) {
+					Set<Map<Economy, Double>> value = entry.get(b.getType().name());
 					List<String> msgs = new ArrayList<>();
-					for (Map<Economy, Double> map : entry.getValue())
+					for (Map<Economy, Double> map : value)
 						for (Economy econ : map.keySet()) {
 							double amount = map.get(econ);
-							msgs.add(callAddBalanceEvent(p, econ, amount));
+							if (amount <= 0) continue;
+							msgs.add(callAddBalanceEvent(p, econ, amount, false));
 						}
 
 					sendUpdateActionbar(p, msgs);
 				} else update(p, add);
 			}
-			else if (b.getState().getData() instanceof Crops && ModifierReader.getModifier("Farming") != null) {
-				Map.Entry<Map<String, Predicate<?>>, Set<Map<Economy, Double>>> entry = ModifierReader.getModifier("Farming");
-				if (entry.getKey().containsKey(b.getType().name())) {
+			else if (w.isAgeable(b) && ModifierReader.getModifier("Farming") != null && r.nextInt(100) < getFarmingChance()) {
+				Map<String, Set<Map<Economy, Double>>> entry = ModifierReader.getModifier("Farming");
+				if (entry.containsKey(b.getType().name())) {
+					Set<Map<Economy, Double>> value = entry.get(b.getType().name());
 					List<String> msgs = new ArrayList<>();
-					for (Map<Economy, Double> map : entry.getValue())
+					for (Map<Economy, Double> map : value)
 						for (Economy econ : map.keySet()) {
 							double amount = map.get(econ);
-							msgs.add(callAddBalanceEvent(p, econ, amount));
+							if (amount <= 0) continue;
+							msgs.add(callAddBalanceEvent(p, econ, amount, false));
 						}
 
 					sendUpdateActionbar(p, msgs);
 				} else update(p, add);
 			}
-			else update(p, add);
 		}
 		
 		@EventHandler
@@ -476,32 +390,34 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
 			String name = e.getCaught() instanceof Item ? ((Item) e.getCaught()).getItemStack().getType().name() : e.getCaught().getType().name();
 
-			if (ModifierReader.getModifier("Fishing") != null) {
-				Map.Entry<Map<String, Predicate<?>>, Set<Map<Economy, Double>>> entry = ModifierReader.getModifier("Fishing");
-				if (entry.getKey().containsKey(name)) {
+			if (ModifierReader.getModifier("Fishing") != null && r.nextInt(100) < getFishingChance()) {
+				Map<String, Set<Map<Economy, Double>>> entry = ModifierReader.getModifier("Fishing");
+				if (entry.containsKey(name)) {
+					Set<Map<Economy, Double>> value = entry.get(name);
 					List<String> msgs = new ArrayList<>();
-					for (Map<Economy, Double> map : entry.getValue())
+					for (Map<Economy, Double> map : value)
 						for (Economy econ : map.keySet()) {
 							double amount = map.get(econ);
-							msgs.add(callAddBalanceEvent(p, econ, amount));
+							if (amount <= 0) continue;
+							msgs.add(callAddBalanceEvent(p, econ, amount, false));
 						}
 
 					sendUpdateActionbar(p, msgs);
 				} else update(p, e.getExpToDrop());
-			} else update(p, e.getExpToDrop());
+			}
 		}
 
 		private void update(Player p, double amount) {
 			List<String> msgs = new ArrayList<>();
-			for (Economy econ : Economy.getNaturalEconomies()) msgs.add(callAddBalanceEvent(p, econ, amount));
+			for (Economy econ : Economy.getNaturalEconomies()) msgs.add(callAddBalanceEvent(p, econ, amount, true));
 
 			sendUpdateActionbar(p, msgs);
 		}
 
-		private String callAddBalanceEvent(Player p, Economy econ, double amount) {
+		private String callAddBalanceEvent(Player p, Economy econ, double amount, boolean random) {
 			NovaPlayer np = new NovaPlayer(p);
 			double divider = r.nextInt(2) + 1;
-			double increase = ((amount + r.nextInt(8) + 1) / divider) / econ.getConversionScale();
+			double increase = random ? ((amount + r.nextInt(8) + 1) / divider) / econ.getConversionScale() : amount;
 
 			double previousBal = np.getBalance(econ);
 
@@ -511,7 +427,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 			if (!event.isCancelled()) {
 				np.add(econ, increase);
 
-				return COLORS.get(r.nextInt(COLORS.size())) + "+" + (Math.floor(increase * 100) / 100 + econ.getSymbol() + "").replace("D", "") + econ.getSymbol();
+				return COLORS.get(r.nextInt(COLORS.size())) + "+" + (Math.floor(increase * 100) / 100 + "").replace("D", "") + econ.getSymbol();
 			}
 
 			return "";
@@ -530,17 +446,30 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 			NovaPlayer np = new NovaPlayer(p);
 			
 			List<String> lost = new ArrayList<>();
-			
 			lost.add(get("constants.lost"));
-			
-			for (Economy econ : Economy.getEconomies()) {
-				double amount = np.getBalance(econ) / getDeathDivider();
-				np.remove(econ, amount);
-				
-				lost.add(ChatColor.DARK_RED + "- " + ChatColor.RED + econ.getSymbol() + Math.floor(amount * 100) / 100);
-			}
+
+			if (ModifierReader.getModifier("Death") != null && ModifierReader.getModifier("Death").containsKey(p.getLastDamageCause().getCause().name())) {
+				Set<Map<Economy, Double>> value = ModifierReader.getModifier("Death").get(p.getLastDamageCause().getCause().name());
+				List<String> msgs = new ArrayList<>();
+				for (Map<Economy, Double> map : value)
+					for (Economy econ : map.keySet()) {
+						double amount = map.get(econ);
+						if (amount <= 0) continue;
+						lost.add(callRemoveBalanceEvent(p, econ, amount));
+					}
+			} else for (Economy econ : Economy.getEconomies()) lost.add(callRemoveBalanceEvent(p, econ, np.getBalance(econ) / getDeathDivider()));
 			
 			if (plugin.hasNotifications()) p.sendMessage(String.join("\n", lost.toArray(new String[0])));
+		}
+
+		private String callRemoveBalanceEvent(Player p, Economy econ, double amount) {
+			NovaPlayer np = new NovaPlayer(p);
+			double previousBal = np.getBalance(econ);
+
+			PlayerChangeBalanceEvent event = new PlayerChangeBalanceEvent(p, econ, amount, previousBal, previousBal - amount, true);
+			if (!event.isCancelled()) np.remove(econ, amount);
+
+			return ChatColor.DARK_RED + "- " + ChatColor.RED + econ.getSymbol() + Math.floor(amount * 100) / 100;
 		}
 
 		// Inventory
@@ -557,8 +486,10 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
 			if (item.isSimilar(w.getGUIBackground())) e.setCancelled(true);
 			if (!item.hasItemMeta()) return;
+			if (!w.hasID(item)) return;
 
-			String id = w.getNBTString(item, "id");
+			String id =  w.getNBTString(item, "id");
+			if (id == null) return;
 			if (!e.isCancelled()) e.setCancelled(true);
 			if (id.length() > 0 && CLICK_ITEMS.containsKey(id)) CLICK_ITEMS.get(id).accept(e);
 		}
@@ -861,6 +792,12 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				ItemStack takeItem = inv.getItem(12);
 				Economy takeEcon = Economy.getEconomy(UUID.fromString(w.getNBTString(takeItem, ECON_TAG)));
 				double take = w.getNBTDouble(takeItem, AMOUNT_TAG);
+				if (np.getBalance(takeEcon) < take) {
+					p.closeInventory();
+					p.sendMessage(String.format(getMessage("error.economy.invalid_amount"), Novaconomy.get("constants.convert")));
+					XSound.BLOCK_NOTE_BLOCK_PLING.play(e.getWhoClicked(), 3F, 0F);
+					return;
+				}
 
 				double max = NovaConfig.getConfiguration().getMaxConvertAmount(takeEcon);
 				if (max >= 0 && take > max) {
@@ -887,11 +824,35 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				p.closeInventory();
 				p.sendMessage(String.format(getMessage("success.economy.convert"), take + "" + takeEcon.getSymbol(), give + "" + giveEcon.getSymbol()));
 			});
+
+			put("no:exchange", e -> {
+				e.getWhoClicked().closeInventory();
+				XSound.BLOCK_NOTE_BLOCK_PLING.play(e.getWhoClicked(), 3F, 0F);
+			});
+
+			put("next:bank_balance", e -> CHANGE_PAGE_TRICONSUMER.accept(e, 1, CommandWrapper.getBankBalanceGUI()));
+			put("prev:bank_balance", e -> CHANGE_PAGE_TRICONSUMER.accept(e, -1, CommandWrapper.getBankBalanceGUI()));
 		}
+	};
+
+	@FunctionalInterface
+	private interface TriConsumer<T, U, L> {
+		void accept(T t, U u, L l);
+	}
+
+	private static final TriConsumer<InventoryClickEvent, Integer, List<Inventory>> CHANGE_PAGE_TRICONSUMER = (e, i, l) -> {
+		HumanEntity p = e.getWhoClicked();
+		ItemStack item = e.getCurrentItem();
+		int nextPage = (int) w.getNBTDouble(item, "page") + i;
+		Inventory nextInv = nextPage >= l.size() ? l.get(0) : l.get(nextPage);
+
+		p.openInventory(nextInv);
+		XSound.ITEM_BOOK_PAGE_TURN.play(p, 3F, 2F);
 	};
 
 	private static final BiConsumer<InventoryClickEvent, Integer> EXCHANGE_BICONSUMER = (e, i) -> {
 		if (!(e.getWhoClicked() instanceof Player)) return;
+		Player p = (Player) e.getWhoClicked();
 		ItemStack item = e.getCurrentItem();
 		Inventory inv = e.getView().getTopInventory();
 		Economy econ = Economy.getEconomy(UUID.fromString(w.getNBTString(item, ECON_TAG)));
@@ -902,7 +863,25 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				.filter(economy -> !economy.equals(econ) && !economy.equals(econ2))
 				.sorted(Comparator.comparing(Economy::getName))
 				.collect(Collectors.toList());
-		if (economies.size() == 0) return;
+
+		if (economies.size() == 0) {
+			ItemStack ec1 = inv.getItem(12);
+			ItemStack first = ec1.clone();
+			first = w.setID(first, "exchange:2");
+			first = w.setNBT(first, ECON_TAG, w.getNBTString(ec1, ECON_TAG));
+			first = w.setNBT(first, AMOUNT_TAG, w.getNBTDouble(ec1, AMOUNT_TAG));
+
+			ItemStack ec2 = inv.getItem(14);
+			ItemStack second = ec2.clone();
+			second = w.setID(second, "exchange:1");
+			second = w.setNBT(second, ECON_TAG, w.getNBTString(ec2, ECON_TAG));
+			second = w.setNBT(second, AMOUNT_TAG, w.getNBTDouble(ec2, AMOUNT_TAG));
+
+			inv.setItem(14, first);
+			inv.setItem(12, second);
+			XSound.BLOCK_NOTE_BLOCK_PLING.play(p, 3F, 2F);
+			return;
+		}
 
 		Economy next = economies.get(economies.indexOf(econ) + 1 >= economies.size() ? 0 : economies.indexOf(econ) + 1);
 		ItemStack newItem = new ItemStack(next.getIcon());
@@ -912,15 +891,13 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		meta.setLore(Collections.singletonList(ChatColor.YELLOW + "" + amount + "" + next.getSymbol()));
 		newItem.setItemMeta(meta);
 
-		w.setID(newItem, "exchange:" + (i == 14 ? "2" : "1"));
-		w.setNBT(newItem, ECON_TAG, next.getUniqueId().toString());
-		w.setNBT(newItem, AMOUNT_TAG, amount);
+		newItem = w.setID(newItem, "exchange:" + (i == 14 ? "2" : "1"));
+		newItem = w.setNBT(newItem, ECON_TAG, next.getUniqueId().toString());
+		newItem = w.setNBT(newItem, AMOUNT_TAG, amount);
 
-		inv.setItem(oIndex, newItem);
-		XSound.BLOCK_NOTE_BLOCK_PLING.play(e.getWhoClicked(), 3F, 2F);
+		inv.setItem(e.getSlot(), newItem);
+		XSound.BLOCK_NOTE_BLOCK_PLING.play(p, 3F, 2F);
 	};
-
-	private static final Set<Material> ores = new HashSet<>(Arrays.stream(Material.values()).filter(m -> m.name().endsWith("ORE") || m.name().equalsIgnoreCase("ANCIENT_DEBRIS")).collect(Collectors.toSet()));
 
 	private static CommandWrapper getCommandWrapper() {
 		try {
@@ -962,6 +939,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 	}
 
 	private static void runInterest() {
+		if (!NovaConfig.getConfiguration().isInterestEnabled()) return;
 		Map<NovaPlayer, Map<Economy, Double>> previousBals = new HashMap<>();
 		Map<NovaPlayer, Map<Economy, Double>> amounts = new HashMap<>();
 
@@ -1005,6 +983,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 	};
 
 	private static void runTaxes() {
+		if (!NovaConfig.getConfiguration().hasAutomaticTaxes()) return;
 		Map<NovaPlayer, Map<Economy, Double>> previousBals = new HashMap<>();
 		Map<NovaPlayer, Map<Economy, Double>> amounts = new HashMap<>();
 
@@ -1014,41 +993,48 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 			Map<Economy, Double> previousBal = new HashMap<>();
 			Map<Economy, Double> amount = new HashMap<>();
 
-			for (Economy econ : Economy.getEconomies()) {
-				double balance = np.getBalance(econ);
-				previousBal.put(econ, balance);
-
-				double remove = NovaConfig.getConfiguration().getMinimumPayment(econ);
-				amount.put(econ, remove);
+			for (Economy econ : Economy.getTaxableEconomies()) {
+				previousBal.put(econ, np.getBalance(econ));
+				double amountD = NovaConfig.getConfiguration().getMinimumPayment(econ);
+				if (amountD > 0) amount.put(econ, amountD);
 			}
+
+			previousBals.put(np, previousBal);
+			if (amount.size() > 0) amounts.put(np, amount);
 		}
 
+		if (amounts.size() < 1) return;
 		AutomaticTaxEvent event = new AutomaticTaxEvent(previousBals, amounts);
 		Bukkit.getPluginManager().callEvent(event);
 
+		Map<NovaPlayer, Map<Economy, Double>> missedMap = new HashMap<>();
 		if (!event.isCancelled()) for (NovaPlayer np : previousBals.keySet()) {
-			AtomicBoolean missed = new AtomicBoolean(false);
-			Map<Economy, Double> missedMap = new HashMap<>();
-
-			int i = 0;
+			missedMap.put(np, new HashMap<>());
 			for (Economy econ : previousBals.get(np).keySet()) {
 				double amount = amounts.get(np).get(econ);
 
 				if (np.getBalance(econ) < amount) {
-					missed.set(true);
-					missedMap.put(econ, amount);
-					np.remove(econ, np.getBalance(econ));
+					Map<Economy, Double> newMap = new HashMap<>(missedMap.get(np));
+					newMap.put(econ, amount);
+					missedMap.put(np, newMap);
+					np.deposit(econ, np.getBalance(econ));
 
 					PlayerMissTaxEvent event2 = new PlayerMissTaxEvent(np.getPlayer(), amount - np.getBalance(econ), econ);
 					Bukkit.getPluginManager().callEvent(event2);
-					return;
-				} else np.remove(econ, amount);
-				i++;
-			}
+				} else np.deposit(econ, amount);
 
-			if (missed.get() && np.isOnline() && NovaConfig.getConfiguration().hasNotifications())
-				np.getOnlinePlayer().sendMessage(String.format(getMessage("notification.tax.missed"), i + " ", i == 1 ? get("constants.economy") : get("constants.economies")));
-			else if (np.isOnline() && NovaConfig.getConfiguration().hasNotifications())
+			}
+		}
+
+		if (!NovaConfig.getConfiguration().hasNotifications()) return;
+		for (NovaPlayer np : previousBals.keySet()) {
+			if (!np.getPlayer().isOnline()) continue;
+			int j = missedMap.get(np).size();
+			int i = Economy.getTaxableEconomies().size() - j;
+			if (j > 0)
+				np.getOnlinePlayer().sendMessage(String.format(getMessage("notification.tax.missed"), j + " ", j == 1 ? get("constants.economy") : get("constants.economies")));
+
+			if (i > 0)
 				np.getOnlinePlayer().sendMessage(String.format(getMessage("notification.tax"), i + " ", i == 1 ? get("constants.economy") : get("constants.economies")));
 		}
 	}
@@ -1083,7 +1069,6 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		if (hasVault()) {
 			getLogger().info("Vault Found! Hooking...");
 			new VaultRegistry(this);
-			getLogger().info("Hooked into Vault API!");
 		} else
 			getLogger().warning("Novaconomy Now Supports Vault! Specify a currency to hook with in functionality.yml!");
 	}
@@ -1092,7 +1077,6 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		if (Bukkit.getPluginManager().getPlugin("Treasury") != null) {
 			getLogger().info("Treasury Found! Hooking...");
 			new TreasuryRegistry(this);
-			getLogger().info("Hooked into Treasury API!");
 		}
 	}
 
@@ -1105,26 +1089,8 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		saveConfig();
 
 		funcConfig = NovaConfig.loadFunctionalityFile();
-
-		File businesses = new File(getDataFolder(), "businesses.yml");
-		if (!businesses.exists()) saveResource("businesses.yml", false);
-
-		File globalF = new File(getDataFolder(), "global.yml");
-		if (!globalF.exists()) saveResource("businesses.yml", false);
-
-		FileConfiguration global = YamlConfiguration.loadConfiguration(globalF);
-		for (Economy econ : Economy.getEconomies()) if (!global.isSet("Bank." + econ.getName())) config.set("Bank." + econ.getName(), 0);
-		try { global.save(globalF); } catch (IOException e) { getLogger().severe(e.getMessage()); for (StackTraceElement s : e.getStackTrace()) getLogger().severe(s.toString()); }
-
-		NovaConfig.reloadLanguages();
-		getLogger().info("Loaded Languages & Configuration...");
-		SERIALIZABLE.forEach(ConfigurationSerialization::registerClass);
-
-		NovaConfig.loadBusinesses();
-
 		playerDir = new File(getDataFolder(), "players");
 		File economyFile = new File(getDataFolder(), "economies.yml");
-
 		try {
 			if (!(economyFile.exists())) economyFile.createNewFile();
 			if (!(playerDir.exists())) playerDir.mkdir();
@@ -1132,11 +1098,26 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 			getLogger().severe("Error loading files & folders");
 			getLogger().severe(e.getMessage());
 		}
-
 		economiesFile = YamlConfiguration.loadConfiguration(economyFile);
 		config = this.getConfig();
 		interest = config.getConfigurationSection("Interest");
 		ncauses = config.getConfigurationSection("NaturalCauses");
+
+		File businesses = new File(getDataFolder(), "businesses.yml");
+		if (!businesses.exists()) saveResource("businesses.yml", false);
+
+		File globalF = new File(getDataFolder(), "global.yml");
+		if (!globalF.exists()) saveResource("global.yml", false);
+
+		FileConfiguration global = YamlConfiguration.loadConfiguration(globalF);
+		for (Economy econ : Economy.getEconomies()) if (!global.isSet("Bank." + econ.getName())) global.set("Bank." + econ.getName(), 0);
+		try { global.save(globalF); } catch (IOException e) { getLogger().severe(e.getMessage()); for (StackTraceElement s : e.getStackTrace()) getLogger().severe(s.toString()); }
+
+		NovaConfig.reloadLanguages();
+		getLogger().info("Loaded Languages & Configuration...");
+		SERIALIZABLE.forEach(ConfigurationSerialization::registerClass);
+
+		NovaConfig.loadBusinesses();
 
 		prefix = get("plugin.prefix");
 
@@ -1256,15 +1237,25 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		if (list == null || list.size() < 1) return false;
 		AtomicBoolean b = new AtomicBoolean(false);
 
-		for (String s : list)
-			if (s.equals(p.getName()) || (s.equalsIgnoreCase("OPS") && p.isOp()) || (s.equalsIgnoreCase("NONOPS") && !p.isOp())) {
+		for (String s : list) {
+			Pattern patt = Pattern.compile(s);
+			if (patt.matcher(p.getName()).matches() || (s.equalsIgnoreCase("OPS") && p.isOp()) || (s.equalsIgnoreCase("NONOPS") && !p.isOp())) {
 				b.set(true);
 				break;
 			}
+		}
 
 		if (p.isOnline()) {
 			Player op = p.getPlayer();
-			if (op.getEffectivePermissions().stream().filter(perm -> list.contains(perm.getPermission()) && perm.getValue()).count() > 1) b.set(true);
+			for (String s : list) {
+				if (b.get()) break;
+				Pattern patt = Pattern.compile(s);
+				for (PermissionAttachmentInfo info : op.getEffectivePermissions())
+					if (patt.matcher(info.getPermission()).matches()) {
+						b.set(true);
+						break;
+					}
+			}
 			if (hasVault() && VaultChat.isInGroup(list, op)) b.set(true);
 		}
 
@@ -1276,14 +1267,14 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 	}
 
 	@Override
-	public double getMaxWithdrawlAmount(Economy econ) {
-		ConfigurationSection sec = config.getConfigurationSection("Taxes.MaxWithdrawl");
+	public double getMaxWithdrawAmount(Economy econ) {
+		ConfigurationSection sec = config.getConfigurationSection("Taxes.MaxWithdraw");
 		return sec.contains(econ.getName()) ? sec.getDouble(econ.getName()) : sec.getDouble("Global", 100);
 	}
 
 	@Override
-	public boolean canBypassWithdrawl(OfflinePlayer p) {
-		return isIncludedIn(config.getStringList("Taxes.MaxWithdrawl.Bypass"), p);
+	public boolean canBypassWithdraw(OfflinePlayer p) {
+		return isIncludedIn(config.getStringList("Taxes.MaxWithdraw.Bypass"), p);
 	}
 
 	@Override
@@ -1293,7 +1284,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
 	@Override
 	public boolean hasAutomaticTaxes() {
-		return config.getBoolean("Taxes.Automatic.Enabled");
+		return config.getBoolean("Taxes.Automatic.Enabled", false);
 	}
 
 	@Override
@@ -1303,7 +1294,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
 	@Override
 	public double getMinimumPayment(Economy econ) {
-		return config.getDouble("Taxes.Minimum." + econ.getName(), config.getDouble("Taxes.Minimum.Global", 0));
+		return config.getDouble("Taxes.Minimums." + econ.getName(), config.getDouble("Taxes.Minimums.Global", 0));
 	}
 
 	@Override
@@ -1403,7 +1394,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
 	@Override
 	public boolean hasNotifications() {
-		return config.getBoolean("Notifications");
+		return config.getBoolean("Notifications", true);
 	}
 
 	@Override
