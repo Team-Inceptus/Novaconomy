@@ -12,6 +12,7 @@ import me.lokka30.treasury.api.economy.response.EconomyException;
 import me.lokka30.treasury.api.economy.response.EconomySubscriber;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.configuration.serialization.ConfigurationSerialization;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.Novaconomy;
@@ -29,10 +30,15 @@ import static us.teaminceptus.novaconomy.Novaconomy.getPlayer;
  */
 public final class TreasuryRegistry implements EconomyProvider {
 
+    static final String TREASURY_ACCOUNTS = "TreasuryAccounts";
     private final Novaconomy plugin;
 
     public TreasuryRegistry(Novaconomy plugin) {
         this.plugin = plugin;
+
+        ConfigurationSerialization.registerClass(TreasuryAccount.class);
+        TreasuryAccount.global = NovaConfig.getGlobalStorage();
+        TreasuryAccount.treasuryAccounts = TreasuryAccount.global.isConfigurationSection(TREASURY_ACCOUNTS) ? TreasuryAccount.global.getConfigurationSection(TREASURY_ACCOUNTS) : TreasuryAccount.global.createSection(TREASURY_ACCOUNTS);
 
         ServiceRegistry r = ServiceRegistry.INSTANCE;
         if (!r.serviceFor(EconomyProvider.class).isPresent()) {
@@ -67,28 +73,35 @@ public final class TreasuryRegistry implements EconomyProvider {
     }
 
     @Override
-    public void hasAccount(@NotNull String identifier, @NotNull EconomySubscriber<Boolean> sub) {
-        sub.succeed(getPlayer(identifier) != null);
+    public void hasAccount(@NotNull String id, @NotNull EconomySubscriber<Boolean> sub) {
+        sub.succeed(TreasuryAccount.getAccounts().stream().map(TreasuryAccount::getIdentifier).collect(Collectors.toSet()).contains(id));
     }
 
     @Override
-    public void retrieveAccount(@NotNull String identifier, @NotNull EconomySubscriber<Account> sub) {
-        sub.succeed(new TreasuryPlayerAccount(new NovaPlayer(getPlayer(identifier))));
+    public void retrieveAccount(@NotNull String id, @NotNull EconomySubscriber<Account> sub) {
+        if (getPlayer(id) != null) sub.succeed(new TreasuryPlayerAccount(new NovaPlayer(getPlayer(id))));
+        else sub.succeed(new TreasuryAccount(id));
     }
 
     @Override
-    public void createAccount(@Nullable String name, @NotNull String identifier, @NotNull EconomySubscriber<Account> sub) {
-        retrieveAccount(identifier, sub);
+    public void createAccount(@Nullable String name, @NotNull String id, @NotNull EconomySubscriber<Account> sub) {
+        if (getPlayer(id) != null) retrieveAccount(id, sub);
+        else sub.succeed(new TreasuryAccount(id, name));
     }
 
     @Override
-    public void retrieveAccountIds(@NotNull EconomySubscriber<Collection<String>> subscription) {
-        subscription.succeed(Arrays.stream(Bukkit.getOfflinePlayers()).map(OfflinePlayer::getName).collect(Collectors.toSet()));
+    public void retrieveAccountIds(@NotNull EconomySubscriber<Collection<String>> sub) {
+        Set<String> playerIds = Arrays.stream(Bukkit.getOfflinePlayers()).map(OfflinePlayer::getName).collect(Collectors.toSet());
+        Set<String> nonPlayerIds = TreasuryAccount.getAccounts().stream().map(TreasuryAccount::getIdentifier).collect(Collectors.toSet());
+
+        Set<String> all = new HashSet<>(playerIds);
+        all.addAll(nonPlayerIds);
+        sub.succeed(all);
     }
 
     @Override
-    public void retrieveNonPlayerAccountIds(@NotNull EconomySubscriber<Collection<String>> subscription) {
-        subscription.succeed(Collections.emptySet());
+    public void retrieveNonPlayerAccountIds(@NotNull EconomySubscriber<Collection<String>> sub) {
+        sub.succeed(TreasuryAccount.getAccounts().stream().map(TreasuryAccount::getIdentifier).collect(Collectors.toSet()));
     }
 
     @Override
