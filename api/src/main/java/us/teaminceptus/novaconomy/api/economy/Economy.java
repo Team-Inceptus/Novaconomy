@@ -26,6 +26,7 @@ import java.util.stream.Collectors;
  */
 public final class Economy implements ConfigurationSerializable {
 
+    private static final String IGNORE_TAXES = "Taxes.Automatic.Ignore";
     private final char symbol;
     private final String section;
     private final String name;
@@ -103,6 +104,12 @@ public final class Economy implements ConfigurationSerializable {
     public static Set<Economy> getInterestEconomies() { return getEconomies().stream().filter(Economy::hasInterest).collect(Collectors.toSet()); }
 
     /**
+     * Fetches a set of Economies that have {@link #hasTax()} to true.
+     * @return Set of Taxable Economies
+     */
+    public static Set<Economy> getTaxableEconomies() { return getEconomies().stream().filter(Economy::hasTax).collect(Collectors.toSet()); }
+
+    /**
      * Set the interest acception state of this economy
      * @param interest Whether or not to allow interest
      */
@@ -112,7 +119,34 @@ public final class Economy implements ConfigurationSerializable {
     }
 
     /**
-     *
+     * Whether this Economy is taxable.
+     * <br><br>
+     * This value is not serialized with the Economy and is changable from config.yml.
+     * @return true if taxable, else false
+     */
+    public boolean hasTax() {
+        return !NovaConfig.loadConfig().getStringList(IGNORE_TAXES).contains(this.name);
+    }
+
+    /**
+     * Sets whether this Economy is taxable.
+     * <br><br>
+     * This value is not serialized with the Economy and is changable from config.yml.
+     * @param tax Whether to allow tax
+     * @return true if successful, else false
+     */
+    public boolean setTax(boolean tax) {
+        FileConfiguration config = NovaConfig.loadConfig();
+        List<String> ignore = config.getStringList(IGNORE_TAXES);
+        boolean b = tax ? ignore.remove(this.name) : ignore.add(this.name);
+        config.set(IGNORE_TAXES, ignore);
+        try { config.save(NovaConfig.getConfigFile()); } catch (Exception ignored) {}
+
+        return b;
+    }
+
+    /**
+     * Saves this Economy to its file.
      */
     public void saveFile() {
         FileConfiguration config = NovaConfig.getEconomiesConfig();
@@ -149,7 +183,7 @@ public final class Economy implements ConfigurationSerializable {
             NovaPlayer np = new NovaPlayer(p);
             FileConfiguration playerConfig = np.getPlayerConfig();
 
-            playerConfig.set(econ.getName(), null);
+            playerConfig.set("economies." + econ.getName().toLowerCase(), null);
 
             try {
                 playerConfig.save(new File(NovaConfig.getPlugin().getDataFolder().getPath() + "/players", p.getUniqueId() + ".yml"));
@@ -164,6 +198,7 @@ public final class Economy implements ConfigurationSerializable {
             NovaConfig.getLogger().info("Error removing economy " + econ.getName());
             NovaConfig.getLogger().severe(e.getMessage());
         }
+        NovaConfig.getConfiguration().reloadHooks();
     }
 
     /**
@@ -468,6 +503,8 @@ public final class Economy implements ConfigurationSerializable {
             } catch (IOException e) {
                 NovaConfig.getLogger().severe(e.getMessage());
             }
+
+            NovaConfig.getConfiguration().reloadHooks();
             return econ;
         }
     }
