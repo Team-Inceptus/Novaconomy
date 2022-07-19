@@ -54,32 +54,30 @@ NaturalCauses:
   DeathDivider: 2
 
   # Modifiers for Natural Causes Events
-  # NBT Queries are only currently supported by the Killing category.
   Modifiers:
 
     # In sections, write your item type (i.e. DIAMOND_ORE, case insensitive) with your currency amount and symbol in front or back.
 
-    Mining:
+    Mining: {} # Remove this when adding
       # DIAMOND_ORE: 120$
 
     # For all Entity Types: https://hub.spigotmc.org/javadocs/spigot/org/bukkit/entity/EntityType.html
-    Killing:
+    Killing: {} # Remove this when adding
       # zombie: [D100, 150$]
-      # skeleton[maxhealth>100]: [D150, 400$] - Supports NBT Queries
 
     # Fishing Modifiers look at the entity or item you caught.
     # For all Entity Types: https://hub.spigotmc.org/javadocs/spigot/org/bukkit/entity/EntityType.html
     # For all Materials: https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Material.html
-    Fishing:
+    Fishing: {} # Remove this when adding
       # cod: [E30, 50$]
 
-    Farming:
+    Farming: {} # Remove this when adding
       # wheat: [F10, 20$]
 
     # Specifies special dividers based on the death cause
     # For all Causes: https://hub.spigotmc.org/javadocs/spigot/org/bukkit/event/entity/EntityDamageEvent.DamageCause.html
     # Causes are case insensitive
-    Death:
+    Death: {}
       # fall: 3 - Divide By 3
       # LAVA: 5 - Divide By 5
 
@@ -105,21 +103,21 @@ Interest:
 Taxes:
 
   # The maximum amount a player can withdraw from the bank every 24 hours
-  MaxWithdrawl:
+  MaxWithdraw:
 
     # All Economies default to this number if one is not specified
     Global: 100
 
     # Coins: 150
 
-    # List of Player Names, Vault Groups, or Permissions that bypass the maximum withdrawl.
+    # List of Player Names, Vault Groups, or Permissions that bypass the maximum withdraw.
     # Other Valid Types:
     # - OPS: Operators will be ignored
     # - NONOPS: Non-Operators will be ignored
     #
     # Selectors like "my.plugin.permission.*" and RegEx are supported.
     Bypass:
-      - OPS
+        - OPS
       # - richguy55
       # - my.plugin.withdraw.unlimited
       # - VaultUnlimitedWithdraw
@@ -133,7 +131,7 @@ Taxes:
   #
   # Selectors like "my.plugin.permission.*" and RegEx are supported.
   Ignore:
-    - OPS
+      - OPS
     # - cooldude124
     # - my.plugin.taxes.none
     # - MyVaultGroup
@@ -149,12 +147,16 @@ Taxes:
     # Whether Taxes will be automatically taken
     Enabled: false
 
+    # List of Economies that will not be taxed
+    Ignore: []
+      # MyEconomy1
+      # SecondEconomy2
+
   # Minimum Amount that can be taken/donated
   Minimums:
     # All Economies default to this number if one is not specified
     Global: 0
-
-    # Coins: 100
+    d# Coins: 100
 
 
 
