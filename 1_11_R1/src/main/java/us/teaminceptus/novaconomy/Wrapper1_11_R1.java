@@ -8,11 +8,13 @@ import net.md_5.bungee.api.chat.TextComponent;
 import net.minecraft.server.v1_11_R1.*;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.block.Block;
 import org.bukkit.craftbukkit.v1_11_R1.entity.CraftPlayer;
 import org.bukkit.craftbukkit.v1_11_R1.inventory.CraftItemStack;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
+import org.bukkit.material.Crops;
 import us.teaminceptus.novaconomy.abstraction.Wrapper;
 
 public final class Wrapper1_11_R1 implements Wrapper {
@@ -152,6 +154,11 @@ public final class Wrapper1_11_R1 implements Wrapper {
         tag.remove("Count");
         nmsitem.setTag(tag);
         return CraftItemStack.asBukkitCopy(nmsitem);
+    }
+
+    @Override
+    public boolean isAgeable(Block b) {
+        return b.getState().getData() instanceof Crops;
     }
 
 }

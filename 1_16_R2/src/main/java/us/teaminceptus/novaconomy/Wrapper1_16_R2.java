@@ -6,6 +6,8 @@ import net.md_5.bungee.api.chat.TextComponent;
 import net.minecraft.server.v1_16_R2.*;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.block.Block;
+import org.bukkit.block.data.Ageable;
 import org.bukkit.craftbukkit.v1_16_R2.inventory.CraftItemStack;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -178,6 +180,11 @@ public final class Wrapper1_16_R2 implements Wrapper {
         tag.remove("Count");
         nmsitem.setTag(tag);
         return CraftItemStack.asBukkitCopy(nmsitem);
+    }
+
+    @Override
+    public boolean isAgeable(Block b) {
+        return b.getBlockData() instanceof Ageable;
     }
 
 }

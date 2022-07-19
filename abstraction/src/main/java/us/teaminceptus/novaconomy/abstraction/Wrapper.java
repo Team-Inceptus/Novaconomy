@@ -6,6 +6,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
@@ -65,6 +66,8 @@ public interface Wrapper {
     boolean getNBTBoolean(ItemStack item, String key);
 
     ItemStack normalize(ItemStack item);
+
+    boolean isAgeable(Block b);
 
     default boolean hasID(ItemStack item) { return getID(item) != null && getID(item).length() > 0; }
 

@@ -7,6 +7,8 @@ import net.minecraft.server.v1_15_R1.ItemStack;
 import net.minecraft.server.v1_15_R1.NBTTagCompound;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.block.Block;
+import org.bukkit.block.data.Ageable;
 import org.bukkit.craftbukkit.v1_15_R1.inventory.CraftItemStack;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -143,6 +145,11 @@ public final class Wrapper1_15_R1 implements Wrapper {
         tag.remove("Count");
         nmsitem.setTag(tag);
         return CraftItemStack.asBukkitCopy(nmsitem);
+    }
+
+    @Override
+    public boolean isAgeable(Block b) {
+        return b.getBlockData() instanceof Ageable;
     }
 
 }
