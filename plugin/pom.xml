@@ -9,6 +9,7 @@
 
     <artifactId>novaconomy</artifactId>
     <name>Novaconomy</name>
+    <url>https://github.com/Team-Inceptus/</url>
 
     <build>
         <sourceDirectory>src/main/java</sourceDirectory>
@@ -23,24 +24,6 @@
             </resource>
         </resources>
         <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-javadoc-plugin</artifactId>
-                <version>3.3.0</version>
-                <configuration>
-                    <links>
-                        <link>https://hub.spigotmc.org/javadocs/spigot/</link>
-                    </links>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>attach-javadocs</id>
-                        <goals>
-                            <goal>jar</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
@@ -88,7 +71,6 @@
                             <artifactId>${project.artifactId}</artifactId>
                             <version>${project.version}</version>
                             <packaging>jar</packaging>
-                            <javadoc>${project.build.directory}/${project.build.finalName}-javadoc.jar</javadoc>
                             <sources>${project.build.directory}/${project.build.finalName}-sources.jar</sources>
                         </configuration>
                     </execution>
