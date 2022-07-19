@@ -20,6 +20,15 @@ body:
   validations:
     required: true
 
+- type: input
+  attributes:
+    label: Minecraft Version
+    description: What is the Minecraft version you are using?
+    placeholder: |
+      Ex: 1.19
+  validations:
+    required: true
+
 - type: textarea
   attributes:
     label: Description
@@ -58,3 +67,11 @@ body:
     value: |
       In the box below, you can attach any relevant info or files that may help us solve the bug.
       If you think this issue is relevant to any other issues, please mention it here.
+- type: textarea
+  attributes:
+    label: Additional Info
+    description: Any additional info that may help us solve the bug.
+    placeholder: |
+      Ex: "I am using Spigot instead of Paper"
+  validations:
+      required: false
