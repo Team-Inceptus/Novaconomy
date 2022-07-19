@@ -7,6 +7,7 @@ import org.bukkit.plugin.RegisteredServiceProvider;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.regex.Pattern;
 
 class VaultChat {
 
@@ -22,9 +23,12 @@ class VaultChat {
     static boolean isInGroup(List<String> groups, Player p) {
         if (chat == null) return false;
         AtomicBoolean b = new AtomicBoolean(false);
-        for (String s : chat.getPlayerGroups(p)) if (groups.contains(s)) {
-            b.set(true);
-            break;
+        for (String s : groups) {
+            Pattern patt = Pattern.compile(s);
+            for (String g : chat.getPlayerGroups(p)) if (patt.matcher(g).matches()) {
+                b.set(true);
+                break;
+            }
         }
 
         return b.get();

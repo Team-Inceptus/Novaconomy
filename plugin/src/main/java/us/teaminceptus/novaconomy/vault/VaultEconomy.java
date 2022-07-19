@@ -3,10 +3,11 @@ package us.teaminceptus.novaconomy.vault;
 import net.milkbowl.vault.economy.AbstractEconomy;
 import net.milkbowl.vault.economy.EconomyResponse;
 import us.teaminceptus.novaconomy.api.NovaPlayer;
+import us.teaminceptus.novaconomy.api.bank.Bank;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 
-import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static us.teaminceptus.novaconomy.Novaconomy.getPlayer;
 
@@ -128,27 +129,32 @@ class VaultEconomy extends AbstractEconomy implements net.milkbowl.vault.economy
 
     @Override
     public EconomyResponse deleteBank(String name) {
-        return NO_BANKS;
+        return new EconomyResponse(0, 0, EconomyResponse.ResponseType.NOT_IMPLEMENTED, "Cannot delete banks");
     }
 
     @Override
     public EconomyResponse bankBalance(String name) {
-        return NO_BANKS;
+        return new VaultEconomyResponse(0, Bank.getBalance(Economy.getEconomy(name)));
     }
 
     @Override
     public EconomyResponse bankHas(String name, double amount) {
-        return NO_BANKS;
+        boolean has = Bank.getBalance(Economy.getEconomy(name)) == amount;
+        return new EconomyResponse(0, Bank.getBalance(Economy.getEconomy(name)), has ? EconomyResponse.ResponseType.SUCCESS : EconomyResponse.ResponseType.FAILURE, null);
     }
 
     @Override
     public EconomyResponse bankWithdraw(String name, double amount) {
-        return NO_BANKS;
+        Economy econ = Economy.getEconomy(name);
+        Bank.removeBalance(econ, amount);
+        return new VaultEconomyResponse(0, Bank.getBalance(Economy.getEconomy(name)));
     }
 
     @Override
     public EconomyResponse bankDeposit(String name, double amount) {
-        return NO_BANKS;
+        Economy econ = Economy.getEconomy(name);
+        Bank.addBalance(econ, amount);
+        return new VaultEconomyResponse(0, Bank.getBalance(Economy.getEconomy(name)));
     }
 
     @Override
@@ -158,12 +164,12 @@ class VaultEconomy extends AbstractEconomy implements net.milkbowl.vault.economy
 
     @Override
     public EconomyResponse isBankMember(String name, String playerName) {
-        return NO_BANKS;
+        return new VaultEconomyResponse(0, 0);
     }
 
     @Override
     public List<String> getBanks() {
-        return Collections.emptyList();
+        return Economy.getEconomies().stream().map(Economy::getName).collect(Collectors.toList());
     }
 
     @Override

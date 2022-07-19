@@ -34,29 +34,62 @@ public class VaultRegistry {
             return;
         }
 
-        RegisteredServiceProvider<net.milkbowl.vault.economy.Economy> rsp = Bukkit.getServer().getServicesManager().getRegistration(net.milkbowl.vault.economy.Economy.class);
-        if (rsp != null && !(rsp.getProvider() instanceof VaultEconomy)) {
-            plugin.getLogger().info("Other Economy Registration Found - Vault will not be used");
+        if (getVaultEconomy() == null) {
+            inject();
             return;
         }
 
-        if (rsp.getProvider() instanceof VaultEconomy) Bukkit.getServer().getServicesManager().unregister(net.milkbowl.vault.economy.Economy.class);
-        inject();
+        RegisteredServiceProvider<net.milkbowl.vault.economy.Economy> rsp = Bukkit.getServicesManager().getRegistration(net.milkbowl.vault.economy.Economy.class);
+        if (rsp == null) {
+            inject();
+            return;
+        }
+
+        if (rsp != null && !(rsp.getProvider() instanceof VaultEconomy))
+            plugin.getLogger().info("Other Economy Registration Found - Vault will not be used");
+
+        if (rsp.getProvider() instanceof VaultEconomy && !rsp.getProvider().getName().equals(getVaultEconomy().getName())) {
+            Bukkit.getServicesManager().unregister(net.milkbowl.vault.economy.Economy.class, rsp.getProvider());
+            inject();
+        }
+    }
+
+    private static Economy getVaultEconomy() {
+        Object o = NovaConfig.loadFunctionalityFile().get("VaultEconomy", -1);
+        if (o instanceof Integer) return null;
+
+        Economy first = Economy.getEconomies().stream().sorted(Comparator.comparing(Economy::getName)).collect(Collectors.toList()).get(0);
+        return Economy.getEconomy(NovaConfig.loadFunctionalityFile().getString("VaultEconomy", first.getName()));
     }
 
     private static void inject() {
         Plugin plugin = NovaConfig.getPlugin();
         Object o = NovaConfig.loadFunctionalityFile().get("VaultEconomy", -1);
-        if (o instanceof Integer) {
-            plugin.getLogger().info("VaultEconomy is disabled in the config - Vault will not be used");
-            return;
+        if (!(o instanceof String)) {
+            plugin.getLogger().info("VaultEconomy is disabled in the config - Registering All Economies...");
+
+            for (RegisteredServiceProvider<net.milkbowl.vault.economy.Economy> rsp : Bukkit.getServicesManager().getRegistrations(net.milkbowl.vault.economy.Economy.class))
+                if (rsp.getProvider() instanceof VaultEconomy)
+                    Bukkit.getServicesManager().unregister(net.milkbowl.vault.economy.Economy.class, rsp.getProvider());
+
+            for (Economy econ : Economy.getEconomies().stream().sorted(Comparator.comparing(Economy::getName)).collect(Collectors.toList()).subList(1, Economy.getEconomies().size())) {
+                VaultEconomy v = new VaultEconomy(econ);
+                if (Bukkit.getServicesManager().getRegistrations(net.milkbowl.vault.economy.Economy.class).stream().anyMatch(r -> r.getProvider().getName().equals(v.getName())))
+                    continue;
+
+                Bukkit.getServicesManager().register(net.milkbowl.vault.economy.Economy.class, v, plugin, ServicePriority.Normal);
+            }
+
+            Economy main = Economy.getEconomies().stream().sorted(Comparator.comparing(Economy::getName)).collect(Collectors.toList()).get(0);
+            Bukkit.getServicesManager().register(net.milkbowl.vault.economy.Economy.class, new VaultEconomy(main), plugin, ServicePriority.High);
+
+            plugin.getLogger().info("Registered All Economies, Main Economy is: " + main.getName() + " (" + main.getUniqueId() + ")");
+        } else {
+            Economy econ = getVaultEconomy();
+
+            Bukkit.getServer().getServicesManager().register(net.milkbowl.vault.economy.Economy.class, new VaultEconomy(econ), plugin, ServicePriority.Normal);
+            plugin.getLogger().info("Injected Economy \"" + econ.getName() + "\"" + " (" + econ.getUniqueId() + ")" + " into Vault");
         }
-
-        Economy first = Economy.getEconomies().stream().sorted(Comparator.comparing(Economy::getName)).collect(Collectors.toList()).get(0);
-        Economy econ = Economy.getEconomy(NovaConfig.loadFunctionalityFile().getString("VaultEconomy", first.getName()));
-
-        Bukkit.getServer().getServicesManager().register(net.milkbowl.vault.economy.Economy.class, new VaultEconomy(econ), plugin, ServicePriority.Highest);
-        plugin.getLogger().info("Injected Economy \"" + econ.getName() + "\"" + " (" + econ.getUniqueId() + ")" + " into Vault");
     }
 
 }
