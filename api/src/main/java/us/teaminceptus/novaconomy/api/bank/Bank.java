@@ -43,7 +43,7 @@ public final class Bank {
     @NotNull
     public static Map<Economy, Double> getBalances() {
         Map<Economy, Double> bal = new HashMap<>();
-        bankSection.getValues(false).forEach((k, v) -> bal.put(Economy.getEconomy(k), (Double) v));
+        bankSection.getValues(false).forEach((k, v) -> bal.put(Economy.getEconomy(k), Double.parseDouble(v.toString())));
         return bal;
     }
 
@@ -95,8 +95,5 @@ public final class Bank {
         if (econ == null) return 0;
         return getBalances().get(econ);
     }
-
-
-
 
 }
