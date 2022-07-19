@@ -11,6 +11,7 @@ import us.teaminceptus.novaconomy.api.economy.Economy;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.logging.Logger;
 
@@ -47,6 +48,12 @@ public interface NovaConfig  {
     static void reloadLanguages() {
         reloadLanguages(false);
     }
+
+    /**
+     * Fetches the file of the main config.yml.
+     * @return Configuration File
+     */
+    static File getConfigFile() { return new File(getDataFolder(), "config.yml"); }
 
     /**
      * Whether or not Notifications is turned on inside of the configuration.
@@ -105,6 +112,10 @@ public interface NovaConfig  {
         }
     }
 
+    /**
+     * Fetches the File that businesses.yml belongs to.
+     * @return businesses.yml File
+     */
     static File getBusinessFile() {
         File f = new File(getDataFolder(), "businesses.yml");
         if (!f.exists()) getPlugin().saveResource("businesses.yml", false);
@@ -156,9 +167,16 @@ public interface NovaConfig  {
     }
 
     /**
-     * Loads the configuration's values.
+     * Loads the global storage configuration.
+     * @return Global Storage Configuration
      */
-    static void loadConfig() {
+    static FileConfiguration getGlobalStorage() { return YamlConfiguration.loadConfiguration(new File(getDataFolder(), "global.yml")); }
+
+    /**
+     * Loads the configuration's values.
+     * @return Loaded FileConfiguration
+     */
+    static FileConfiguration loadConfig() {
         // Config Checks
         FileConfiguration config = getPlugin().getConfig();
 
@@ -203,7 +221,7 @@ public interface NovaConfig  {
 
         if (!taxes.isList("Ignore")) config.set("Ignore", Arrays.asList("OPS"));
 
-        if (!taxes.isConfigurationSection("MaxWithdrawl")) taxes.createSection("MaxWithdrawl");
+        if (!taxes.isConfigurationSection("MaxWithdraw")) taxes.createSection("MaxWithdraw");
         if (!taxes.isInt("MaxWithdraw.Global")) taxes.set("MaxWithdraw.Global", 100);
         if (!taxes.isList("MaxWithdraw.Bypass")) taxes.set("MaxWithdraw.Bypass", Arrays.asList("OPS"));
         for (Economy econ : Economy.getEconomies()) {
@@ -212,17 +230,19 @@ public interface NovaConfig  {
         }
 
         if (!taxes.isConfigurationSection("Automatic")) taxes.createSection("Automatic");
-        if (!taxes.isLong("Automatic.Interval")) taxes.set("Automatic.Interval", 1728000);
+        if (!taxes.isLong("Automatic.Interval") && !taxes.isInt("Automatic.Interval")) taxes.set("Automatic.Interval", 1728000);
         if (!taxes.isBoolean("Automatic.Enabled")) taxes.set("Automatic.Enabled", false);
+        if (!taxes.isList("Automatic.Ignore")) taxes.set("Automatic.Ignore", new ArrayList<>());
 
         if (!taxes.isConfigurationSection("Minimums")) taxes.createSection("Minimums");
-        if (!taxes.isDouble("Minimums.Global")) taxes.set("Minimums.Global", 0.0D);
+        if (!taxes.isDouble("Minimums.Global") && !taxes.isInt("Minimums.Global")) taxes.set("Minimums.Global", 0.0D);
         for (Economy econ : Economy.getEconomies()) {
             String id = "Minimums." + econ.getName();
-            if (taxes.isSet(id) && !taxes.isDouble(id)) taxes.set(id, null);
+            if (taxes.isSet(id) && !taxes.isDouble(id) && !taxes.isInt(id)) taxes.set(id, null);
         }
 
         getPlugin().saveConfig();
+        return config;
     }
 
     // Impl
@@ -389,26 +409,26 @@ public interface NovaConfig  {
     void reloadHooks();
 
     /**
-     * Fetches the maxmimum amount of money a player can withdrawl from the global bank on a daily basis.
+     * Fetches the maxmimum amount of money a player can withdraw from the global bank on a daily basis.
      * @param econ Economy to test against
      * @return Maximum amount
      */
-    double getMaxWithdrawlAmount(Economy econ);
+    double getMaxWithdrawAmount(Economy econ);
 
     /**
-     * Whether this OfflinePlayer can bypass the max withdrawl amount.
+     * Whether this OfflinePlayer can bypass the max withdraw amount.
      * @param p Player to test against
      * @return true if they can, else false
      */
-    boolean canBypassWithdrawl(OfflinePlayer p);
+    boolean canBypassWithdraw(OfflinePlayer p);
 
     /**
-     * Whether this NovaPlayer can bypass the max withdrawl amount.
+     * Whether this NovaPlayer can bypass the max withdraw amount.
      * @param np NovaPlayer to test against
      * @return true if they can, else false
      */
-    default boolean canBypassWithdrawl(NovaPlayer np) {
-        return canBypassWithdrawl(np.getPlayer());
+    default boolean canBypassWithdraw(NovaPlayer np) {
+        return canBypassWithdraw(np.getPlayer());
     }
 
     /**
@@ -416,7 +436,7 @@ public interface NovaConfig  {
      * @param p Player to test against
      * @return true if they can, else false
      */
-   boolean canIgnoreTaxes(OfflinePlayer p);
+    boolean canIgnoreTaxes(OfflinePlayer p);
 
     /**
      * Whether this NovaPlayer does not automatically pay taxes.
@@ -434,8 +454,8 @@ public interface NovaConfig  {
     boolean hasAutomaticTaxes();
 
     /**
-     * Fetches how often, in ticks, taxes should be automatically withdrawled from the player's balance.
-     * @return Withdrawl interval
+     * Fetches how often, in ticks, taxes should be automatically withdrawed from the player's balance.
+     * @return Withdraw interval
      */
     long getTaxesTicks();
 
