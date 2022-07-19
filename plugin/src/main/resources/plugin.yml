@@ -1,5 +1,8 @@
-name: Novaconomy
-version: 1.2.0
+name: ${project.name}
+version: 1.3.0
+description: ${project.description}
+author: Team Inceptus
+website: ${project.url}
 api-version: 1.13
 main: us.teaminceptus.novaconomy.Novaconomy
 softdepend: [PlaceholderAPI, Vault, Treasury]
@@ -67,6 +70,11 @@ permissions:
     default: op
     children:
       novaconomy.economy: true
+  novaconomy.economy.interest:
+    description: Access to enable/disable interest
+    default: op
+    children:
+      novaconomy.economy: true
 
   # User
   novaconomy.user:
@@ -114,6 +122,28 @@ permissions:
     default: true
     children:
       novaconomy.user.business: true
+
+  # User Bank
+  novaconomy.user.bank:
+    description: Base Novaconomy Bank Permission
+    default: true
+    children:
+      novaconomy.user: true
+  novaconomy.user.bank.info:
+    description: Access Bank Information
+    default: true
+    children:
+      novaconomy.user.bank: true
+  novaconomy.user.bank.withdraw:
+    description: Access to withdraw from bank
+    default: true
+    children:
+      novaconomy.user.bank: true
+  novaconomy.user.bank.deposit:
+    description: Access to deposit to bank
+    default: true
+    children:
+      novaconomy.user.bank: true
 
   
   
