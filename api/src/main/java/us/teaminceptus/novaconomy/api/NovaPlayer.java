@@ -11,11 +11,13 @@ import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.api.bank.Bank;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.events.player.PlayerDepositEvent;
-import us.teaminceptus.novaconomy.api.events.player.PlayerWithdrawlEvent;
+import us.teaminceptus.novaconomy.api.events.player.PlayerWithdrawEvent;
 import us.teaminceptus.novaconomy.api.util.Product;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Class representing a Player used in the Plugin
@@ -23,7 +25,7 @@ import java.io.IOException;
  */
 public final class NovaPlayer {
 
-    private static final String LBW = "last_bank_withdrawl";
+    private static final String LBW = "last_bank_withdraw";
     private static final String LBD = "last_bank_deposit";
     private final OfflinePlayer p;
 
@@ -83,6 +85,15 @@ public final class NovaPlayer {
     }
 
     /**
+     * Fetches this player's name.
+     * @return Name of this player
+     */
+    @NotNull
+    public String getPlayerName() {
+        return this.p.getName();
+    }
+
+    /**
      * Fetches the balance of this player
      * @param econ Economy to use
      * @return Player Balance
@@ -104,6 +115,7 @@ public final class NovaPlayer {
         if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
 
         pConfig.set("economies." + econ.getName().toLowerCase() + ".balance", newBal);
+        save();
     }
     
     private void save() {
@@ -150,12 +162,12 @@ public final class NovaPlayer {
     }
 
     /**
-     * Fetches an Event Representation of the last bank withdrawl of this player
-     * @return {@link PlayerWithdrawlEvent} representing last withdrawl; Player may be null if {@link #isOnline()} returns false
+     * Fetches an Event Representation of the last bank withdraw of this player
+     * @return {@link PlayerWithdrawEvent} representing last withdraw; Player may be null if {@link #isOnline()} returns false
      */
     @NotNull
-    public PlayerWithdrawlEvent getLastBankWithdrawl() {
-        return new PlayerWithdrawlEvent(getOnlinePlayer(), pConfig.getDouble(LBW + ".amount"), Economy.getEconomy(pConfig.getString(LBW + ".economy")), pConfig.getLong(LBW + ".timestamp"));
+    public PlayerWithdrawEvent getLastBankWithdraw() {
+        return new PlayerWithdrawEvent(getOnlinePlayer(), pConfig.getDouble(LBW + ".amount"), Economy.getEconomy(pConfig.getString(LBW + ".economy")), pConfig.getLong(LBW + ".timestamp"));
     }
 
     /**
@@ -168,18 +180,18 @@ public final class NovaPlayer {
     }
 
     /**
-     * Withdrawls an amount from the global bank
-     * @param econ Economy to withdrawl from
-     * @param amount Amount to withdrawl
+     * Withdraws an amount from the global bank
+     * @param econ Economy to withdraw from
+     * @param amount Amount to withdraw
      * @throws IllegalArgumentException if economy is null, or amount is negative or greater than the current bank balance
-     * @throws UnsupportedOperationException if amount is greater than the max withdrawl or already withdrawn in the last 24 hours
+     * @throws UnsupportedOperationException if amount is greater than the max withdraw or already withdrawn in the last 24 hours
      */
-    public void withdrawl(@NotNull Economy econ, double amount) throws IllegalArgumentException, UnsupportedOperationException {
+    public void withdraw(@NotNull Economy econ, double amount) throws IllegalArgumentException, UnsupportedOperationException {
         if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
         if (amount < 0 || amount > Bank.getBalance(econ)) throw new IllegalArgumentException("Amount cannot be negative or greater than current bank balance");
 
-        if (!NovaConfig.getConfiguration().canBypassWithdrawl(p) && NovaConfig.getConfiguration().getMaxWithdrawlAmount(econ) < amount) throw new UnsupportedOperationException("Amount exceeds max withdrawl amount");
-        if (System.currentTimeMillis() - 86400000 < pConfig.getLong(LBW + ".timestamp")) throw new UnsupportedOperationException("Last withdrawl was less than 24 hours ago");
+        if (!NovaConfig.getConfiguration().canBypassWithdraw(p) && NovaConfig.getConfiguration().getMaxWithdrawAmount(econ) < amount) throw new UnsupportedOperationException("Amount exceeds max withdraw amount");
+        if (System.currentTimeMillis() - 86400000 < pConfig.getLong(LBW + ".timestamp", 0)) throw new UnsupportedOperationException("Last withdraw was less than 24 hours ago");
 
         Bank.removeBalance(econ, amount);
         add(econ, amount);
@@ -189,7 +201,7 @@ public final class NovaPlayer {
         pConfig.set(LBW + ".timestamp", System.currentTimeMillis());
         save();
 
-        PlayerWithdrawlEvent event = new PlayerWithdrawlEvent(getOnlinePlayer(), amount, econ, System.currentTimeMillis());
+        PlayerWithdrawEvent event = new PlayerWithdrawEvent(getOnlinePlayer(), amount, econ, System.currentTimeMillis());
         Bukkit.getPluginManager().callEvent(event);
     }
 
@@ -213,7 +225,54 @@ public final class NovaPlayer {
         pConfig.set(LBW + ".amount", amount);
         pConfig.set(LBW + ".economy", econ.getName());
         pConfig.set(LBW + ".timestamp", System.currentTimeMillis());
+        pConfig.set("donated." + econ.getName(), getDonatedAmount(econ) + amount);
         save();
+    }
+
+    /**
+     * Fetches a Map of Economies to how much they have donated to the global bank.
+     * @return Donation Map
+     */
+    @NotNull
+    public Map<Economy, Double> getAllDonatedAmounts() {
+        Map<Economy, Double> amounts = new HashMap<>();
+        pConfig.getConfigurationSection("donated").getValues(false).forEach((k, v) -> amounts.put(Economy.getEconomy(k), v instanceof Double ? (double) v : 0));
+        return amounts;
+    }
+
+    /**
+     * Fetches the total amount of money this player has donated to the global bank.
+     * @param econ Economy to check
+     * @return Total amount donated, or 0 if not found or economy is null
+     */
+    public double getDonatedAmount(@Nullable Economy econ) {
+        if (econ == null) return 0;
+        return getAllDonatedAmounts().getOrDefault(econ, 0D);
+    }
+
+    /**
+     * Fetches a sorted list of the top donators of this Economy to the global bank, descending.
+     * @param econ Economy donated to
+     * @param max Amount of top donators to fetch
+     * @return List of top donators
+     */
+    @NotNull
+    public static List<NovaPlayer> getTopDonators(Economy econ, int max) {
+        List<NovaPlayer> top = Arrays.stream(Bukkit.getOfflinePlayers())
+                .map(NovaPlayer::new)
+                .sorted(Collections.reverseOrder(Comparator.comparingDouble(o -> o.getDonatedAmount(econ))))
+                .collect(Collectors.toList());
+        return max <= 0 ? top : top.subList(0, Math.min(max, top.size()));
+    }
+
+    /**
+     * Fetches a sorted list of the top donators of this Economy to the global bank, descending.
+     * @param econ Economy donated to
+     * @return List of top donators
+     */
+    @NotNull
+    public static List<NovaPlayer> getTopDonators(Economy econ) {
+        return getTopDonators(econ, -1);
     }
 
     /**
@@ -242,7 +301,7 @@ public final class NovaPlayer {
         if (!pConfig.isString(LBD + ".economy")) pConfig.set(LBD + ".economy", "");
 
         // Economies
-        if (!(pConfig.isConfigurationSection("economies"))) pConfig.createSection("economies");
+        if (!pConfig.isConfigurationSection("economies")) pConfig.createSection("economies");
         ConfigurationSection economies = pConfig.getConfigurationSection("economies");
 
         if (Economy.getEconomies().size() > 0)
@@ -253,5 +312,8 @@ public final class NovaPlayer {
 
                 if (!econ.isDouble("balance")) econ.set("balance", 0D);
             }
+
+        // Donated
+        if (!pConfig.isConfigurationSection("donated")) pConfig.createSection("donated");
     }
 }
