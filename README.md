@@ -20,7 +20,8 @@ unlimited stock and set the prices to whatever you want!
 
 -----
 ## 🔮 Future Features
-- Treasury API Hook
+- [x] Treasury API Hook
+- [ ] Novaconomy Stock Market
 
 -----
 ## 💻 Novaconomy API
