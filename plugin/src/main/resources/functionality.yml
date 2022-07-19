@@ -21,7 +21,7 @@ MaxConvertAmount: -1
 # MaxConvertAmount for specific Economies
 # If one is not set then it will default to MaxConvertAmount
 # Economy names are case-sensitive
-EconomyMaxConvertAmounts:
+EconomyMaxConvertAmounts: {}
 
   # Dollars: -1
 
@@ -29,5 +29,5 @@ EconomyMaxConvertAmounts:
 
 
 # Specify an Economy that the plugin will register into Vault
-# Put "-1" for no Vault registration
+# Put "-1" to register all of them, the first economy alphabetically will be active.
 VaultEconomy: -1
