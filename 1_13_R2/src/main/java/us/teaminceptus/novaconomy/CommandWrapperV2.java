@@ -49,9 +49,9 @@ public final class CommandWrapperV2 implements CommandWrapper {
             handler.register(this);
             new EconomyCommands(this);
             new BusinessCommands(this);
-
-            handler.registerBrigadier();
+            new BankCommands(this);
         }
+        handler.registerBrigadier();
         plugin.getLogger().info("Loaded Command Version v2 (1.13.2+)");
     }
 
@@ -70,7 +70,8 @@ public final class CommandWrapperV2 implements CommandWrapper {
         return CommandWrapper.get(key);
     }
 
-    private static @SafeVarargs <T> List<String> toStringList(Function<T, String> func, T... elements) {
+    @SafeVarargs
+    private static <T> List<String> toStringList(Function<T, String> func, T... elements) {
         return toStringList(func, Arrays.asList(elements));
     }
 
@@ -178,6 +179,32 @@ public final class CommandWrapperV2 implements CommandWrapper {
 
     }
 
+    @Command({"nbank", "bank", "globalbank", "gbank"})
+    @Description("Interact with the Global Novaconomy Bank")
+    @Usage("/bank <info|deposit|withdraw|transfer|leaderboard|...> <args...>")
+    private static final class BankCommands {
+        private final CommandWrapperV2 wrapper;
+
+        private BankCommands(CommandWrapperV2 wrapper) {
+            this.wrapper = wrapper;
+
+            BukkitCommandHandler handler = CommandWrapperV2.handler;
+            handler.register(this);
+        }
+
+        @Subcommand({"info", "information", "balances", "balance"})
+        @CommandPermission("novaconomy.user.bank.info")
+        public void bankBalances(Player p) { wrapper.bankBalances(p); }
+
+        @Subcommand("deposit")
+        @CommandPermission("novaconomy.user.bank.deposit")
+        public void bankDeposit(Player p, @Range(min = 0.01) double amount, Economy econ) { wrapper.bankDeposit(p, amount, econ);}
+
+        @Subcommand("withdraw")
+        @CommandPermission("novaconomy.user.bank.withdraw")
+        public void bankWithdraw(Player p, @Range(min = 0.01) double amount, Economy econ) { wrapper.bankWithdraw(p, amount, econ);}
+    }
+
     @Command({"economy", "econ", "novaecon", "novaconomy", "necon"})
     @Description("Manage economies or their balances")
     @Usage("/economy <create|delete|addbal|removebal|info> <args...>")
@@ -211,7 +238,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
 
         @Subcommand("interest")
         @AutoComplete("@interest")
-        @CommandPermission("novaconomy.economy")
+        @CommandPermission("novaconomy.economy.interest")
         public void interest(CommandSender sender, @Default("enable") String interest) {
             wrapper.interest(sender, interest.equalsIgnoreCase("enable") || interest.equalsIgnoreCase("true"));
         }
@@ -243,6 +270,5 @@ public final class CommandWrapperV2 implements CommandWrapper {
         public void info(CommandSender sender, Economy economy) {
             wrapper.economyInfo(sender, economy);
         }
-
     }
 }

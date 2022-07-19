@@ -16,6 +16,7 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
 
@@ -498,6 +499,79 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                 }
                 break;
             }
+            case "bank": {
+                if (args.length < 1) {
+                    sender.sendMessage(getMessage("error.argument"));
+                    return false;
+                }
+
+                switch (args[0].toLowerCase()) {
+                    case "balances": case "balance": case "info": case "information": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+                        bankBalances(p);
+                        break;
+                    }
+                    case "deposit": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
+                        try {
+                            if (args.length < 2) {
+                                sender.sendMessage(getMessage("error.argument.amount"));
+                                return false;
+                            }
+                            double amount = Double.parseDouble(args[1]);
+
+                            if (args.length < 3) {
+                                sender.sendMessage(getMessage("error.argument.economy"));
+                                return false;
+                            }
+
+                            Economy econ = Economy.getEconomy(args[2]);
+                            if (econ == null) {
+                                sender.sendMessage(getMessage("error.economy.inexistent"));
+                                return false;
+                            }
+
+                            bankDeposit(p, amount, econ);
+                            return true;
+                        } catch (NumberFormatException e) {
+                            sender.sendMessage(getMessage("error.argument.amount"));
+                            return false;
+                        }
+                    }
+                    case "withdraw": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
+                        try {
+                            if (args.length < 2) {
+                                sender.sendMessage(getMessage("error.argument.amount"));
+                                return false;
+                            }
+                            double amount = Double.parseDouble(args[1]);
+
+                            if (args.length < 3) {
+                                sender.sendMessage(getMessage("error.argument.economy"));
+                                return false;
+                            }
+
+                            Economy econ = Economy.getEconomy(args[2]);
+                            if (econ == null) {
+                                sender.sendMessage(getMessage("error.economy.inexistent"));
+                                return false;
+                            }
+
+                            bankWithdraw(p, amount, econ);
+                            return true;
+                        } catch (NumberFormatException e) {
+                            sender.sendMessage(getMessage("error.argument.amount"));
+                            return false;
+                        }
+                    }
+                }
+            }
             default: {
                 sender.sendMessage(getMessage("error.argument"));
                 return false;
@@ -574,11 +648,11 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
             case "pay": {
                 switch (args.length) {
                     case 1:
-                        for (Player p : Bukkit.getOnlinePlayers()) suggestions.add(p.getName());
+                        suggestions.addAll(Bukkit.getOnlinePlayers().stream().map(Player::getName).collect(Collectors.toList()));
                         return suggestions;
 
                     case 2:
-                        for (Economy econ : Economy.getEconomies()) suggestions.add(econ.getName());
+                        suggestions.addAll(Economy.getEconomies().stream().map(Economy::getName).collect(Collectors.toList()));
                         return suggestions;
                 }
 
@@ -598,6 +672,18 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                         if (args[0].equalsIgnoreCase("create")) for (Material m : Material.values()) suggestions.add(m.name().toLowerCase());
                         return suggestions;
                 }
+                return suggestions;
+            }
+            case "bank": {
+                switch (args.length) {
+                    case 1:
+                        suggestions.addAll(Arrays.asList("balances", "balance", "info", "information", "deposit", "withdraw"));
+                        return suggestions;
+                    case 3:
+                        if (args[0].equalsIgnoreCase("deposit") || args[0].equalsIgnoreCase("withdraw"))
+                            suggestions.addAll(Economy.getEconomies().stream().map(Economy::getName).collect(Collectors.toList()));
+                }
+
                 return suggestions;
             }
             default: return suggestions;

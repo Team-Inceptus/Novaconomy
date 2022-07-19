@@ -19,6 +19,7 @@ import org.bukkit.util.ChatPaginator;
 import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.NovaPlayer;
+import us.teaminceptus.novaconomy.api.bank.Bank;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.events.player.PlayerPayEvent;
@@ -31,6 +32,8 @@ public interface CommandWrapper {
 
     default void loadCommands() {}
 
+    Wrapper wr = getWrapper();
+
     Map<String, List<String>> COMMANDS = new HashMap<String, List<String>>() {{
         put("ehelp", Arrays.asList("nhelp", "novahelp", "econhelp", "economyhelp"));
         put("economy", Arrays.asList("econ", "novaecon", "novaconomy", "necon"));
@@ -41,6 +44,7 @@ public interface CommandWrapper {
         put("novaconomyreload", Arrays.asList("novareload", "nreload", "econreload"));
         put("business", Arrays.asList("nbusiness"));
         put("overridelanguages", Arrays.asList("overl", "overridemessages"));
+        put("nbank", Arrays.asList("bank", "globalbank", "gbank"));
     }};
 
     Map<String, String> COMMAND_PERMISSION = new HashMap<String, String>() {{
@@ -64,6 +68,7 @@ public interface CommandWrapper {
        put("novaconomyreload", "Reload Novaconomy Configuration");
        put("business", "Manage your Novaconomy Business");
        put("overridelanguages", "Load Default /Messages from Plugin JAR");
+       put("nbank", "Interact with the Global Novaconomy Bank");
     }};
 
     Map<String, String> COMMAND_USAGE = new HashMap<String, String>() {{
@@ -94,15 +99,15 @@ public interface CommandWrapper {
     default void help(CommandSender sender) {
         List<String> commandInfo = new ArrayList<>();
         Plugin plugin = getPlugin();
-        for (String name : plugin.getDescription().getCommands().keySet()) {
+        for (String name : COMMANDS.keySet()) {
             PluginCommand pcmd = Bukkit.getPluginCommand(name);
 
-            if (pcmd.getPermission() != null && !(sender.hasPermission(pcmd.getPermission()))) continue;
+            if (!sender.isOp() && COMMAND_PERMISSION.get(name) != null && !(sender.hasPermission(COMMAND_PERMISSION.get(name)))) continue;
 
             if (sender.isOp())
-                commandInfo.add(ChatColor.GOLD + pcmd.getUsage() + ChatColor.WHITE + " - " + ChatColor.GREEN + pcmd.getDescription() + ChatColor.WHITE + " | " + ChatColor.BLUE + (pcmd.getPermission() == null ? "No Permissions" : pcmd.getPermission()));
+                commandInfo.add(ChatColor.GOLD + "/" + pcmd.getName() + ChatColor.WHITE + " - " + ChatColor.GREEN + COMMAND_DESCRIPTION.get(name) + ChatColor.WHITE + " | " + ChatColor.BLUE + (COMMAND_PERMISSION.get(name) == null ? "No Permissions" : COMMAND_PERMISSION.get(name)));
             else
-                commandInfo.add(ChatColor.GOLD + pcmd.getUsage() + ChatColor.WHITE + " - " + ChatColor.GREEN + pcmd.getDescription());
+                commandInfo.add(ChatColor.GOLD + "/" + pcmd.getName() + ChatColor.WHITE + " - " + ChatColor.GREEN + COMMAND_DESCRIPTION.get(name));
         }
 
         String msg = get("constants.commands") + "\n\n" + String.join("\n", commandInfo.toArray(new String[]{}));
@@ -136,8 +141,9 @@ public interface CommandWrapper {
         NovaConfig.loadConfig();
         NovaConfig.reloadRunnables();
         NovaConfig.reloadLanguages();
+        NovaConfig.loadFunctionalityFile();
         YamlConfiguration.loadConfiguration(new File(plugin.getDataFolder(), "businesses.yml"));
-        YamlConfiguration.loadConfiguration(new File(plugin.getDataFolder(), "functionality.yml"));
+        YamlConfiguration.loadConfiguration(new File(plugin.getDataFolder(), "global.yml"));
         sender.sendMessage(get("command.reload.success"));
     }
 
@@ -174,7 +180,7 @@ public interface CommandWrapper {
 
         np.remove(from, amount);
         np.add(to, toBal);
-        p.sendMessage(String.format(getMessage("success.economy.convert"), (from.getSymbol() + "") + amount + "", (to.getSymbol() + "") + Math.floor(toBal * 100) / 100) + "");
+        p.sendMessage(String.format(getMessage("success.economy.convert"), amount + "" + from.getSymbol(), Math.floor(toBal * 100) / 100) + "" + to.getSymbol());
     }
 
     default void exchange(Player p, double amount) {
@@ -199,8 +205,7 @@ public interface CommandWrapper {
             return;
         }
 
-        Wrapper wr = getWrapper();
-        Inventory inv = wr.genGUI(36, getMessage("constants.economy.exchange"));
+        Inventory inv = wr.genGUI(36, get("constants.economy.exchange"), new Wrapper.CancelHolder());
 
         List<Economy> economies = Economy.getEconomies().stream().sorted(Comparator.comparing(Economy::getName)).collect(Collectors.toList());
 
@@ -209,45 +214,45 @@ public interface CommandWrapper {
         ItemMeta e1Meta = econ1.getItemMeta();
         e1Meta.setLore(Collections.singletonList(ChatColor.YELLOW + "" + amount + "" + economy1.getSymbol()));
         econ1.setItemMeta(e1Meta);
-        wr.setID(econ1, "exchange:1");
-        wr.setNBT(econ1, "economy", economy1.getUniqueId().toString());
-        wr.setNBT(econ1, "amount", amount);
+        econ1 = wr.setID(econ1, "exchange:1");
+        econ1 = wr.setNBT(econ1, "economy", economy1.getUniqueId().toString());
+        econ1 = wr.setNBT(econ1, "amount", amount);
         inv.setItem(12, econ1);
 
         Economy economy2 = economies.get(1);
         ItemStack econ2 = new ItemStack(economy2.getIcon());
-        ItemMeta e2Meta = econ1.getItemMeta();
-        e2Meta.setLore(Collections.singletonList(ChatColor.YELLOW + "" + economy1.convertAmount(economy2, amount) + "" + economy1.getSymbol()));
-        econ1.setItemMeta(e2Meta);
-        wr.setID(econ2, "exchange:2");
-        wr.setNBT(econ2, "economy", economy2.getUniqueId().toString());
-        wr.setNBT(econ2, "amount", Math.floor(economy1.convertAmount(economy2, amount) * 100) / 100);
+        ItemMeta e2Meta = econ2.getItemMeta();
+        e2Meta.setLore(Collections.singletonList(ChatColor.YELLOW + "" + economy1.convertAmount(economy2, amount) + "" + economy2.getSymbol()));
+        econ2.setItemMeta(e2Meta);
+        econ2 = wr.setID(econ2, "exchange:2");
+        econ2 = wr.setNBT(econ2, "economy", economy2.getUniqueId().toString());
+        econ2 = wr.setNBT(econ2, "amount", Math.floor(economy1.convertAmount(economy2, amount) * 100) / 100);
         inv.setItem(14, econ2);
 
         ItemStack yes = new ItemStack(limeWool());
         ItemMeta yMeta = yes.getItemMeta();
         yMeta.setDisplayName(ChatColor.GREEN + get("constants.yes"));
         yes.setItemMeta(yMeta);
-        wr.setID(yes, "yes:exchange");
-        inv.setItem(28, yes);
+        yes = wr.setID(yes, "yes:exchange");
+        inv.setItem(30, yes);
 
         ItemStack no = new ItemStack(redWool());
         ItemMeta nMeta = no.getItemMeta();
         nMeta.setDisplayName(ChatColor.RED + get("constants.cancel"));
         no.setItemMeta(nMeta);
-        wr.setID(no, "no:exchange");
-        inv.setItem(30, no);
+        no = wr.setID(no, "no:exchange");
+        inv.setItem(32, no);
 
         p.openInventory(inv);
     }
 
     static ItemStack limeWool() {
-        if (getWrapper().isLegacy()) return new ItemStack(Material.matchMaterial("WOOL"), 5);
+        if (wr.isLegacy()) return new ItemStack(Material.matchMaterial("WOOL"), 5);
         else return new ItemStack(Material.matchMaterial("LIME_WOOL"));
     }
 
     static ItemStack redWool() {
-        if (getWrapper().isLegacy()) return new ItemStack(Material.matchMaterial("WOOL"), 14);
+        if (wr.isLegacy()) return new ItemStack(Material.matchMaterial("WOOL"), 14);
         else return new ItemStack(Material.matchMaterial("RED_WOOL"));
     }
 
@@ -354,7 +359,7 @@ public interface CommandWrapper {
     }
 
     default void interest(CommandSender sender, boolean enabled) {
-        if (!sender.hasPermission("novaconomy.economy")) {
+        if (!sender.hasPermission("novaconomy.economy.interest")) {
             sender.sendMessage(getMessage("error.permission.argument"));
             return;
         }
@@ -375,7 +380,7 @@ public interface CommandWrapper {
             return;
         }
 
-        p.getInventory().addItem(getWrapper().createCheck(econ, amount));
+        p.getInventory().addItem(wr.createCheck(econ, amount));
         p.sendMessage(String.format(getMessage("success.economy.check"), amount + "", econ.getSymbol() + ""));
     }
 
@@ -419,7 +424,7 @@ public interface CommandWrapper {
             np.remove(econ, amount);
             nt.add(econ, amount);
 
-            getWrapper().sendActionbar(p, String.format(getMessage("success.economy.receive_actionbar"), Math.floor(e.getAmount() * 100) / 100, e.getPayer().getName()));
+            wr.sendActionbar(p, String.format(getMessage("success.economy.receive_actionbar"), Math.floor(e.getAmount() * 100) / 100, e.getPayer().getName()));
             target.sendMessage(String.format(getMessage("success.economy.receive"), econ.getSymbol() + Math.floor(e.getAmount() * 100) / 100 + "", e.getPayer().getName() + ""));
         }
     }
@@ -451,7 +456,7 @@ public interface CommandWrapper {
             p.sendMessage(getMessage("error.business.not_an_owner"));
             return;
         }
-        p.openInventory(getWrapper().generateBusinessData(b));
+        p.openInventory(wr.generateBusinessData(b));
     }
 
     default void businessQuery(Player p, Business b) {
@@ -459,7 +464,7 @@ public interface CommandWrapper {
             p.sendMessage(getMessage("error.permission.argument"));
             return;
         }
-        p.openInventory(getWrapper().generateBusinessData(b));
+        p.openInventory(wr.generateBusinessData(b));
     }
 
     default void addProduct(Player p, double price) {
@@ -495,8 +500,6 @@ public interface CommandWrapper {
         ItemStack product = p.getItemInHand().clone();
         product.setAmount(1);
 
-        Wrapper wr = getWrapper();
-
         List<String> sortedList = new ArrayList<>();
         Economy.getEconomies().forEach(econ -> sortedList.add(econ.getName()));
         sortedList.sort(String.CASE_INSENSITIVE_ORDER);
@@ -509,14 +512,14 @@ public interface CommandWrapper {
 
         ItemStack economyWheel = new ItemStack(econ.getIconType());
         economyWheel = wr.setNBT(economyWheel, "economy", econ.getName().toLowerCase());
-        wr.setID(economyWheel, "economy:wheel:add_product");
+        economyWheel = wr.setID(economyWheel, "economy:wheel:add_product");
 
         ItemMeta eMeta = economyWheel.getItemMeta();
         eMeta.setDisplayName(ChatColor.GOLD + econ.getName());
         economyWheel.setItemMeta(eMeta);
         inv.setItem(22, economyWheel);
 
-        pr = getWrapper().setNBT(pr, "price", price);
+        pr = wr.setNBT(pr, "price", price);
         ItemMeta meta = pr.getItemMeta();
         meta.setLore(prLore);
         pr.setItemMeta(meta);
@@ -566,7 +569,7 @@ public interface CommandWrapper {
         Inventory inv = Bukkit.createInventory(new ReturnItemsHolder(p, "business:add_resource"), 54, get("constants.business.add_stock"));
 
         ItemStack confirm = new ItemStack(Material.BEACON);
-        confirm = getWrapper().setID(confirm, "business:add_resource");
+        confirm = wr.setID(confirm, "business:add_resource");
 
         ItemMeta cMeta = confirm.getItemMeta();
         cMeta.setDisplayName(get("constants.confirm"));
@@ -599,7 +602,7 @@ public interface CommandWrapper {
             return;
         }
 
-        Wrapper wr = getWrapper();
+
         Inventory inv = wr.genGUI(54, get("constants.business.remove_product"));
         Inventory bData = wr.generateBusinessData(b);
 
@@ -613,6 +616,62 @@ public interface CommandWrapper {
 
         p.openInventory(inv);
     }
+
+    default void bankBalances(Player p) {
+        if (Economy.getEconomies().size() < 1) {
+            p.sendMessage(getMessage("error.economy.none"));
+            return;
+        }
+
+        p.openInventory(getBankBalanceGUI().get(0));
+    }
+
+    default void bankDeposit(Player p, double amount, Economy econ) {
+        NovaPlayer np = new NovaPlayer(p);
+        if (np.getBalance(econ) < amount) {
+            p.sendMessage(String.format(getMessage("error.economy.invalid_amount"), get("constants.bank.deposit")));
+            return;
+        }
+
+        if (amount < NovaConfig.getConfiguration().getMinimumPayment(econ)) {
+            p.sendMessage(String.format(getMessage("error.bank.minimum_payment"), String.format("%,.2f", NovaConfig.getConfiguration().getMinimumPayment(econ)) + econ.getSymbol(), String.format("%,.2f", amount) + econ.getSymbol()));
+            return;
+        }
+
+        np.deposit(econ, amount);
+        p.sendMessage(String.format(getMessage("success.bank.deposit"), amount + "" + econ.getSymbol(), econ.getName()));
+    }
+
+    default void bankWithdraw(Player p, double amount, Economy econ) {
+        if (amount > NovaConfig.getConfiguration().getMaxWithdrawAmount(econ)) {
+            p.sendMessage(String.format(getMessage("error.bank.maximum_withdraw"), String.format("%,.2f", NovaConfig.getConfiguration().getMaxWithdrawAmount(econ)) + econ.getSymbol(), String.format("%,.2f", amount) + econ.getSymbol()));
+            return;
+        }
+
+        if (amount > Bank.getBalance(econ)) {
+            p.sendMessage(String.format(getMessage("error.bank.maximum_withdraw"), String.format("%,.2f", Bank.getBalance(econ)) + econ.getSymbol(), String.format("%,.2f", amount) + econ.getSymbol()));
+            return;
+        }
+
+        NovaPlayer np = new NovaPlayer(p);
+        long time = (np.getLastBankWithdraw().getTimestamp() - System.currentTimeMillis()) + 86400000;
+        long timeSecs = (long) Math.floor((double) time / 1000D);
+        final String timeS;
+
+        if (timeSecs < 60) timeS = timeSecs + " " + get("constants.time.second");
+        else if (timeSecs >= 60 && timeSecs < 3600) timeS = ((long) Math.floor((double) timeSecs / 60D) + " ").replace("L", "") + get("constants.time.minute");
+        else timeS = ((long) Math.floor((double) timeSecs / (60D * 60D)) + " ").replace("L", "") + get("constants.time.hour");
+
+        if (time > 0) {
+            p.sendMessage(String.format(getMessage("error.bank.withdraw_time"), timeS));
+            return;
+        }
+
+        np.withdraw(econ, amount);
+        p.sendMessage(String.format(getMessage("success.bank.withdraw"), amount + "" + econ.getSymbol(), econ.getName()));
+    }
+
+    // Util Classes & Other Static Methods
 
     class ReturnItemsHolder implements InventoryHolder {
 
@@ -656,5 +715,65 @@ public interface CommandWrapper {
         } catch (Exception e) {
             throw new IllegalStateException("Wrapper not Found: " + getServerVersion());
         }
+    }
+
+    static List<Inventory> getBankBalanceGUI() {
+        List<Inventory> invs = new ArrayList<>();
+
+        ItemStack nextArrow = new ItemStack(Material.ARROW);
+        ItemMeta nMeta = nextArrow.getItemMeta();
+        nMeta.setDisplayName(ChatColor.AQUA + get("constants.next"));
+        nextArrow.setItemMeta(nMeta);
+        nextArrow = wr.setID(nextArrow, "next:bank_balance");
+
+        ItemStack backArrow = new ItemStack(Material.ARROW);
+        ItemMeta bMeta = backArrow.getItemMeta();
+        bMeta.setDisplayName(ChatColor.RED + get("constants.prev"));
+        backArrow.setItemMeta(bMeta);
+        backArrow = wr.setID(backArrow, "prev:bank_balance");
+
+        List<Economy> econs = new ArrayList<>(Economy.getEconomies()).stream().sorted(Comparator.comparing(Economy::getName)).collect(Collectors.toList());
+        int pageCount = (int) Math.floor((econs.size() - 1D) / 28D) + 1;
+        for (int i = 0; i < pageCount; i++) {
+            Inventory inv = wr.genGUI(54, get("constants.bank.balance") + " - " + String.format(get("constants.page"), i + 1), new Wrapper.CancelHolder());
+
+            if (pageCount > 1 && i < pageCount - 1) {
+                ItemStack next = nextArrow.clone();
+                next = wr.setNBT(next, "page", i);
+                inv.setItem(48, next);
+            }
+
+            if (i > 0) {
+                ItemStack back = backArrow.clone();
+                back = wr.setNBT(back, "page", i);
+                inv.setItem(50, back);
+            }
+
+            List<Economy> elist = new ArrayList<>(econs.subList(i * 28, Math.min((i + 1) * 28, econs.size())));
+            elist.forEach(econ -> {
+                ItemStack item = new ItemStack(econ.getIconType());
+                ItemMeta iMeta = item.getItemMeta();
+                iMeta.setDisplayName(ChatColor.AQUA + String.format("%,.2f", Bank.getBalance(econ)) + "" + econ.getSymbol());
+                List<String> topDonors = new ArrayList<>();
+                topDonors.add(ChatColor.YELLOW + get("constants.bank.top_donors"));
+                topDonors.add(" ");
+
+                List<String> topDonorsNames = NovaPlayer.getTopDonators(econ, 5).stream().map(NovaPlayer::getPlayerName).collect(Collectors.toList());
+                List<Double> topDonorsAmounts = NovaPlayer.getTopDonators(econ, 5).stream().map(n -> n.getDonatedAmount(econ)).collect(Collectors.toList());
+                for (int j = 0; j < topDonorsNames.size(); j++)
+                    if (j < 2)
+                        topDonors.add(new ChatColor[]{ChatColor.GOLD, ChatColor.GRAY}[j] + "#" + (j + 1) + " - " + topDonorsNames.get(j) + " | " + String.format("%,.2f", topDonorsAmounts.get(j) ) + econ.getSymbol());
+                    else if (j == 3)
+                        topDonors.add(ChatColor.translateAlternateColorCodes('&', "&x&c&6&3#3 - " + topDonorsNames.get(j) + " | " + String.format("%,.2f", topDonorsAmounts.get(j) ) + econ.getSymbol() ));
+                    else topDonors.add(ChatColor.BLUE + "#" + (j + 1) + " - " + topDonorsNames.get(j) + " | " + String.format("%,.2f", topDonorsAmounts.get(j) ) + econ.getSymbol());
+                iMeta.setLore(topDonors);
+                item.setItemMeta(iMeta);
+                inv.addItem(item);
+            });
+
+            invs.add(inv);
+        }
+
+        return invs;
     }
 }
