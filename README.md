@@ -7,6 +7,13 @@ With the freedom to have your own symbols, icons, conversion rates, and even int
 
 <h2 style="text-decoration: underline;">📓Changelog</h2>
 
+### 🏦 1.3.0 Update: Banks, Bugs n' Betters
+- Created Banks and Taxes, a global currency holder that players can deposit and withdraw from (configurable for min/maxxes), as well as mandatory or optional taxes.
+- Fixed MANY BUGS, such as non-ID meta-having items (i.e. enchanted items) getting stuck in inventories, interest being available to users (yikes), and so many more.
+- Added Modifiers for Natural Causes, allowing you to override certain death causes, materials broken, and entities killed with your own.
+- Economies can no longer have the same symbol (you might get a "This Economy already exists" error if you try to create a new one with the same symbol as an existing one).
+- Optimized, Bug Fixed, and ready to go!
+
 ### 📈 1.2.0 Update: Business is Boomin
 Capitalism at its finest: Create, sell, and capitalize on your own merchandise! Create up to 28 products with
 unlimited stock and set the prices to whatever you want!
