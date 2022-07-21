@@ -123,6 +123,12 @@ public final class CommandWrapperV2 implements CommandWrapper {
     @CommandPermission("novaconomy.admin.reloadconfig")
     public void reloadConfig(CommandSender sender) { CommandWrapper.super.reloadConfig(sender); }
 
+    @Command({"createcheck", "check", "ncheck", "nc", "novacheck"})
+    @Usage("/createcheck <economy> <amount>")
+    @Description("Create a Novaconomy Check redeemable for a certain amount of money")
+    @CommandPermission("novaconomy.user.check")
+    public void createCheck(Player p, @Range(min = 1) double amount, Economy econ) { CommandWrapper.super.createCheck(p, econ, amount, true); }
+
     @Override
     @Command({"exchange", "convertgui", "convgui", "exch"})
     @Usage("/exchange <amount>")
@@ -263,7 +269,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
 
         @Subcommand({"check", "createcheck"})
         @CommandPermission("novaconomy.economy.check")
-        public void createCheck(Player p, Economy economy, @Named("amount") @Range(min = 1) double amount) { wrapper.createCheck(p, economy, amount); }
+        public void createCheck(Player p, Economy economy, @Named("amount") @Range(min = 1) double amount) { wrapper.createCheck(p, economy, amount, false); }
 
         @Subcommand("info")
         @CommandPermission("novaconomy.economy.info")

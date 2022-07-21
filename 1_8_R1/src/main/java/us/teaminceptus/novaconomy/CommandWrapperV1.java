@@ -369,7 +369,7 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
 
                             double amount = Double.parseDouble(args[2]);
 
-                            createCheck(p, econ, amount);
+                            createCheck(p, econ, amount, false);
                         } catch (NumberFormatException e) {
                             sender.sendMessage(getMessage("error.argument.amount"));
                             return false;
@@ -570,6 +570,44 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                             return false;
                         }
                     }
+                    default: {
+                        sender.sendMessage(getMessage("error.argument"));
+                        return false;
+                    }
+                }
+            }
+            case "createcheck": {
+                if (!(sender instanceof Player)) return false;
+                Player p = (Player) sender;
+
+                try {
+                    if (args.length < 1) {
+                        sender.sendMessage(getMessage("error.argument.economy"));
+                        return false;
+                    }
+                    Economy econ = Economy.getEconomy(args[0]);
+
+                    if (econ == null) {
+                        sender.sendMessage(getMessage("error.economy.inexistent"));
+                        return false;
+                    }
+
+                    if (args.length < 2) {
+                        sender.sendMessage(getMessage("error.argument.amount"));
+                        return false;
+                    }
+
+                    double amount = Double.parseDouble(args[1]);
+                    if (amount < 1) {
+                        p.sendMessage(getMessage("error.argument.amount"));
+                        return false;
+                    }
+
+                    createCheck(p, econ, amount, true);
+                    return true;
+                } catch (NumberFormatException e) {
+                    sender.sendMessage(getMessage("error.argument.amount"));
+                    return false;
                 }
             }
             default: {
@@ -625,7 +663,6 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                         else if (args[0].equalsIgnoreCase("create"))
                             suggestions.addAll(Arrays.asList("$", "%", "Q", "L", "P", "A", "a", "r", "R", "C", "c", "D", "d", "W", "w", "B", "b"));
 
-
                         return suggestions;
                     }
                     case 4: {
@@ -648,11 +685,11 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
             case "pay": {
                 switch (args.length) {
                     case 1:
-                        suggestions.addAll(Bukkit.getOnlinePlayers().stream().map(Player::getName).collect(Collectors.toList()));
+                        suggestions.addAll(Bukkit.getOnlinePlayers().stream().map(Player::getName).collect(Collectors.toSet()));
                         return suggestions;
 
                     case 2:
-                        suggestions.addAll(Economy.getEconomies().stream().map(Economy::getName).collect(Collectors.toList()));
+                        suggestions.addAll(Economy.getEconomies().stream().map(Economy::getName).collect(Collectors.toSet()));
                         return suggestions;
                 }
 
@@ -666,10 +703,10 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                         return suggestions;
 
                     case 2:
-                        if (args[0].equalsIgnoreCase("query")) for (Business b : Business.getBusinesses()) suggestions.add(b.getName());
+                        if (args[0].equalsIgnoreCase("query")) suggestions.addAll(Business.getBusinesses().stream().map(Business::getName).collect(Collectors.toSet()));
                         return suggestions;
                     case 3:
-                        if (args[0].equalsIgnoreCase("create")) for (Material m : Material.values()) suggestions.add(m.name().toLowerCase());
+                        if (args[0].equalsIgnoreCase("create")) suggestions.addAll(Arrays.stream(Material.values()).map(Material::name).map(String::toLowerCase).collect(Collectors.toSet()));
                         return suggestions;
                 }
                 return suggestions;
@@ -683,11 +720,15 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                         if (args[0].equalsIgnoreCase("deposit") || args[0].equalsIgnoreCase("withdraw"))
                             suggestions.addAll(Economy.getEconomies().stream().map(Economy::getName).collect(Collectors.toList()));
                 }
-
                 return suggestions;
             }
-            default: return suggestions;
+            case "createcheck": {
+                if (args.length == 1) suggestions.addAll(Economy.getEconomies().stream().map(Economy::getName).collect(Collectors.toSet()));
+                return suggestions;
+            }
         }
+
+        return suggestions;
     }
 
     @Override

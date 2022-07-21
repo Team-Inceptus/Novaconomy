@@ -45,6 +45,7 @@ public interface CommandWrapper {
         put("business", Arrays.asList("nbusiness"));
         put("overridelanguages", Arrays.asList("overl", "overridemessages"));
         put("nbank", Arrays.asList("bank", "globalbank", "gbank"));
+        put("createcheck", Arrays.asList("nc", "check", "novacheck", "ncheck"));
     }};
 
     Map<String, String> COMMAND_PERMISSION = new HashMap<String, String>() {{
@@ -56,6 +57,7 @@ public interface CommandWrapper {
        put("novaconomyreload", "novaconomy.admin.reloadconfig");
        put("business", "novaconomy.user.business");
        put("overridelanguages", "novaconomy.admin.reloadconfig");
+       put("createcheck", "novaconomy.user.check");
     }};
 
     Map<String, String> COMMAND_DESCRIPTION = new HashMap<String, String>() {{
@@ -69,6 +71,7 @@ public interface CommandWrapper {
        put("business", "Manage your Novaconomy Business");
        put("overridelanguages", "Load Default /Messages from Plugin JAR");
        put("nbank", "Interact with the Global Novaconomy Bank");
+       put("createcheck", "Create a Novaconomy Check redeemable for a certain amount of money");
     }};
 
     Map<String, String> COMMAND_USAGE = new HashMap<String, String>() {{
@@ -81,6 +84,7 @@ public interface CommandWrapper {
        put("novaconomyreload", "/novareload");
        put("business", "/business <create|delete|edit|stock> <args...>");
        put("overridelanguages", "/overridelanguages");
+       put("createcheck", "/createcheck <economy> <amount>");
     }};
 
     static Plugin getPlugin() {
@@ -369,8 +373,8 @@ public interface CommandWrapper {
         sender.sendMessage(getMessage(key));
     }
 
-    default void createCheck(Player p, Economy econ, double amount) {
-        if (!p.hasPermission("novaconomy.economy.check")) {
+    default void createCheck(Player p, Economy econ, double amount, boolean take) {
+        if ((take && !p.hasPermission("novaconomy.user.check")) || (!take && !p.hasPermission("novaconomy.economy.check"))) {
             p.sendMessage(getMessage("error.permission.argument"));
             return;
         }
@@ -380,7 +384,15 @@ public interface CommandWrapper {
             return;
         }
 
+        NovaPlayer nt = new NovaPlayer(p);
+        if (take && nt.getBalance(econ) < amount) {
+            p.sendMessage(String.format(getMessage("error.economy.invalid_amount"), get("constants.purchase")));
+            return;
+        }
+
         p.getInventory().addItem(wr.createCheck(econ, amount));
+        if (take) nt.remove(econ, amount);
+
         p.sendMessage(String.format(getMessage("success.economy.check"), amount + "", econ.getSymbol() + ""));
     }
 
