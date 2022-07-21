@@ -49,11 +49,22 @@ class Placeholders extends PlaceholderExpansion {
             Economy.getEconomies().forEach(e -> bal.addAndGet(new NovaPlayer(p).getBalance(e)));
             return String.valueOf(bal.get());
         });
+        put("last_withdrawal_timestamp", p -> String.valueOf(new NovaPlayer(p).getLastBankWithdraw().getTimestamp()));
+        put("last_withdrawal_amount", p -> String.valueOf(new NovaPlayer(p).getLastBankWithdraw().getAmount()));
+        put("last_withdrawal_economy", p -> String.valueOf(new NovaPlayer(p).getLastBankWithdraw().getEconomy().getName()));
+
+        put("last_deposit_timestamp", p -> String.valueOf(new NovaPlayer(p).getLastBankDeposit().getTimestamp()));
+        put("last_deposit_amount", p -> String.valueOf(new NovaPlayer(p).getLastBankDeposit().getAmount()));
+        put("last_deposit_economy", p -> String.valueOf(new NovaPlayer(p).getLastBankDeposit().getEconomy().getName()));
     }};
 
     private static final Map<String, BiFunction<OfflinePlayer, String, String>> OFFLINE_ARG_PH = new HashMap<String, BiFunction<OfflinePlayer, String, String>>() {{
         put("balance", (p, arg) -> {
             if (Economy.exists(arg)) return String.valueOf(new NovaPlayer(p).getBalance(Economy.getEconomy(arg)));
+            return "0";
+        });
+        put("donated", (p, arg) -> {
+            if (Economy.exists(arg)) return String.valueOf(new NovaPlayer(p).getDonatedAmount(Economy.getEconomy(arg)));
             return "0";
         });
     }};
@@ -70,7 +81,7 @@ class Placeholders extends PlaceholderExpansion {
 
     @Override
     public @NotNull String getVersion() {
-        return "1.0.0";
+        return "1.0.1";
     }
 
     // Impl
