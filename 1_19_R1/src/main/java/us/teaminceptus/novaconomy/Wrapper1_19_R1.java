@@ -3,7 +3,7 @@ package us.teaminceptus.novaconomy;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.TextComponent;
-import net.minecraft.nbt.*;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
@@ -14,11 +14,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import us.teaminceptus.novaconomy.abstraction.Wrapper;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 public final class Wrapper1_19_R1 implements Wrapper {
 
@@ -78,37 +73,6 @@ public final class Wrapper1_19_R1 implements Wrapper {
         item.setItemMeta(meta);
 
         return item;
-    }
-
-    private Object getData(Tag b) {
-        switch (b.getId()) {
-            case 1: return ((ByteTag) b).getAsByte();
-            case 2: return ((ShortTag) b).getAsShort();
-            case 3: return ((IntTag) b).getAsInt();
-            case 4: return ((LongTag) b).getAsLong();
-            case 5: return ((FloatTag) b).getAsFloat();
-            case 6: return ((DoubleTag) b).getAsDouble();
-            case 7: return ((ByteArrayTag) b).getAsByteArray();
-            case 8: return b.getAsString();
-            case 9: {
-                List<Object> l = new ArrayList<>();
-
-                ListTag list = (ListTag) b;
-                for (Tag nbtBase : list) l.add(getData(nbtBase));
-                return l;
-            }
-            case 10: {
-                CompoundTag c = (CompoundTag) b;
-                Map<String, Object> map = new HashMap<>();
-
-                c.getAllKeys().forEach(s -> map.put(s, getData(c.get(s))));
-                return map;
-            }
-            case 11: return ((IntArrayTag) b).getAsIntArray();
-            case 12: return ((LongArrayTag) b).getAsLongArray();
-
-            default: return null;
-        }
     }
 
     @Override
