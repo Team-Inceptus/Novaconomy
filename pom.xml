@@ -2,7 +2,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>us.teaminceptus</groupId>
     <artifactId>novaconomy-parent</artifactId>
-    <version>1.3.0-SNAPSHOT</version>
+    <version>1.4.0-SNAPSHOT</version>
 
     <name>Novaconomy-Parent</name>
     <description>Multi-Economy Plugin made for Spigot 1.8+</description>
