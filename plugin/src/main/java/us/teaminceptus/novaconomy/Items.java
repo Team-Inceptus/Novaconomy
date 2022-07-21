@@ -71,7 +71,7 @@ final class Items {
             ItemMeta meta = item.getItemMeta();
             meta.setDisplayName(display);
             String localizedName = ChatColor.stripColor(display).toLowerCase().replace(' ', '_');
-            for (Character c : REMOVE_STRS.toCharArray()) localizedName.replace(c.toString(), "");
+            for (Character c : REMOVE_STRS.toCharArray()) localizedName = localizedName.replace(c.toString(), "");
 
             getWrapper().setID(item, localizedName);
             item.setItemMeta(meta);
