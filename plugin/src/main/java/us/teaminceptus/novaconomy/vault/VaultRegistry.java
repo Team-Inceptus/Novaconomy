@@ -64,8 +64,7 @@ public class VaultRegistry {
 
     private static void inject() {
         Plugin plugin = NovaConfig.getPlugin();
-        Object o = NovaConfig.loadFunctionalityFile().get("VaultEconomy", -1);
-        if (!(o instanceof String)) {
+        if (getVaultEconomy() == null) {
             plugin.getLogger().info("VaultEconomy is disabled in the config - Registering All Economies...");
 
             for (RegisteredServiceProvider<net.milkbowl.vault.economy.Economy> rsp : Bukkit.getServicesManager().getRegistrations(net.milkbowl.vault.economy.Economy.class))
