@@ -78,7 +78,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
     // Lamp Impl
 
     private boolean economyCount(Player p) {
-        if (Economy.getEconomies().size() < 1) {
+        if (Economy.getEconomies().isEmpty()) {
             p.sendMessage(getMessage("error.economy.none"));
             return false;
         }

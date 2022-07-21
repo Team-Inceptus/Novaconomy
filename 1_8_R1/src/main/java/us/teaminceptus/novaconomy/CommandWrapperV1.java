@@ -56,7 +56,7 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
     }
 
     private boolean economyCount(CommandSender sender) {
-        if (Economy.getEconomies().size() < 1) {
+        if (Economy.getEconomies().isEmpty()) {
             sender.sendMessage(getMessage("error.economy.none"));
             return false;
         }

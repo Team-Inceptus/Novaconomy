@@ -29,7 +29,7 @@ public class VaultRegistry {
 
     public static void reloadVault() {
         Plugin plugin = NovaConfig.getPlugin();
-        if (Economy.getEconomies().size() == 0) {
+        if (Economy.getEconomies().isEmpty()) {
             plugin.getLogger().info("No Economies Created - Vault will not be used");
             return;
         }

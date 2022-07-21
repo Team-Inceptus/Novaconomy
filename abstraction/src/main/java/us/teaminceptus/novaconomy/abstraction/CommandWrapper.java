@@ -480,7 +480,7 @@ public interface CommandWrapper {
     }
 
     default void addProduct(Player p, double price) {
-        if (Economy.getEconomies().size() < 1) {
+        if (Economy.getEconomies().isEmpty()) {
             p.sendMessage(getMessage("error.economy.none"));
             return;
         }
@@ -567,7 +567,7 @@ public interface CommandWrapper {
     }
 
     default void addResource(Player p) {
-        if (Economy.getEconomies().size() < 1) {
+        if (Economy.getEconomies().isEmpty()) {
             p.sendMessage(getMessage("error.economy.none"));
             return;
         }
@@ -598,7 +598,7 @@ public interface CommandWrapper {
     }
 
     default void removeProduct(Player p) {
-        if (Economy.getEconomies().size() < 1) {
+        if (Economy.getEconomies().isEmpty()) {
             p.sendMessage(getMessage("error.economy.none"));
             return;
         }
@@ -630,7 +630,7 @@ public interface CommandWrapper {
     }
 
     default void bankBalances(Player p) {
-        if (Economy.getEconomies().size() < 1) {
+        if (Economy.getEconomies().isEmpty()) {
             p.sendMessage(getMessage("error.economy.none"));
             return;
         }
