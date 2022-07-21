@@ -6,7 +6,6 @@ import com.jeff_media.updatechecker.UpdateCheckSource;
 import com.jeff_media.updatechecker.UpdateChecker;
 import org.apache.commons.lang.WordUtils;
 import org.bstats.bukkit.Metrics;
-import org.bstats.charts.SimpleBarChart;
 import org.bstats.charts.SimplePie;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -202,7 +201,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 							value.add(readString(amount));
 						}
 
-						map.put(k, value);
+						map.put(k.toUpperCase(), value);
 					});
 
 					mods.put(s, map);
@@ -988,6 +987,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		Map<NovaPlayer, Map<Economy, Double>> amounts = new HashMap<>();
 
 		for (OfflinePlayer p : Bukkit.getOfflinePlayers()) {
+			if (NovaConfig.getConfiguration().canIgnoreTaxes(p)) continue;
 			NovaPlayer np = new NovaPlayer(p);
 
 			Map<Economy, Double> previousBal = new HashMap<>();
@@ -1154,27 +1154,6 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		Metrics metrics = new Metrics(this, PLUGIN_ID);
 
 		metrics.addCustomChart(new SimplePie("used_language", () -> Language.getById(this.getLanguage()).name()));
-		metrics.addCustomChart(new SimpleBarChart("used_symbols", () -> {
-			Map<String, Integer> map = new HashMap<>();
-			for (Economy econ : Economy.getEconomies()) {
-				String key = econ.getSymbol() + "";
-				if (map.containsKey(key)) map.put(key, map.get(key) + 1);
-				else map.put(key, map.get(key) + 1);
-			}
-
-			return map;
-		}));
-		metrics.addCustomChart(new SimpleBarChart("used_business_items", () -> {
-			Map<String, Integer> map = new HashMap<>();
-			for (Business b : Business.getBusinesses())
-				for (BusinessProduct p : b.getProducts()) {
-					String name = p.getItem().getType().name();
-					if (map.containsKey(name)) map.put(name, map.get(name) + 1);
-					else map.put(name, 1);
-				}
-
-			return map;
-		}));
 		metrics.addCustomChart(new SimplePie("command_version", () -> getWrapper().getCommandVersion() + ""));
 
 		getLogger().info("Loaded Dependencies...");
