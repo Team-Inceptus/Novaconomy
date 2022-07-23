@@ -13,7 +13,8 @@ body:
     multiple: true
     options:
       - Performance / Memory Leak / Server Crash
-      - Configuration Data Loss
+      - Configuration Data Loss / Data Corruption
+      - Permission Issues
       - Compatibility Issues
       - Console Errors
       - Other Unexpected Behavior
