@@ -187,6 +187,8 @@ public interface NovaConfig  {
         if (!config.isConfigurationSection("NaturalCauses")) config.createSection("NaturalCauses");
         ConfigurationSection nc = config.getConfigurationSection("NaturalCauses");
 
+        if (!nc.isList("Ignore")) nc.set("Ignore", new ArrayList<>());
+
         if (!nc.isBoolean("KillIncrease")) nc.set("KillIncrease", true);
         if (!nc.isInt("KillIncreaseChance")) nc.set("KillIncreaseChance", 100);
 
@@ -241,7 +243,7 @@ public interface NovaConfig  {
             if (taxes.isSet(id) && !taxes.isDouble(id) && !taxes.isInt(id)) taxes.set(id, null);
         }
 
-        getPlugin().saveConfig();
+        try { config.save(getConfigFile()); } catch (IOException e) { getPlugin().getLogger().severe(e.getMessage()); }
         return config;
     }
 

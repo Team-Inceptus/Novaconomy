@@ -81,6 +81,9 @@ NaturalCauses:
       # fall: 3 - Divide By 3
       # LAVA: 5 - Divide By 5
 
+  # List of case insensitive Materials, Entity Types, or Death Causes that will not be affected by Natural Causes
+  Ignore: []
+
 
 # Interest Section
 Interest:

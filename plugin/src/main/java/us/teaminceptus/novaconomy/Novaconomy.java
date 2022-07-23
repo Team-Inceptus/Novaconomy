@@ -173,6 +173,17 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
 	private static class ModifierReader {
 
+		private static boolean isIgnored(String s) {
+			AtomicBoolean state = new AtomicBoolean(false);
+
+			FileConfiguration config = NovaConfig.getPlugin().getConfig();
+
+			Set<String> ignore = config.getStringList("NaturalCauses.Ignore").stream().map(String::toUpperCase).collect(Collectors.toSet());
+			state.set(ignore.stream().anyMatch(s::equalsIgnoreCase));
+
+			return state.get();
+		}
+
 		private static Map<String, Map<String, Set<Map<Economy, Double>>>> getAllModifiers() throws IllegalArgumentException {
 			Map<String, Map<String, Set<Map<Economy, Double>>>> mods = new HashMap<>();
 			FileConfiguration config = NovaConfig.getPlugin().getConfig();
@@ -317,11 +328,13 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 			if (!(e.getEntity() instanceof LivingEntity)) return;
 			LivingEntity en = (LivingEntity) e.getEntity();
 			if (en.getHealth() - e.getFinalDamage() > 0) return;
+			String id = en.getType().name();
+			if (ModifierReader.isIgnored(id)) return;
 
 			if (ModifierReader.getModifier("Killing") != null && r.nextInt(100) < getKillChance()) {
 				Map<String, Set<Map<Economy, Double>>> entry = ModifierReader.getModifier("Killing");
-				if (entry.containsKey(en.getType().name())) {
-					Set<Map<Economy, Double>> value = entry.get(en.getType().name());
+				if (entry.containsKey(id)) {
+					Set<Map<Economy, Double>> value = entry.get(id);
 					List<String> msgs = new ArrayList<>();
 					for (Map<Economy, Double> map : value)
 						for (Economy econ : map.keySet()) {
@@ -334,21 +347,23 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				} else update(p, en.getMaxHealth());
 			}
 		}
-		
 		@EventHandler
 		public void moneyIncrease(BlockBreakEvent e) {
 			if (e.isCancelled()) return;
 			if (!(plugin.hasMiningIncrease())) return;
 			if (e.getBlock().getDrops().size() < 1) return;
-			
+
 			Block b = e.getBlock();
 			Player p = e.getPlayer();
 			int add = e.getExpToDrop() == 0 && ores.contains(b.getType()) ? r.nextInt(3) : e.getExpToDrop();
-			
+
+			String id = b.getType().name();
+			if (ModifierReader.isIgnored(id)) return;
+
 			if (!w.isAgeable(b) && ModifierReader.getModifier("Mining") != null && r.nextInt(100) < getMiningChance()) {
 				Map<String, Set<Map<Economy, Double>>> entry = ModifierReader.getModifier("Mining");
-				if (entry.containsKey(b.getType().name())) {
-					Set<Map<Economy, Double>> value = entry.get(b.getType().name());
+				if (entry.containsKey(id)) {
+					Set<Map<Economy, Double>> value = entry.get(id);
 					List<String> msgs = new ArrayList<>();
 					for (Map<Economy, Double> map : value)
 						for (Economy econ : map.keySet()) {
@@ -362,8 +377,8 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 			}
 			else if (w.isAgeable(b) && ModifierReader.getModifier("Farming") != null && r.nextInt(100) < getFarmingChance()) {
 				Map<String, Set<Map<Economy, Double>>> entry = ModifierReader.getModifier("Farming");
-				if (entry.containsKey(b.getType().name())) {
-					Set<Map<Economy, Double>> value = entry.get(b.getType().name());
+				if (entry.containsKey(id)) {
+					Set<Map<Economy, Double>> value = entry.get(id);
 					List<String> msgs = new ArrayList<>();
 					for (Map<Economy, Double> map : value)
 						for (Economy econ : map.keySet()) {
@@ -385,8 +400,8 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 			if (e.getState() != PlayerFishEvent.State.CAUGHT_FISH) return;
 
 			Player p = e.getPlayer();
-
 			String name = e.getCaught() instanceof Item ? ((Item) e.getCaught()).getItemStack().getType().name() : e.getCaught().getType().name();
+			if (ModifierReader.isIgnored(name)) return;
 
 			if (ModifierReader.getModifier("Fishing") != null && r.nextInt(100) < getFishingChance()) {
 				Map<String, Set<Map<Economy, Double>>> entry = ModifierReader.getModifier("Fishing");
@@ -445,9 +460,11 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 			
 			List<String> lost = new ArrayList<>();
 			lost.add(get("constants.lost"));
+			String id = p.getLastDamageCause().getCause().name();
+			if (ModifierReader.isIgnored(id)) return;
 
-			if (ModifierReader.getModifier("Death") != null && ModifierReader.getModifier("Death").containsKey(p.getLastDamageCause().getCause().name())) {
-				Set<Map<Economy, Double>> value = ModifierReader.getModifier("Death").get(p.getLastDamageCause().getCause().name());
+			if (ModifierReader.getModifier("Death") != null && ModifierReader.getModifier("Death").containsKey(id)) {
+				Set<Map<Economy, Double>> value = ModifierReader.getModifier("Death").get(id);
 				List<String> msgs = new ArrayList<>();
 				for (Map<Economy, Double> map : value)
 					for (Economy econ : map.keySet()) {
@@ -635,6 +652,21 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				dMeta.setLore(Collections.singletonList(String.format(Novaconomy.get("constants.business.price"), w.getNBTDouble(display, PRICE_TAG), econ.getSymbol())));
 				display.setItemMeta(dMeta);
 				inv.setItem(13, display);
+			});
+			put("economy:wheel:leaderboard", e -> {
+				if (!(e.getWhoClicked() instanceof Player)) return;
+				Player p = (Player) e.getWhoClicked();
+				ItemStack item = e.getCurrentItem();
+				String econ = w.getNBTString(item, "economy");
+
+				List<String> economies = new ArrayList<>();
+				economies.add("all");
+				Economy.getEconomies().stream().map(Economy::getName).sorted(Comparator.reverseOrder()).forEach(economies::add);
+				int nextI = economies.indexOf(econ) + 1;
+				if (nextI >= economies.size()) nextI = 0;
+
+				Economy next = economies.get(nextI).equalsIgnoreCase("all") ? null : Economy.getEconomy(economies.get(nextI));
+				getCommandWrapper().balanceLeaderboard(p, next);
 			});
 
 			put("yes:buy_product", e -> {
@@ -1068,8 +1100,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		if (hasVault()) {
 			getLogger().info("Vault Found! Hooking...");
 			new VaultRegistry(this);
-		} else
-			getLogger().warning("Novaconomy Now Supports Vault! Specify a currency to hook with in functionality.yml!");
+		}
 	}
 
 	private void loadTreasury() {
@@ -1172,6 +1203,8 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
 	private void reloadValues() {
 		NovaConfig.loadConfig();
+		NovaConfig.loadFunctionalityFile();
+		NovaConfig.loadBusinesses();
 	}
 
 	/**
