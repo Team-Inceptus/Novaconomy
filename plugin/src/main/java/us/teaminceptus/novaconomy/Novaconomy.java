@@ -186,8 +186,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
 					modifier.getValues(false).forEach((k, v) -> {
 						Set<Map<Economy, Double>> value = new HashSet<>();
-						if (!(v instanceof String)) return;
-						String amount = (String) v;
+						String amount = v.toString();
 
 						if (amount.contains("[") && amount.contains("]")) {
 							amount = amount.replaceAll("[\\[\\]]", "").replace(" ", "");
