@@ -1,5 +1,6 @@
 package us.teaminceptus.novaconomy.api;
 
+import com.google.common.util.concurrent.AtomicDouble;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.ConfigurationSection;
@@ -263,6 +264,16 @@ public final class NovaPlayer {
                 .sorted(Collections.reverseOrder(Comparator.comparingDouble(o -> o.getDonatedAmount(econ))))
                 .collect(Collectors.toList());
         return max <= 0 ? top : top.subList(0, Math.min(max, top.size()));
+    }
+
+    /**
+     * Fetches and adds all of the balances from {@link #getBalance(Economy)}.
+     * @return total balance of all economies
+     */
+    public double getTotalBalance() {
+        AtomicDouble bal = new AtomicDouble(0);
+        Economy.getEconomies().forEach(e -> bal.addAndGet(getBalance(e)));
+        return bal.get();
     }
 
     /**
