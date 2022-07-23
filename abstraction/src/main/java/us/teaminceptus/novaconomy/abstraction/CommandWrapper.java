@@ -1,9 +1,11 @@
 package us.teaminceptus.novaconomy.abstraction;
 
+import com.cryptomorin.xseries.XSound;
 import org.apache.commons.lang.WordUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -14,6 +16,7 @@ import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.util.ChatPaginator;
 import us.teaminceptus.novaconomy.api.Language;
@@ -26,6 +29,7 @@ import us.teaminceptus.novaconomy.api.events.player.PlayerPayEvent;
 
 import java.io.File;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public interface CommandWrapper {
@@ -46,6 +50,7 @@ public interface CommandWrapper {
         put("overridelanguages", Arrays.asList("overl", "overridemessages"));
         put("nbank", Arrays.asList("bank", "globalbank", "gbank"));
         put("createcheck", Arrays.asList("nc", "check", "novacheck", "ncheck"));
+        put("balanceleaderboard", Arrays.asList("bleaderboard", "nleaderboard", "bl", "nl", "novaleaderboard", "balboard", "novaboard"));
     }};
 
     Map<String, String> COMMAND_PERMISSION = new HashMap<String, String>() {{
@@ -58,6 +63,7 @@ public interface CommandWrapper {
        put("business", "novaconomy.user.business");
        put("overridelanguages", "novaconomy.admin.reloadconfig");
        put("createcheck", "novaconomy.user.check");
+       put("balanceleaderboard", "novaconomy.user.leaderboard");
     }};
 
     Map<String, String> COMMAND_DESCRIPTION = new HashMap<String, String>() {{
@@ -72,6 +78,7 @@ public interface CommandWrapper {
        put("overridelanguages", "Load Default /Messages from Plugin JAR");
        put("nbank", "Interact with the Global Novaconomy Bank");
        put("createcheck", "Create a Novaconomy Check redeemable for a certain amount of money");
+       put("balanceleaderboard", "View the top 15 balances in all or certain economies");
     }};
 
     Map<String, String> COMMAND_USAGE = new HashMap<String, String>() {{
@@ -85,6 +92,7 @@ public interface CommandWrapper {
        put("business", "/business <create|delete|edit|stock> <args...>");
        put("overridelanguages", "/overridelanguages");
        put("createcheck", "/createcheck <economy> <amount>");
+       put("balanceleaderboard", "/balanceleaderboard [<economy>]");
     }};
 
     static Plugin getPlugin() {
@@ -371,6 +379,55 @@ public interface CommandWrapper {
         NovaConfig.getConfiguration().setInterestEnabled(enabled);
         String key = "success.economy." + (enabled ? "enable" : "disable" ) + "_interest";
         sender.sendMessage(getMessage(key));
+    }
+
+    default void balanceLeaderboard(Player p, Economy econ ) {
+        if (!p.hasPermission("novaconomy.user.leaderboard")) {
+            p.sendMessage(getMessage("error.permission"));
+            return;
+        }
+
+        if (Economy.getEconomies().isEmpty()) {
+            p.sendMessage(getMessage("error.economy.none"));
+            return;
+        }
+
+        boolean economy = econ != null;
+
+        Function<NovaPlayer, Double> func = economy ? np -> np.getBalance(econ) : NovaPlayer::getTotalBalance;
+        List<NovaPlayer> players = new ArrayList<>(Arrays.stream(Bukkit.getOfflinePlayers()).map(NovaPlayer::new).sorted(Comparator.comparing(func).reversed()).collect(Collectors.toList())).subList(0, Math.min(Bukkit.getOfflinePlayers().length, 15));
+
+        Inventory inv = wr.genGUI(54, get("constants.balance_leaderboard"), new Wrapper.CancelHolder());
+
+        ItemStack type = new ItemStack(Material.PAPER);
+        ItemMeta tMeta = type.getItemMeta();
+        if (economy) {
+            type.setType(econ.getIconType());
+            tMeta.setDisplayName(ChatColor.AQUA + econ.getName());
+        } else tMeta.setDisplayName(ChatColor.AQUA + get("constants.all_economies"));
+        type.setItemMeta(tMeta);
+        type = wr.setID(type, "economy:wheel:leaderboard");
+        type = wr.setNBT(type, "economy", economy ? econ.getName() : "all");
+
+        inv.setItem(13, type);
+
+        for (int i = 0; i < players.size(); i++) {
+            int index = i == 0 ? 22 : i + 27;
+            if (index > 34) index = index + 2;
+            int level = i + 1;
+            ChatColor color = new ChatColor[]{ChatColor.GOLD, ChatColor.GRAY, ChatColor.YELLOW, ChatColor.AQUA}[Math.min(i, 3)];
+
+            NovaPlayer np = players.get(i);
+            ItemStack head = createPlayerHead(np.getPlayer());
+            ItemMeta meta = head.getItemMeta();
+            meta.setDisplayName(color + "#" + level + " - " + (np.isOnline() && np.getOnlinePlayer().getDisplayName() != null ? np.getOnlinePlayer().getDisplayName() : np.getPlayer().getName()));
+            meta.setLore(Collections.singletonList(ChatColor.GOLD + String.format("%,.2f", economy ? np.getBalance(econ) : np.getTotalBalance()) + (economy ? econ.getSymbol() : "")));
+            head.setItemMeta(meta);
+
+            inv.setItem(index, head);
+        }
+        p.openInventory(inv);
+        XSound.BLOCK_NOTE_BLOCK_PLING.play(p, 3F, 1F);
     }
 
     default void createCheck(Player p, Economy econ, double amount, boolean take) {
@@ -727,6 +784,14 @@ public interface CommandWrapper {
         } catch (Exception e) {
             throw new IllegalStateException("Wrapper not Found: " + getServerVersion());
         }
+    }
+
+    static ItemStack createPlayerHead(OfflinePlayer p) {
+        ItemStack head = new ItemStack(wr.isLegacy() ? Material.matchMaterial("SKULL_ITEM") : Material.matchMaterial("PLAYER_HEAD"));
+        SkullMeta meta = (SkullMeta) head.getItemMeta();
+        meta.setOwner(p.getName());
+        head.setItemMeta(meta);
+        return head;
     }
 
     static List<Inventory> getBankBalanceGUI() {

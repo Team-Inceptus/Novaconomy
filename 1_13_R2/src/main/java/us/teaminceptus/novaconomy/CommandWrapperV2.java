@@ -50,9 +50,10 @@ public final class CommandWrapperV2 implements CommandWrapper {
             new EconomyCommands(this);
             new BusinessCommands(this);
             new BankCommands(this);
+
+            handler.registerBrigadier();
+            plugin.getLogger().info("Loaded Command Version v2 (1.13.2+)");
         }
-        handler.registerBrigadier();
-        plugin.getLogger().info("Loaded Command Version v2 (1.13.2+)");
     }
 
     private static String getMessage(String key) {
@@ -142,6 +143,13 @@ public final class CommandWrapperV2 implements CommandWrapper {
     @Description("Load Default Messages from Plugin JAR")
     @CommandPermission("novaconomy.admin.reloadconfig")
     public void loadLanguages(CommandSender sender) { CommandWrapper.super.loadLanguages(sender); }
+
+    @Override
+    @Command({"balanceleaderboard", "bleaderboard", "nleaderboard", "bl", "nl", "novaleaderboard", "balboard", "novaboard"})
+    @Usage("/balanceleaderboard [<economy>]")
+    @Description("View the top 15 balances of all or certain economies")
+    @CommandPermission("novaconomy.user.leaderboard")
+    public void balanceLeaderboard(Player p, @Optional Economy econ) { CommandWrapper.super.balanceLeaderboard(p, econ); }
 
     @Command({"business", "nbusiness"})
     @Description("Manage your Novaconomy Business")

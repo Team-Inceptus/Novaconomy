@@ -25,7 +25,7 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
     public CommandWrapperV1(Plugin plugin) {
         this.plugin = plugin;
         loadCommands();
-        plugin.getLogger().info("Loaded Command Version v1 (1.8 - 1.13)");
+        plugin.getLogger().info("Loaded Command Version v1 (1.8+)");
     }
 
     private PluginCommand createCommand(String name, String... aliases) {
@@ -610,6 +610,22 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                     return false;
                 }
             }
+            case "balanceleaderboard": {
+                if (!(sender instanceof Player)) return false;
+                Player p = (Player) sender;
+
+                Economy econ = null;
+                if (args.length > 0) {
+                    econ = Economy.getEconomy(args[0]);
+                    if (econ == null) {
+                        sender.sendMessage(getMessage("error.economy.inexistent"));
+                        return false;
+                    }
+                }
+
+                balanceLeaderboard(p, econ);
+                break;
+            }
             default: {
                 sender.sendMessage(getMessage("error.argument"));
                 return false;
@@ -623,10 +639,6 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
         List<String> suggestions = new ArrayList<>();
 
         switch (cmd.getName()) {
-            case "ehelp": {
-                suggestions.addAll(plugin.getDescription().getCommands().keySet());
-                return suggestions;
-            }
             case "convert": {
                 switch (args.length) {
                     case 1: {
@@ -722,7 +734,7 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                 }
                 return suggestions;
             }
-            case "createcheck": {
+            case "createcheck": case "balanceleaderboard": {
                 if (args.length == 1) suggestions.addAll(Economy.getEconomies().stream().map(Economy::getName).collect(Collectors.toSet()));
                 return suggestions;
             }
