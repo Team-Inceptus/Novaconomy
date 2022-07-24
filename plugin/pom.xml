@@ -9,7 +9,6 @@
 
     <artifactId>novaconomy</artifactId>
     <name>Novaconomy</name>
-    <url>https://github.com/Team-Inceptus/</url>
 
     <build>
         <sourceDirectory>src/main/java</sourceDirectory>
@@ -38,7 +37,7 @@
                             <goal>jar</goal>
                         </goals>
                         <configuration>
-                            <attach>false</attach>
+                            <attach>true</attach>
                             <includePom>true</includePom>
                         </configuration>
                     </execution>

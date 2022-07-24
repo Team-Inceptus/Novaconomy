@@ -46,7 +46,7 @@
                             <goal>jar</goal>
                         </goals>
                         <configuration>
-                            <attach>false</attach>
+                            <attach>true</attach>
                             <includePom>true</includePom>
                         </configuration>
                     </execution>
@@ -93,6 +93,7 @@
             <groupId>org.jetbrains</groupId>
             <artifactId>annotations-java5</artifactId>
             <version>23.0.0</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.spigotmc</groupId>
