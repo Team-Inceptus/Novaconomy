@@ -14,7 +14,6 @@ import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.Plugin;
-import org.jetbrains.annotations.NotNull;
 import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.business.Business;
@@ -115,7 +114,7 @@ public interface Wrapper {
 
     // Util
 
-    default ItemStack createCheck(@NotNull Economy econ, double amount) throws IllegalArgumentException {
+    default ItemStack createCheck(Economy econ, double amount) throws IllegalArgumentException {
         Validate.notNull(econ, "Economy cannot be null");
         Validate.isTrue(amount > 0, "Amount must be greater than 0");
 
