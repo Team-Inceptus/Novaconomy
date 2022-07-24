@@ -1,5 +1,6 @@
 package us.teaminceptus.novaconomy.abstraction;
 
+import com.google.gson.Gson;
 import net.md_5.bungee.api.chat.BaseComponent;
 import org.apache.commons.lang.Validate;
 import org.bukkit.Bukkit;
@@ -21,6 +22,12 @@ import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.util.BusinessProduct;
 import us.teaminceptus.novaconomy.api.util.Product;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -251,6 +258,48 @@ public interface Wrapper {
 
     static String getMessage(String key) { return get("plugin.prefix") + get(key); }
 
+    static UUID untrimUUID(String oldUUID) {
+        String p1 = oldUUID.substring(0, 8);
+        String p2 = oldUUID.substring(8, 12);
+        String p3 = oldUUID.substring(12, 16);
+        String p4 = oldUUID.substring(16, 20);
+        String p5 = oldUUID.substring(20, 32);
+
+        String newUUID = p1 + "-" + p2 + "-" + p3 + "-" + p4 + "-" + p5;
+
+        return UUID.fromString(newUUID);
+    }
+
+    static OfflinePlayer getPlayer(String name) {
+        if (Bukkit.getOnlineMode()) try {
+            URL url = new URL("https://api.mojang.com/users/profiles/minecraft/" + name);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+
+            connection.setRequestMethod("GET");
+            connection.setRequestProperty("User-Agent", "Java 8 Novaconomy Plugin");
+            connection.setRequestProperty("Content-Type", "application/json");
+
+            int responseCode = connection.getResponseCode();
+
+            if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_ACCEPTED) {
+                BufferedReader input = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+                StringBuilder builder = new StringBuilder();
+                String inputLine;
+                while ((inputLine = input.readLine()) != null) builder.append(inputLine);
+
+                Gson g = new Gson();
+                return Bukkit.getOfflinePlayer(untrimUUID(g.fromJson(builder.toString(), APIPlayer.class).id));
+            }
+
+        } catch (IOException e) {
+            Bukkit.getLogger().severe(e.getClass().getName());
+            Bukkit.getLogger().severe(e.getMessage());
+            for (StackTraceElement s : e.getStackTrace()) Bukkit.getLogger().severe(s.toString());
+        }
+        else return Bukkit.getPlayer(UUID.nameUUIDFromBytes(("OfflinePlayer:" + name).getBytes(StandardCharsets.UTF_8)));
+        return null;
+    }
+
     default boolean isLegacy() {
         return getCommandVersion() == 1;
     }
@@ -263,4 +312,15 @@ public interface Wrapper {
         }
     }
 
+    class APIPlayer {
+
+        public final String name;
+        public final String id;
+
+        public APIPlayer(String name, String id) {
+            this.name = name;
+            this.id = id;
+        }
+
+    }
 }
