@@ -1,5 +1,5 @@
 name: ${project.name}
-version: 1.3.0
+version: 1.4.0
 description: ${project.description}
 author: Team Inceptus
 website: ${project.url}
@@ -105,6 +105,23 @@ permissions:
     default: true
     children:
       novaconomy.user: true
+
+  # User Bounty
+  novaconomy.user.bounty:
+    description: Access to general bounty commands
+    default: true
+    children:
+      novaconomy.user: true
+  novaconomy.user.bounty.manage:
+    description: Access to create and delete a bounty
+    default: true
+    children:
+      novaconomy.user.bounty: true
+  novaconomy.user.bounty.list:
+    description: Access to list current bounties
+    default: true
+    children:
+      novaconomy.user.bounty: true
 
   # User Business
   novaconomy.user.business:
