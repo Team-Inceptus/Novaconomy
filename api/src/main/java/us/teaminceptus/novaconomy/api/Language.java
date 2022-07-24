@@ -2,10 +2,8 @@ package us.teaminceptus.novaconomy.api;
 
 import org.bukkit.ChatColor;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Files;
 import java.util.Properties;
 
 /**
@@ -69,15 +67,13 @@ public enum Language {
         if (key == null) return null;
 
         Properties p = new Properties();
-        File f = new File(NovaConfig.getDataFolder(), "novaconomy" + id + ".properties");
-
-        try (InputStream str = Files.newInputStream(f.toPath())) {
+        try (InputStream str = NovaConfig.getPlugin().getClass().getResourceAsStream("/novaconomy" + id + ".properties")) {
             p.load(str);
             str.close();
             return ChatColor.translateAlternateColorCodes('&', p.getProperty(key, "Unknown Value"));
         } catch (IOException e) {
             NovaConfig.getLogger().severe(e.getMessage());
-            return "Unknwon Value";
+            return "Unknown Value";
         }
     }
 
