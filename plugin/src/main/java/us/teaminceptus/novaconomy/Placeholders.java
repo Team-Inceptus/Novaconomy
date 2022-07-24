@@ -8,14 +8,19 @@ import us.teaminceptus.novaconomy.api.NovaPlayer;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
 class Placeholders extends PlaceholderExpansion {
 
-    Placeholders() {
+    private final Novaconomy plugin;
+
+    Placeholders(Novaconomy plugin) {
+        this.plugin = plugin;
         register();
     }
 
@@ -71,7 +76,7 @@ class Placeholders extends PlaceholderExpansion {
 
     @Override
     public @NotNull String getIdentifier() {
-        return "novaconomy";
+        return plugin.getName().toLowerCase();
     }
 
     @Override
@@ -85,6 +90,15 @@ class Placeholders extends PlaceholderExpansion {
     }
 
     // Impl
+
+    @Override
+    public List<String> getPlaceholders() {
+        List<String> ph = new ArrayList<>();
+        ph.addAll(OFFLINE_PH.keySet());
+        ph.addAll(OFFLINE_ARG_PH.keySet());
+
+        return ph;
+    }
 
     @Override
     public String onRequest(OfflinePlayer p, String arg) {
