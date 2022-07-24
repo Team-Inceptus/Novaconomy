@@ -2,11 +2,13 @@ package us.teaminceptus.novaconomy;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.Server;
 import org.bukkit.command.*;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import us.teaminceptus.novaconomy.abstraction.CommandWrapper;
+import us.teaminceptus.novaconomy.abstraction.Wrapper;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.economy.Economy;
@@ -85,10 +87,6 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
             }
             case "novaconomyreload": {
                 reloadConfig(sender);
-                break;
-            }
-            case "overridelanguages": {
-                loadLanguages(sender);
                 break;
             }
             case "convert": {
@@ -625,6 +623,93 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
 
                 balanceLeaderboard(p, econ);
                 break;
+            }
+            case "bounty": {
+                if (!(sender instanceof Player)) return false;
+                Player p = (Player) sender;
+
+                if (args.length < 1) {
+                    sender.sendMessage(getMessage("error.argument"));
+                    return false;
+                }
+
+                try {
+                    switch (args[0].toLowerCase()) {
+                        case "add":
+                        case "create": {
+                            if (args.length < 2) {
+                                sender.sendMessage(getMessage("error.argument.player"));
+                                return false;
+                            }
+
+                            OfflinePlayer target = Wrapper.getPlayer(args[1]);
+
+                            if (p == null) {
+                                sender.sendMessage(getMessage("error.argument.player"));
+                                return false;
+                            }
+
+                            if (args.length < 3) {
+                                sender.sendMessage(getMessage("error.argument.economy"));
+                                return false;
+                            }
+
+                            Economy econ = Economy.getEconomy(args[2]);
+
+                            if (econ == null) {
+                                sender.sendMessage(getMessage("error.economy.inexistent"));
+                                return false;
+                            }
+
+                            if (args.length < 4) {
+                                sender.sendMessage(getMessage("error.argument.amount"));
+                                return false;
+                            }
+
+                            double amount = Double.parseDouble(args[3]);
+
+                            if (amount <= 0) {
+                                sender.sendMessage(getMessage("error.argument.amount"));
+                                return false;
+                            }
+
+                            createBounty(p, target, econ, amount);
+                            break;
+                        }
+                        case "remove":
+                        case "delete": {
+                            if (args.length < 2) {
+                                sender.sendMessage(getMessage("error.argument.player"));
+                                return false;
+                            }
+
+                            OfflinePlayer target = Wrapper.getPlayer(args[1]);
+
+                            if (p == null) {
+                                sender.sendMessage(getMessage("error.argument.player"));
+                                return false;
+                            }
+
+                            deleteBounty(p, target);
+                            break;
+                        }
+                        case "self": {
+                            listBounties(p, false);
+                            break;
+                        }
+                        case "owned": {
+                            listBounties(p, true);
+                            break;
+                        }
+                        default: {
+                            sender.sendMessage(getMessage("error.argument"));
+                            return false;
+                        }
+                    }
+                } catch (NumberFormatException e) {
+                    sender.sendMessage(getMessage("error.argument.amount"));
+                    return false;
+                }
             }
             default: {
                 sender.sendMessage(getMessage("error.argument"));

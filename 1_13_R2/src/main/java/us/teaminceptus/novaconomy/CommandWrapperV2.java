@@ -1,6 +1,8 @@
 package us.teaminceptus.novaconomy;
 
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
@@ -10,6 +12,7 @@ import revxrsal.commands.bukkit.BukkitCommandHandler;
 import revxrsal.commands.bukkit.annotation.CommandPermission;
 import revxrsal.commands.exception.CommandErrorException;
 import us.teaminceptus.novaconomy.abstraction.CommandWrapper;
+import us.teaminceptus.novaconomy.abstraction.Wrapper;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 
@@ -46,10 +49,19 @@ public final class CommandWrapperV2 implements CommandWrapper {
 
             handler.getAutoCompleter().registerParameterSuggestions(boolean.class, SuggestionProvider.of("true", "false"));
 
+            handler.registerValueResolver(OfflinePlayer.class, ctx -> {
+                OfflinePlayer p = Wrapper.getPlayer(ctx.popForParameter());
+                if (p == null) throw new CommandErrorException(getMessage("error.argument.player"));
+                return p;
+            });
+
+            handler.getAutoCompleter().registerParameterSuggestions(OfflinePlayer.class, SuggestionProvider.of(toStringList(OfflinePlayer::getName, Bukkit.getOfflinePlayers())));
+
             handler.register(this);
             new EconomyCommands(this);
             new BusinessCommands(this);
             new BankCommands(this);
+            new BountyCommands(this);
 
             handler.registerBrigadier();
             plugin.getLogger().info("Loaded Command Version v2 (1.13.2+)");
@@ -65,10 +77,6 @@ public final class CommandWrapperV2 implements CommandWrapper {
         for (T element : elements) list.add(func.apply(element));
 
         return list;
-    }
-
-    private static String get(String key) {
-        return CommandWrapper.get(key);
     }
 
     @SafeVarargs
@@ -136,13 +144,6 @@ public final class CommandWrapperV2 implements CommandWrapper {
     @Description("Convert one balance in an economy to another balance (with a GUI)")
     @CommandPermission("novaconomy.user.convert")
     public void exchange(Player p, @Range(min = 0.01) double amount) { CommandWrapper.super.exchange(p, amount); }
-
-    @Override
-    @Command({"overridelanguages", "overl", "overridemessages"})
-    @Usage("/overridelanguages")
-    @Description("Load Default Messages from Plugin JAR")
-    @CommandPermission("novaconomy.admin.reloadconfig")
-    public void loadLanguages(CommandSender sender) { CommandWrapper.super.loadLanguages(sender); }
 
     @Override
     @Command({"balanceleaderboard", "bleaderboard", "nleaderboard", "bl", "nl", "novaleaderboard", "balboard", "novaboard"})
@@ -284,5 +285,37 @@ public final class CommandWrapperV2 implements CommandWrapper {
         public void info(CommandSender sender, Economy economy) {
             wrapper.economyInfo(sender, economy);
         }
+    }
+
+    @Command({"bounty", "novabounty", "nbounty"})
+    @Description("Manage your Novaconomy Bounties")
+    @Usage("/bounty <owned|create|delete|self> <args...>")
+    private static final class BountyCommands {
+
+        private final CommandWrapperV2 wrapper;
+
+        BountyCommands(CommandWrapperV2 wrapper) {
+            this.wrapper = wrapper;
+
+            BukkitCommandHandler handler = CommandWrapperV2.handler;
+            handler.register(this);
+        }
+
+        @Subcommand({"create", "add"})
+        @CommandPermission("novaconomy.user.bounty.manage")
+        public void createBounty(Player p, OfflinePlayer target, Economy economy, @Range(min = 0.01) double amount) { wrapper.createBounty(p, target, economy, amount); }
+
+        @Subcommand({"delete", "remove"})
+        @CommandPermission("novaconomy.user.bounty.manage")
+        public void removeBounty(Player p, OfflinePlayer target) { wrapper.deleteBounty(p, target); }
+
+        @Subcommand("owned")
+        @CommandPermission("novaconomy.user.bounty.list")
+        public void listOwnedBounties(Player p) { wrapper.listBounties(p, true); }
+
+        @Subcommand("self")
+        @CommandPermission("novaconomy.user.bounty.list")
+        public void listSelfBounties(Player p) { wrapper.listBounties(p, false); }
+
     }
 }
