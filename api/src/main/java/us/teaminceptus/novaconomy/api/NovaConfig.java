@@ -30,21 +30,17 @@ public interface NovaConfig  {
 
     /**
      * Reloads Novaconomy's Language Files.
+     * @deprecated Languages are no longer stored in the plugin folder
      * @param replace if should replace files (defaults to false)
      */
+    @Deprecated
     static void reloadLanguages(boolean replace) {
-        for (Language l : Language.values()) {
-            String fName = "novaconomy" + (l.getIdentifier().length() == 0 ? "" : "_" + l.getIdentifier()) + ".properties";
-            File f = new File(getDataFolder(), fName);
-
-            if (replace && f.exists()) f.delete();
-
-            if (!f.exists()) getPlugin().saveResource(fName, false);
-        }
     }
     /**
      * Reloads Novaconomy's Language Files.
+     * @deprecated Languages are no longer stored in the plugin folder
      */
+    @Deprecated
     static void reloadLanguages() {
         reloadLanguages(false);
     }
@@ -178,7 +174,11 @@ public interface NovaConfig  {
      */
     static FileConfiguration loadConfig() {
         // Config Checks
-        FileConfiguration config = getPlugin().getConfig();
+        Plugin p = getPlugin();
+        File f = getConfigFile();
+        if (!f.exists()) p.saveDefaultConfig();
+
+        FileConfiguration config = YamlConfiguration.loadConfiguration(f);
 
         if (!config.isBoolean("Notifications")) config.set("Notifications", true);
         if (!config.isString("Language")) config.set("Language", "en");
@@ -188,9 +188,12 @@ public interface NovaConfig  {
         ConfigurationSection nc = config.getConfigurationSection("NaturalCauses");
 
         if (!nc.isList("Ignore")) nc.set("Ignore", new ArrayList<>());
+        if (!nc.isDouble("MaxIncrease") && !nc.isInt("MaxIncrease")) nc.set("MaxIncrease", 1000.0D);
+        if (!nc.isBoolean("EnchantBonus")) nc.set("EnchantBonus", true);
 
         if (!nc.isBoolean("KillIncrease")) nc.set("KillIncrease", true);
         if (!nc.isInt("KillIncreaseChance")) nc.set("KillIncreaseChance", 100);
+        if (!nc.isBoolean("KillIncreaseIndirect")) nc.set("KillIncreaseIndirect", true);
 
         if (!nc.isBoolean("FishingIncrease")) nc.set("FishingIncrease", true);
         if (!nc.isInt("FishingIncreaseChance")) nc.set("FishingIncreaseChance", 70);
@@ -221,7 +224,8 @@ public interface NovaConfig  {
         if (!config.isConfigurationSection("Taxes")) config.createSection("Taxes");
         ConfigurationSection taxes = config.getConfigurationSection("Taxes");
 
-        if (!taxes.isList("Ignore")) config.set("Ignore", Arrays.asList("OPS"));
+        if (!taxes.isList("Ignore")) taxes.set("Ignore", Arrays.asList("OPS"));
+        if (!taxes.isBoolean("Online")) taxes.set("Online", false);
 
         if (!taxes.isConfigurationSection("MaxWithdraw")) taxes.createSection("MaxWithdraw");
         if (!taxes.isInt("MaxWithdraw.Global")) taxes.set("MaxWithdraw.Global", 100);
@@ -243,7 +247,12 @@ public interface NovaConfig  {
             if (taxes.isSet(id) && !taxes.isDouble(id) && !taxes.isInt(id)) taxes.set(id, null);
         }
 
-        try { config.save(getConfigFile()); } catch (IOException e) { getPlugin().getLogger().severe(e.getMessage()); }
+        if (!config.isConfigurationSection("Bounties")) config.createSection("Bounties");
+        if (!config.isBoolean("Bounties.Enabled")) config.set("Bounties.Enabled", true);
+        if (!config.isBoolean("Bounties.Broadcast")) config.set("Bounties.Broadcast", true);
+
+        try { config.save(f); } catch (IOException e) { getPlugin().getLogger().severe(e.getMessage()); }
+
         return config;
     }
 
@@ -467,5 +476,65 @@ public interface NovaConfig  {
      * @return Minimum amount
      */
     double getMinimumPayment(Economy econ);
+
+    /**
+     * Whether Players have to be online for taxes to be paid.
+     * @return true if they must be online, else false
+     */
+    boolean hasOnlineTaxes();
+
+    /**
+     * Sets whether Players have to be online for taxes to be paid.
+     * @param enabled true if they must be online, else false
+     */
+    void setOnlineTaxes(boolean enabled);
+
+    /**
+     * Whether custom tax events are enabled.
+     * @return true if enabled, else false
+     */
+    boolean hasCustomTaxes();
+
+    /**
+     * Sets whether custom tax events are enabled.
+     * @param enabled true if enabled, else false
+     */
+    void setCustomTaxes(boolean enabled);
+
+    /**
+     * Fetches the maximum amount that can be gained from a natural cause.
+     * @return Maximum Amount
+     */
+    double getMaxIncrease();
+
+    /**
+     * Sets the maximum amount that can be gained from a natural cause.
+     * @param max Maximum Amount
+     */
+    void setMaxIncrease(double max);
+
+    /**
+     * Whether Enchantments amplify natural causes.
+     * @return true if enabled, else false
+     */
+    boolean hasEnchantBonus();
+
+    /**
+     * Sets whether Enchantments amplify natural causes.
+     * @param enabled true if enabled, else false
+     */
+    void setEnchantBonus(boolean enabled);
+
+    /**
+     * Whether Bounties are being broadcated.
+     * @return true if broadcasted, else false
+     */
+    boolean isBroadcastingBounties();
+
+    /**
+     * Sets whether Bounties are being broadcasted.
+     * @param broadcast true if broadcasted, else false
+     */
+    void setBroadcastingBounties(boolean broadcast);
 
 }
