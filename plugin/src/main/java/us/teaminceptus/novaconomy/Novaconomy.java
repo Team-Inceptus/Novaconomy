@@ -1,12 +1,13 @@
 package us.teaminceptus.novaconomy;
 
 import com.cryptomorin.xseries.XSound;
-import com.google.gson.Gson;
+import com.google.common.util.concurrent.AtomicDouble;
 import com.jeff_media.updatechecker.UpdateCheckSource;
 import com.jeff_media.updatechecker.UpdateChecker;
 import org.apache.commons.lang.WordUtils;
 import org.bstats.bukkit.Metrics;
 import org.bstats.charts.SimplePie;
+import org.bstats.charts.SingleLineChart;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -17,10 +18,8 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.bukkit.configuration.serialization.ConfigurationSerialization;
-import org.bukkit.entity.HumanEntity;
-import org.bukkit.entity.Item;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Player;
+import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
@@ -43,6 +42,7 @@ import us.teaminceptus.novaconomy.abstraction.Wrapper;
 import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.NovaPlayer;
+import us.teaminceptus.novaconomy.api.bounty.Bounty;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.events.AutomaticTaxEvent;
@@ -59,16 +59,12 @@ import us.teaminceptus.novaconomy.api.util.Product;
 import us.teaminceptus.novaconomy.treasury.TreasuryRegistry;
 import us.teaminceptus.novaconomy.vault.VaultRegistry;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
@@ -118,57 +114,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 	 * @return OfflinePlayer Object
 	 */
 	public static OfflinePlayer getPlayer(String name) {
-		if (Bukkit.getOnlineMode()) try {
-			URL url = new URL("https://api.mojang.com/users/profiles/minecraft/" + name);
-			HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-
-			connection.setRequestMethod("GET");
-			connection.setRequestProperty("User-Agent", "Java 8 Novaconomy Bot");
-
-			int responseCode = connection.getResponseCode();
-
-			if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_ACCEPTED) {
-				BufferedReader input = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-				StringBuilder builder = new StringBuilder();
-				String inputLine;
-				while ((inputLine = input.readLine()) != null) builder.append(inputLine);
-
-				Gson g = new Gson();
-				return Bukkit.getOfflinePlayer(untrimUUID(g.fromJson(builder.toString(), APIPlayer.class).id));
-			}
-
-		} catch (IOException e) {
-			Bukkit.getLogger().severe(e.getClass().getName());
-			Bukkit.getLogger().severe(e.getMessage());
-			for (StackTraceElement s : e.getStackTrace()) Bukkit.getLogger().severe(s.toString());
-		}
-		else return Bukkit.getPlayer(UUID.nameUUIDFromBytes(("OfflinePlayer:" + name).getBytes(StandardCharsets.UTF_8)));
-		return null;
-	}
-
-
-	private static class APIPlayer {
-
-		public final String name;
-		public final String id;
-
-		public APIPlayer(String name, String id) {
-			this.name = name;
-			this.id = id;
-		}
-
-	}
-
-	private static UUID untrimUUID(String oldUUID) {
-		String p1 = oldUUID.substring(0, 8);
-		String p2 = oldUUID.substring(8, 12);
-		String p3 = oldUUID.substring(12, 16);
-		String p4 = oldUUID.substring(16, 20);
-		String p5 = oldUUID.substring(20, 32);
-
-		String newUUID = p1 + "-" + p2 + "-" + p3 + "-" + p4 + "-" + p5;
-
-		return UUID.fromString(newUUID);
+		return Wrapper.getPlayer(name);
 	}
 
 	private static class ModifierReader {
@@ -322,14 +268,31 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		@EventHandler
 		public void moneyIncrease(EntityDamageByEntityEvent e) {
 			if (e.isCancelled()) return;
-			if (!(plugin.hasKillIncrease())) return;
-			if (!(e.getDamager() instanceof Player)) return;
-			Player p = (Player) e.getDamager();
+			if (!plugin.hasKillIncrease()) return;
+
+			final Player p;
+			if (e.getDamager() instanceof Tameable) {
+				Tameable t = (Tameable) e.getDamager();
+				if (t.isTamed() && t.getOwner() instanceof Player) p = (Player) t.getOwner();
+				else p = null;
+			} else if (e.getDamager() instanceof Player) p = (Player) e.getDamager();
+			else p = null;
+
+			if (p == null) return;
+
 			if (!(e.getEntity() instanceof LivingEntity)) return;
 			LivingEntity en = (LivingEntity) e.getEntity();
 			if (en.getHealth() - e.getFinalDamage() > 0) return;
+
 			String id = en.getType().name();
 			if (ModifierReader.isIgnored(id)) return;
+
+			double iAmount = en.getMaxHealth();
+			if (p.getEquipment().getItemInHand() != null) {
+				ItemStack hand = p.getEquipment().getItemInHand();
+				if (hand.hasItemMeta() && hand.getItemMeta().hasEnchant(Enchantment.LOOT_BONUS_MOBS))
+					iAmount += hand.getItemMeta().getEnchantLevel(Enchantment.LOOT_BONUS_MOBS) * (r.nextInt(4) + 6);
+			}
 
 			if (ModifierReader.getModifier("Killing") != null && r.nextInt(100) < getKillChance()) {
 				Map<String, Set<Map<Economy, Double>>> entry = ModifierReader.getModifier("Killing");
@@ -344,21 +307,27 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 						}
 
 					sendUpdateActionbar(p, msgs);
-				} else update(p, en.getMaxHealth());
+				} else update(p, iAmount);
 			}
 		}
 		@EventHandler
 		public void moneyIncrease(BlockBreakEvent e) {
 			if (e.isCancelled()) return;
-			if (!(plugin.hasMiningIncrease())) return;
+			if (!plugin.hasMiningIncrease()) return;
 			if (e.getBlock().getDrops().size() < 1) return;
 
 			Block b = e.getBlock();
 			Player p = e.getPlayer();
-			int add = e.getExpToDrop() == 0 && ores.contains(b.getType()) ? r.nextInt(3) : e.getExpToDrop();
 
 			String id = b.getType().name();
 			if (ModifierReader.isIgnored(id)) return;
+
+			double add = e.getExpToDrop() == 0 && ores.contains(b.getType()) ? r.nextInt(3) : e.getExpToDrop();
+			if (p.getEquipment().getItemInHand() != null) {
+				ItemStack hand = p.getEquipment().getItemInHand();
+				if (hand.hasItemMeta() && hand.getItemMeta().hasEnchant(Enchantment.LOOT_BONUS_BLOCKS))
+					add += hand.getItemMeta().getEnchantLevel(Enchantment.LOOT_BONUS_BLOCKS) * (r.nextInt(3) + 4);
+			}
 
 			if (!w.isAgeable(b) && ModifierReader.getModifier("Mining") != null && r.nextInt(100) < getMiningChance()) {
 				Map<String, Set<Map<Economy, Double>>> entry = ModifierReader.getModifier("Mining");
@@ -395,13 +364,29 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		@EventHandler
 		public void moneyIncrease(PlayerFishEvent e) {
 			if (e.isCancelled()) return;
-			if (!(plugin.hasFishingIncrease())) return;
+			if (!plugin.hasFishingIncrease()) return;
 			
 			if (e.getState() != PlayerFishEvent.State.CAUGHT_FISH) return;
 
 			Player p = e.getPlayer();
 			String name = e.getCaught() instanceof Item ? ((Item) e.getCaught()).getItemStack().getType().name() : e.getCaught().getType().name();
 			if (ModifierReader.isIgnored(name)) return;
+
+			double iAmount = e.getExpToDrop();
+
+			if (p.getEquipment().getItemInHand() != null) {
+				ItemStack hand = p.getEquipment().getItemInHand();
+
+				if (hand.hasItemMeta()) {
+					if (hand.getItemMeta().hasEnchant(Enchantment.LURE))
+						iAmount += hand.getItemMeta().getEnchantLevel(Enchantment.LURE) * (r.nextInt(8) + 6);
+
+					if (hand.getItemMeta().hasEnchant(Enchantment.LUCK))
+						iAmount += hand.getItemMeta().getEnchantLevel(Enchantment.LUCK) * (r.nextInt(8) + 6);
+
+				}
+
+			}
 
 			if (ModifierReader.getModifier("Fishing") != null && r.nextInt(100) < getFishingChance()) {
 				Map<String, Set<Map<Economy, Double>>> entry = ModifierReader.getModifier("Fishing");
@@ -416,7 +401,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 						}
 
 					sendUpdateActionbar(p, msgs);
-				} else update(p, e.getExpToDrop());
+				} else update(p, iAmount);
 			}
 		}
 
@@ -430,7 +415,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		private String callAddBalanceEvent(Player p, Economy econ, double amount, boolean random) {
 			NovaPlayer np = new NovaPlayer(p);
 			double divider = r.nextInt(2) + 1;
-			double increase = random ? ((amount + r.nextInt(8) + 1) / divider) / econ.getConversionScale() : amount;
+			double increase = Math.min(random ? ((amount + r.nextInt(8) + 1) / divider) / econ.getConversionScale() : amount, plugin.getMaxIncrease());
 
 			double previousBal = np.getBalance(econ);
 
@@ -440,7 +425,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 			if (!event.isCancelled()) {
 				np.add(econ, increase);
 
-				return COLORS.get(r.nextInt(COLORS.size())) + "+" + (Math.floor(increase * 100) / 100 + "").replace("D", "") + econ.getSymbol();
+				return COLORS.get(r.nextInt(COLORS.size())) + "+" + String.format("%,.2f", (Math.floor(increase * 100) / 100)) + econ.getSymbol();
 			}
 
 			return "";
@@ -450,10 +435,56 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 			XSound.BLOCK_NOTE_BLOCK_PLING.play(p, 3F, 2F);
 			if (plugin.hasNotifications()) w.sendActionbar(p, String.join(ChatColor.YELLOW + ", " + ChatColor.RESET, added.toArray(new String[0])));
 		}
+
+		private ItemStack getItem(EntityEquipment i, EquipmentSlot s) {
+			switch (s) {
+				case FEET: return i.getBoots();
+				case LEGS: return i.getLeggings();
+				case CHEST: return i.getChestplate();
+				case HEAD: return i.getHelmet();
+				default: return i.getItemInHand();
+			}
+		}
+
+		@EventHandler
+		public void claimBounty(EntityDamageByEntityEvent e) {
+			if (!(e.getEntity() instanceof Player)) return;
+			if (!(e.getDamager() instanceof Player)) return;
+			Player killer = (Player) e.getDamager();
+			Player target = (Player) e.getEntity();
+			if (target.getHealth() - e.getFinalDamage() > 0) return;
+			NovaPlayer nt = new NovaPlayer(target);
+			if (nt.getSelfBounties().isEmpty()) return;
+			NovaPlayer nk = new NovaPlayer(killer);
+
+			String kName = killer.getDisplayName() == null ? killer.getName() : killer.getDisplayName();
+			String tName = target.getDisplayName() == null ? target.getName() : target.getDisplayName();
+			boolean broadcast = plugin.isBroadcastingBounties();
+
+			AtomicDouble amount = new AtomicDouble(0);
+			AtomicInteger bountyCount = new AtomicInteger(0);
+			String key = "bounties." + target.getUniqueId();
+			for (Bounty b : nt.getSelfBounties()) {
+				FileConfiguration config = b.getOwner().getPlayerConfig();
+				File f = b.getOwner().getPlayerFile();
+				config.set(key, null);
+				try { config.save(f); } catch (IOException err) { Bukkit.getLogger().severe(err.getMessage()); }
+
+				if (b.getOwner().isOnline()) b.getOwner().getOnlinePlayer().sendMessage(String.format(getMessage("success.bounty.redeem"), kName, tName));
+				if (broadcast)
+					Bukkit.broadcastMessage(String.format(get("success.bounty.broadcast"), kName, tName, String.format("%,.2f", b.getAmount())));
+
+				amount.addAndGet(b.getAmount());
+				bountyCount.incrementAndGet();
+				nk.add(b.getEconomy(), b.getAmount());
+			}
+
+			if (!broadcast) killer.sendMessage(String.format(getMessage("success.bounty.claim"), bountyCount.get(), tName));
+		}
 		
 		@EventHandler
 		public void moneyDecrease(PlayerDeathEvent e) {
-			if (!(plugin.hasDeathDecrease())) return;
+			if (!plugin.hasDeathDecrease()) return;
 			
 			Player p = e.getEntity();
 			NovaPlayer np = new NovaPlayer(p);
@@ -462,6 +493,20 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 			lost.add(get("constants.lost"));
 			String id = p.getLastDamageCause().getCause().name();
 			if (ModifierReader.isIgnored(id)) return;
+
+			double divider = getDeathDivider();
+
+			for (EquipmentSlot s : EquipmentSlot.values()) {
+				if (s == EquipmentSlot.HAND || s.name().equalsIgnoreCase("OFF_HAND")) continue;
+
+				ItemStack item = getItem(p.getEquipment(), s);
+				if (item == null) continue;
+				if (!item.hasItemMeta()) continue;
+
+				if (item.getItemMeta().hasEnchant(Enchantment.PROTECTION_ENVIRONMENTAL))
+					divider /= Math.min(item.getEnchantmentLevel(Enchantment.PROTECTION_ENVIRONMENTAL) / 2, 4);
+			}
+
 
 			if (ModifierReader.getModifier("Death") != null && ModifierReader.getModifier("Death").containsKey(id)) {
 				Set<Map<Economy, Double>> value = ModifierReader.getModifier("Death").get(id);
@@ -472,7 +517,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 						if (amount <= 0) continue;
 						lost.add(callRemoveBalanceEvent(p, econ, amount));
 					}
-			} else for (Economy econ : Economy.getEconomies()) lost.add(callRemoveBalanceEvent(p, econ, np.getBalance(econ) / getDeathDivider()));
+			} else for (Economy econ : Economy.getEconomies()) lost.add(callRemoveBalanceEvent(p, econ, np.getBalance(econ) / divider));
 			
 			if (plugin.hasNotifications()) p.sendMessage(String.join("\n", lost.toArray(new String[0])));
 		}
@@ -1013,12 +1058,15 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 	};
 
 	private static void runTaxes() {
-		if (!NovaConfig.getConfiguration().hasAutomaticTaxes()) return;
+		Novaconomy plugin = getPlugin(Novaconomy.class);
+		if (!plugin.hasAutomaticTaxes()) return;
 		Map<NovaPlayer, Map<Economy, Double>> previousBals = new HashMap<>();
 		Map<NovaPlayer, Map<Economy, Double>> amounts = new HashMap<>();
 
-		for (OfflinePlayer p : Bukkit.getOfflinePlayers()) {
-			if (NovaConfig.getConfiguration().canIgnoreTaxes(p)) continue;
+		Collection<? extends OfflinePlayer> players = plugin.hasOnlineTaxes() ? Bukkit.getOnlinePlayers() : Arrays.asList(Bukkit.getOfflinePlayers());
+
+		for (OfflinePlayer p : players) {
+			if (plugin.canIgnoreTaxes(p)) continue;
 			NovaPlayer np = new NovaPlayer(p);
 
 			Map<Economy, Double> previousBal = new HashMap<>();
@@ -1026,7 +1074,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
 			for (Economy econ : Economy.getTaxableEconomies()) {
 				previousBal.put(econ, np.getBalance(econ));
-				double amountD = NovaConfig.getConfiguration().getMinimumPayment(econ);
+				double amountD = plugin.getMinimumPayment(econ);
 				if (amountD > 0) amount.put(econ, amountD);
 			}
 
@@ -1039,26 +1087,32 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		Bukkit.getPluginManager().callEvent(event);
 
 		Map<NovaPlayer, Map<Economy, Double>> missedMap = new HashMap<>();
-		if (!event.isCancelled()) for (NovaPlayer np : previousBals.keySet()) {
-			missedMap.put(np, new HashMap<>());
-			for (Economy econ : previousBals.get(np).keySet()) {
-				double amount = amounts.get(np).get(econ);
+		if (!event.isCancelled()) {
+			for (NovaPlayer np : previousBals.keySet()) {
+				missedMap.put(np, new HashMap<>());
+				for (Economy econ : previousBals.get(np).keySet()) {
+					double amount = amounts.get(np).get(econ);
 
-				if (np.getBalance(econ) < amount) {
-					Map<Economy, Double> newMap = new HashMap<>(missedMap.get(np));
-					newMap.put(econ, amount);
-					missedMap.put(np, newMap);
-					np.deposit(econ, np.getBalance(econ));
+					if (np.getBalance(econ) < amount) {
+						Map<Economy, Double> newMap = new HashMap<>(missedMap.get(np));
+						newMap.put(econ, amount);
+						missedMap.put(np, newMap);
+						np.deposit(econ, np.getBalance(econ));
 
-					PlayerMissTaxEvent event2 = new PlayerMissTaxEvent(np.getPlayer(), amount - np.getBalance(econ), econ);
-					Bukkit.getPluginManager().callEvent(event2);
-				} else np.deposit(econ, amount);
+						PlayerMissTaxEvent event2 = new PlayerMissTaxEvent(np.getPlayer(), amount - np.getBalance(econ), econ);
+						Bukkit.getPluginManager().callEvent(event2);
+					} else np.deposit(econ, amount);
 
+				}
 			}
+			sendTaxNotifications(previousBals.keySet(), missedMap);
 		}
+	}
 
-		if (!NovaConfig.getConfiguration().hasNotifications()) return;
-		for (NovaPlayer np : previousBals.keySet()) {
+	private static void sendTaxNotifications(Collection<NovaPlayer> players, Map<NovaPlayer, Map<Economy, Double>> missedMap) {
+		Novaconomy plugin = getPlugin(Novaconomy.class);
+		if (!plugin.hasNotifications()) return;
+		for (NovaPlayer np : players) {
 			if (!np.getPlayer().isOnline()) continue;
 			int j = missedMap.get(np).size();
 			int i = Economy.getTaxableEconomies().size() - j;
@@ -1086,12 +1140,13 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		add(Price.class);
 		add(Product.class);
 		add(BusinessProduct.class);
+		add(Bounty.class);
 	}};
 
 	private void loadPlaceholders() {
 		if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
 			getLogger().info("Placeholder API Found! Hooking...");
-			new Placeholders();
+			new Placeholders(this);
 			getLogger().info("Hooked into Placeholder API!");
 		}
 	}
@@ -1115,8 +1170,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 	 */
 	@Override
 	public void onEnable() {
-		saveDefaultConfig();
-		saveConfig();
+		NovaConfig.loadConfig();
 
 		funcConfig = NovaConfig.loadFunctionalityFile();
 		playerDir = new File(getDataFolder(), "players");
@@ -1143,11 +1197,8 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		for (Economy econ : Economy.getEconomies()) if (!global.isSet("Bank." + econ.getName())) global.set("Bank." + econ.getName(), 0);
 		try { global.save(globalF); } catch (IOException e) { getLogger().severe(e.getMessage()); for (StackTraceElement s : e.getStackTrace()) getLogger().severe(s.toString()); }
 
-		NovaConfig.reloadLanguages();
 		getLogger().info("Loaded Languages & Configuration...");
 		SERIALIZABLE.forEach(ConfigurationSerialization::registerClass);
-
-		NovaConfig.loadBusinesses();
 
 		prefix = get("plugin.prefix");
 
@@ -1156,8 +1207,6 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		getCommandWrapper();
 		new Events(this);
 
-		reloadValues();
-		
 		INTEREST_RUNNABLE.runTaskTimer(this, getInterestTicks(), getInterestTicks());
 		TAXES_RUNNABLE.runTaskTimer(this, getTaxesTicks(), getTaxesTicks());
 
@@ -1185,6 +1234,13 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
 		metrics.addCustomChart(new SimplePie("used_language", () -> Language.getById(this.getLanguage()).name()));
 		metrics.addCustomChart(new SimplePie("command_version", () -> getWrapper().getCommandVersion() + ""));
+		metrics.addCustomChart(new SingleLineChart("economy_count", () -> Economy.getEconomies().size()));
+		metrics.addCustomChart(new SingleLineChart("business_count", () -> Business.getBusinesses().size()));
+		metrics.addCustomChart(new SingleLineChart("bounty_count", () -> {
+			AtomicInteger count = new AtomicInteger(0);
+			for (OfflinePlayer p : Bukkit.getOfflinePlayers()) count.addAndGet(new NovaPlayer(p).getOwnedBounties().size());
+			return count.get();
+		}));
 
 		getLogger().info("Loaded Dependencies...");
 		saveConfig();
@@ -1200,12 +1256,6 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 	 * @return true if legacy server, else false
 	 */
 	public static boolean isLegacy() { return w.isLegacy(); }
-
-	private void reloadValues() {
-		NovaConfig.loadConfig();
-		NovaConfig.loadFunctionalityFile();
-		NovaConfig.loadBusinesses();
-	}
 
 	/**
 	 * Fetches the Directory of all Player data.
@@ -1306,6 +1356,61 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 	@Override
 	public double getMinimumPayment(Economy econ) {
 		return config.getDouble("Taxes.Minimums." + econ.getName(), config.getDouble("Taxes.Minimums.Global", 0));
+	}
+
+	@Override
+	public boolean hasOnlineTaxes() {
+		return config.getBoolean("Taxes.Online", false);
+	}
+
+	@Override
+	public void setOnlineTaxes(boolean enabled) {
+		config.set("Taxes.Online", enabled);
+		saveConfig();
+	}
+
+	@Override
+	public boolean hasCustomTaxes() {
+		return config.getBoolean("Taxes.Events.Enabled", false);
+	}
+
+	@Override
+	public void setCustomTaxes(boolean enabled) {
+		config.set("Taxes.Events.Enabled", enabled);
+		saveConfig();
+	}
+
+	@Override
+	public double getMaxIncrease() {
+		return config.getDouble("NaturalCauses.MaxIncrease", 1000) <= 0 ? Double.MAX_VALUE : config.getDouble("NaturalCauses.MaxIncrease", 1000);
+	}
+
+	@Override
+	public void setMaxIncrease(double max) {
+		config.set("NaturalCauses.MaxIncrease", max);
+		saveConfig();
+	}
+
+	@Override
+	public boolean hasEnchantBonus() {
+		return config.getBoolean("NaturalCauses.EnchantBonus", true);
+	}
+
+	@Override
+	public void setEnchantBonus(boolean enabled) {
+		config.set("NaturalCauses.EnchantBonus", enabled);
+		saveConfig();
+	}
+
+	@Override
+	public boolean isBroadcastingBounties() {
+		return config.getBoolean("Bounties.Broadcast", true);
+	}
+
+	@Override
+	public void setBroadcastingBounties(boolean broadcast) {
+		config.set("Bounties.Broadcast", broadcast);
+		saveConfig();
 	}
 
 	@Override

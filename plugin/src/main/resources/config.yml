@@ -177,5 +177,8 @@ Taxes:
 # Bounties Secton
 Bounties:
 
+  # Whether Bounty Claims are broadcasted to the server
+  Broadcast: true
+
   # Whether Bounties are enabled
   Enabled: true
