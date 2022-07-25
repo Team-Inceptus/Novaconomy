@@ -35,17 +35,18 @@ public final class CommandWrapperV2 implements CommandWrapper {
                 if (econ == null) throw new CommandErrorException(getMessage("error.argument.economy"));
                 return econ;
             });
-            handler.getAutoCompleter().registerParameterSuggestions(Economy.class, SuggestionProvider.of(toStringList(Economy::getName, Economy.getEconomies())));
+
+            handler.getAutoCompleter().registerParameterSuggestions(Economy.class, SuggestionProvider.of(() -> toStringList(Economy::getName, Economy.getEconomies())));
 
             handler.registerValueResolver(Material.class, ctx -> Material.matchMaterial(ctx.popForParameter()));
-            handler.getAutoCompleter().registerParameterSuggestions(Material.class, SuggestionProvider.of(toStringList(m -> m.name().toLowerCase(), Material.values())));
+            handler.getAutoCompleter().registerParameterSuggestions(Material.class, SuggestionProvider.of(() -> toStringList(m -> m.name().toLowerCase(), Material.values())));
 
             handler.registerValueResolver(Business.class, ctx -> {
                 Business b = Business.getByName(ctx.popForParameter());
                 if (b == null) throw new CommandErrorException(getMessage("error.argument.business"));
                 return b;
             });
-            handler.getAutoCompleter().registerParameterSuggestions(Business.class, SuggestionProvider.of(toStringList(Business::getName, Business.getBusinesses())));
+            handler.getAutoCompleter().registerParameterSuggestions(Business.class, SuggestionProvider.of(() -> toStringList(Business::getName, Business.getBusinesses())));
 
             handler.getAutoCompleter().registerParameterSuggestions(boolean.class, SuggestionProvider.of("true", "false"));
 
@@ -55,7 +56,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
                 return p;
             });
 
-            handler.getAutoCompleter().registerParameterSuggestions(OfflinePlayer.class, SuggestionProvider.of(toStringList(OfflinePlayer::getName, Bukkit.getOfflinePlayers())));
+            handler.getAutoCompleter().registerParameterSuggestions(OfflinePlayer.class, SuggestionProvider.of(() -> toStringList(OfflinePlayer::getName, Bukkit.getOfflinePlayers())));
 
             handler.register(this);
             new EconomyCommands(this);
