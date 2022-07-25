@@ -20,7 +20,7 @@ import java.util.UUID;
  */
 public final class Bounty implements ConfigurationSerializable, Comparable<Bounty> {
 
-    private final NovaPlayer owner;
+    private final OfflinePlayer owner;
 
     private final Economy econ;
 
@@ -28,7 +28,7 @@ public final class Bounty implements ConfigurationSerializable, Comparable<Bount
 
     private final OfflinePlayer target;
 
-    private Bounty(NovaPlayer owner, Economy econ, double amount, OfflinePlayer target) {
+    private Bounty(OfflinePlayer owner, Economy econ, double amount, OfflinePlayer target) {
         this.owner = owner;
         this.econ = econ;
         this.amount = amount;
@@ -48,7 +48,7 @@ public final class Bounty implements ConfigurationSerializable, Comparable<Bount
      * @return Bounty Owner
      */
     @NotNull
-    public NovaPlayer getOwner() {
+    public OfflinePlayer getOwner() {
         return owner;
     }
 
@@ -98,6 +98,7 @@ public final class Bounty implements ConfigurationSerializable, Comparable<Bount
 
     private void save() {
         String key = "bounties." + target.getUniqueId();
+        NovaPlayer owner = new NovaPlayer(this.owner);
         FileConfiguration config = owner.getPlayerConfig();
         File f = owner.getPlayerFile();
 
@@ -117,7 +118,7 @@ public final class Bounty implements ConfigurationSerializable, Comparable<Bount
         if (serialize == null) return null;
 
         try {
-            NovaPlayer owner = new NovaPlayer(Bukkit.getOfflinePlayer(UUID.fromString((String) serialize.get("owner"))));
+            OfflinePlayer owner = Bukkit.getOfflinePlayer(UUID.fromString((String) serialize.get("owner")));
             Economy econ = Economy.getEconomy(UUID.fromString((String) serialize.get("economy")));
             OfflinePlayer target = Bukkit.getOfflinePlayer(UUID.fromString((String) serialize.get("target")));
             return new Bounty(owner, econ, (double) serialize.get("amount"), target);
@@ -213,7 +214,7 @@ public final class Bounty implements ConfigurationSerializable, Comparable<Bount
             File f = owner.getPlayerFile();
 
             if (config.isSet(key)) throw new UnsupportedOperationException("Bounty already exists");
-            Bounty b = new Bounty(owner, econ, amount, target);
+            Bounty b = new Bounty(owner.getPlayer(), econ, amount, target);
 
             if (config.getConfigurationSection("bounties") == null) config.createSection("bounties");
             config.set(key, b);

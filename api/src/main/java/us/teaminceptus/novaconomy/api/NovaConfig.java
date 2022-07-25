@@ -526,6 +526,18 @@ public interface NovaConfig  {
     void setEnchantBonus(boolean enabled);
 
     /**
+     * Whether Bounties are enabled.
+     * @return true if enabled, else false
+     */
+    boolean areBountiesEnabled();
+
+    /**
+     * Sets whether Bounties are enabled.
+     * @param enabled true if enabled, else false
+     */
+    void setBountiesEnabled(boolean enabled);
+
+    /**
      * Whether Bounties are being broadcated.
      * @return true if broadcasted, else false
      */

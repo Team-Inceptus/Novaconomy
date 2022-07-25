@@ -181,12 +181,12 @@ public final class Economy implements ConfigurationSerializable {
         config.set(econ.getEconomySection().getCurrentPath(), null);
         for (OfflinePlayer p : Bukkit.getOfflinePlayers()) {
             NovaPlayer np = new NovaPlayer(p);
-            FileConfiguration playerConfig = np.getPlayerConfig();
+            FileConfiguration pConfig = np.getPlayerConfig();
 
-            playerConfig.set("economies." + econ.getName().toLowerCase(), null);
+            pConfig.set("economies." + econ.getName().toLowerCase(), null);
 
             try {
-                playerConfig.save(new File(NovaConfig.getPlugin().getDataFolder().getPath() + "/players", p.getUniqueId() + ".yml"));
+                pConfig.save(new File(NovaConfig.getPlugin().getDataFolder().getPath() + "/players", p.getUniqueId() + ".yml"));
             } catch (IOException e) {
                 NovaConfig.getLogger().severe(e.getMessage());
             }

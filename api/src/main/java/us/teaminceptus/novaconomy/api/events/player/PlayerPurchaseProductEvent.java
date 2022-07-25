@@ -11,15 +11,19 @@ public class PlayerPurchaseProductEvent extends PlayerEconomyEvent {
 
     private final BusinessProduct product;
 
+    private int amount;
+
     /**
      * Constructs a PlayerPurchaseProductEvent.
      * @param p Player that purchased product
      * @param product BusinessProduct used
+     * @param amount Amount of product purchased
      */
-    public PlayerPurchaseProductEvent(@NotNull Player p, @NotNull BusinessProduct product) {
+    public PlayerPurchaseProductEvent(@NotNull Player p, @NotNull BusinessProduct product, int amount) {
         super(p, product.getPrice().getAmount(), product.getEconomy());
 
         this.product = product;
+        this.amount = amount;
     }
 
     /**
@@ -29,5 +33,13 @@ public class PlayerPurchaseProductEvent extends PlayerEconomyEvent {
     @NotNull
     public BusinessProduct getProduct() {
         return product;
+    }
+
+    /**
+     * Fetches the amount of the product purchased.
+     * @return Amount of product purchased
+     */
+    public int getPurchasedAmount() {
+        return amount;
     }
 }
