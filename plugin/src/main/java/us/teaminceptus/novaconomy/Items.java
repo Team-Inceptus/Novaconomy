@@ -35,6 +35,16 @@ final class Items {
         else return new ItemStack(Material.matchMaterial("RED_WOOL"));
     }
 
+    public static ItemStack limePane() {
+        if (Novaconomy.isLegacy()) return new ItemStack(Material.matchMaterial("STAINED_GLASS_PANE"), 5);
+        else return new ItemStack(Material.matchMaterial("LIME_STAINED_GLASS_PANE"));
+    }
+
+    public static ItemStack redPane() {
+        if (Novaconomy.isLegacy()) return new ItemStack(Material.matchMaterial("STAINED_GLASS_PANE"), 14);
+        else return new ItemStack(Material.matchMaterial("RED_STAINED_GLASS_PANE"));
+    }
+
     public static ItemStack cancel() {
         return cancel("close");
     }
