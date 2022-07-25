@@ -195,7 +195,7 @@ public interface CommandWrapper {
 
         np.remove(from, amount);
         np.add(to, toBal);
-        p.sendMessage(String.format(getMessage("success.economy.convert"), amount + "" + from.getSymbol(), Math.floor(toBal * 100) / 100) + "" + to.getSymbol());
+        p.sendMessage(String.format(getMessage("success.economy.convert"), String.format("%,.2f", amount) + from.getSymbol(), String.format("%,.2f", Math.floor(toBal * 100) / 100)) + to.getSymbol());
     }
 
     default void exchange(Player p, double amount) {
@@ -320,13 +320,13 @@ public interface CommandWrapper {
 
         NovaPlayer nt = new NovaPlayer(target);
 
-        if (add <= 0) {
+        if (add < 0) {
             sender.sendMessage(getMessage("error.argument.amount"));
             return;
         }
 
         nt.add(econ, add);
-        sender.sendMessage(String.format(getMessage("success.economy.addbalance"),  econ.getSymbol() + "", add, target.getName()));
+        sender.sendMessage(String.format(getMessage("success.economy.addbalance"),  String.format("%,.2f", add), econ.getSymbol(), target.getName()));
     }
 
     default void removeBalance(CommandSender sender, Economy econ, Player target, double remove) {
@@ -337,13 +337,13 @@ public interface CommandWrapper {
 
         NovaPlayer nt = new NovaPlayer(target);
 
-        if (remove <= 0) {
+        if (remove < 0) {
             sender.sendMessage(getMessage("error.argument.amount"));
             return;
         }
 
         nt.remove(econ, remove);
-        sender.sendMessage(String.format(getMessage("success.economy.removebalance"),  econ.getSymbol() + "", remove, target.getName()));
+        sender.sendMessage(String.format(getMessage("success.economy.removebalance"),  String.format("%,.2f", remove), econ.getSymbol(), target.getName()));
     }
 
     default void setBalance(CommandSender sender, Economy econ, Player target, double balance) {
@@ -360,7 +360,7 @@ public interface CommandWrapper {
         }
 
         nt.setBalance(econ, balance);
-        sender.sendMessage(String.format(getMessage("success.economy.setbalance"),  econ.getSymbol() + "", balance, target.getName()));
+        sender.sendMessage(String.format(getMessage("success.economy.setbalance"), target.getName(), econ.getName(), String.format("%,.2f", balance) + econ.getSymbol()));
     }
 
     default void interest(CommandSender sender, boolean enabled) {
@@ -547,6 +547,11 @@ public interface CommandWrapper {
         }
 
         if (p.getItemInHand() == null) {
+            p.sendMessage(getMessage("error.argument.item"));
+            return;
+        }
+
+        if (p.getItemInHand().getType() == Material.AIR) {
             p.sendMessage(getMessage("error.argument.item"));
             return;
         }
@@ -739,6 +744,11 @@ public interface CommandWrapper {
             return;
         }
 
+        if (!NovaConfig.getConfiguration().areBountiesEnabled()) {
+            p.sendMessage(getMessage("error.bounty.disabled"));
+            return;
+        }
+
         if (target.getUniqueId().equals(p.getUniqueId())) {
             p.sendMessage(getMessage("error.bounty.self"));
             return;
@@ -763,13 +773,18 @@ public interface CommandWrapper {
             if (target.isOnline() && NovaConfig.getConfiguration().hasNotifications())
                 target.getPlayer().sendMessage(String.format(getMessage("notification.bounty"), p.getDisplayName() == null ? p.getName() : p.getDisplayName(), String.format("%,.2f", amount) + econ.getSymbol()));
         } catch (UnsupportedOperationException e) {
-            p.sendMessage(getMessage("error.bounty.exists"));
+            p.sendMessage(String.format(getMessage("error.bounty.exists"), target.isOnline() && target.getPlayer().getDisplayName() == null ? target.getName() : target.getPlayer().getDisplayName()));
         }
     }
 
     default void deleteBounty(Player p, OfflinePlayer target) {
         if (!p.hasPermission("novaconomy.user.bounty.manage")) {
             p.sendMessage(getMessage("error.permission.argument"));
+            return;
+        }
+
+        if (!NovaConfig.getConfiguration().areBountiesEnabled()) {
+            p.sendMessage(getMessage("error.bounty.disabled"));
             return;
         }
 
@@ -788,6 +803,9 @@ public interface CommandWrapper {
             return;
         }
 
+        Bounty b = (Bounty) config.get(key);
+        np.add(b.getEconomy(), b.getAmount());
+
         config.set(key, null);
         try { config.save(f); } catch (IOException e) { Bukkit.getLogger().severe(e.getMessage()); }
         p.sendMessage(String.format(getMessage("success.bounty.delete"), target.getName()));
@@ -796,6 +814,11 @@ public interface CommandWrapper {
     default void listBounties(Player p, boolean owned) {
         if (!p.hasPermission("novaconomy.user.bounty.list")) {
             p.sendMessage(getMessage("error.permission.argument"));
+            return;
+        }
+
+        if (!NovaConfig.getConfiguration().areBountiesEnabled()) {
+            p.sendMessage(getMessage("error.bounty.disabled"));
             return;
         }
 
@@ -813,10 +836,13 @@ public interface CommandWrapper {
         }
 
         Inventory inv = wr.genGUI(36, owned ? get("constants.bounty.all") : get("constants.bounty.self"), new Wrapper.CancelHolder());
+        for (int i = 10; i < 12; i++) inv.setItem(i, wr.getGUIBackground());
+        for (int i = 15; i < 17; i++) inv.setItem(i, wr.getGUIBackground());
+
 
         ItemStack head = createPlayerHead(p);
         ItemMeta meta = head.getItemMeta();
-        meta.setDisplayName(ChatColor.AQUA + p.getDisplayName() == null ? p.getName() : p.getDisplayName());
+        meta.setDisplayName(ChatColor.AQUA + (p.getDisplayName() == null ? p.getName() : p.getDisplayName()));
         if (owned) meta.setLore(Collections.singletonList(String.format(get("constants.bounty.amount"), np.getOwnedBounties().size())));
         head.setItemMeta(meta);
         inv.setItem(4, head);
@@ -825,7 +851,7 @@ public interface CommandWrapper {
 
         if (owned) {
             List<Map.Entry<OfflinePlayer, Bounty>> bounties = np.getTopBounties(10);
-            for (int i = 0; i < 10; i++) {
+            for (int i = 0; i < bounties.size(); i++) {
                 Map.Entry<OfflinePlayer, Bounty> bounty = bounties.get(i);
                 int index = fIndex.apply(i);
 
@@ -842,7 +868,7 @@ public interface CommandWrapper {
             }
         } else {
             List<Bounty> bounties = np.getTopSelfBounties(10);
-            for (int i = 0; i < 10; i++) {
+            for (int i = 0; i < bounties.size(); i++) {
                 int index = fIndex.apply(i);
 
                 Bounty b = bounties.get(i);
