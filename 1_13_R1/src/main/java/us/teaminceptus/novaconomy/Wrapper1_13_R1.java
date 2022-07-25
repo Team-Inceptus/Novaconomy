@@ -13,6 +13,7 @@ import org.bukkit.block.data.Ageable;
 import org.bukkit.craftbukkit.v1_13_R1.entity.CraftPlayer;
 import org.bukkit.craftbukkit.v1_13_R1.inventory.CraftItemStack;
 import org.bukkit.entity.Player;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import us.teaminceptus.novaconomy.abstraction.Wrapper;
@@ -162,4 +163,11 @@ public final class Wrapper1_13_R1 implements Wrapper {
         return b.getBlockData() instanceof Ageable;
     }
 
+    @Override
+    public void removeItem(PlayerInteractEvent e) {
+        switch (e.getHand()) {
+            case OFF_HAND: e.getPlayer().getEquipment().setItemInOffHand(null);
+            case HAND: e.getPlayer().getEquipment().setItemInMainHand(null);
+        }
+    }
 }

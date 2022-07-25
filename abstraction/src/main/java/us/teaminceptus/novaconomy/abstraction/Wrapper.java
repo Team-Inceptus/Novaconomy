@@ -9,6 +9,7 @@ import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
@@ -75,6 +76,8 @@ public interface Wrapper {
 
     boolean isAgeable(Block b);
 
+    void removeItem(PlayerInteractEvent p);
+
     default boolean hasID(ItemStack item) { return getID(item) != null && getID(item).length() > 0; }
 
     default String getID(ItemStack item) { return getNBTString(item, "id"); }
@@ -131,7 +134,7 @@ public interface Wrapper {
     }
 
     default Inventory generateBusinessData(Business b) {
-        Inventory inv = genGUI(54, ChatColor.GOLD + b.getName());
+        Inventory inv = genGUI(54, ChatColor.GOLD + b.getName(), new Wrapper.CancelHolder());
 
         ItemStack owner = createSkull(b.getOwner());
         ItemMeta oMeta = owner.getItemMeta();

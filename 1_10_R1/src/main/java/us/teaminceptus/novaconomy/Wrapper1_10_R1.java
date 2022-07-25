@@ -12,6 +12,7 @@ import org.bukkit.block.Block;
 import org.bukkit.craftbukkit.v1_10_R1.entity.CraftPlayer;
 import org.bukkit.craftbukkit.v1_10_R1.inventory.CraftItemStack;
 import org.bukkit.entity.Player;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.material.Crops;
@@ -159,6 +160,14 @@ public final class Wrapper1_10_R1 implements Wrapper {
     @Override
     public boolean isAgeable(Block b) {
         return b.getState().getData() instanceof Crops;
+    }
+
+    @Override
+    public void removeItem(PlayerInteractEvent e) {
+        switch (e.getHand()) {
+            case OFF_HAND: e.getPlayer().getEquipment().setItemInOffHand(null);
+            case HAND: e.getPlayer().getEquipment().setItemInMainHand(null);
+        }
     }
 
 }
