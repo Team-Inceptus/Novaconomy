@@ -23,11 +23,21 @@ Language: en
 # Natural Causes to gain or lose money
 NaturalCauses:
 
+  # Whether Enchantments will amplify the amount of money gained or lost
+  EnchantBonus: true
+
+  # The Maximum amount of money that can be gained
+  # Set to -1 for no maximum
+  MaxIncrease: 1000
+
   # Whether Players gain money from killing entities
   KillIncrease: true
 
   # The Chance of gaining money from killing entities (out of 100)
   KillIncreaseChance: 100
+
+  # Whether Players gain money from their pets (i.e. dogs) killing entities
+  KillIncreaseIndirect: true
 
   # Whether Players gain money from fishing
   FishingIncrease: true
@@ -81,6 +91,9 @@ NaturalCauses:
       # fall: 3 - Divide By 3
       # LAVA: 5 - Divide By 5
 
+  # List of case insensitive Materials, Entity Types, Death Causes, Permissions, Player Names or Vault Groups that will not be affected by Natural Causes
+  Ignore: []
+
 
 # Interest Section
 Interest:
@@ -101,6 +114,9 @@ Interest:
 
 # Taxes Section
 Taxes:
+
+  # Whether Players have to be online for taxes to affect them
+  Online: false
 
   # The maximum amount a player can withdraw from the bank every 24 hours
   MaxWithdraw:
@@ -156,7 +172,35 @@ Taxes:
   Minimums:
     # All Economies default to this number if one is not specified
     Global: 0
-    d# Coins: 100
+      # Coins: 100
 
+  # Players need the permission "novaconomy.admin.tax.call" to call any of these, but you can also specify other permissions to call specific events.
+  #
+  # Messages support & color codes
+  #
+  # "%s" represents inputted arguments from the command, depending on their order (i.e. 1st argument, 2nd argument, etc.)
+  # Ex: "/taxevent MyEvent true true" will trigger the event with the arguments "true", "true" ; If MyEvent's Message is "&a%s &b%s", it will be displayed as "&aTrue &bTrue"
+  #
+  # Custom Events Callable by Commands
+  Events:
 
+    # Whether Events are enabled
+    Enabled: true
 
+    # EnvironmentTaxes:
+    #   name: "Environment Taxes"
+    #   permission: novaconomy.admin.tax_event # Default Permission
+    #   message: "&cYou have been taxed by the environment." # Message Broadcasted
+    #   amount: [30D, $50]
+    #   online: true # Whether the player must be online to be taxed
+    #   use_ignore: true # Whether to include the Ignore list above
+    #   ignore: [] # List of Player Names, Vault Groups, or Permissions to exempt from taxes.
+
+# Bounties Secton
+Bounties:
+
+  # Whether Bounty Claims are broadcasted to the server
+  Broadcast: true
+
+  # Whether Bounties are enabled
+  Enabled: true

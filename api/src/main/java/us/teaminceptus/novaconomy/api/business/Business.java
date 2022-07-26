@@ -23,6 +23,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 /**
  * Represents a Novaconomy Business
@@ -165,6 +166,22 @@ public final class Business implements ConfigurationSerializable {
     }
 
     /**
+     * Fetches the total stock amount of this item.
+     * @param item Item to test
+     * @return Total stock amount of this item, or 0 if item is null or not found
+     */
+    public int getTotalStock(@Nullable ItemStack item) {
+        if (item == null) return 0;
+
+        AtomicInteger count = new AtomicInteger(0);
+        List<ItemStack> items = new ArrayList<>(resources).stream().filter(i -> i.isSimilar(item)).collect(Collectors.toList());
+
+        items.forEach(i -> count.addAndGet(i.getAmount()));
+
+        return count.get();
+    }
+
+    /**
      * Whether a Resource matching this Material is in stock.
      * @param m Material to use
      * @return true if material matches an item in stock, else false
@@ -208,7 +225,16 @@ public final class Business implements ConfigurationSerializable {
     @NotNull
     public Business removeResource(@Nullable Collection<? extends ItemStack> resources) {
         if (resources == null) return this;
-        resources.forEach(i -> {
+
+        List<ItemStack> newR = new ArrayList<>();
+        for (ItemStack item : resources)
+            for (int i = 0; i < item.getAmount(); i++) {
+                ItemStack clone = item.clone();
+                clone.setAmount(1);
+                newR.add(clone);
+            }
+
+        newR.forEach(i -> {
             if (this.resources.contains(i)) {
                 int index = this.resources.indexOf(i);
                 if (this.resources.get(index).getAmount() > this.resources.get(index).getMaxStackSize()) {

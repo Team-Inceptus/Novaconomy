@@ -14,7 +14,7 @@ body:
       options:
         - Optimization
         - Compatibility
-        - API Support
+        - API Support/Hook
         - Other
     validations:
       required: true

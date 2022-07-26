@@ -31,6 +31,14 @@ public final class Price implements ConfigurationSerializable {
     }
 
     /**
+     * Constructs a Price from a Map Entry.
+     * @param entry Map Entry
+     */
+    public Price(@NotNull Map.Entry<Economy, Double> entry) {
+        this(entry.getKey(), entry.getValue());
+    }
+
+    /**
      * Fetches the Price amount.
      * @return Price Amount
      */

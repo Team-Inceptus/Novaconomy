@@ -1,5 +1,5 @@
 name: ${project.name}
-version: 1.3.0
+version: 1.4.0
 description: ${project.description}
 author: Team Inceptus
 website: ${project.url}
@@ -27,6 +27,12 @@ permissions:
 
   novaconomy.admin.delete_business:
     description: Delete businesses that aren't yours
+    default: op
+    children:
+      novaconomy.admin: true
+
+  novaconomy.admin.tax_event:
+    description: Call custom tax events
     default: op
     children:
       novaconomy.admin: true
@@ -100,6 +106,28 @@ permissions:
     default: true
     children:
       novaconomy.user: true
+  novaconomy.user.leaderboard:
+    description: Access to view the balance leaderboard
+    default: true
+    children:
+      novaconomy.user: true
+
+  # User Bounty
+  novaconomy.user.bounty:
+    description: Access to general bounty commands
+    default: true
+    children:
+      novaconomy.user: true
+  novaconomy.user.bounty.manage:
+    description: Access to create and delete a bounty
+    default: true
+    children:
+      novaconomy.user.bounty: true
+  novaconomy.user.bounty.list:
+    description: Access to list current bounties
+    default: true
+    children:
+      novaconomy.user.bounty: true
 
   # User Business
   novaconomy.user.business:

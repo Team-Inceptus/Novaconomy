@@ -10,6 +10,7 @@ import org.bukkit.block.Block;
 import org.bukkit.craftbukkit.v1_9_R2.entity.CraftPlayer;
 import org.bukkit.craftbukkit.v1_9_R2.inventory.CraftItemStack;
 import org.bukkit.entity.Player;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.material.Crops;
@@ -195,4 +196,11 @@ public final class Wrapper1_9_R2 implements Wrapper {
         return b.getState().getData() instanceof Crops;
     }
 
+    @Override
+    public void removeItem(PlayerInteractEvent e) {
+        switch (e.getHand()) {
+            case OFF_HAND: e.getPlayer().getEquipment().setItemInOffHand(null);
+            case HAND: e.getPlayer().getEquipment().setItemInMainHand(null);
+        }
+    }
 }

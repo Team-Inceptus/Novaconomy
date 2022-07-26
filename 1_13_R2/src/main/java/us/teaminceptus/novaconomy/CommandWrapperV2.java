@@ -1,6 +1,8 @@
 package us.teaminceptus.novaconomy;
 
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
@@ -10,6 +12,8 @@ import revxrsal.commands.bukkit.BukkitCommandHandler;
 import revxrsal.commands.bukkit.annotation.CommandPermission;
 import revxrsal.commands.exception.CommandErrorException;
 import us.teaminceptus.novaconomy.abstraction.CommandWrapper;
+import us.teaminceptus.novaconomy.abstraction.Wrapper;
+import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 
@@ -32,27 +36,40 @@ public final class CommandWrapperV2 implements CommandWrapper {
                 if (econ == null) throw new CommandErrorException(getMessage("error.argument.economy"));
                 return econ;
             });
-            handler.getAutoCompleter().registerParameterSuggestions(Economy.class, SuggestionProvider.of(toStringList(Economy::getName, Economy.getEconomies())));
+
+            handler.getAutoCompleter().registerParameterSuggestions(Economy.class, SuggestionProvider.of(() -> toStringList(Economy::getName, Economy.getEconomies())));
 
             handler.registerValueResolver(Material.class, ctx -> Material.matchMaterial(ctx.popForParameter()));
-            handler.getAutoCompleter().registerParameterSuggestions(Material.class, SuggestionProvider.of(toStringList(m -> m.name().toLowerCase(), Material.values())));
+            handler.getAutoCompleter().registerParameterSuggestions(Material.class, SuggestionProvider.of(() -> toStringList(m -> m.name().toLowerCase(), Material.values())));
 
             handler.registerValueResolver(Business.class, ctx -> {
                 Business b = Business.getByName(ctx.popForParameter());
                 if (b == null) throw new CommandErrorException(getMessage("error.argument.business"));
                 return b;
             });
-            handler.getAutoCompleter().registerParameterSuggestions(Business.class, SuggestionProvider.of(toStringList(Business::getName, Business.getBusinesses())));
+            handler.getAutoCompleter().registerParameterSuggestions(Business.class, SuggestionProvider.of(() -> toStringList(Business::getName, Business.getBusinesses())));
 
             handler.getAutoCompleter().registerParameterSuggestions(boolean.class, SuggestionProvider.of("true", "false"));
+
+            handler.registerValueResolver(OfflinePlayer.class, ctx -> {
+                OfflinePlayer p = Wrapper.getPlayer(ctx.popForParameter());
+                if (p == null) throw new CommandErrorException(getMessage("error.argument.player"));
+                return p;
+            });
+
+            handler.getAutoCompleter().registerParameterSuggestions(OfflinePlayer.class, SuggestionProvider.of(() -> toStringList(OfflinePlayer::getName, Bukkit.getOfflinePlayers())));
+
+            handler.getAutoCompleter().registerSuggestion("event", SuggestionProvider.of(() -> toStringList(NovaConfig.CustomTaxEvent::getIdentifier, NovaConfig.getConfiguration().getAllCustomEvents())));
 
             handler.register(this);
             new EconomyCommands(this);
             new BusinessCommands(this);
             new BankCommands(this);
+            new BountyCommands(this);
+
+            handler.registerBrigadier();
+            plugin.getLogger().info("Loaded Command Version v2 (1.13.2+)");
         }
-        handler.registerBrigadier();
-        plugin.getLogger().info("Loaded Command Version v2 (1.13.2+)");
     }
 
     private static String getMessage(String key) {
@@ -66,10 +83,6 @@ public final class CommandWrapperV2 implements CommandWrapper {
         return list;
     }
 
-    private static String get(String key) {
-        return CommandWrapper.get(key);
-    }
-
     @SafeVarargs
     private static <T> List<String> toStringList(Function<T, String> func, T... elements) {
         return toStringList(func, Arrays.asList(elements));
@@ -78,7 +91,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
     // Lamp Impl
 
     private boolean economyCount(Player p) {
-        if (Economy.getEconomies().size() < 1) {
+        if (Economy.getEconomies().isEmpty()) {
             p.sendMessage(getMessage("error.economy.none"));
             return false;
         }
@@ -123,6 +136,12 @@ public final class CommandWrapperV2 implements CommandWrapper {
     @CommandPermission("novaconomy.admin.reloadconfig")
     public void reloadConfig(CommandSender sender) { CommandWrapper.super.reloadConfig(sender); }
 
+    @Command({"createcheck", "check", "ncheck", "nc", "novacheck"})
+    @Usage("/createcheck <economy> <amount>")
+    @Description("Create a Novaconomy Check redeemable for a certain amount of money")
+    @CommandPermission("novaconomy.user.check")
+    public void createCheck(Player p, @Range(min = 1) double amount, Economy econ) { CommandWrapper.super.createCheck(p, econ, amount, true); }
+
     @Override
     @Command({"exchange", "convertgui", "convgui", "exch"})
     @Usage("/exchange <amount>")
@@ -131,11 +150,19 @@ public final class CommandWrapperV2 implements CommandWrapper {
     public void exchange(Player p, @Range(min = 0.01) double amount) { CommandWrapper.super.exchange(p, amount); }
 
     @Override
-    @Command({"overridelanguages", "overl", "overridemessages"})
-    @Usage("/overridelanguages")
-    @Description("Load Default Messages from Plugin JAR")
-    @CommandPermission("novaconomy.admin.reloadconfig")
-    public void loadLanguages(CommandSender sender) { CommandWrapper.super.loadLanguages(sender); }
+    @Command({"balanceleaderboard", "bleaderboard", "nleaderboard", "bl", "nl", "novaleaderboard", "balboard", "novaboard"})
+    @Usage("/balanceleaderboard [<economy>]")
+    @Description("View the top 15 balances of all or certain economies")
+    @CommandPermission("novaconomy.user.leaderboard")
+    public void balanceLeaderboard(Player p, @Optional Economy econ) { CommandWrapper.super.balanceLeaderboard(p, econ); }
+
+    @Override
+    @Command({"taxevent", "customtax"})
+    @Usage("/taxevent <event> [<self>]")
+    @Description("Call a Custom Tax Event from the configuration")
+    @CommandPermission("novaconomy.admin.tax_event")
+    @AutoComplete("@event *")
+    public void callEvent(CommandSender sender, String event, @Default("true") boolean self) { CommandWrapper.super.callEvent(sender, event, self); }
 
     @Command({"business", "nbusiness"})
     @Description("Manage your Novaconomy Business")
@@ -226,7 +253,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
         @Subcommand({"create", "make"})
         @AutoComplete("* @symbol *")
         @CommandPermission("novaconomy.economy.create")
-        public void createEconomy(CommandSender sender, String name, String symbol,Material icon, @Default("1") @Range(min = 0.01, max = Integer.MAX_VALUE) double scale, @Named("natural-increase") @Default("true") boolean naturalIncrease) {
+        public void createEconomy(CommandSender sender, String name, String symbol, Material icon, @Default("1") @Range(min = 0.01, max = Integer.MAX_VALUE) double scale, @Named("natural-increase") @Default("true") boolean naturalIncrease) {
             wrapper.createEconomy(sender, name, symbol.contains("\"") || symbol.contains("'") ? symbol.charAt(1) : symbol.charAt(0), icon, scale, naturalIncrease);
         }
 
@@ -263,12 +290,44 @@ public final class CommandWrapperV2 implements CommandWrapper {
 
         @Subcommand({"check", "createcheck"})
         @CommandPermission("novaconomy.economy.check")
-        public void createCheck(Player p, Economy economy, @Named("amount") @Range(min = 1) double amount) { wrapper.createCheck(p, economy, amount); }
+        public void createCheck(Player p, Economy economy, @Named("amount") @Range(min = 1) double amount) { wrapper.createCheck(p, economy, amount, false); }
 
         @Subcommand("info")
         @CommandPermission("novaconomy.economy.info")
         public void info(CommandSender sender, Economy economy) {
             wrapper.economyInfo(sender, economy);
         }
+    }
+
+    @Command({"bounty", "novabounty", "nbounty"})
+    @Description("Manage your Novaconomy Bounties")
+    @Usage("/bounty <owned|create|delete|self> <args...>")
+    private static final class BountyCommands {
+
+        private final CommandWrapperV2 wrapper;
+
+        BountyCommands(CommandWrapperV2 wrapper) {
+            this.wrapper = wrapper;
+
+            BukkitCommandHandler handler = CommandWrapperV2.handler;
+            handler.register(this);
+        }
+
+        @Subcommand({"create", "add"})
+        @CommandPermission("novaconomy.user.bounty.manage")
+        public void createBounty(Player p, OfflinePlayer target, Economy economy, @Range(min = 0.01) double amount) { wrapper.createBounty(p, target, economy, amount); }
+
+        @Subcommand({"delete", "remove"})
+        @CommandPermission("novaconomy.user.bounty.manage")
+        public void removeBounty(Player p, OfflinePlayer target) { wrapper.deleteBounty(p, target); }
+
+        @Subcommand("owned")
+        @CommandPermission("novaconomy.user.bounty.list")
+        public void listOwnedBounties(Player p) { wrapper.listBounties(p, true); }
+
+        @Subcommand("self")
+        @CommandPermission("novaconomy.user.bounty.list")
+        public void listSelfBounties(Player p) { wrapper.listBounties(p, false); }
+
     }
 }

@@ -2,11 +2,13 @@ package us.teaminceptus.novaconomy;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.Server;
 import org.bukkit.command.*;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import us.teaminceptus.novaconomy.abstraction.CommandWrapper;
+import us.teaminceptus.novaconomy.abstraction.Wrapper;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.economy.Economy;
@@ -25,7 +27,7 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
     public CommandWrapperV1(Plugin plugin) {
         this.plugin = plugin;
         loadCommands();
-        plugin.getLogger().info("Loaded Command Version v1 (1.8 - 1.13)");
+        plugin.getLogger().info("Loaded Command Version v1 (1.8+)");
     }
 
     private PluginCommand createCommand(String name, String... aliases) {
@@ -56,7 +58,7 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
     }
 
     private boolean economyCount(CommandSender sender) {
-        if (Economy.getEconomies().size() < 1) {
+        if (Economy.getEconomies().isEmpty()) {
             sender.sendMessage(getMessage("error.economy.none"));
             return false;
         }
@@ -85,10 +87,6 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
             }
             case "novaconomyreload": {
                 reloadConfig(sender);
-                break;
-            }
-            case "overridelanguages": {
-                loadLanguages(sender);
                 break;
             }
             case "convert": {
@@ -369,7 +367,7 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
 
                             double amount = Double.parseDouble(args[2]);
 
-                            createCheck(p, econ, amount);
+                            createCheck(p, econ, amount, false);
                         } catch (NumberFormatException e) {
                             sender.sendMessage(getMessage("error.argument.amount"));
                             return false;
@@ -570,7 +568,161 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                             return false;
                         }
                     }
+                    default: {
+                        sender.sendMessage(getMessage("error.argument"));
+                        return false;
+                    }
                 }
+            }
+            case "createcheck": {
+                if (!(sender instanceof Player)) return false;
+                Player p = (Player) sender;
+
+                try {
+                    if (args.length < 1) {
+                        sender.sendMessage(getMessage("error.argument.economy"));
+                        return false;
+                    }
+                    Economy econ = Economy.getEconomy(args[0]);
+
+                    if (econ == null) {
+                        sender.sendMessage(getMessage("error.economy.inexistent"));
+                        return false;
+                    }
+
+                    if (args.length < 2) {
+                        sender.sendMessage(getMessage("error.argument.amount"));
+                        return false;
+                    }
+
+                    double amount = Double.parseDouble(args[1]);
+                    if (amount < 1) {
+                        p.sendMessage(getMessage("error.argument.amount"));
+                        return false;
+                    }
+
+                    createCheck(p, econ, amount, true);
+                    return true;
+                } catch (NumberFormatException e) {
+                    sender.sendMessage(getMessage("error.argument.amount"));
+                    return false;
+                }
+            }
+            case "balanceleaderboard": {
+                if (!(sender instanceof Player)) return false;
+                Player p = (Player) sender;
+
+                Economy econ = null;
+                if (args.length > 0) {
+                    econ = Economy.getEconomy(args[0]);
+                    if (econ == null) {
+                        sender.sendMessage(getMessage("error.economy.inexistent"));
+                        return false;
+                    }
+                }
+
+                balanceLeaderboard(p, econ);
+                break;
+            }
+            case "bounty": {
+                if (!(sender instanceof Player)) return false;
+                Player p = (Player) sender;
+
+                if (args.length < 1) {
+                    sender.sendMessage(getMessage("error.argument"));
+                    return false;
+                }
+
+                try {
+                    switch (args[0].toLowerCase()) {
+                        case "add":
+                        case "create": {
+                            if (args.length < 2) {
+                                sender.sendMessage(getMessage("error.argument.player"));
+                                return false;
+                            }
+
+                            OfflinePlayer target = Wrapper.getPlayer(args[1]);
+
+                            if (p == null) {
+                                sender.sendMessage(getMessage("error.argument.player"));
+                                return false;
+                            }
+
+                            if (args.length < 3) {
+                                sender.sendMessage(getMessage("error.argument.economy"));
+                                return false;
+                            }
+
+                            Economy econ = Economy.getEconomy(args[2]);
+
+                            if (econ == null) {
+                                sender.sendMessage(getMessage("error.economy.inexistent"));
+                                return false;
+                            }
+
+                            if (args.length < 4) {
+                                sender.sendMessage(getMessage("error.argument.amount"));
+                                return false;
+                            }
+
+                            double amount = Double.parseDouble(args[3]);
+
+                            if (amount <= 0) {
+                                sender.sendMessage(getMessage("error.argument.amount"));
+                                return false;
+                            }
+
+                            createBounty(p, target, econ, amount);
+                            break;
+                        }
+                        case "remove":
+                        case "delete": {
+                            if (args.length < 2) {
+                                sender.sendMessage(getMessage("error.argument.player"));
+                                return false;
+                            }
+
+                            OfflinePlayer target = Wrapper.getPlayer(args[1]);
+
+                            if (p == null) {
+                                sender.sendMessage(getMessage("error.argument.player"));
+                                return false;
+                            }
+
+                            deleteBounty(p, target);
+                            break;
+                        }
+                        case "self": {
+                            listBounties(p, false);
+                            break;
+                        }
+                        case "owned": {
+                            listBounties(p, true);
+                            break;
+                        }
+                        default: {
+                            sender.sendMessage(getMessage("error.argument"));
+                            return false;
+                        }
+                    }
+                } catch (NumberFormatException e) {
+                    sender.sendMessage(getMessage("error.argument.amount"));
+                    return false;
+                }
+            }
+            case "taxevent": {
+                if (args.length < 1) {
+                    sender.sendMessage(getMessage("error.argument.event"));
+                    return false;
+                }
+
+                boolean self = true;
+                if (args.length > 2) self = Boolean.parseBoolean(args[1]);
+
+                callEvent(sender, args[0], self);
+
+                break;
             }
             default: {
                 sender.sendMessage(getMessage("error.argument"));
@@ -585,10 +737,6 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
         List<String> suggestions = new ArrayList<>();
 
         switch (cmd.getName()) {
-            case "ehelp": {
-                suggestions.addAll(plugin.getDescription().getCommands().keySet());
-                return suggestions;
-            }
             case "convert": {
                 switch (args.length) {
                     case 1: {
@@ -625,7 +773,6 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                         else if (args[0].equalsIgnoreCase("create"))
                             suggestions.addAll(Arrays.asList("$", "%", "Q", "L", "P", "A", "a", "r", "R", "C", "c", "D", "d", "W", "w", "B", "b"));
 
-
                         return suggestions;
                     }
                     case 4: {
@@ -648,11 +795,11 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
             case "pay": {
                 switch (args.length) {
                     case 1:
-                        suggestions.addAll(Bukkit.getOnlinePlayers().stream().map(Player::getName).collect(Collectors.toList()));
+                        suggestions.addAll(Bukkit.getOnlinePlayers().stream().map(Player::getName).collect(Collectors.toSet()));
                         return suggestions;
 
                     case 2:
-                        suggestions.addAll(Economy.getEconomies().stream().map(Economy::getName).collect(Collectors.toList()));
+                        suggestions.addAll(Economy.getEconomies().stream().map(Economy::getName).collect(Collectors.toSet()));
                         return suggestions;
                 }
 
@@ -666,10 +813,10 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                         return suggestions;
 
                     case 2:
-                        if (args[0].equalsIgnoreCase("query")) for (Business b : Business.getBusinesses()) suggestions.add(b.getName());
+                        if (args[0].equalsIgnoreCase("query")) suggestions.addAll(Business.getBusinesses().stream().map(Business::getName).collect(Collectors.toSet()));
                         return suggestions;
                     case 3:
-                        if (args[0].equalsIgnoreCase("create")) for (Material m : Material.values()) suggestions.add(m.name().toLowerCase());
+                        if (args[0].equalsIgnoreCase("create")) suggestions.addAll(Arrays.stream(Material.values()).map(Material::name).map(String::toLowerCase).collect(Collectors.toSet()));
                         return suggestions;
                 }
                 return suggestions;
@@ -683,11 +830,25 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                         if (args[0].equalsIgnoreCase("deposit") || args[0].equalsIgnoreCase("withdraw"))
                             suggestions.addAll(Economy.getEconomies().stream().map(Economy::getName).collect(Collectors.toList()));
                 }
-
                 return suggestions;
             }
-            default: return suggestions;
+            case "createcheck": case "balanceleaderboard": {
+                if (args.length == 1) suggestions.addAll(Economy.getEconomies().stream().map(Economy::getName).collect(Collectors.toSet()));
+                return suggestions;
+            }
+            case "taxevent": {
+                switch (args.length) {
+                    case 1:
+                        suggestions.addAll(NovaConfig.getConfiguration().getAllCustomEvents().stream().map(NovaConfig.CustomTaxEvent::getIdentifier).collect(Collectors.toSet()));
+                        return suggestions;
+                    case 2:
+                        suggestions.addAll(Arrays.asList("true", "false"));
+                        return suggestions;
+                }
+            }
         }
+
+        return suggestions;
     }
 
     @Override

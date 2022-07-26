@@ -11,6 +11,7 @@ import org.bukkit.block.Block;
 import org.bukkit.block.data.Ageable;
 import org.bukkit.craftbukkit.v1_18_R1.inventory.CraftItemStack;
 import org.bukkit.entity.Player;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import us.teaminceptus.novaconomy.abstraction.Wrapper;
@@ -155,4 +156,8 @@ public final class Wrapper1_18_R1 implements Wrapper {
         return b.getBlockData() instanceof Ageable;
     }
 
+    @Override
+    public void removeItem(PlayerInteractEvent e) {
+        e.getPlayer().getEquipment().setItem(e.getHand(), null);
+    }
 }

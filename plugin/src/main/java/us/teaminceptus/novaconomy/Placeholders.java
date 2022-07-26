@@ -8,14 +8,19 @@ import us.teaminceptus.novaconomy.api.NovaPlayer;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
 class Placeholders extends PlaceholderExpansion {
 
-    Placeholders() {
+    private final Novaconomy plugin;
+
+    Placeholders(Novaconomy plugin) {
+        this.plugin = plugin;
         register();
     }
 
@@ -49,6 +54,13 @@ class Placeholders extends PlaceholderExpansion {
             Economy.getEconomies().forEach(e -> bal.addAndGet(new NovaPlayer(p).getBalance(e)));
             return String.valueOf(bal.get());
         });
+        put("last_withdrawal_timestamp", p -> String.valueOf(new NovaPlayer(p).getLastBankWithdraw().getTimestamp()));
+        put("last_withdrawal_amount", p -> String.valueOf(new NovaPlayer(p).getLastBankWithdraw().getAmount()));
+        put("last_withdrawal_economy", p -> String.valueOf(new NovaPlayer(p).getLastBankWithdraw().getEconomy().getName()));
+
+        put("last_deposit_timestamp", p -> String.valueOf(new NovaPlayer(p).getLastBankDeposit().getTimestamp()));
+        put("last_deposit_amount", p -> String.valueOf(new NovaPlayer(p).getLastBankDeposit().getAmount()));
+        put("last_deposit_economy", p -> String.valueOf(new NovaPlayer(p).getLastBankDeposit().getEconomy().getName()));
     }};
 
     private static final Map<String, BiFunction<OfflinePlayer, String, String>> OFFLINE_ARG_PH = new HashMap<String, BiFunction<OfflinePlayer, String, String>>() {{
@@ -56,11 +68,15 @@ class Placeholders extends PlaceholderExpansion {
             if (Economy.exists(arg)) return String.valueOf(new NovaPlayer(p).getBalance(Economy.getEconomy(arg)));
             return "0";
         });
+        put("donated", (p, arg) -> {
+            if (Economy.exists(arg)) return String.valueOf(new NovaPlayer(p).getDonatedAmount(Economy.getEconomy(arg)));
+            return "0";
+        });
     }};
 
     @Override
     public @NotNull String getIdentifier() {
-        return "novaconomy";
+        return plugin.getName().toLowerCase();
     }
 
     @Override
@@ -70,10 +86,19 @@ class Placeholders extends PlaceholderExpansion {
 
     @Override
     public @NotNull String getVersion() {
-        return "1.0.0";
+        return "1.0.1";
     }
 
     // Impl
+
+    @Override
+    public List<String> getPlaceholders() {
+        List<String> ph = new ArrayList<>();
+        ph.addAll(OFFLINE_PH.keySet());
+        ph.addAll(OFFLINE_ARG_PH.keySet());
+
+        return ph;
+    }
 
     @Override
     public String onRequest(OfflinePlayer p, String arg) {

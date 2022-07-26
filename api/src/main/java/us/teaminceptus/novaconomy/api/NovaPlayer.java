@@ -1,5 +1,6 @@
 package us.teaminceptus.novaconomy.api;
 
+import com.google.common.util.concurrent.AtomicDouble;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.ConfigurationSection;
@@ -9,9 +10,11 @@ import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.api.bank.Bank;
+import us.teaminceptus.novaconomy.api.bounty.Bounty;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.events.player.PlayerDepositEvent;
 import us.teaminceptus.novaconomy.api.events.player.PlayerWithdrawEvent;
+import us.teaminceptus.novaconomy.api.util.Price;
 import us.teaminceptus.novaconomy.api.util.Product;
 
 import java.io.File;
@@ -37,15 +40,15 @@ public final class NovaPlayer {
      * @param p Player to use
      * @throws IllegalArgumentException if p is null
      */
-    public NovaPlayer(OfflinePlayer p) throws IllegalArgumentException {
-        if (p == null) throw new IllegalArgumentException("player is null");
+    public NovaPlayer(@NotNull OfflinePlayer p) throws IllegalArgumentException {
+        if (p == null) throw new IllegalArgumentException("Player is null");
         this.p = p;
 
-        if (!(NovaConfig.getPlayerDirectory().exists())) NovaConfig.getPlayerDirectory().mkdir();
+        if (!NovaConfig.getPlayerDirectory().exists()) NovaConfig.getPlayerDirectory().mkdir();
 
         this.pFile = new File(NovaConfig.getPlayerDirectory(), p.getUniqueId() + ".yml");
 
-        if (!(pFile.exists())) try {
+        if (!pFile.exists()) try {
             pFile.createNewFile();
         } catch (IOException e) {
             NovaConfig.getLogger().severe(e.getMessage());
@@ -64,6 +67,13 @@ public final class NovaPlayer {
     public FileConfiguration getPlayerConfig() {
         return pConfig;
     }
+
+    /**
+     * Fetch the File this player's information is stored in
+     * @return {@link File} representing the file {@link #getPlayerConfig()} is stored in
+     */
+    @NotNull
+    public File getPlayerFile() { return pFile; }
 
     /**
      * Fetch the player this class belongs to
@@ -149,6 +159,25 @@ public final class NovaPlayer {
         if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
 
         setBalance(econ, getBalance(econ) - remove);
+    }
+
+    /**
+     * Removes a Price from the balance of this player
+     * @param price Price to remove
+     */
+    public void remove(@NotNull Price price) {
+        if (price == null) throw new IllegalArgumentException("Price cannot be null");
+        remove(price.getEconomy(), price.getAmount());
+    }
+
+    /**
+     * Adds a Price to the balance of this player
+     * @param price Price to use
+     * @throws IllegalArgumentException if price is null
+     */
+    public void add(@NotNull Price price) throws IllegalArgumentException {
+        if (price == null) throw new IllegalArgumentException("Price cannot be null");
+        add(price.getEconomy(), price.getAmount());
     }
 
     /**
@@ -266,6 +295,16 @@ public final class NovaPlayer {
     }
 
     /**
+     * Fetches and adds all of the balances from {@link #getBalance(Economy)}.
+     * @return total balance of all economies
+     */
+    public double getTotalBalance() {
+        AtomicDouble bal = new AtomicDouble(0);
+        Economy.getEconomies().forEach(e -> bal.addAndGet(getBalance(e)));
+        return bal.get();
+    }
+
+    /**
      * Fetches a sorted list of the top donators of this Economy to the global bank, descending.
      * @param econ Economy donated to
      * @return List of top donators
@@ -281,6 +320,100 @@ public final class NovaPlayer {
      */
     public boolean isOnline() {
         return p.isOnline();
+    }
+
+    /**
+     * Fetches all of the Bounties this player owns.
+     * @return List of Owned Bounties
+     */
+    @NotNull
+    public Map<OfflinePlayer, Bounty> getOwnedBounties() {
+        Map<OfflinePlayer, Bounty> bounties = new HashMap<>();
+        pConfig.getConfigurationSection("bounties").getValues(false).forEach((k, v) -> bounties.put(Bukkit.getOfflinePlayer(UUID.fromString(k)), (Bounty) v));
+        return bounties;
+    }
+
+    /**
+     * Fetches a sorted list of Bounties this player owns, descending, by their amount.
+     * @param max Amount of top bounties to fetch
+     * @return List of top bounties
+     */
+    @NotNull
+    public List<Map.Entry<OfflinePlayer, Bounty>> getTopBounties(int max) {
+        List<Map.Entry<OfflinePlayer, Bounty>> bounties = new ArrayList<>(
+                getOwnedBounties()
+                        .entrySet()
+                        .stream()
+                        .sorted(Collections.reverseOrder(Map.Entry.comparingByValue()))
+                        .collect(Collectors.toList()));
+        return max <= 0 ? bounties : bounties.subList(0, Math.min(max, bounties.size()));
+    }
+
+    /**
+     * Fetches a sorted list of Bounties this player owns, descending, by their amount, with no maximum.
+     * @return List of top bounties
+     */
+    @NotNull
+    public List<Map.Entry<OfflinePlayer, Bounty>> getTopBounties() {
+        return getTopBounties(-1);
+    }
+
+    /**
+     * Fetches a sorted list of Bounties that have this player as their target, descending, by their amount.
+     * @param max Amount of top bounties to fetch
+     * @return List of top bounties
+     */
+    @NotNull
+    public List<Bounty> getTopSelfBounties(int max) {
+        List<Bounty> bounties = new ArrayList<>(
+                getSelfBounties()
+                        .stream()
+                        .sorted(Collections.reverseOrder(Comparator.comparingDouble(Bounty::getAmount)))
+                        .collect(Collectors.toList()));
+        return max <= 0 ? bounties : bounties.subList(0, Math.min(max, bounties.size()));
+    }
+
+    /**
+     * Fetches a sorted list of Bounties that have this player as their target, descending, by their amount, with no maximum.
+     * @return List of top bounties
+     */
+    @NotNull
+    public List<Bounty> getTopSelfBounties() {
+        return getTopSelfBounties(-1);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof NovaPlayer)) return false;
+        NovaPlayer that = (NovaPlayer) o;
+        if (that == this) return true;
+
+        return p.getUniqueId().equals(that.p.getUniqueId());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(p.getUniqueId());
+    }
+
+    /**
+     * Fetches all of the Bounties that this player is the target of.
+     * @return List of Bounties wanted by this player
+     */
+    @NotNull
+    public Set<Bounty> getSelfBounties() {
+        Set<Bounty> bounties = new HashSet<>();
+
+        for (OfflinePlayer p : Bukkit.getOfflinePlayers()) {
+            NovaPlayer np = new NovaPlayer(p);
+            bounties.addAll(np.getOwnedBounties()
+                    .values()
+                    .stream()
+                    .filter(b -> b.getOwner().getUniqueId().equals(p.getUniqueId()))
+                    .collect(Collectors.toSet()));
+        }
+
+        return bounties;
     }
 
     private void reloadValues() {
@@ -315,5 +448,10 @@ public final class NovaPlayer {
 
         // Donated
         if (!pConfig.isConfigurationSection("donated")) pConfig.createSection("donated");
+
+        // Bounties
+        if (!pConfig.isConfigurationSection("bounties")) pConfig.createSection("bounties");
+
+        save();
     }
 }

@@ -1,11 +1,14 @@
 package us.teaminceptus.novaconomy.abstraction;
 
+import com.cryptomorin.xseries.XSound;
 import org.apache.commons.lang.WordUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
@@ -14,18 +17,24 @@ import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.ChatPaginator;
 import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.NovaPlayer;
 import us.teaminceptus.novaconomy.api.bank.Bank;
+import us.teaminceptus.novaconomy.api.bounty.Bounty;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.economy.Economy;
+import us.teaminceptus.novaconomy.api.events.CommandTaxEvent;
 import us.teaminceptus.novaconomy.api.events.player.PlayerPayEvent;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public interface CommandWrapper {
@@ -43,8 +52,11 @@ public interface CommandWrapper {
         put("pay", Arrays.asList("givemoney", "novapay", "econpay", "givebal"));
         put("novaconomyreload", Arrays.asList("novareload", "nreload", "econreload"));
         put("business", Arrays.asList("nbusiness"));
-        put("overridelanguages", Arrays.asList("overl", "overridemessages"));
         put("nbank", Arrays.asList("bank", "globalbank", "gbank"));
+        put("createcheck", Arrays.asList("nc", "check", "novacheck", "ncheck"));
+        put("balanceleaderboard", Arrays.asList("bleaderboard", "nleaderboard", "bl", "nl", "novaleaderboard", "balboard", "novaboard"));
+        put("bounty", Arrays.asList("novabounty", "nbounty"));
+        put("taxevent", Arrays.asList("customtax"));
     }};
 
     Map<String, String> COMMAND_PERMISSION = new HashMap<String, String>() {{
@@ -55,7 +67,10 @@ public interface CommandWrapper {
        put("pay", "novaconomy.user.pay");
        put("novaconomyreload", "novaconomy.admin.reloadconfig");
        put("business", "novaconomy.user.business");
-       put("overridelanguages", "novaconomy.admin.reloadconfig");
+       put("createcheck", "novaconomy.user.check");
+       put("balanceleaderboard", "novaconomy.user.leaderboard");
+       put("bounty", "novaconomy.user.bounty");
+       put("taxevent", "novaconomy.admin.tax_event");
     }};
 
     Map<String, String> COMMAND_DESCRIPTION = new HashMap<String, String>() {{
@@ -67,8 +82,11 @@ public interface CommandWrapper {
        put("pay", "Pay another user");
        put("novaconomyreload", "Reload Novaconomy Configuration");
        put("business", "Manage your Novaconomy Business");
-       put("overridelanguages", "Load Default /Messages from Plugin JAR");
        put("nbank", "Interact with the Global Novaconomy Bank");
+       put("createcheck", "Create a Novaconomy Check redeemable for a certain amount of money");
+       put("balanceleaderboard", "View the top 15 balances in all or certain economies");
+       put("bounty", "Manage your Novaconomy Bounties");
+       put("taxevent", "Call a Custom Tax Event from the configuration");
     }};
 
     Map<String, String> COMMAND_USAGE = new HashMap<String, String>() {{
@@ -81,6 +99,10 @@ public interface CommandWrapper {
        put("novaconomyreload", "/novareload");
        put("business", "/business <create|delete|edit|stock> <args...>");
        put("overridelanguages", "/overridelanguages");
+       put("createcheck", "/createcheck <economy> <amount>");
+       put("balanceleaderboard", "/balanceleaderboard [<economy>]");
+       put("bounty", "/bounty <owned|create|delete|self> <args...>");
+       put("taxevent", "/taxevent <event> [<self>]");
     }};
 
     static Plugin getPlugin() {
@@ -140,7 +162,6 @@ public interface CommandWrapper {
         plugin.reloadConfig();
         NovaConfig.loadConfig();
         NovaConfig.reloadRunnables();
-        NovaConfig.reloadLanguages();
         NovaConfig.loadFunctionalityFile();
         YamlConfiguration.loadConfiguration(new File(plugin.getDataFolder(), "businesses.yml"));
         YamlConfiguration.loadConfiguration(new File(plugin.getDataFolder(), "global.yml"));
@@ -180,7 +201,7 @@ public interface CommandWrapper {
 
         np.remove(from, amount);
         np.add(to, toBal);
-        p.sendMessage(String.format(getMessage("success.economy.convert"), amount + "" + from.getSymbol(), Math.floor(toBal * 100) / 100) + "" + to.getSymbol());
+        p.sendMessage(String.format(getMessage("success.economy.convert"), String.format("%,.2f", amount) + from.getSymbol(), String.format("%,.2f", Math.floor(toBal * 100) / 100)) + to.getSymbol());
     }
 
     default void exchange(Player p, double amount) {
@@ -262,11 +283,17 @@ public interface CommandWrapper {
             return;
         }
 
-        for (Economy econ : Economy.getEconomies())
-            if (econ.getName().equals(name)) {
+        for (Economy econ : Economy.getEconomies()) {
+            if (econ.getName().equalsIgnoreCase(name)) {
                 sender.sendMessage(getMessage("error.economy.exists"));
                 return;
             }
+
+            if (econ.getSymbol() == symbol) {
+                sender.sendMessage(getMessage("error.economy.symbol_exists"));
+                return;
+            }
+        }
 
         if (scale <= 0) {
             sender.sendMessage(getMessage("error.argument.scale"));
@@ -305,13 +332,13 @@ public interface CommandWrapper {
 
         NovaPlayer nt = new NovaPlayer(target);
 
-        if (add <= 0) {
+        if (add < 0) {
             sender.sendMessage(getMessage("error.argument.amount"));
             return;
         }
 
         nt.add(econ, add);
-        sender.sendMessage(String.format(getMessage("success.economy.addbalance"),  econ.getSymbol() + "", add, target.getName()));
+        sender.sendMessage(String.format(getMessage("success.economy.addbalance"),  String.format("%,.2f", add), econ.getSymbol(), target.getName()));
     }
 
     default void removeBalance(CommandSender sender, Economy econ, Player target, double remove) {
@@ -322,23 +349,13 @@ public interface CommandWrapper {
 
         NovaPlayer nt = new NovaPlayer(target);
 
-        if (remove <= 0) {
+        if (remove < 0) {
             sender.sendMessage(getMessage("error.argument.amount"));
             return;
         }
 
         nt.remove(econ, remove);
-        sender.sendMessage(String.format(getMessage("success.economy.removebalance"),  econ.getSymbol() + "", remove, target.getName()));
-    }
-
-    default void loadLanguages(CommandSender sender) {
-        if (!sender.hasPermission("novaconomy.admin.reloadconfig")) {
-            sender.sendMessage(getMessage("error.permission"));
-            return;
-        }
-
-        NovaConfig.reloadLanguages(true);
-        sender.sendMessage(getMessage("success.override_languages"));
+        sender.sendMessage(String.format(getMessage("success.economy.removebalance"),  String.format("%,.2f", remove), econ.getSymbol(), target.getName()));
     }
 
     default void setBalance(CommandSender sender, Economy econ, Player target, double balance) {
@@ -355,7 +372,7 @@ public interface CommandWrapper {
         }
 
         nt.setBalance(econ, balance);
-        sender.sendMessage(String.format(getMessage("success.economy.setbalance"),  econ.getSymbol() + "", balance, target.getName()));
+        sender.sendMessage(String.format(getMessage("success.economy.setbalance"), target.getName(), econ.getName(), String.format("%,.2f", balance) + econ.getSymbol()));
     }
 
     default void interest(CommandSender sender, boolean enabled) {
@@ -369,8 +386,57 @@ public interface CommandWrapper {
         sender.sendMessage(getMessage(key));
     }
 
-    default void createCheck(Player p, Economy econ, double amount) {
-        if (!p.hasPermission("novaconomy.economy.check")) {
+    default void balanceLeaderboard(Player p, Economy econ ) {
+        if (!p.hasPermission("novaconomy.user.leaderboard")) {
+            p.sendMessage(getMessage("error.permission"));
+            return;
+        }
+
+        if (Economy.getEconomies().isEmpty()) {
+            p.sendMessage(getMessage("error.economy.none"));
+            return;
+        }
+
+        boolean economy = econ != null;
+
+        Function<NovaPlayer, Double> func = economy ? np -> np.getBalance(econ) : NovaPlayer::getTotalBalance;
+        List<NovaPlayer> players = new ArrayList<>(Arrays.stream(Bukkit.getOfflinePlayers()).map(NovaPlayer::new).sorted(Comparator.comparing(func).reversed()).collect(Collectors.toList())).subList(0, Math.min(Bukkit.getOfflinePlayers().length, 15));
+
+        Inventory inv = wr.genGUI(54, get("constants.balance_leaderboard"), new Wrapper.CancelHolder());
+
+        ItemStack type = new ItemStack(Material.PAPER);
+        ItemMeta tMeta = type.getItemMeta();
+        if (economy) {
+            type.setType(econ.getIconType());
+            tMeta.setDisplayName(ChatColor.AQUA + econ.getName());
+        } else tMeta.setDisplayName(ChatColor.AQUA + get("constants.all_economies"));
+        type.setItemMeta(tMeta);
+        type = wr.setID(type, "economy:wheel:leaderboard");
+        type = wr.setNBT(type, "economy", economy ? econ.getName() : "all");
+
+        inv.setItem(13, type);
+
+        for (int i = 0; i < players.size(); i++) {
+            int index = i == 0 ? 22 : i + 27;
+            if (index > 34) index = index + 2;
+            int level = i + 1;
+            ChatColor color = new ChatColor[]{ChatColor.GOLD, ChatColor.GRAY, ChatColor.YELLOW, ChatColor.AQUA}[Math.min(i, 3)];
+
+            NovaPlayer np = players.get(i);
+            ItemStack head = createPlayerHead(np.getPlayer());
+            ItemMeta meta = head.getItemMeta();
+            meta.setDisplayName(color + "#" + level + " - " + (np.isOnline() && np.getOnlinePlayer().getDisplayName() != null ? np.getOnlinePlayer().getDisplayName() : np.getPlayer().getName()));
+            meta.setLore(Collections.singletonList(ChatColor.GOLD + String.format("%,.2f", economy ? np.getBalance(econ) : np.getTotalBalance()) + (economy ? econ.getSymbol() : "")));
+            head.setItemMeta(meta);
+
+            inv.setItem(index, head);
+        }
+        p.openInventory(inv);
+        XSound.BLOCK_NOTE_BLOCK_PLING.play(p, 3F, 1F);
+    }
+
+    default void createCheck(Player p, Economy econ, double amount, boolean take) {
+        if ((take && !p.hasPermission("novaconomy.user.check")) || (!take && !p.hasPermission("novaconomy.economy.check"))) {
             p.sendMessage(getMessage("error.permission.argument"));
             return;
         }
@@ -380,7 +446,15 @@ public interface CommandWrapper {
             return;
         }
 
+        NovaPlayer nt = new NovaPlayer(p);
+        if (take && nt.getBalance(econ) < amount) {
+            p.sendMessage(String.format(getMessage("error.economy.invalid_amount"), get("constants.purchase")));
+            return;
+        }
+
         p.getInventory().addItem(wr.createCheck(econ, amount));
+        if (take) nt.remove(econ, amount);
+
         p.sendMessage(String.format(getMessage("success.economy.check"), amount + "", econ.getSymbol() + ""));
     }
 
@@ -468,7 +542,7 @@ public interface CommandWrapper {
     }
 
     default void addProduct(Player p, double price) {
-        if (Economy.getEconomies().size() < 1) {
+        if (Economy.getEconomies().isEmpty()) {
             p.sendMessage(getMessage("error.economy.none"));
             return;
         }
@@ -485,6 +559,11 @@ public interface CommandWrapper {
         }
 
         if (p.getItemInHand() == null) {
+            p.sendMessage(getMessage("error.argument.item"));
+            return;
+        }
+
+        if (p.getItemInHand().getType() == Material.AIR) {
             p.sendMessage(getMessage("error.argument.item"));
             return;
         }
@@ -555,7 +634,7 @@ public interface CommandWrapper {
     }
 
     default void addResource(Player p) {
-        if (Economy.getEconomies().size() < 1) {
+        if (Economy.getEconomies().isEmpty()) {
             p.sendMessage(getMessage("error.economy.none"));
             return;
         }
@@ -586,7 +665,7 @@ public interface CommandWrapper {
     }
 
     default void removeProduct(Player p) {
-        if (Economy.getEconomies().size() < 1) {
+        if (Economy.getEconomies().isEmpty()) {
             p.sendMessage(getMessage("error.economy.none"));
             return;
         }
@@ -603,7 +682,7 @@ public interface CommandWrapper {
         }
 
 
-        Inventory inv = wr.genGUI(54, get("constants.business.remove_product"));
+        Inventory inv = wr.genGUI(54, get("constants.business.remove_product"), new Wrapper.CancelHolder());
         Inventory bData = wr.generateBusinessData(b);
 
         List<ItemStack> items =  Arrays.stream(bData.getContents())
@@ -618,7 +697,7 @@ public interface CommandWrapper {
     }
 
     default void bankBalances(Player p) {
-        if (Economy.getEconomies().size() < 1) {
+        if (Economy.getEconomies().isEmpty()) {
             p.sendMessage(getMessage("error.economy.none"));
             return;
         }
@@ -671,6 +750,214 @@ public interface CommandWrapper {
         p.sendMessage(String.format(getMessage("success.bank.withdraw"), amount + "" + econ.getSymbol(), econ.getName()));
     }
 
+    default void createBounty(Player p, OfflinePlayer target, Economy econ, double amount) {
+        if (!p.hasPermission("novaconomy.user.bounty.manage")) {
+            p.sendMessage(getMessage("error.permission.argument"));
+            return;
+        }
+
+        if (!NovaConfig.getConfiguration().hasBounties()) {
+            p.sendMessage(getMessage("error.bounty.disabled"));
+            return;
+        }
+
+        if (target.getUniqueId().equals(p.getUniqueId())) {
+            p.sendMessage(getMessage("error.bounty.self"));
+            return;
+        }
+
+        if (amount <= 0) {
+            p.sendMessage(getMessage("error.argument.amount"));
+            return;
+        }
+
+        NovaPlayer np = new NovaPlayer(p);
+        if (np.getBalance(econ) < amount) {
+            p.sendMessage(String.format(getMessage("error.economy.invalid_amount"), get("constants.place_bounty")));
+            return;
+        }
+
+        try {
+            Bounty.builder().setOwner(np).setAmount(amount).setTarget(target).setEconomy(econ).build();
+            np.remove(econ, amount);
+            p.sendMessage(String.format(getMessage("success.bounty.create"), target.getName()));
+
+            if (target.isOnline() && NovaConfig.getConfiguration().hasNotifications())
+                target.getPlayer().sendMessage(String.format(getMessage("notification.bounty"), p.getDisplayName() == null ? p.getName() : p.getDisplayName(), String.format("%,.2f", amount) + econ.getSymbol()));
+        } catch (UnsupportedOperationException e) {
+            p.sendMessage(String.format(getMessage("error.bounty.exists"), target.isOnline() && target.getPlayer().getDisplayName() == null ? target.getName() : target.getPlayer().getDisplayName()));
+        }
+    }
+
+    default void deleteBounty(Player p, OfflinePlayer target) {
+        if (!p.hasPermission("novaconomy.user.bounty.manage")) {
+            p.sendMessage(getMessage("error.permission.argument"));
+            return;
+        }
+
+        if (!NovaConfig.getConfiguration().hasBounties()) {
+            p.sendMessage(getMessage("error.bounty.disabled"));
+            return;
+        }
+
+        if (target.getUniqueId().equals(p.getUniqueId())) {
+            p.sendMessage(getMessage("error.bounty.self"));
+            return;
+        }
+
+        NovaPlayer np = new NovaPlayer(p);
+        FileConfiguration config = np.getPlayerConfig();
+        File f = np.getPlayerFile();
+        String key = "bounties." + target.getUniqueId();
+
+        if (!config.isSet(key)) {
+            p.sendMessage(getMessage("error.bounty.inexistent"));
+            return;
+        }
+
+        Bounty b = (Bounty) config.get(key);
+        np.add(b.getEconomy(), b.getAmount());
+
+        config.set(key, null);
+        try { config.save(f); } catch (IOException e) { Bukkit.getLogger().severe(e.getMessage()); }
+        p.sendMessage(String.format(getMessage("success.bounty.delete"), target.getName()));
+    }
+
+    default void listBounties(Player p, boolean owned) {
+        if (!p.hasPermission("novaconomy.user.bounty.list")) {
+            p.sendMessage(getMessage("error.permission.argument"));
+            return;
+        }
+
+        if (!NovaConfig.getConfiguration().hasBounties()) {
+            p.sendMessage(getMessage("error.bounty.disabled"));
+            return;
+        }
+
+        NovaPlayer np = new NovaPlayer(p);
+        FileConfiguration config = np.getPlayerConfig();
+
+        if (owned && !config.isSet("bounties")) {
+            p.sendMessage(getMessage("error.bounty.none"));
+            return;
+        }
+
+        if (!owned && np.getSelfBounties().isEmpty()) {
+            p.sendMessage(getMessage("error.bounty.none.self"));
+            return;
+        }
+
+        Inventory inv = wr.genGUI(36, owned ? get("constants.bounty.all") : get("constants.bounty.self"), new Wrapper.CancelHolder());
+        for (int i = 10; i < 12; i++) inv.setItem(i, wr.getGUIBackground());
+        for (int i = 15; i < 17; i++) inv.setItem(i, wr.getGUIBackground());
+
+
+        ItemStack head = createPlayerHead(p);
+        ItemMeta meta = head.getItemMeta();
+        meta.setDisplayName(ChatColor.AQUA + (p.getDisplayName() == null ? p.getName() : p.getDisplayName()));
+        if (owned) meta.setLore(Collections.singletonList(String.format(get("constants.bounty.amount"), np.getOwnedBounties().size())));
+        head.setItemMeta(meta);
+        inv.setItem(4, head);
+
+        Function<Integer, Integer> fIndex = i -> i > 2 ? i + 16 : i + 12;
+
+        if (owned) {
+            List<Map.Entry<OfflinePlayer, Bounty>> bounties = np.getTopBounties(10);
+            for (int i = 0; i < bounties.size(); i++) {
+                Map.Entry<OfflinePlayer, Bounty> bounty = bounties.get(i);
+                int index = fIndex.apply(i);
+
+                OfflinePlayer target = bounty.getKey();
+                Bounty b = bounty.getValue();
+
+                ItemStack bHead = createPlayerHead(target);
+                SkullMeta bMeta = (SkullMeta) bHead.getItemMeta();
+                bMeta.setOwner(target.getName());
+                bMeta.setDisplayName(ChatColor.AQUA + (target.isOnline() && target.getPlayer().getDisplayName() == null ? target.getPlayer().getDisplayName() : target.getName()));
+                bMeta.setLore(Collections.singletonList(ChatColor.YELLOW + String.format("%,.2f", b.getAmount()) + b.getEconomy().getSymbol()));
+                bHead.setItemMeta(bMeta);
+                inv.setItem(index, bHead);
+            }
+        } else {
+            List<Bounty> bounties = np.getTopSelfBounties(10);
+            for (int i = 0; i < bounties.size(); i++) {
+                int index = fIndex.apply(i);
+
+                Bounty b = bounties.get(i);
+
+                ItemStack bMap = new ItemStack(Material.MAP);
+                ItemMeta bMeta = bMap.getItemMeta();
+                bMeta.setDisplayName(ChatColor.YELLOW + String.format("%,.2f", b.getAmount()) + b.getEconomy().getSymbol());
+                bMap.setItemMeta(bMeta);
+
+                inv.setItem(index, bMap);
+            }
+        }
+
+        p.openInventory(inv);
+        XSound.BLOCK_NOTE_BLOCK_PLING.play(p, 3F, 1F);
+    }
+
+    default void callEvent(CommandSender sender, String event, boolean self) {
+        if (!sender.hasPermission("novaconomy.admin.tax_event")) {
+            sender.sendMessage(getMessage("error.permission.argument"));
+            return;
+        }
+
+        if (!NovaConfig.getConfiguration().hasCustomTaxes()) {
+            sender.sendMessage(getMessage("error.tax.custom_disabled"));
+            return;
+        }
+
+        Optional<NovaConfig.CustomTaxEvent> customO = NovaConfig.getConfiguration().getAllCustomEvents()
+                .stream()
+                .filter(e -> e.getIdentifier().equals(event))
+                .findFirst();
+
+        if (!customO.isPresent()) {
+            sender.sendMessage(getMessage("error.tax.custom_inexistent"));
+            return;
+        }
+
+        CommandTaxEvent eventC = new CommandTaxEvent(customO.get());
+        Bukkit.getPluginManager().callEvent(eventC);
+        if (eventC.isCancelled()) return;
+
+        NovaConfig.CustomTaxEvent custom = eventC.getEvent();
+
+        if (!sender.hasPermission(custom.getPermission())) {
+            sender.sendMessage(getMessage("error.permission.tax_event"));
+            return;
+        }
+
+        List<UUID> players = (custom.isOnline() ? new ArrayList<>(Bukkit.getOnlinePlayers()) : Arrays.asList(Bukkit.getOfflinePlayers()))
+                .stream()
+                .filter(p -> !NovaConfig.getConfiguration().isIgnoredTax(p, custom))
+                .map(OfflinePlayer::getUniqueId)
+                .collect(Collectors.toList());
+
+        if (sender instanceof Player) {
+            UUID uid = ((Player) sender).getUniqueId();
+            if (self) { if (!players.contains(uid)) players.add(uid); }
+            else players.remove(uid);
+        }
+
+        for (UUID uid : players)
+            new BukkitRunnable() {
+                @Override
+                public void run() {
+                    OfflinePlayer p = Bukkit.getOfflinePlayer(uid);
+                    NovaPlayer np = new NovaPlayer(p);
+                    custom.getPrices().forEach(np::remove);
+
+                    if (p.isOnline())
+                        p.getPlayer().sendMessage(ChatColor.translateAlternateColorCodes('&', custom.getMessage()));
+                }
+            }.runTask(NovaConfig.getPlugin());
+
+        sender.sendMessage(String.format(getMessage("success.tax.custom_event"), custom.getName()));
+    }
+
     // Util Classes & Other Static Methods
 
     class ReturnItemsHolder implements InventoryHolder {
@@ -715,6 +1002,14 @@ public interface CommandWrapper {
         } catch (Exception e) {
             throw new IllegalStateException("Wrapper not Found: " + getServerVersion());
         }
+    }
+
+    static ItemStack createPlayerHead(OfflinePlayer p) {
+        ItemStack head = new ItemStack(wr.isLegacy() ? Material.matchMaterial("SKULL_ITEM") : Material.matchMaterial("PLAYER_HEAD"));
+        SkullMeta meta = (SkullMeta) head.getItemMeta();
+        meta.setOwner(p.getName());
+        head.setItemMeta(meta);
+        return head;
     }
 
     static List<Inventory> getBankBalanceGUI() {
