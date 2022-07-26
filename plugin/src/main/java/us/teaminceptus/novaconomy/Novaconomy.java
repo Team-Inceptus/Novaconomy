@@ -579,8 +579,8 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		public void click(InventoryClickEvent e) {
 			Inventory inv = e.getClickedInventory();
 			if (inv == null) return;
-			if (inv instanceof PlayerInventory) return;
 			if (inv.getHolder() != null && inv.getHolder() instanceof Wrapper.CancelHolder) e.setCancelled(true);
+			if (inv instanceof PlayerInventory) return;
 
 			if (e.getCurrentItem() == null) return;
 			ItemStack item = e.getCurrentItem();
@@ -625,10 +625,11 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		public void move(InventoryMoveItemEvent e) {
 			if (e.getItem() == null) return;
 			ItemStack item = e.getItem();
-			Inventory inv = e.getInitiator();
+			Inventory inv = e.getDestination();
+			if (inv instanceof PlayerInventory) return;
+			if (inv.getHolder() != null && inv.getHolder() instanceof Wrapper.CancelHolder) e.setCancelled(true);
 
 			if (item.isSimilar(w.getGUIBackground())) e.setCancelled(true);
-			if (inv.getHolder() != null && inv.getHolder() instanceof Wrapper.CancelHolder) e.setCancelled(true);
 
 			String id = w.getNBTString(item, "id");
 			if (id.length() > 0 && CLICK_ITEMS.containsKey(id)) e.setCancelled(true);
