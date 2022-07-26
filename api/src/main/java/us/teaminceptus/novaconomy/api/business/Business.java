@@ -235,13 +235,14 @@ public final class Business implements ConfigurationSerializable {
             }
 
         newR.forEach(i -> {
-            if (this.resources.contains(i)) {
-                int index = this.resources.indexOf(i);
-                if (this.resources.get(index).getAmount() > this.resources.get(index).getMaxStackSize()) {
-                    ItemStack clone = i.clone();
-                    clone.setAmount(clone.getAmount() - 1);
-                    this.resources.set(index, clone);
-                } else this.resources.remove(i);
+            Iterator<ItemStack> it = this.resources.iterator();
+            while (it.hasNext()) {
+                ItemStack item = it.next();
+                if (item.isSimilar(i)) {
+                    if (item.getAmount() > i.getAmount()) item.setAmount(item.getAmount() - i.getAmount());
+                    else it.remove();
+                    break;
+                }
             }
         });
         saveBusiness();
