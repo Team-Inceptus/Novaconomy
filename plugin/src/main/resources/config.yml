@@ -178,9 +178,6 @@ Taxes:
   #
   # Messages support & color codes
   #
-  # "%s" represents inputted arguments from the command, depending on their order (i.e. 1st argument, 2nd argument, etc.)
-  # Ex: "/taxevent MyEvent true true" will trigger the event with the arguments "true", "true" ; If MyEvent's Message is "&a%s &b%s", it will be displayed as "&aTrue &bTrue"
-  #
   # Custom Events Callable by Commands
   Events:
 
