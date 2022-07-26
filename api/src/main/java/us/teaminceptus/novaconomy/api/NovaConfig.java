@@ -6,13 +6,15 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.Plugin;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.api.economy.Economy;
+import us.teaminceptus.novaconomy.api.util.Price;
 
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.*;
 import java.util.logging.Logger;
 
 /**
@@ -247,6 +249,8 @@ public interface NovaConfig  {
             if (taxes.isSet(id) && !taxes.isDouble(id) && !taxes.isInt(id)) taxes.set(id, null);
         }
 
+        if (!taxes.isConfigurationSection("Events")) taxes.createSection("Events");
+
         if (!config.isConfigurationSection("Bounties")) config.createSection("Bounties");
         if (!config.isBoolean("Bounties.Enabled")) config.set("Bounties.Enabled", true);
         if (!config.isBoolean("Bounties.Broadcast")) config.set("Bounties.Broadcast", true);
@@ -254,6 +258,179 @@ public interface NovaConfig  {
         try { config.save(f); } catch (IOException e) { getPlugin().getLogger().severe(e.getMessage()); }
 
         return config;
+    }
+
+    /**
+     * Represents a Custom Tax Event in the configuration
+     */
+    final class CustomTaxEvent {
+
+        private final String identifier;
+        private String name;
+        private String permission;
+        private boolean online;
+        private List<Price> prices;
+        private boolean usingIgnore;
+        private String message;
+
+        private List<String> ignore;
+
+        /**
+         * Constructs a CustomTaxEvent.
+         * @param identifier The identifier of the event as the key in the configuration.
+         * @param name The name of the event.
+         * @param prices Prices that will be deducted from the player.
+         * @param permission The permission required to call this event.
+         * @param message The message that will be sent to the player.
+         * @param usingIgnore Whether the event is including the default ignore list.
+         * @param ignore The list of Permissions, Players or Groups that are not affected.
+         * @param online Whether the event is only called when the player is online.
+         */
+        public CustomTaxEvent(String identifier, String name, List<Price> prices, String permission, String message, boolean usingIgnore, List<String> ignore, boolean online) {
+            this.identifier = identifier;
+            this.name = name;
+            this.prices = prices;
+            this.permission = permission;
+            this.usingIgnore = usingIgnore;
+            this.ignore = ignore;
+            this.online = online;
+            this.message = message;
+        }
+
+        /**
+         * Fetches the identifier of the event stored in the configuration.
+         * @return Event ID
+         */
+        public String getIdentifier() {
+            return identifier;
+        }
+
+        /**
+         * Gets the name of the event.
+         * @return The name of the event.
+         */
+        @NotNull
+        public String getName() {
+            return name;
+        }
+
+        /**
+         * Gets the permission required to call this event.
+         * @return The permission required to call this event.
+         */
+        @NotNull
+        public String getPermission() {
+            return permission;
+        }
+
+        /**
+         * Whether the Player has to be online to be affected.
+         * @return true if online mode, else false
+         */
+        public boolean isOnline() {
+            return online;
+        }
+
+        /**
+         * Gets a list of Prices that the player will be deducted from.
+         * @return Prices that the player will pay
+         */
+        @NotNull
+        public List<Price> getPrices() {
+            return prices;
+        }
+
+        /**
+         * Whether this Event is including the default event list in {@link #getIgnoring()}.
+         * @return true if using ignore, else false
+         */
+        public boolean isUsingIgnore() {
+            return usingIgnore;
+        }
+
+        /**
+         * Gets all of the Permissions, Players or Groups that are not affected.
+         * @return A list of Permissions, Players or Groups that are not affected.
+         */
+        @NotNull
+        public List<String> getIgnoring() {
+            return ignore;
+        }
+
+        /**
+         * Fetches the message sent to the player.
+         * @return The message sent to the player.
+         */
+        @NotNull
+        public String getMessage() {
+            return message;
+        }
+
+        /**
+         * Sets the message sent to the player.
+         * @param message Message sent
+         * @throws IllegalArgumentException if message is null
+         */
+        public void setMessage(@NotNull String message) throws IllegalArgumentException {
+            if (message == null) throw new IllegalArgumentException("Message cannot be null");
+            this.message = message;
+        }
+
+        /**
+         * Sets the name of this event.
+         * @param name Name of event
+         * @throws IllegalArgumentException if name is null
+         */
+        public void setName(@NotNull String name) throws IllegalArgumentException {
+            if (name == null) throw new IllegalArgumentException("Name cannot be null");
+            this.name = name;
+        }
+
+        /**
+         * Sets the permission required to call this event.
+         * @param permission Permission required to call this event.
+         * @throws IllegalArgumentException if permission is null
+         */
+        public void setPermission(String permission) throws IllegalArgumentException {
+            if (permission == null) throw new IllegalArgumentException("Permission cannot be null");
+            this.permission = permission;
+        }
+
+        /**
+         * Sets whether the Player has to be online to be affected.
+         * @param online true if online mode, else false
+         */
+        public void setOnline(boolean online) {
+            this.online = online;
+        }
+
+        /**
+         * Sets the list of Prices that the player will be deducted from.
+         * @param prices Prices that the player will pay
+         * @throws IllegalArgumentException if price collection is null
+         */
+        public void setPrices(@NotNull Collection<? extends Price> prices) throws IllegalArgumentException {
+            if (prices == null) throw new IllegalArgumentException("Prices cannot be null");
+            this.prices = new ArrayList<>(prices);
+        }
+
+        /**
+         * Sets whether this Event is including the default event list in {@link #getIgnoring()}.
+         * @param usingIgnore true if using ignore, else false
+         */
+        public void setUsingIgnore(boolean usingIgnore) {
+            this.usingIgnore = usingIgnore;
+        }
+
+        /**
+         * Sets the list of Permissions, Players or Groups that are not affected.
+         * @param ignore A Collection of Permissions, Players or Groups that are not affected.
+         * @throws IllegalArgumentException if ignore collection is null
+         */
+        public void setIgnore(@NotNull Collection<? extends String> ignore) throws IllegalArgumentException {
+            if (ignore == null) throw new IllegalArgumentException("Ignore List cannot be null");
+            this.ignore = new ArrayList<>(ignore);
+        }
     }
 
     // Impl
@@ -529,7 +706,7 @@ public interface NovaConfig  {
      * Whether Bounties are enabled.
      * @return true if enabled, else false
      */
-    boolean areBountiesEnabled();
+    boolean hasBounties();
 
     /**
      * Sets whether Bounties are enabled.
@@ -549,4 +726,27 @@ public interface NovaConfig  {
      */
     void setBroadcastingBounties(boolean broadcast);
 
+    /**
+     * Fetches all of the Custom Tax Events in the configuration.
+     * @return Custom Tax Events
+     */
+    @NotNull
+    Set<CustomTaxEvent> getAllCustomEvents();
+
+    /**
+     * Tests if this Player is ignored
+     * @param p Player to test against
+     * @param event Optional CustomTaxEvent to test against
+     * @return true if they are ignored, else false
+     */
+    boolean isIgnoredTax(@NotNull OfflinePlayer p, @Nullable CustomTaxEvent event);
+
+    /**
+     * Tests if this Player is ignored
+     * @param p Player to test against
+     * @return true if they are ignored, else false
+     */
+    default boolean isIgnoredTax(OfflinePlayer p) {
+        return isIgnoredTax(p, null);
+    }
 }
