@@ -188,6 +188,12 @@
             <id>nms-repo</id>
             <name>NMS Repository</name>
             <url>https://repo.codemc.org/repository/nms/</url>
+            <releases>
+                <updatePolicy>never</updatePolicy>
+            </releases>
+            <snapshots>
+                <updatePolicy>never</updatePolicy>
+            </snapshots>
         </repository>
         <repository>
             <id>jeff-media-public</id>
