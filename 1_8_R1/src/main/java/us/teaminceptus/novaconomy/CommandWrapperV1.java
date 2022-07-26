@@ -711,6 +711,19 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                     return false;
                 }
             }
+            case "taxevent": {
+                if (args.length < 1) {
+                    sender.sendMessage(getMessage("error.argument.event"));
+                    return false;
+                }
+
+                boolean self = true;
+                if (args.length > 2) self = Boolean.parseBoolean(args[1]);
+
+                callEvent(sender, args[0], self);
+
+                break;
+            }
             default: {
                 sender.sendMessage(getMessage("error.argument"));
                 return false;
@@ -822,6 +835,16 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
             case "createcheck": case "balanceleaderboard": {
                 if (args.length == 1) suggestions.addAll(Economy.getEconomies().stream().map(Economy::getName).collect(Collectors.toSet()));
                 return suggestions;
+            }
+            case "taxevent": {
+                switch (args.length) {
+                    case 1:
+                        suggestions.addAll(NovaConfig.getConfiguration().getAllCustomEvents().stream().map(NovaConfig.CustomTaxEvent::getIdentifier).collect(Collectors.toSet()));
+                        return suggestions;
+                    case 2:
+                        suggestions.addAll(Arrays.asList("true", "false"));
+                        return suggestions;
+                }
             }
         }
 

@@ -19,6 +19,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.ChatPaginator;
 import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.NovaConfig;
@@ -27,6 +28,7 @@ import us.teaminceptus.novaconomy.api.bank.Bank;
 import us.teaminceptus.novaconomy.api.bounty.Bounty;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.economy.Economy;
+import us.teaminceptus.novaconomy.api.events.CommandTaxEvent;
 import us.teaminceptus.novaconomy.api.events.player.PlayerPayEvent;
 
 import java.io.File;
@@ -54,6 +56,7 @@ public interface CommandWrapper {
         put("createcheck", Arrays.asList("nc", "check", "novacheck", "ncheck"));
         put("balanceleaderboard", Arrays.asList("bleaderboard", "nleaderboard", "bl", "nl", "novaleaderboard", "balboard", "novaboard"));
         put("bounty", Arrays.asList("novabounty", "nbounty"));
+        put("taxevent", Arrays.asList("customtax"));
     }};
 
     Map<String, String> COMMAND_PERMISSION = new HashMap<String, String>() {{
@@ -67,6 +70,7 @@ public interface CommandWrapper {
        put("createcheck", "novaconomy.user.check");
        put("balanceleaderboard", "novaconomy.user.leaderboard");
        put("bounty", "novaconomy.user.bounty");
+       put("taxevent", "novaconomy.admin.tax_event");
     }};
 
     Map<String, String> COMMAND_DESCRIPTION = new HashMap<String, String>() {{
@@ -82,6 +86,7 @@ public interface CommandWrapper {
        put("createcheck", "Create a Novaconomy Check redeemable for a certain amount of money");
        put("balanceleaderboard", "View the top 15 balances in all or certain economies");
        put("bounty", "Manage your Novaconomy Bounties");
+       put("taxevent", "Call a Custom Tax Event from the configuration");
     }};
 
     Map<String, String> COMMAND_USAGE = new HashMap<String, String>() {{
@@ -97,6 +102,7 @@ public interface CommandWrapper {
        put("createcheck", "/createcheck <economy> <amount>");
        put("balanceleaderboard", "/balanceleaderboard [<economy>]");
        put("bounty", "/bounty <owned|create|delete|self> <args...>");
+       put("taxevent", "/taxevent <event> [<self>]");
     }};
 
     static Plugin getPlugin() {
@@ -277,11 +283,17 @@ public interface CommandWrapper {
             return;
         }
 
-        for (Economy econ : Economy.getEconomies())
-            if (econ.getName().equals(name)) {
+        for (Economy econ : Economy.getEconomies()) {
+            if (econ.getName().equalsIgnoreCase(name)) {
                 sender.sendMessage(getMessage("error.economy.exists"));
                 return;
             }
+
+            if (econ.getSymbol() == symbol) {
+                sender.sendMessage(getMessage("error.economy.symbol_exists"));
+                return;
+            }
+        }
 
         if (scale <= 0) {
             sender.sendMessage(getMessage("error.argument.scale"));
@@ -670,7 +682,7 @@ public interface CommandWrapper {
         }
 
 
-        Inventory inv = wr.genGUI(54, get("constants.business.remove_product"));
+        Inventory inv = wr.genGUI(54, get("constants.business.remove_product"), new Wrapper.CancelHolder());
         Inventory bData = wr.generateBusinessData(b);
 
         List<ItemStack> items =  Arrays.stream(bData.getContents())
@@ -744,7 +756,7 @@ public interface CommandWrapper {
             return;
         }
 
-        if (!NovaConfig.getConfiguration().areBountiesEnabled()) {
+        if (!NovaConfig.getConfiguration().hasBounties()) {
             p.sendMessage(getMessage("error.bounty.disabled"));
             return;
         }
@@ -783,7 +795,7 @@ public interface CommandWrapper {
             return;
         }
 
-        if (!NovaConfig.getConfiguration().areBountiesEnabled()) {
+        if (!NovaConfig.getConfiguration().hasBounties()) {
             p.sendMessage(getMessage("error.bounty.disabled"));
             return;
         }
@@ -817,7 +829,7 @@ public interface CommandWrapper {
             return;
         }
 
-        if (!NovaConfig.getConfiguration().areBountiesEnabled()) {
+        if (!NovaConfig.getConfiguration().hasBounties()) {
             p.sendMessage(getMessage("error.bounty.disabled"));
             return;
         }
@@ -884,6 +896,66 @@ public interface CommandWrapper {
 
         p.openInventory(inv);
         XSound.BLOCK_NOTE_BLOCK_PLING.play(p, 3F, 1F);
+    }
+
+    default void callEvent(CommandSender sender, String event, boolean self) {
+        if (!sender.hasPermission("novaconomy.admin.tax_event")) {
+            sender.sendMessage(getMessage("error.permission.argument"));
+            return;
+        }
+
+        if (!NovaConfig.getConfiguration().hasCustomTaxes()) {
+            sender.sendMessage(getMessage("error.tax.custom_disabled"));
+            return;
+        }
+
+        Optional<NovaConfig.CustomTaxEvent> customO = NovaConfig.getConfiguration().getAllCustomEvents()
+                .stream()
+                .filter(e -> e.getIdentifier().equals(event))
+                .findFirst();
+
+        if (!customO.isPresent()) {
+            sender.sendMessage(getMessage("error.tax.custom_inexistent"));
+            return;
+        }
+
+        CommandTaxEvent eventC = new CommandTaxEvent(customO.get());
+        Bukkit.getPluginManager().callEvent(eventC);
+        if (eventC.isCancelled()) return;
+
+        NovaConfig.CustomTaxEvent custom = eventC.getEvent();
+
+        if (!sender.hasPermission(custom.getPermission())) {
+            sender.sendMessage(getMessage("error.permission.tax_event"));
+            return;
+        }
+
+        List<UUID> players = (custom.isOnline() ? new ArrayList<>(Bukkit.getOnlinePlayers()) : Arrays.asList(Bukkit.getOfflinePlayers()))
+                .stream()
+                .filter(p -> !NovaConfig.getConfiguration().isIgnoredTax(p, custom))
+                .map(OfflinePlayer::getUniqueId)
+                .collect(Collectors.toList());
+
+        if (sender instanceof Player) {
+            UUID uid = ((Player) sender).getUniqueId();
+            if (self) { if (!players.contains(uid)) players.add(uid); }
+            else players.remove(uid);
+        }
+
+        for (UUID uid : players)
+            new BukkitRunnable() {
+                @Override
+                public void run() {
+                    OfflinePlayer p = Bukkit.getOfflinePlayer(uid);
+                    NovaPlayer np = new NovaPlayer(p);
+                    custom.getPrices().forEach(np::remove);
+
+                    if (p.isOnline())
+                        p.getPlayer().sendMessage(ChatColor.translateAlternateColorCodes('&', custom.getMessage()));
+                }
+            }.runTask(NovaConfig.getPlugin());
+
+        sender.sendMessage(String.format(getMessage("success.tax.custom_event"), custom.getName()));
     }
 
     // Util Classes & Other Static Methods

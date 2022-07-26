@@ -13,6 +13,7 @@ import revxrsal.commands.bukkit.annotation.CommandPermission;
 import revxrsal.commands.exception.CommandErrorException;
 import us.teaminceptus.novaconomy.abstraction.CommandWrapper;
 import us.teaminceptus.novaconomy.abstraction.Wrapper;
+import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 
@@ -57,6 +58,8 @@ public final class CommandWrapperV2 implements CommandWrapper {
             });
 
             handler.getAutoCompleter().registerParameterSuggestions(OfflinePlayer.class, SuggestionProvider.of(() -> toStringList(OfflinePlayer::getName, Bukkit.getOfflinePlayers())));
+
+            handler.getAutoCompleter().registerSuggestion("event", SuggestionProvider.of(() -> toStringList(NovaConfig.CustomTaxEvent::getIdentifier, NovaConfig.getConfiguration().getAllCustomEvents())));
 
             handler.register(this);
             new EconomyCommands(this);
@@ -153,6 +156,14 @@ public final class CommandWrapperV2 implements CommandWrapper {
     @CommandPermission("novaconomy.user.leaderboard")
     public void balanceLeaderboard(Player p, @Optional Economy econ) { CommandWrapper.super.balanceLeaderboard(p, econ); }
 
+    @Override
+    @Command({"taxevent", "customtax"})
+    @Usage("/taxevent <event> [<self>]")
+    @Description("Call a Custom Tax Event from the configuration")
+    @CommandPermission("novaconomy.admin.tax_event")
+    @AutoComplete("@event *")
+    public void callEvent(CommandSender sender, String event, @Default("true") boolean self) { CommandWrapper.super.callEvent(sender, event, self); }
+
     @Command({"business", "nbusiness"})
     @Description("Manage your Novaconomy Business")
     @Usage("/business <create|info|delete|addproduct|stock|query|...> <args...>")
@@ -242,7 +253,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
         @Subcommand({"create", "make"})
         @AutoComplete("* @symbol *")
         @CommandPermission("novaconomy.economy.create")
-        public void createEconomy(CommandSender sender, String name, String symbol,Material icon, @Default("1") @Range(min = 0.01, max = Integer.MAX_VALUE) double scale, @Named("natural-increase") @Default("true") boolean naturalIncrease) {
+        public void createEconomy(CommandSender sender, String name, String symbol, Material icon, @Default("1") @Range(min = 0.01, max = Integer.MAX_VALUE) double scale, @Named("natural-increase") @Default("true") boolean naturalIncrease) {
             wrapper.createEconomy(sender, name, symbol.contains("\"") || symbol.contains("'") ? symbol.charAt(1) : symbol.charAt(0), icon, scale, naturalIncrease);
         }
 
