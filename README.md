@@ -6,6 +6,24 @@ Novaconomy gives you the freedom to create **multiple** economies of your own ch
 With the freedom to have your own symbols, icons, conversion rates, and even interest, you'll have all you need to have a proper Economy!
 
 <h2 style="text-decoration: underline;">📓Changelog</h2>
+### 💰 1.4.0 Update: "It's High Noon"
+- New Features:
+  - Created custom Tax Events, callable from "/taxevent" command (requires `novaconomy.admin.tax_event`)
+  - Created Balance Leaderboards
+  - Created Bounties on Players
+  - Created a user /createcheck command for withdrawing money into item form
+    - /economy createcheck is an **admin command** that does not withdraw money from the player 
+- Bug Fixes:
+  - Messages are now stored in the JAR and can be deleted in the plugin folder
+  - Fixed Inventory Interaction where Items can be taken out
+  - Fixed Case-Insensitive Modifier Names and ones with Multiple Economies
+  - Optimization & Performance Improvements, Code Cleanup
+- Other Improvements:
+  - Indirect Kills for KillIncrease
+  - Enchantment Bonuses for Natural Causes
+  - Online Taxes Option for Automatic Taxes/Custom Events (Only apply taxes if players are online)
+  - Bulk Product Purchase in Businesses
+  - Exclude Entities, Death Causes, Blocks, or Materials in Natural Causes
 
 ### 🏦 1.3.0 Update: Banks, Bugs n' Betters
 - Created Banks and Taxes, a global currency holder that players can deposit and withdraw from (configurable for min/maxxes), as well as mandatory or optional taxes.
@@ -21,6 +39,9 @@ unlimited stock and set the prices to whatever you want!
 -----
 ## 🔮 Future Features
 - [x] Treasury API Hook
+- [x] Bounties
+- [x] Custom Tax Events
+- [ ] Business Investing
 - [ ] Novaconomy Stock Market
 
 -----
