@@ -103,6 +103,7 @@ public final class Bounty implements ConfigurationSerializable, Comparable<Bount
         File f = owner.getPlayerFile();
 
         if (config.getConfigurationSection("bounties") == null) config.createSection("bounties");
+        if (!config.isSet(key)) return;
         config.set(key, this);
         try { config.save(f); } catch (IOException e) { Bukkit.getLogger().severe(e.getMessage()); }
     }
@@ -222,7 +223,6 @@ public final class Bounty implements ConfigurationSerializable, Comparable<Bount
 
             return b;
         }
-
 
     }
 
