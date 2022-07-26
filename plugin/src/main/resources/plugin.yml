@@ -31,6 +31,12 @@ permissions:
     children:
       novaconomy.admin: true
 
+  novaconomy.admin.tax_event:
+    description: Call custom tax events
+    default: op
+    children:
+      novaconomy.admin: true
+
   # Economy
   novaconomy.economy:
     description: Access to all Economy actions
