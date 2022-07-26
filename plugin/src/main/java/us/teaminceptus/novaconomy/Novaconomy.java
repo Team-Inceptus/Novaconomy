@@ -1615,9 +1615,6 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		FileConfiguration config = NovaConfig.getPlugin().getConfig();
 		List<String> ignore = config.getStringList("Taxes.Ignore");
 
-		if (event.isUsingIgnore()) state.compareAndSet(false, ignore.stream().anyMatch(p.getName()::equals));
-		state.compareAndSet(false, event.getIgnoring().stream().anyMatch(p.getName()::equals));
-
 		state.compareAndSet(false, ignore.contains("OPS") && p.isOp());
 		state.compareAndSet(false, ignore.contains("NONOPS") && !p.isOp());
 
@@ -1627,9 +1624,16 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 			Set<PermissionAttachmentInfo> infos = op.getEffectivePermissions();
 			infos.forEach(perm -> state.compareAndSet(false, ignore.stream().anyMatch(perm.getPermission()::equals)));
 
-			if (hasVault()) {
-				state.compareAndSet(false, VaultChat.isInGroup(ignore, op));
-				state.compareAndSet(false, VaultChat.isInGroup(event.getIgnoring(), op));
+			if (hasVault()) state.compareAndSet(false, VaultChat.isInGroup(ignore, op));
+		}
+
+		if (event != null) {
+			if (event.isUsingIgnore()) state.compareAndSet(false, ignore.stream().anyMatch(p.getName()::equals));
+			state.compareAndSet(false, event.getIgnoring().stream().anyMatch(p.getName()::equals));
+
+			if (p.isOnline()) {
+				Player op = p.getPlayer();
+				if (hasVault()) state.compareAndSet(false, VaultChat.isInGroup(event.getIgnoring(), op));
 			}
 		}
 
