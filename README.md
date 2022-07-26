@@ -6,6 +6,7 @@ Novaconomy gives you the freedom to create **multiple** economies of your own ch
 With the freedom to have your own symbols, icons, conversion rates, and even interest, you'll have all you need to have a proper Economy!
 
 <h2 style="text-decoration: underline;">📓Changelog</h2>
+
 ### 💰 1.4.0 Update: "It's High Noon"
 - New Features:
   - Created custom Tax Events, callable from "/taxevent" command (requires `novaconomy.admin.tax_event`)
