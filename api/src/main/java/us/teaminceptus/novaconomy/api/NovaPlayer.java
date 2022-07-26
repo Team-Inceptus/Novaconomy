@@ -14,6 +14,7 @@ import us.teaminceptus.novaconomy.api.bounty.Bounty;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.events.player.PlayerDepositEvent;
 import us.teaminceptus.novaconomy.api.events.player.PlayerWithdrawEvent;
+import us.teaminceptus.novaconomy.api.util.Price;
 import us.teaminceptus.novaconomy.api.util.Product;
 
 import java.io.File;
@@ -158,6 +159,25 @@ public final class NovaPlayer {
         if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
 
         setBalance(econ, getBalance(econ) - remove);
+    }
+
+    /**
+     * Removes a Price from the balance of this player
+     * @param price Price to remove
+     */
+    public void remove(@NotNull Price price) {
+        if (price == null) throw new IllegalArgumentException("Price cannot be null");
+        remove(price.getEconomy(), price.getAmount());
+    }
+
+    /**
+     * Adds a Price to the balance of this player
+     * @param price Price to use
+     * @throws IllegalArgumentException if price is null
+     */
+    public void add(@NotNull Price price) throws IllegalArgumentException {
+        if (price == null) throw new IllegalArgumentException("Price cannot be null");
+        add(price.getEconomy(), price.getAmount());
     }
 
     /**
@@ -389,7 +409,7 @@ public final class NovaPlayer {
             bounties.addAll(np.getOwnedBounties()
                     .values()
                     .stream()
-                    .filter(b -> b.getOwner().equals(np))
+                    .filter(b -> b.getOwner().getUniqueId().equals(p.getUniqueId()))
                     .collect(Collectors.toSet()));
         }
 
