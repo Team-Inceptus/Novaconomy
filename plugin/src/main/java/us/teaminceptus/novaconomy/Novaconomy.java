@@ -37,6 +37,8 @@ import org.bukkit.permissions.PermissionAttachmentInfo;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.abstraction.CommandWrapper;
 import us.teaminceptus.novaconomy.abstraction.Wrapper;
 import us.teaminceptus.novaconomy.api.Language;
@@ -126,13 +128,12 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 			List<String> ignore = config.getStringList("NaturalCauses.Ignore");
 
 			state.set(ignore.stream().anyMatch(s::equalsIgnoreCase));
+			state.compareAndSet(false, ignore.stream().anyMatch(p.getName()::equals));
 
-			if (!state.get()) state.set(ignore.stream().anyMatch(p.getName()::equals));
-			if (!state.get()) {
-				Set<PermissionAttachmentInfo> infos = p.getEffectivePermissions();
-				infos.forEach(perm -> { if (!state.get()) state.set(ignore.stream().anyMatch(perm.getPermission()::equals)); });
-			}
-			if (!state.get() && hasVault()) state.set(VaultChat.isInGroup(ignore, p));
+			Set<PermissionAttachmentInfo> infos = p.getEffectivePermissions();
+			infos.forEach(perm -> state.compareAndSet(false, ignore.stream().anyMatch(perm.getPermission()::equals)));
+
+			if (hasVault()) state.compareAndSet(false, VaultChat.isInGroup(ignore, p));
 
 			return state.get();
 		}
@@ -280,18 +281,23 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 			if (!plugin.hasKillIncrease()) return;
 
 			final Player p;
-			if (e.getDamager() instanceof Tameable) {
-				Tameable t = (Tameable) e.getDamager();
-				if (t.isTamed() && t.getOwner() instanceof Player) p = (Player) t.getOwner();
-				else p = null;
-			} else if (e.getDamager() instanceof Player) p = (Player) e.getDamager();
-			else p = null;
+			if (e.getDamager() instanceof Player) p = (Player) e.getDamager();
+			else if (e.getDamager() instanceof Projectile && ((Projectile) e.getDamager()).getShooter() instanceof Player) p = (Player) ((Projectile) e.getDamager()).getShooter();
+			else if (e.getDamager() instanceof Tameable && ((Tameable) e.getDamager()).getOwner() instanceof Player) p = (Player) ((Tameable) e.getDamager()).getOwner();
+			else return;
 
 			if (p == null) return;
 
 			if (!(e.getEntity() instanceof LivingEntity)) return;
 			LivingEntity en = (LivingEntity) e.getEntity();
 			if (en.getHealth() - e.getFinalDamage() > 0) return;
+
+			if (en instanceof Player) {
+				Player target = (Player) en;
+				NovaPlayer nt = new NovaPlayer(target);
+
+				if (nt.getSelfBounties().stream().anyMatch(b -> b.getOwner().getUniqueId().equals(p.getUniqueId()))) return;
+			}
 
 			String id = en.getType().name();
 			if (ModifierReader.isIgnored(p, id)) return;
@@ -466,9 +472,15 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		@EventHandler
 		public void claimBounty(EntityDamageByEntityEvent e) {
 			if (!(e.getEntity() instanceof Player)) return;
-			if (!(e.getDamager() instanceof Player)) return;
-			if (!plugin.areBountiesEnabled()) return;
-			Player killer = (Player) e.getDamager();
+
+			final Player killer;
+
+			if (e.getDamager() instanceof Player) killer = (Player) e.getDamager();
+			else if (e.getDamager() instanceof Projectile && ((Projectile) e.getDamager()).getShooter() instanceof Player) killer = (Player) ((Projectile) e.getDamager()).getShooter();
+			else if (e.getDamager() instanceof Tameable && ((Tameable) e.getDamager()).getOwner() instanceof Player) killer = (Player) ((Tameable) e.getDamager()).getOwner();
+			else return;
+
+			if (!plugin.hasBounties()) return;
 			Player target = (Player) e.getEntity();
 			if (target.getHealth() - e.getFinalDamage() > 0) return;
 			NovaPlayer nt = new NovaPlayer(target);
@@ -479,24 +491,33 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 			String tName = target.getDisplayName() == null ? target.getName() : target.getDisplayName();
 			boolean broadcast = plugin.isBroadcastingBounties();
 
+			String key = "bounties." + target.getUniqueId();
 			AtomicDouble amount = new AtomicDouble(0);
 			AtomicInteger bountyCount = new AtomicInteger(0);
-			String key = "bounties." + target.getUniqueId();
+
 			for (Bounty b : nt.getSelfBounties()) {
-				NovaPlayer owner = new NovaPlayer(b.getOwner());
-				FileConfiguration config = owner.getPlayerConfig();
-				File f = owner.getPlayerFile();
-				config.set(key, null);
-				try { config.save(f); } catch (IOException err) { Bukkit.getLogger().severe(err.getMessage()); }
+				OfflinePlayer owner = b.getOwner();
 
 				if (broadcast)
-					Bukkit.broadcastMessage(String.format(get("success.bounty.broadcast"), kName, tName, String.format("%,.2f", b.getAmount())));
+					Bukkit.broadcastMessage(String.format(get("success.bounty.broadcast"), kName, tName, String.format("%,.2f", b.getAmount()) + b.getEconomy().getSymbol()));
 				else if (owner.isOnline())
-					owner.getOnlinePlayer().sendMessage(String.format(getMessage("success.bounty.redeem"), kName, tName));
+					owner.getPlayer().sendMessage(String.format(getMessage("success.bounty.redeem"), kName, tName));
 
 				amount.addAndGet(b.getAmount());
 				bountyCount.incrementAndGet();
 				nk.add(b.getEconomy(), b.getAmount());
+
+				new BukkitRunnable() {
+					@Override
+					public void run() {
+						File pFile = new File(NovaConfig.getPlayerDirectory(), owner.getUniqueId() + ".yml");
+						FileConfiguration pConfig = YamlConfiguration.loadConfiguration(pFile);
+
+						pConfig.set(key, null);
+
+						try { pConfig.save(pFile); } catch (IOException err) { NovaConfig.getLogger().severe(err.getMessage()); }
+					}
+				}.runTask(plugin);
 			}
 
 			if (!broadcast) killer.sendMessage(String.format(getMessage("success.bounty.claim"), bountyCount.get(), tName));
@@ -537,7 +558,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 						if (amount <= 0) continue;
 						lost.add(callRemoveBalanceEvent(p, econ, amount));
 					}
-			} else for (Economy econ : Economy.getEconomies()) lost.add(callRemoveBalanceEvent(p, econ, np.getBalance(econ) / divider));
+			} else for (Economy econ : Economy.getEconomies()) lost.add(callRemoveBalanceEvent(p, econ, np.getBalance(econ) / Math.max(divider, getDeathDivider())));
 			
 			if (plugin.hasNotifications()) p.sendMessage(String.join("\n", lost.toArray(new String[0])));
 		}
@@ -1348,6 +1369,8 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				.setNotifyOpsOnJoin(true)
 				.setChangelogLink("https://github.com/Team-Inceptus/Novaconomy/releases/")
 				.setUserAgent("Java 8 Novaconomy User Agent")
+				.setColoredConsoleOutput(true)
+				.setNotifyRequesters(true)
 				.checkEveryXHours(1)
 				.checkNow();
 
@@ -1524,7 +1547,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 	}
 
 	@Override
-	public boolean areBountiesEnabled() {
+	public boolean hasBounties() {
 		return config.getBoolean("Bounties.Enabled", true);
 	}
 
@@ -1543,6 +1566,74 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 	public void setBroadcastingBounties(boolean broadcast) {
 		config.set("Bounties.Broadcast", broadcast);
 		saveConfig();
+	}
+
+	@Override
+	public Set<CustomTaxEvent> getAllCustomEvents() {
+		Set<CustomTaxEvent> events = new HashSet<>();
+
+		config.getConfigurationSection("Taxes.Events").getValues(false).forEach((k, v) -> {
+			if (!(v instanceof ConfigurationSection)) return;
+			ConfigurationSection sec = (ConfigurationSection) v;
+
+			String name = sec.getString("name", k);
+			String perm = sec.getString("permission", "novaconomy.admin.tax.call");
+			String msg = sec.getString("message", "");
+			boolean ignore = sec.getBoolean("using_ignore", true);
+			boolean online = sec.getBoolean("online", false);
+			List<String> ignored = sec.getStringList("ignore");
+
+			List<Price> prices = new ArrayList<>();
+			String amount = sec.get("amount").toString();
+			if (amount.contains("[") && amount.contains("]")) {
+				amount = amount.replaceAll("[\\[\\]]", "").replace(" ", "");
+				String[] amounts = amount.split(",");
+
+				for (String s : amounts) prices.addAll(ModifierReader.readString(s)
+						.entrySet()
+						.stream()
+						.map(Price::new)
+						.collect(Collectors.toSet()));
+			} else {
+				Optional<Map.Entry<Economy, Double>> opt = ModifierReader.readString(amount)
+						.entrySet()
+						.stream()
+						.findFirst();
+				opt.ifPresent(entry -> prices.add(new Price(entry)));
+			}
+
+			events.add(new CustomTaxEvent(k, name, prices, perm, msg, ignore, ignored, online));
+		});
+
+		return events;
+	}
+
+	@Override
+	public boolean isIgnoredTax(@NotNull OfflinePlayer p, @Nullable NovaConfig.CustomTaxEvent event) {
+		AtomicBoolean state = new AtomicBoolean(false);
+
+		FileConfiguration config = NovaConfig.getPlugin().getConfig();
+		List<String> ignore = config.getStringList("Taxes.Ignore");
+
+		if (event.isUsingIgnore()) state.compareAndSet(false, ignore.stream().anyMatch(p.getName()::equals));
+		state.compareAndSet(false, event.getIgnoring().stream().anyMatch(p.getName()::equals));
+
+		state.compareAndSet(false, ignore.contains("OPS") && p.isOp());
+		state.compareAndSet(false, ignore.contains("NONOPS") && !p.isOp());
+
+		if (p.isOnline()) {
+			Player op = p.getPlayer();
+
+			Set<PermissionAttachmentInfo> infos = op.getEffectivePermissions();
+			infos.forEach(perm -> state.compareAndSet(false, ignore.stream().anyMatch(perm.getPermission()::equals)));
+
+			if (hasVault()) {
+				state.compareAndSet(false, VaultChat.isInGroup(ignore, op));
+				state.compareAndSet(false, VaultChat.isInGroup(event.getIgnoring(), op));
+			}
+		}
+
+		return state.get();
 	}
 
 	@Override
