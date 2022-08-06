@@ -2,7 +2,6 @@ package us.teaminceptus.novaconomy.abstraction;
 
 import com.google.gson.Gson;
 import net.md_5.bungee.api.chat.BaseComponent;
-import org.apache.commons.lang.Validate;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -118,8 +117,8 @@ public interface Wrapper {
     // Util
 
     default ItemStack createCheck(Economy econ, double amount) throws IllegalArgumentException {
-        Validate.notNull(econ, "Economy cannot be null");
-        Validate.isTrue(amount > 0, "Amount must be greater than 0");
+        if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
+        if (amount <= 0) throw new IllegalArgumentException("Amount must be positive");
 
         ItemStack item = new ItemStack(Material.PAPER);
         item = setID(item, "economy:check");

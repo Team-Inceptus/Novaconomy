@@ -27,9 +27,9 @@ public class Product implements ConfigurationSerializable {
      * @throws IllegalArgumentException if item or price is null
      */
     public Product(@NotNull ItemStack item, @NotNull Price price) throws IllegalArgumentException {
-        Validate.notNull(item, "Item cannot be null");
-        Validate.notNull(price, "Price cannot be null");
-        Validate.notNull(price.getEconomy(), "Price Economy cannot be null");
+        if (item == null) throw new IllegalArgumentException("Item cannot be null");
+        if (price == null) throw new IllegalArgumentException("Price cannot be null");
+        if (price.getEconomy() == null) throw new IllegalArgumentException("Price Economy cannot be null");
 
         this.item = item;
         this.price = price;
@@ -63,7 +63,7 @@ public class Product implements ConfigurationSerializable {
      */
     @NotNull
     public Product setItem(@NotNull ItemStack item) throws IllegalArgumentException {
-        Validate.notNull(item, "Item cannot be null");
+        if (item == null) throw new IllegalArgumentException("Item cannot be null");
         this.item = item;
         return this;
     }
@@ -84,6 +84,15 @@ public class Product implements ConfigurationSerializable {
     @NotNull
     public Economy getEconomy() {
         return price.getEconomy();
+    }
+
+    /**
+     * Fetches the Product's Price Amount.
+     * @return Price Amount Product is selling at
+     */
+    @NotNull
+    public double getAmount() {
+        return price.getAmount();
     }
 
     /**

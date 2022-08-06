@@ -1,10 +1,10 @@
 package us.teaminceptus.novaconomy.api.util;
 
-import org.apache.commons.lang.Validate;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.api.business.Business;
+import us.teaminceptus.novaconomy.api.economy.Economy;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -26,8 +26,20 @@ public final class BusinessProduct extends Product {
      */
     public BusinessProduct(@NotNull ItemStack item, @NotNull Price price, @NotNull Business business) throws IllegalArgumentException {
         super(item, price);
-        Validate.notNull(business, "Business cannot be null");
+        if (business == null) throw new IllegalArgumentException("Business cannot be null");
         this.business = business;
+    }
+
+    /**
+     * Constructs a Business Product.
+     * @param item Item to use
+     * @param econ Economy Price is using
+     * @param amount Amount Price is selling at
+     * @param business Business to use
+     * @throws IllegalArgumentException if item, price, or economy is null / amount is less than or greater than 0
+     */
+    public BusinessProduct(@NotNull ItemStack item, @NotNull Economy econ, double amount, @NotNull Business business) throws IllegalArgumentException{
+        this(item, new Price(econ, amount), business);
     }
 
     /**
@@ -38,7 +50,7 @@ public final class BusinessProduct extends Product {
      */
     public BusinessProduct(@NotNull Product pr, @NotNull Business business) throws IllegalArgumentException {
         super(pr == null ? null : pr.getItem(), pr == null ? null : pr.getPrice());
-        Validate.notNull(business, "Business cannot be null");
+        if (business == null) throw new IllegalArgumentException("Business cannot be null");
         this.business = business;
     }
 
@@ -56,7 +68,7 @@ public final class BusinessProduct extends Product {
      * @param business Business to set
      */
     public void setBusiness(@NotNull Business business) {
-        Validate.notNull(business, "Business cannot be null");
+        if (business == null) throw new IllegalArgumentException("Business cannot be null");
         this.business = business;
     }
 

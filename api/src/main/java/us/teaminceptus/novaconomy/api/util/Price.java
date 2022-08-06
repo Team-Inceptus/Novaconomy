@@ -1,6 +1,5 @@
 package us.teaminceptus.novaconomy.api.util;
 
-import org.apache.commons.lang.Validate;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -21,10 +20,10 @@ public final class Price implements ConfigurationSerializable {
      * Constructs a Price.
      * @param econ Economy to use
      * @param amount Price Amount
-     * @throws IllegalArgumentException if amount is less than or equal to 0
+     * @throws IllegalArgumentException if amount is not positive
      */
     public Price(@Nullable Economy econ, double amount) throws IllegalArgumentException {
-        Validate.isTrue(amount > 0, "Amount must be greater than 0");
+        if (amount <= 0) throw new IllegalArgumentException("Amount must be positive");
 
         this.econ = econ;
         this.amount = amount;
@@ -50,12 +49,13 @@ public final class Price implements ConfigurationSerializable {
      * Sets the current Price amount.
      * @param amount Price Amount
      * @return this Price, for chaining
-     * @throws IllegalArgumentException if amount is less than or equal to 0
+     * @throws IllegalArgumentException if amount is not positive
      */
+    @NotNull
     public Price setAmount(double amount) throws IllegalArgumentException {
-        Validate.isTrue(amount > 0, "Amount must be greater than 0");
-        this.amount = amount;
-        return this;
+       if (amount <= 0) throw new IllegalArgumentException("Amount must be positive");
+       this.amount = amount;
+       return this;
     }
 
     /**
@@ -86,7 +86,7 @@ public final class Price implements ConfigurationSerializable {
      */
     @NotNull
     public Price convertTo(@NotNull Economy econ) throws IllegalArgumentException {
-        Validate.notNull(econ, "Economy cannot be null");
+        if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
         return new Price(econ, econ.convertAmount(this.econ, this.amount));
     }
 
