@@ -28,6 +28,7 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.inventory.InventoryMoveItemEvent;
 import org.bukkit.event.player.PlayerFishEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -595,6 +596,19 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
 			if (!e.isCancelled()) e.setCancelled(true);
 			CLICK_ITEMS.get(id).accept(e);
+		}
+
+		@EventHandler
+		public void drag(InventoryDragEvent e) {
+			Inventory inv = e.getView().getTopInventory();
+			if (inv == null) return;
+			if (inv.getHolder() != null && inv.getHolder() instanceof Wrapper.CancelHolder) e.setCancelled(true);
+			if (inv instanceof PlayerInventory) return;
+
+			for (ItemStack item : e.getNewItems().values()) {
+				if (item == null) return;
+				if (item.isSimilar(w.getGUIBackground())) e.setCancelled(true);
+			}
 		}
 
 		@EventHandler
