@@ -30,6 +30,7 @@ import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.events.CommandTaxEvent;
 import us.teaminceptus.novaconomy.api.events.player.PlayerPayEvent;
+import us.teaminceptus.novaconomy.api.util.Price;
 
 import java.io.File;
 import java.io.IOException;
@@ -942,13 +943,17 @@ public interface CommandWrapper {
             else players.remove(uid);
         }
 
+        List<Price> prices = custom.getPrices();
+        boolean deposit = custom.isDepositing();
+
         for (UUID uid : players)
             new BukkitRunnable() {
                 @Override
                 public void run() {
                     OfflinePlayer p = Bukkit.getOfflinePlayer(uid);
                     NovaPlayer np = new NovaPlayer(p);
-                    custom.getPrices().forEach(np::remove);
+                    prices.forEach(np::remove);
+                    if (deposit) prices.forEach(Bank::addBalance);
 
                     if (p.isOnline())
                         p.getPlayer().sendMessage(ChatColor.translateAlternateColorCodes('&', custom.getMessage()));

@@ -1597,6 +1597,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 			boolean ignore = sec.getBoolean("using_ignore", true);
 			boolean online = sec.getBoolean("online", false);
 			List<String> ignored = sec.getStringList("ignore");
+			boolean deposit = sec.getBoolean("deposit", true);
 
 			List<Price> prices = new ArrayList<>();
 			String amount = sec.get("amount").toString();
@@ -1617,7 +1618,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				opt.ifPresent(entry -> prices.add(new Price(entry)));
 			}
 
-			events.add(new CustomTaxEvent(k, name, prices, perm, msg, ignore, ignored, online));
+			events.add(new CustomTaxEvent(k, name, prices, perm, msg, ignore, ignored, online, deposit));
 		});
 
 		return events;

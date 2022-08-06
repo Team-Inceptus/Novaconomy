@@ -192,6 +192,7 @@ Taxes:
     #   online: true # Whether the player must be online to be taxed
     #   use_ignore: true # Whether to include the Ignore list above
     #   ignore: [] # List of Player Names, Vault Groups, or Permissions to exempt from taxes.
+    #   deposit: true # Whether this event will deposit into the bank
 
 # Bounties Secton
 Bounties:
