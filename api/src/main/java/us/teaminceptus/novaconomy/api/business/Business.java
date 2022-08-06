@@ -1,10 +1,7 @@
 package us.teaminceptus.novaconomy.api.business;
 
 import org.apache.commons.lang.Validate;
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.Material;
-import org.bukkit.OfflinePlayer;
+import org.bukkit.*;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.bukkit.enchantments.Enchantment;
@@ -38,15 +35,20 @@ public final class Business implements ConfigurationSerializable {
 
     private final Material icon;
 
+    private Location home = null;
+
+    private final BusinessStatistics stats;
+
     private final List<BusinessProduct> products = new ArrayList<>();
 
     private final List<ItemStack> resources = new ArrayList<>();
 
-    private Business(String name, Material icon, OfflinePlayer owner, Collection<Product> products, Collection<ItemStack> resources, boolean save) {
+    private Business(String name, Material icon, OfflinePlayer owner, Collection<Product> products, Collection<ItemStack> resources, BusinessStatistics stats, boolean save) {
         this.id = UUID.nameUUIDFromBytes(name.getBytes(StandardCharsets.UTF_8));
         this.name = name;
         this.icon = icon;
         this.owner = owner;
+        this.stats = stats == null ? new BusinessStatistics(this) : stats;
         if (products != null) products.forEach(p -> this.products.add(new BusinessProduct(p, this)));
         if (resources != null) this.resources.addAll(resources);
         if (save) saveBusiness();
@@ -80,6 +82,26 @@ public final class Business implements ConfigurationSerializable {
     public UUID getUniqueId() { return this.id; }
 
     /**
+     * Fetches the Business's Home Location.
+     * @return Business Home Location
+     */
+    @Nullable
+    public Location getHome() { return this.home; }
+
+    /**
+     * Sets the Business's Home Location.
+     * @param home Business Home Location
+     */
+    public void setHome(@Nullable Location home) {
+        setHome(home, true);
+    }
+
+    private void setHome(Location home, boolean save) {
+        this.home = home;
+        if (save) saveBusiness();
+    }
+
+    /**
      * Fetches the List of Products this Business is selling.
      * @return Products to add
      */
@@ -101,6 +123,9 @@ public final class Business implements ConfigurationSerializable {
             put("icon", icon.name());
             put("resources", map);
             put("products", p);
+            put("stats", stats);
+
+            if (home != null) put("home", home);
         }};
     }
 
@@ -369,13 +394,18 @@ public final class Business implements ConfigurationSerializable {
 
         Map<String, ItemStack> res = (Map<String, ItemStack>) serial.get("resources");
         List<ItemStack> resources = new ArrayList<>(res.values());
+        Location home = serial.containsKey("home") ? (Location) serial.get("home") : null;
 
-        return new Business(
+        Business b = new Business(
                 (String) serial.get("name"),
                 Material.valueOf((String) serial.get("icon")),
                 (OfflinePlayer) serial.get("owner"),
-                (List<Product>) serial.get("products"), resources, false
+                (List<Product>) serial.get("products"), resources,
+                (BusinessStatistics) serial.get("stats"), false
         );
+        b.setHome(home, false);
+
+        return b;
     }
 
     /**
@@ -491,6 +521,14 @@ public final class Business implements ConfigurationSerializable {
     }
 
     /**
+     * Fetches the Business's Statistics.
+     * @return Business Statistics
+     */
+    public BusinessStatistics getStatistics() {
+        return new BusinessStatistics(this);
+    }
+
+    /**
      * Represents a Business Builder
      */
     public static final class Builder {
@@ -539,11 +577,11 @@ public final class Business implements ConfigurationSerializable {
          */
         @NotNull
         public Business build() throws IllegalArgumentException, UnsupportedOperationException {
-            Validate.notNull(owner, "Owner cannot be null");
+            if (owner == null) throw new IllegalArgumentException("Owner cannot be null");
             Validate.notNull(name, "Name cannot be null");
             Validate.notNull(icon, "Icon cannot be null");
 
-            Business b = new Business(name, icon, owner, null, null, false);
+            Business b = new Business(name, icon, owner, null, null, null, false);
 
             if (Business.exists(name)) throw new UnsupportedOperationException("Business already exists");
 
