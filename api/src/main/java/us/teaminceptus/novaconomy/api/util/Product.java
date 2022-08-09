@@ -10,18 +10,19 @@ import us.teaminceptus.novaconomy.api.economy.Economy;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Represents a Sellable Product
  */
-public class Product implements ConfigurationSerializable {
+public class Product implements ConfigurationSerializable, Comparable<Product> {
 
     private ItemStack item;
 
     private Price price;
 
     /**
-     * Constructs a Business Product.
+     * Constructs a Product.
      * @param item Item to sell
      * @param price Price to sell at
      * @throws IllegalArgumentException if item or price is null
@@ -36,7 +37,16 @@ public class Product implements ConfigurationSerializable {
     }
 
     /**
-     * Constructs a Business Product.
+     * Constructs a Product from a Business Product.
+     * @param product Business Product to construct from
+     * @throws NullPointerException if product is null
+     */
+    public Product(@NotNull BusinessProduct product) throws NullPointerException {
+        this(product.getItem(), product.getPrice());
+    }
+
+    /**
+     * Constructs a Product.
      * @param item Item to sell
      * @param econ Economy to sell at
      * @param amount Price at selling
@@ -125,6 +135,19 @@ public class Product implements ConfigurationSerializable {
         }};
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Product product = (Product) o;
+        return item.equals(product.item) && price.equals(product.price);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(item, price);
+    }
+
     /**
      * Deserializes a Product into a Map.
      * @param serial Serialization from {@link #serialize()}
@@ -140,5 +163,10 @@ public class Product implements ConfigurationSerializable {
         } catch (ClassCastException | NullPointerException e) {
             throw new IllegalArgumentException(e);
         }
+    }
+
+    @Override
+    public int compareTo(@NotNull Product p) {
+        return Double.compare(this.getAmount(), p.getAmount());
     }
 }

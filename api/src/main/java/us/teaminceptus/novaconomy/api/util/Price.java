@@ -7,11 +7,12 @@ import us.teaminceptus.novaconomy.api.economy.Economy;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Utility Class for creating a Price with an Economy
  */
-public final class Price implements ConfigurationSerializable {
+public final class Price implements ConfigurationSerializable, Comparable<Price> {
 
     private Economy econ;
     private double amount;
@@ -141,6 +142,27 @@ public final class Price implements ConfigurationSerializable {
     }
 
     @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Price price = (Price) o;
+        return Double.compare(price.amount, amount) == 0 && econ.equals(price.econ);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(econ, amount);
+    }
+
+    @Override
+    public String toString() {
+        return "Price{" +
+                "econ=" + econ.getUniqueId() +
+                ", amount=" + amount +
+                '}';
+    }
+
+    @Override
     public Map<String, Object> serialize() {
         return new HashMap<String, Object>() {{
             put("amount", amount);
@@ -163,5 +185,10 @@ public final class Price implements ConfigurationSerializable {
         } catch (ClassCastException | NullPointerException e) {
             throw new IllegalArgumentException(e);
         }
+    }
+
+    @Override
+    public int compareTo(@NotNull Price r) {
+        return Double.compare(amount, r.amount);
     }
 }
