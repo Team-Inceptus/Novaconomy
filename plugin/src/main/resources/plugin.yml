@@ -111,6 +111,16 @@ permissions:
     default: true
     children:
       novaconomy.user: true
+  novaconomy.user.settings:
+    description: Access to view and change settings
+    default: true
+    children:
+      novaconomy.user: true
+  novaconomy.user.rate:
+    description: Access to rate other businesses
+    default: true
+    children:
+      novaconomy.user: true
 
   # User Bounty
   novaconomy.user.bounty:
@@ -147,6 +157,11 @@ permissions:
       novaconomy.user.business: true
   novaconomy.user.business.query:
     description: Access information about other businesses
+    default: true
+    children:
+      novaconomy.user.business: true
+  novaconomy.user.business.home:
+    description: Access to teleport and set home
     default: true
     children:
       novaconomy.user.business: true
