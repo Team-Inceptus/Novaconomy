@@ -1,5 +1,6 @@
 package us.teaminceptus.novaconomy.api;
 
+import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.AtomicDouble;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
@@ -11,9 +12,12 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.api.bank.Bank;
 import us.teaminceptus.novaconomy.api.bounty.Bounty;
+import us.teaminceptus.novaconomy.api.business.Business;
+import us.teaminceptus.novaconomy.api.business.Rating;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.events.player.PlayerDepositEvent;
 import us.teaminceptus.novaconomy.api.events.player.PlayerWithdrawEvent;
+import us.teaminceptus.novaconomy.api.settings.Settings;
 import us.teaminceptus.novaconomy.api.util.Price;
 import us.teaminceptus.novaconomy.api.util.Product;
 
@@ -299,7 +303,7 @@ public final class NovaPlayer {
      * @return total balance of all economies
      */
     public double getTotalBalance() {
-        AtomicDouble bal = new AtomicDouble(0);
+        AtomicDouble bal = new AtomicDouble();
         Economy.getEconomies().forEach(e -> bal.addAndGet(getBalance(e)));
         return bal.get();
     }
@@ -409,11 +413,127 @@ public final class NovaPlayer {
             bounties.addAll(np.getOwnedBounties()
                     .values()
                     .stream()
-                    .filter(b -> b.getOwner().getUniqueId().equals(p.getUniqueId()))
+                    .filter(b -> b.isOwner(p))
                     .collect(Collectors.toSet()));
         }
 
         return bounties;
+    }
+
+    /**
+     * Fetches a Personal Setting for this Player.
+     * @param setting Setting to fetch
+     * @return Setting value, or default if not found/null
+     */
+    public boolean getSetting(@Nullable Settings.Personal setting) {
+        if (setting == null) return setting.getDefaultValue();
+        return pConfig.getBoolean("settings." + setting.name().toLowerCase(), setting.getDefaultValue());
+    }
+
+    /**
+     * Sets a Personal Setting for this Player.
+     * @param setting Setting to set
+     * @param value Value for the setting
+     * @throws IllegalArgumentException if setting is null
+     */
+    public void setSetting(@NotNull Settings.Personal setting, boolean value) throws IllegalArgumentException {
+        if (setting == null) throw new IllegalArgumentException("Setting cannot be null");
+        pConfig.set("settings." + setting.name().toLowerCase(), value);
+        save();
+    }
+
+    /**
+     * Utility setting for {@link Settings.Personal#NOTIFICATIONS}
+     * <br><br>
+     * This method is not overridden by {@link NovaConfig#hasNotifications()}.
+     * @return true if notifications are enabled, else false
+     */
+    public boolean hasNotifications() {
+        return getSetting(Settings.Personal.NOTIFICATIONS);
+    }
+
+    /**
+     * Sets the rating value for this Business.
+     * @param id ID of the Business to set the rating for
+     * @param rating Rating to set
+     * @param comment Comment on the rating
+     * @throws IllegalArgumentException if rating is less than 0 (no rating) / greater than 5, or business ID is null
+     */
+    public void setRating(@NotNull UUID id, int rating, @Nullable String comment) throws IllegalArgumentException {
+        Preconditions.checkNotNull(id, "Business ID cannot be null");
+        if (rating < 0 || rating > 5) throw new IllegalArgumentException("Rating must be between 0 and 5");
+
+        String comm = comment == null ? "" : comment;
+
+        pConfig.set("ratings." + id + ".rating", rating);
+        pConfig.set("ratings." + id + ".last_rating", System.currentTimeMillis());
+        pConfig.set("ratings." + id + ".comment", comm);
+
+        save();
+    }
+
+    /**
+     * Sets the rating for this Business by this player.
+     * @param business Business to set the rating for
+     * @param rating Rating to set
+     * @throws IllegalArgumentException if rating is less than 0 (no rating) / greater than 5, or business is null
+     */
+    public void setRating(@NotNull Business business, int rating, @Nullable String comment) throws IllegalArgumentException {
+        Preconditions.checkNotNull(business, "Business cannot be null");
+        setRating(business.getUniqueId(), rating, comment);
+    }
+
+    /**
+     * Sets the rating for this Business by this player.
+     * @param r Rating to set
+     */
+    public void setRating(@NotNull Rating r) {
+        Preconditions.checkNotNull(r, "Rating cannot be null");
+        setRating(r.getBusinessId(), r.getRatingLevel(), r.getComment());
+    }
+
+    /**
+     * Fetches a Date representation of when this Player last rated
+     * @param b Business to search
+     * @return Date of when this Player last rated, or current time if not found / Business is null
+     */
+    @NotNull
+    public Date getLastRating(@Nullable Business b) {
+        if (b == null) return new Date();
+        return new Date(pConfig.getLong("ratings." + b.getUniqueId() + ".last_rating", System.currentTimeMillis()));
+    }
+
+    /**
+     * Fetches the rating value for this Business.
+     * @param b Business to fetch the rating for
+     * @return Rating value, or 0 if not found
+     * @throws IllegalArgumentException if business is null
+     */
+    public int getRatingLevel(@NotNull Business b) throws IllegalArgumentException {
+        Preconditions.checkNotNull(b, "Business cannot be null");
+        return pConfig.getInt("ratings." + b.getUniqueId() + ".rating", 0);
+    }
+
+    /**
+     * Fetches the comment on the rating for this Business.
+     * @param b Business to fetch the comment for
+     * @return Comment on the rating, may be empty
+     * @throws IllegalArgumentException if bussiness is null
+     */
+    @NotNull
+    public String getRatingComment(@NotNull Business b) throws IllegalArgumentException {
+        Preconditions.checkNotNull(b, "Business cannot be null");
+        return pConfig.getString("ratings." + b.getUniqueId() + ".comment", "");
+    }
+
+    /**
+     * Whether this player has a rating for this Business.
+     * @param b Business to check
+     * @return true if this player has a rating for this Business, else false
+     */
+    public boolean hasRating(@Nullable Business b) {
+        if (b == null) return false;
+        return getRatingLevel(b) != 0;
     }
 
     private void reloadValues() {
@@ -446,11 +566,30 @@ public final class NovaPlayer {
                 if (!econ.isDouble("balance")) econ.set("balance", 0D);
             }
 
-        // Donated
+        // Donated & Bounties
         if (!pConfig.isConfigurationSection("donated")) pConfig.createSection("donated");
-
-        // Bounties
         if (!pConfig.isConfigurationSection("bounties")) pConfig.createSection("bounties");
+
+        // Settings
+        if (!pConfig.isConfigurationSection("settings")) pConfig.createSection("settings");
+        ConfigurationSection settings = pConfig.getConfigurationSection("settings");
+
+        for (Settings.Personal sett : Settings.Personal.values()) {
+            String key = sett.name().toLowerCase();
+            if (!settings.isBoolean(key)) settings.set(key, sett.getDefaultValue());
+        }
+
+        // Ratings
+        if (!pConfig.isConfigurationSection("ratings")) pConfig.createSection("ratings");
+        for (Business b : Business.getBusinesses()) {
+            if (!pConfig.isConfigurationSection("ratings." + b.getUniqueId()))
+                pConfig.createSection("ratings." + b.getUniqueId());
+
+            ConfigurationSection rating = pConfig.getConfigurationSection("ratings." + b.getUniqueId());
+            if (!rating.isInt("rating")) rating.set("rating", 0);
+            if (!rating.isInt("last_rating") && !rating.isLong("last_ratings")) rating.set("last_rating", 0L);
+            if (!rating.isSet("comment")) rating.set("comment", "");
+        }
 
         save();
     }
