@@ -60,6 +60,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
             handler.getAutoCompleter().registerParameterSuggestions(OfflinePlayer.class, SuggestionProvider.of(() -> toStringList(OfflinePlayer::getName, Bukkit.getOfflinePlayers())));
 
             handler.getAutoCompleter().registerSuggestion("event", SuggestionProvider.of(() -> toStringList(NovaConfig.CustomTaxEvent::getIdentifier, NovaConfig.getConfiguration().getAllCustomEvents())));
+            handler.getAutoCompleter().registerSuggestion("settings", SuggestionProvider.of(Arrays.asList("business", "personal")));
 
             handler.register(this);
             new EconomyCommands(this);
@@ -157,12 +158,26 @@ public final class CommandWrapperV2 implements CommandWrapper {
     public void balanceLeaderboard(Player p, @Optional Economy econ) { CommandWrapper.super.balanceLeaderboard(p, econ); }
 
     @Override
+    @Command({"settings", "novasettings", "nsettings"})
+    @Usage("/settings [<business|personal>]")
+    @Description("Manage your Novaconomy Settings")
+    @AutoComplete("@settings")
+    public void settings(Player p, @Optional String section) { CommandWrapper.super.settings(p, section); }
+
+    @Override
     @Command({"taxevent", "customtax"})
     @Usage("/taxevent <event> [<self>]")
     @Description("Call a Custom Tax Event from the configuration")
     @CommandPermission("novaconomy.admin.tax_event")
     @AutoComplete("@event *")
     public void callEvent(CommandSender sender, String event, @Default("true") boolean self) { CommandWrapper.super.callEvent(sender, event, self); }
+
+    @Override
+    @Command({"rate", "novarate", "nrate", "ratebusiness"})
+    @Usage("/rate <business> [<comment>]")
+    @Description("Rate a business")
+    @CommandPermission("novaconomy.user.rate")
+    public void rate(Player p, Business business, @Default("") String comment) { CommandWrapper.super.rate(p, business, comment); }
 
     @Command({"business", "nbusiness"})
     @Description("Manage your Novaconomy Business")
@@ -193,13 +208,25 @@ public final class CommandWrapperV2 implements CommandWrapper {
         public void addProduct(Player p, @Range(min = 0.01) double price) { wrapper.addProduct(p, price); }
 
         @Subcommand({"addresource", "stock", "addr", "addstock"})
+        @CommandPermission("novaconomy.user.business.resources")
         public void addResource(Player p) { wrapper.addResource(p); }
 
         @Subcommand({"removeproduct", "removep"})
         public void removeProduct(Player p) { wrapper.removeProduct(p); }
 
+        @Subcommand("home")
+        @CommandPermission("novaconomy.user.business.home")
+        public void home(Player p) { wrapper.businessHome(p, false); }
+
+        @Subcommand("sethome")
+        @CommandPermission("novaconomy.user.business.home")
+        public void setHome(Player p) { wrapper.businessHome(p, true); }
+
         @Subcommand("delete")
         public void deleteBusiness(Player p, @Default String confirm) { wrapper.deleteBusiness(p, confirm.equalsIgnoreCase("confirm")); }
+
+        @Subcommand({"statistics", "stats"})
+        public void statistics(Player p) { wrapper.statistics(p, Business.getByOwner(p));}
 
         @Subcommand("remove")
         public void removeBusiness(CommandSender sender, Business b, @Default String confirm) { wrapper.removeBusiness(sender, b, confirm.equalsIgnoreCase("confirm"));}

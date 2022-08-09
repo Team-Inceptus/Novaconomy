@@ -10,6 +10,7 @@ import org.bukkit.plugin.Plugin;
 import us.teaminceptus.novaconomy.abstraction.CommandWrapper;
 import us.teaminceptus.novaconomy.abstraction.Wrapper;
 import us.teaminceptus.novaconomy.api.NovaConfig;
+import us.teaminceptus.novaconomy.api.NovaPlayer;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 
@@ -162,7 +163,7 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                     }
 
                     if (Bukkit.getPlayer(args[0]) == null) {
-                        p.sendMessage(getMessage("error.player.offline"));
+                        p.sendMessage(getMessage("error.argument.player"));
                         return false;
                     }
 
@@ -306,7 +307,7 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                             }
 
                             if (Bukkit.getPlayer(args[2]) == null) {
-                                sender.sendMessage(getMessage("error.player.offline"));
+                                sender.sendMessage(getMessage("error.argument.player"));
                                 return false;
                             }
 
@@ -458,6 +459,12 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                     case "addresource": case "stock": case "addr": case "addstock": {
                         if (!(sender instanceof Player)) return false;
                         Player p = (Player) sender;
+
+                        if (!p.hasPermission("novaconomy.user.business.resources")) {
+                            sender.sendMessage(getMessage("error.permission.argument"));
+                            return false;
+                        }
+
                         addResource(p);
                         break;
                     }
@@ -487,6 +494,30 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                         Business b = Business.getByName(args[1]);
 
                         removeBusiness(sender, b, args.length < 3 && args[2].equalsIgnoreCase("confirm"));
+                        break;
+                    }
+                    case "home": case "sethome": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
+                        if (!p.hasPermission("novaconomy.user.business.home")) {
+                            sender.sendMessage(getMessage("error.permission.argument"));
+                            return false;
+                        }
+
+                        businessHome(p, args[0].equalsIgnoreCase("sethome"));
+                        break;
+                    }
+                    case "stats": case "statistics": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
+                        if (!Business.exists(p)) {
+                            sender.sendMessage(getMessage("error.business.not_an_owner"));
+                            return false;
+                        }
+
+                        statistics(p, Business.getByOwner(p));
                         break;
                     }
 
@@ -724,6 +755,42 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
 
                 break;
             }
+            case "settings": {
+                if (!(sender instanceof Player)) return false;
+                Player p = (Player) sender;
+
+                if (args.length < 1) settings(p, null);
+                else {
+                    if (!args[0].equalsIgnoreCase("business") && !args[0].equalsIgnoreCase("personal")) {
+                        p.sendMessage(getMessage("error.argument"));
+                        return false;
+                    }
+
+                    settings(p, args[0]);
+                }
+                break;
+            }
+            case "rate": {
+                if (!(sender instanceof Player)) return false;
+                Player p = (Player) sender;
+                NovaPlayer np = new NovaPlayer(p);
+
+                if (args.length < 1) {
+                    sender.sendMessage(getMessage("error.argument.business"));
+                    return false;
+                }
+
+                if (!Business.exists(args[0])) {
+                    sender.sendMessage(getMessage("error.business.inexistent"));
+                    return false;
+                }
+
+                Business b = Business.getByName(args[0]);
+                String comment = args.length < 2 ? "" : String.join(" ", Arrays.copyOfRange(args, 1, args.length));
+
+                rate(p, b, comment);
+                break;
+            }
             default: {
                 sender.sendMessage(getMessage("error.argument"));
                 return false;
@@ -845,6 +912,14 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                         suggestions.addAll(Arrays.asList("true", "false"));
                         return suggestions;
                 }
+            }
+            case "settings": {
+                if (args.length == 1) suggestions.addAll(Arrays.asList("business", "personal"));
+                return suggestions;
+            }
+            case "rate": {
+                if (args.length == 1) suggestions.addAll(Business.getBusinesses().stream().map(Business::getName).collect(Collectors.toSet()));
+                return suggestions;
             }
         }
 
