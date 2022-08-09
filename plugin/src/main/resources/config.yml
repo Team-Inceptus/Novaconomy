@@ -18,6 +18,9 @@ Notifications: true
 # - ja (Japanese / 日本)
 # - zh (Chinese / 中国人)
 # - it (Italian / Italiano)
+# - fi (Finnish / Suomi)
+# - nb (Norwegian Bokmål / Norsk Bokmål)
+# - sv (Swedish / Svenska)
 Language: en
 
 # Natural Causes to gain or lose money
