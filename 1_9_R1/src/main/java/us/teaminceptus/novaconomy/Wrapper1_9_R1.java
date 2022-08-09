@@ -1,9 +1,10 @@
 package us.teaminceptus.novaconomy;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import net.md_5.bungee.api.chat.BaseComponent;
-import net.minecraft.server.v1_9_R1.*;
+import net.minecraft.server.v1_9_R1.ChatComponentText;
+import net.minecraft.server.v1_9_R1.ItemStack;
+import net.minecraft.server.v1_9_R1.NBTTagCompound;
+import net.minecraft.server.v1_9_R1.PacketPlayOutChat;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.block.Block;
@@ -47,22 +48,6 @@ public final class Wrapper1_9_R1 implements Wrapper {
         novaconomy.setString(key, value);
         tag.set(ROOT, novaconomy);
         return CraftItemStack.asBukkitCopy(nmsitem);
-    }
-
-    @Override
-    public void openBook(Player p, org.bukkit.inventory.ItemStack book) {
-        int slot = p.getInventory().getHeldItemSlot();
-        org.bukkit.inventory.ItemStack old = p.getInventory().getItem(slot);
-        p.getInventory().setItem(slot, book);
-
-        ByteBuf buf = Unpooled.buffer(256);
-        buf.setByte(0, 0);
-        buf.writerIndex(1);
-
-        PacketPlayOutCustomPayload packet = new PacketPlayOutCustomPayload("MC|BOpen", new PacketDataSerializer(buf));
-        PlayerConnection pc = ((CraftPlayer) p).getHandle().playerConnection;
-        pc.sendPacket(packet);
-        p.getInventory().setItem(slot, old);
     }
 
     @Override

@@ -53,11 +53,6 @@ public final class Wrapper1_19_R1 implements Wrapper {
     }
 
     @Override
-    public void openBook(Player p, org.bukkit.inventory.ItemStack book) {
-        p.openBook(book);
-    }
-
-    @Override
     public org.bukkit.inventory.ItemStack getGUIBackground() {
         org.bukkit.inventory.ItemStack item = new org.bukkit.inventory.ItemStack(Material.BLACK_STAINED_GLASS_PANE);
         ItemMeta meta = item.getItemMeta();
