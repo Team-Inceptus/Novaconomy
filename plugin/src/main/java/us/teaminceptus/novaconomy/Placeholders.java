@@ -50,7 +50,7 @@ class Placeholders extends PlaceholderExpansion {
             return "";
         });
         put("all_balances", p -> {
-            AtomicDouble bal = new AtomicDouble(0);
+            AtomicDouble bal = new AtomicDouble();
             Economy.getEconomies().forEach(e -> bal.addAndGet(new NovaPlayer(p).getBalance(e)));
             return String.valueOf(bal.get());
         });

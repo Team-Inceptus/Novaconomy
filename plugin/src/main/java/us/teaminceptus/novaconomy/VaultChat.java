@@ -22,7 +22,7 @@ class VaultChat {
 
     static boolean isInGroup(List<String> groups, Player p) {
         if (chat == null) return false;
-        AtomicBoolean b = new AtomicBoolean(false);
+        AtomicBoolean b = new AtomicBoolean();
         for (String s : groups) {
             Pattern patt = Pattern.compile(s);
             for (String g : chat.getPlayerGroups(p)) if (patt.matcher(g).matches()) {
