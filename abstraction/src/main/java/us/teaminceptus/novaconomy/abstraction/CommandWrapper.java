@@ -37,7 +37,6 @@ import us.teaminceptus.novaconomy.api.util.Product;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.*;
 import java.util.function.BiConsumer;
@@ -1516,8 +1515,10 @@ public interface CommandWrapper {
             Method mtd = meta.getClass().getDeclaredMethod("setProfile", GameProfile.class);
             mtd.setAccessible(true);
             mtd.invoke(meta, profile);
-        } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException ex) {
-            ex.printStackTrace();
+        } catch (Exception e) {
+            Bukkit.getLogger().severe(e.getClass().getSimpleName());
+            Bukkit.getLogger().severe(e.getMessage());
+            for (StackTraceElement el : e.getStackTrace()) Bukkit.getLogger().severe(el.toString());
         }
         head.setItemMeta(meta);
         return head;
