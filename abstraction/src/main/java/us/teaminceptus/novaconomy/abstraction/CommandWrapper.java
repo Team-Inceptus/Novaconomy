@@ -1,6 +1,8 @@
 package us.teaminceptus.novaconomy.abstraction;
 
 import com.cryptomorin.xseries.XSound;
+import com.mojang.authlib.GameProfile;
+import com.mojang.authlib.properties.Property;
 import org.apache.commons.lang.WordUtils;
 import org.bukkit.*;
 import org.bukkit.command.CommandSender;
@@ -25,15 +27,18 @@ import us.teaminceptus.novaconomy.api.bank.Bank;
 import us.teaminceptus.novaconomy.api.bounty.Bounty;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.business.BusinessStatistics;
+import us.teaminceptus.novaconomy.api.business.Rating;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.events.CommandTaxEvent;
-import us.teaminceptus.novaconomy.api.events.player.PlayerPayEvent;
+import us.teaminceptus.novaconomy.api.events.player.economy.PlayerPayEvent;
 import us.teaminceptus.novaconomy.api.settings.Settings;
 import us.teaminceptus.novaconomy.api.util.Price;
 import us.teaminceptus.novaconomy.api.util.Product;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
@@ -1123,10 +1128,12 @@ public interface CommandWrapper {
 
         ItemStack sold = new ItemStack(Material.EMERALD);
         ItemMeta sMeta = sold.getItemMeta();
-        sMeta.setDisplayName(ChatColor.YELLOW + get("constants.business.stats.global"));
+        sMeta.setDisplayName(ChatColor.YELLOW + "" + ChatColor.UNDERLINE + get("constants.business.stats.global"));
         sMeta.setLore(Arrays.asList(
-            String.format(get("constants.business.stats.global.sold"), String.format("%,.0f", (double) statistics.getTotalSales())),
-            String.format(get("constants.business.stats.global.resources"), String.format("%,.0f", (double) statistics.getTotalResources()))
+                "",
+                String.format(get("constants.business.stats.global.sold"), String.format("%,.0f", (double) statistics.getTotalSales())),
+                String.format(get("constants.business.stats.global.resources"), String.format("%,.0f", (double) statistics.getTotalResources())),
+                String.format(get("constants.business.stats.global.ratings"), String.format("%,.0f", (double) b.getRatings().size()))
         ));
         sold.setItemMeta(sMeta);
         stats.setItem(21, sold);
@@ -1136,12 +1143,14 @@ public interface CommandWrapper {
             BusinessStatistics.Transaction latestT = statistics.getLastTransaction();
             Product pr = latestT.getProduct();
             ItemStack prI = pr.getItem();
+            OfflinePlayer buyer = latestT.getBuyer();
 
-            latest = createPlayerHead(latestT.getBuyer());
+            latest = createPlayerHead(buyer);
             ItemMeta lMeta = latest.getItemMeta();
             lMeta.setDisplayName(ChatColor.YELLOW + get("constants.business.stats.global.latest"));
             String display = prI.hasItemMeta() && prI.getItemMeta().hasDisplayName() ? prI.getItemMeta().getDisplayName() : WordUtils.capitalizeFully(prI.getType().name().replace('_', ' '));
-            lMeta.setLore(Collections.singletonList(
+            lMeta.setLore(Arrays.asList(
+                    ChatColor.AQUA + (buyer.isOnline() && buyer.getPlayer().getDisplayName() != null ? buyer.getPlayer().getDisplayName() : buyer.getName()) + ":",
                     ChatColor.WHITE + display + " (" + prI.getAmount() + ")" + ChatColor.GOLD + " | " + ChatColor.BLUE + String.format("%,.2f", pr.getAmount() * prI.getAmount()) + pr.getEconomy().getSymbol()
             ));
             latest.setItemMeta(lMeta);
@@ -1164,9 +1173,10 @@ public interface CommandWrapper {
 
             top = new ItemStack(Material.DIAMOND);
             ItemMeta tMeta = top.getItemMeta();
-            tMeta.setDisplayName(ChatColor.YELLOW + get("constants.business.stats.global.top"));
+            tMeta.setDisplayName(ChatColor.YELLOW + "" + ChatColor.UNDERLINE + get("constants.business.stats.global.top"));
 
             List<String> lore = new ArrayList<>();
+            lore.add(" ");
 
             for (int i = 0; i < Math.min(5, topProd.size()); i++) {
                 Map.Entry<Product, Integer> entry = topProd.get(i);
@@ -1234,7 +1244,7 @@ public interface CommandWrapper {
             return;
         }
 
-        Inventory rate = w.genGUI(36, String.format(get("constants.rating"), b.getName()));
+        Inventory rate = w.genGUI(36, String.format(get("constants.rating"), b.getName()), new Wrapper.CancelHolder());
 
         ItemStack ratingWheel = new ItemStack(RATING_MATS[2]);
         ItemMeta rMeta = ratingWheel.getItemMeta();
@@ -1268,6 +1278,143 @@ public interface CommandWrapper {
         rate.setItem(23, cancel);
 
         p.openInventory(rate);
+    }
+
+    default void businessRating(Player p, OfflinePlayer target) {
+        if (!Business.exists(p)) {
+            p.sendMessage(getMessage("error.business.not_an_owner"));
+            return;
+        }
+
+        if (target.getUniqueId().equals(p.getUniqueId())) {
+            p.sendMessage(getMessage("error.business.rate_self"));
+            return;
+        }
+
+        Business b = Business.getByOwner(p);
+
+        Optional<Rating> r = b.getRatings().stream().filter(ra -> ra.isOwner(target)).findFirst();
+        if (!r.isPresent()) {
+            p.sendMessage(getMessage("error.business.no_rating"));
+            return;
+        }
+
+        Rating rating = r.get();
+        Inventory pr = w.genGUI(27, target.getName() + " - \"" + b.getName() + "\"", new Wrapper.CancelHolder());
+
+        ItemStack head = createPlayerHead(target);
+        ItemMeta hMeta = head.getItemMeta();
+        hMeta.setDisplayName(ChatColor.YELLOW + target.getName());
+        hMeta.setLore(Collections.singletonList(ChatColor.AQUA + formatTimeAgo(rating.getTimestamp().getTime())));
+        head.setItemMeta(hMeta);
+        pr.setItem(12, head);
+
+        ItemStack pRating = new ItemStack(RATING_MATS[rating.getRatingLevel() - 1]);
+        ItemMeta rMeta = pRating.getItemMeta();
+        rMeta.setDisplayName(ChatColor.YELLOW + "" + rating.getRatingLevel() + "⭐");
+        rMeta.setLore(Collections.singletonList(ChatColor.YELLOW + "\"" + (rating.getComment().isEmpty() ? get("constants.no_comment") : rating.getComment()) + "\""));
+        pRating.setItemMeta(rMeta);
+        pr.setItem(14, pRating);
+
+        p.openInventory(pr);
+    }
+
+    default void discoverBusinesses(Player p) {
+        if (!p.hasPermission("novaconomy.user.business.discover")) {
+            p.sendMessage(getMessage("error.permission.argument"));
+            return;
+        }
+
+        Inventory discover = w.genGUI(54, get("constants.business.discover"), new Wrapper.CancelHolder());
+
+        for (int i = 0; i < 28; i++) {
+            int index = 10 + i;
+            if (index > 16) index += 2;
+            if (index > 25) index += 2;
+            if (index > 34) index += 2;
+            discover.setItem(index, loading());
+        }
+
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                List<Business> businesses = new ArrayList<>();
+                for (Business b : Business.getBusinesses()) {
+                    if (b.isOwner(p)) continue;
+                    if (!b.getSetting(Settings.Business.PUBLIC_DISCOVERY)) continue;
+                    businesses.add(b);
+                }
+
+                Collections.shuffle(businesses);
+                for (int i = 0; i < 28; i++) {
+                    int index = 10 + i;
+                    if (index > 16) index += 2;
+                    if (index > 25) index += 2;
+                    if (index > 34) index += 2;
+                    if (index > 43) return;
+
+                    if (businesses.size() > i) {
+                        Business b = businesses.get(i);
+
+                        boolean pOwner = b.getSetting(Settings.Business.PUBLIC_OWNER);
+                        boolean pRating = b.getSetting(Settings.Business.PUBLIC_RATING);
+
+                        ItemStack icon = new ItemStack(b.getIcon().getType());
+                        ItemMeta hMeta = icon.getItemMeta();
+                        hMeta.setDisplayName(ChatColor.GOLD + b.getName());
+                        StringBuilder rB = new StringBuilder();
+                        for (int j = 0; j < Math.round(b.getAverageRating()); j++) rB.append("⭐");
+
+                        hMeta.setLore(Arrays.asList(
+                                pOwner ? String.format(get("constants.business.owner"), b.getOwner().getName()) : get("constants.business.anonymous"),
+                                pRating ? " " : "",
+                                pRating ? ChatColor.YELLOW + rB.toString() : "")
+                        );
+                        icon.setItemMeta(hMeta);
+
+                        icon = w.setID(icon, "business:discover");
+                        icon = w.setNBT(icon, "business", b.getUniqueId().toString());
+
+                        discover.setItem(index, icon);
+                    } else discover.setItem(index, w.getGUIBackground());
+                }
+
+                XSound.ENTITY_ARROW_HIT_PLAYER.play(p, 3F, 2F);
+            }
+        }.runTaskAsynchronously(NovaConfig.getPlugin());
+        p.openInventory(discover);
+    }
+
+    default void editPrice(Player p, double newPrice, Economy econ) {
+        if (newPrice <= 0) {
+            p.sendMessage(getMessage("error.argument.amount"));
+            return;
+        }
+
+        if (!Business.exists(p)) {
+            p.sendMessage(getMessage("error.business.not_an_owner"));
+            return;
+        }
+
+        Business b = Business.getByOwner(p);
+        Inventory select = w.genGUI(54, get("constants.business.select_product"), new Wrapper.CancelHolder());
+        Inventory bData = w.generateBusinessData(b, p);
+
+        List<ItemStack> items = Arrays.stream(bData.getContents())
+                .filter(Objects::nonNull)
+                .filter(w::hasID)
+                .filter(i -> w.getNBTBoolean(i, "is_product"))
+                .collect(Collectors.toList());
+
+        items.replaceAll(item -> w.setID(item, "product:edit_price"));
+        items.replaceAll(item -> w.setNBT(item, "price", newPrice));
+        items.replaceAll(item -> {
+            Economy economy = econ == null ? w.getNBTProduct(item, "product").getEconomy() : econ;
+            return w.setNBT(item, "economy", economy.getUniqueId().toString());
+        });
+        items.forEach(select::addItem);
+
+        p.openInventory(select);
     }
 
     // Util Classes & Other Static Methods
@@ -1348,6 +1495,30 @@ public interface CommandWrapper {
         ItemStack head = new ItemStack(w.isLegacy() ? Material.matchMaterial("SKULL_ITEM") : Material.matchMaterial("PLAYER_HEAD"));
         SkullMeta meta = (SkullMeta) head.getItemMeta();
         meta.setOwner(p.getName());
+        head.setItemMeta(meta);
+        return head;
+    }
+
+    static ItemStack loading() {
+        ItemStack load = new ItemStack(createPlayerHead("eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYmRkMmViMGM2ZjhhOTU0M2VmNWZkNzI1MjVjYzJmYWIzNTY2M2NkNzA5MTM1ZTQzYjhlMjU3ZGMwYjc1ODk0OCJ9fX0="));
+        ItemMeta meta = load.getItemMeta();
+        meta.setDisplayName(ChatColor.DARK_RED + get("constants.loading"));
+        load.setItemMeta(meta);
+        return load;
+    }
+
+    static ItemStack createPlayerHead(String texture) {
+        ItemStack head = new ItemStack(w.isLegacy() ? Material.matchMaterial("SKULL_ITEM") : Material.matchMaterial("PLAYER_HEAD"));
+        SkullMeta meta = (SkullMeta) head.getItemMeta();
+        GameProfile profile = new GameProfile(UUID.randomUUID(), null);
+        profile.getProperties().put("textures", new Property("textures", texture));
+        try {
+            Method mtd = meta.getClass().getDeclaredMethod("setProfile", GameProfile.class);
+            mtd.setAccessible(true);
+            mtd.invoke(meta, profile);
+        } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException ex) {
+            ex.printStackTrace();
+        }
         head.setItemMeta(meta);
         return head;
     }

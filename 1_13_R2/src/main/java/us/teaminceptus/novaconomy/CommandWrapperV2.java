@@ -13,6 +13,7 @@ import revxrsal.commands.bukkit.annotation.CommandPermission;
 import revxrsal.commands.exception.CommandErrorException;
 import us.teaminceptus.novaconomy.abstraction.CommandWrapper;
 import us.teaminceptus.novaconomy.abstraction.Wrapper;
+import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.economy.Economy;
@@ -69,6 +70,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
             new BountyCommands(this);
 
             handler.registerBrigadier();
+            handler.setLocale(Language.getCurrentLanguage().getLocale());
             plugin.getLogger().info("Loaded Command Version v2 (1.13.2+)");
         }
     }
@@ -228,9 +230,20 @@ public final class CommandWrapperV2 implements CommandWrapper {
         @Subcommand({"statistics", "stats"})
         public void statistics(Player p) { wrapper.statistics(p, Business.getByOwner(p));}
 
+        @Subcommand({"settings", "setting"})
+        public void settings(Player p) { wrapper.settings(p, "business"); }
+
+        @Subcommand("rating")
+        public void businessRating(Player p, OfflinePlayer target) { wrapper.businessRating(p, target); }
+
+        @Subcommand("discover")
+        public void discoverBusiness(Player p) { wrapper.discoverBusinesses(p); }
+
         @Subcommand("remove")
         public void removeBusiness(CommandSender sender, Business b, @Default String confirm) { wrapper.removeBusiness(sender, b, confirm.equalsIgnoreCase("confirm"));}
 
+        @Subcommand({"editprice", "price"})
+        public void editPrice(Player p, @Range(min = 0.01) double newPrice, @Optional Economy economy) { wrapper.editPrice(p, newPrice, economy); }
     }
 
     @Command({"nbank", "bank", "globalbank", "gbank"})
