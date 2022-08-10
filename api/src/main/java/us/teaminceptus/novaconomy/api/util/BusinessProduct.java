@@ -73,6 +73,20 @@ public final class BusinessProduct extends Product {
     }
 
     @Override
+    public BusinessProduct setPrice(@NotNull Price price) throws IllegalArgumentException {
+        super.setPrice(price);
+        this.business.saveBusiness();
+        return this;
+    }
+
+    @Override
+    public BusinessProduct setItem(@NotNull ItemStack item) throws IllegalArgumentException {
+        super.setItem(item);
+        this.business.saveBusiness();
+        return this;
+    }
+
+    @Override
     public Map<String, Object> serialize() {
         return new HashMap<String, Object>(super.serialize()) {{
             put("business", business.getUniqueId().toString());
