@@ -1,4 +1,4 @@
-package us.teaminceptus.novaconomy.api.events.player;
+package us.teaminceptus.novaconomy.api.events.player.economy;
 
 import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;

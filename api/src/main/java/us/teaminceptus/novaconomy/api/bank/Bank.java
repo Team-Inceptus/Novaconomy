@@ -7,6 +7,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.jetbrains.annotations.NotNull;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.economy.Economy;
+import us.teaminceptus.novaconomy.api.util.Price;
 
 import java.io.File;
 import java.util.HashMap;
@@ -77,6 +78,16 @@ public final class Bank {
     }
 
     /**
+     * Adds a Price to the Bank.
+     * @param price Price to add
+     * @throws IllegalArgumentException if price is null
+     */
+    public static void addBalance(@NotNull Price price) throws IllegalArgumentException {
+        if (price == null) throw new IllegalArgumentException("Price cannot be null");
+        addBalance(price.getEconomy(), price.getAmount());
+    }
+
+    /**
      * Removes a balance from the Bank.
      * @param econ Economy to remove the balance from.
      * @param amount Amount to remove from the balance.
@@ -84,6 +95,16 @@ public final class Bank {
      */
     public static void removeBalance(@NotNull Economy econ, double amount) throws IllegalArgumentException {
         setBalance(econ, getBalance(econ) - amount);
+    }
+
+    /**
+     * Removes a Price from the Bank.
+     * @param price Price to remove
+     * @throws IllegalArgumentException if price is null
+     */
+    public static void removeBalance(@NotNull Price price) throws IllegalArgumentException {
+        if (price == null) throw new IllegalArgumentException("Price cannot be null");
+        removeBalance(price.getEconomy(), price.getAmount());
     }
 
     /**

@@ -130,6 +130,7 @@ public final class TreasuryRegistry implements EconomyProvider {
     @Override
     public void registerCurrency(@NotNull Currency currency, @NotNull EconomySubscriber<Boolean> subscription) {
         try {
+
             Economy newE = Economy.builder()
                     .setName(currency.getDisplayNameSingular())
                     .setSymbol(currency.getSymbol().charAt(0))

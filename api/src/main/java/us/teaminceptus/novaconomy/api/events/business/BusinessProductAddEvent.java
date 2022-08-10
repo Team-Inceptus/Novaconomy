@@ -1,6 +1,5 @@
 package us.teaminceptus.novaconomy.api.events.business;
 
-import org.apache.commons.lang.Validate;
 import org.bukkit.event.Cancellable;
 import org.jetbrains.annotations.NotNull;
 import us.teaminceptus.novaconomy.api.util.BusinessProduct;
@@ -21,7 +20,7 @@ public class BusinessProductAddEvent extends BusinessEvent implements Cancellabl
      */
     public BusinessProductAddEvent(@NotNull BusinessProduct pr) throws IllegalArgumentException {
         super(pr.getBusiness());
-        Validate.notNull(pr, "Product cannot be null");
+        if (pr == null) throw new IllegalArgumentException("Product cannot be null");
         this.product = pr;
         this.isCancelled = false;
     }

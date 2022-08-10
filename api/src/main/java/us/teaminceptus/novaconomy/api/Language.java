@@ -1,9 +1,11 @@
 package us.teaminceptus.novaconomy.api;
 
 import org.bukkit.ChatColor;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Locale;
 import java.util.Properties;
 
 /**
@@ -42,20 +44,57 @@ public enum Language {
     /**
      * Represents Italian / Italiano
      */
-    ITALIAN("_it");
+    ITALIAN("_it"),
+    /**
+     * Represents Swedish / Svenska
+     */
+    SWEDISH("_sv"),
+    /**
+     * Represents Norwegain Bokmål / Norsk Bokmål
+     */
+    NORWEGIAN_BOKMAL("_nb"),
+    /**
+     * Represents Finnish / Suomi
+     */
+    FINNISH("_fi");
 
     private final String id;
 
+    private final Locale locale;
+
     Language(String identifier) {
         this.id = identifier;
+
+        final Locale l;
+        switch (identifier.replace("_", "")) {
+            case "": l = Locale.ENGLISH; break;
+            case "fr": l = Locale.FRENCH; break;
+            case "de": l = Locale.GERMAN; break;
+            case "ja": l = Locale.JAPANESE; break;
+            case "zh": l = Locale.CHINESE; break;
+            case "it": l = Locale.ITALIAN; break;
+            default: l = new Locale(identifier.replace("_", ""));
+        }
+
+        this.locale = l;
     }
 
     /**
      * Fetches the Identifier of this Language.
      * @return Identifier
      */
+    @NotNull
     public String getIdentifier() {
         return this.id.replace("_", "");
+    }
+
+    /**
+     * Fetches the Locale belonging to this Language.
+     * @return Locale
+     */
+    @NotNull
+    public Locale getLocale() {
+        return locale;
     }
 
     /**

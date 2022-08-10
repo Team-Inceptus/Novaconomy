@@ -1,5 +1,5 @@
 name: ${project.name}
-version: 1.4.1
+version: 1.5.0
 description: ${project.description}
 author: Team Inceptus
 website: ${project.url}
@@ -111,6 +111,16 @@ permissions:
     default: true
     children:
       novaconomy.user: true
+  novaconomy.user.settings:
+    description: Access to view and change settings
+    default: true
+    children:
+      novaconomy.user: true
+  novaconomy.user.rate:
+    description: Access to rate other businesses
+    default: true
+    children:
+      novaconomy.user: true
 
   # User Bounty
   novaconomy.user.bounty:
@@ -135,6 +145,11 @@ permissions:
     default: true
     children:
       novaconomy.user: true
+  novaconomy.user.business.discover:
+    description: Access to discovering businesses
+    default: true
+    children:
+      novaconomy.user.business: true
   novaconomy.user.business.create:
     description: Access to creating Novaconomy Businesses
     default: true
@@ -147,6 +162,11 @@ permissions:
       novaconomy.user.business: true
   novaconomy.user.business.query:
     description: Access information about other businesses
+    default: true
+    children:
+      novaconomy.user.business: true
+  novaconomy.user.business.home:
+    description: Access to teleport and set home
     default: true
     children:
       novaconomy.user.business: true

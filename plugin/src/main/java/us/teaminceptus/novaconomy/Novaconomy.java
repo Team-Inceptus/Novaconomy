@@ -28,6 +28,7 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.inventory.InventoryMoveItemEvent;
 import org.bukkit.event.player.PlayerFishEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -46,15 +47,21 @@ import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.NovaPlayer;
 import us.teaminceptus.novaconomy.api.bounty.Bounty;
 import us.teaminceptus.novaconomy.api.business.Business;
+import us.teaminceptus.novaconomy.api.business.BusinessStatistics;
+import us.teaminceptus.novaconomy.api.business.Rating;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.events.AutomaticTaxEvent;
 import us.teaminceptus.novaconomy.api.events.InterestEvent;
 import us.teaminceptus.novaconomy.api.events.business.BusinessProductAddEvent;
 import us.teaminceptus.novaconomy.api.events.business.BusinessProductRemoveEvent;
+import us.teaminceptus.novaconomy.api.events.business.BusinessSettingChangeEvent;
 import us.teaminceptus.novaconomy.api.events.business.BusinessStockEvent;
-import us.teaminceptus.novaconomy.api.events.player.PlayerChangeBalanceEvent;
 import us.teaminceptus.novaconomy.api.events.player.PlayerMissTaxEvent;
-import us.teaminceptus.novaconomy.api.events.player.PlayerPurchaseProductEvent;
+import us.teaminceptus.novaconomy.api.events.player.PlayerRateBusinessEvent;
+import us.teaminceptus.novaconomy.api.events.player.PlayerSettingChangeEvent;
+import us.teaminceptus.novaconomy.api.events.player.economy.PlayerChangeBalanceEvent;
+import us.teaminceptus.novaconomy.api.events.player.economy.PlayerPurchaseProductEvent;
+import us.teaminceptus.novaconomy.api.settings.Settings;
 import us.teaminceptus.novaconomy.api.util.BusinessProduct;
 import us.teaminceptus.novaconomy.api.util.Price;
 import us.teaminceptus.novaconomy.api.util.Product;
@@ -122,7 +129,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 	private static class ModifierReader {
 
 		private static boolean isIgnored(Player p, String s) {
-			AtomicBoolean state = new AtomicBoolean(false);
+			AtomicBoolean state = new AtomicBoolean();
 
 			FileConfiguration config = NovaConfig.getPlugin().getConfig();
 			List<String> ignore = config.getStringList("NaturalCauses.Ignore");
@@ -398,7 +405,6 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
 					if (hand.getItemMeta().hasEnchant(Enchantment.LUCK))
 						iAmount += hand.getItemMeta().getEnchantLevel(Enchantment.LUCK) * (r.nextInt(8) + 6);
-
 				}
 
 			}
@@ -447,16 +453,17 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		}
 
 		private void sendUpdateActionbar(Player p, List<String> added) {
-			XSound.BLOCK_NOTE_BLOCK_PLING.play(p, 3F, 2F);
+			if (new NovaPlayer(p).hasNotifications()) {
+				List<String> msgs = new ArrayList<>(added);
 
-			List<String> msgs = new ArrayList<>(added);
+				if (added.size() > 4) {
+					msgs = added.subList(0, 4);
+					msgs.add(ChatColor.WHITE + "...");
+				}
 
-			if (added.size() > 4) {
-				msgs = added.subList(0, 4);
-				msgs.add(ChatColor.WHITE + "...");
+				XSound.BLOCK_NOTE_BLOCK_PLING.play(p, 3F, 2F);
+				w.sendActionbar(p, String.join(ChatColor.YELLOW + ", " + ChatColor.RESET, msgs.toArray(new String[0])));
 			}
-
-			if (plugin.hasNotifications()) w.sendActionbar(p, String.join(ChatColor.YELLOW + ", " + ChatColor.RESET, msgs.toArray(new String[0])));
 		}
 
 		private ItemStack getItem(EntityEquipment i, EquipmentSlot s) {
@@ -492,8 +499,8 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 			boolean broadcast = plugin.isBroadcastingBounties();
 
 			String key = "bounties." + target.getUniqueId();
-			AtomicDouble amount = new AtomicDouble(0);
-			AtomicInteger bountyCount = new AtomicInteger(0);
+			AtomicDouble amount = new AtomicDouble();
+			AtomicInteger bountyCount = new AtomicInteger();
 
 			for (Bounty b : nt.getSelfBounties()) {
 				OfflinePlayer owner = b.getOwner();
@@ -551,7 +558,6 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
 			if (ModifierReader.getModifier("Death") != null && ModifierReader.getModifier("Death").containsKey(id)) {
 				Set<Map<Economy, Double>> value = ModifierReader.getModifier("Death").get(id);
-				List<String> msgs = new ArrayList<>();
 				for (Map<Economy, Double> map : value)
 					for (Economy econ : map.keySet()) {
 						double amount = map.get(econ);
@@ -560,7 +566,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 					}
 			} else for (Economy econ : Economy.getEconomies()) lost.add(callRemoveBalanceEvent(p, econ, np.getBalance(econ) / Math.max(divider, getDeathDivider())));
 			
-			if (plugin.hasNotifications()) p.sendMessage(String.join("\n", lost.toArray(new String[0])));
+			if (np.hasNotifications()) p.sendMessage(String.join("\n", lost.toArray(new String[0])));
 		}
 
 		private String callRemoveBalanceEvent(Player p, Economy econ, double amount) {
@@ -579,7 +585,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		public void click(InventoryClickEvent e) {
 			Inventory inv = e.getClickedInventory();
 			if (inv == null) return;
-			if (inv.getHolder() != null && inv.getHolder() instanceof Wrapper.CancelHolder) e.setCancelled(true);
+			if (inv.getHolder() instanceof Wrapper.CancelHolder) e.setCancelled(true);
 			if (inv instanceof PlayerInventory) return;
 
 			if (e.getCurrentItem() == null) return;
@@ -595,6 +601,19 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
 			if (!e.isCancelled()) e.setCancelled(true);
 			CLICK_ITEMS.get(id).accept(e);
+		}
+
+		@EventHandler
+		public void drag(InventoryDragEvent e) {
+			Inventory inv = e.getView().getTopInventory();
+			if (inv == null) return;
+			if (inv.getHolder() != null && inv.getHolder() instanceof Wrapper.CancelHolder) e.setCancelled(true);
+			if (inv instanceof PlayerInventory) return;
+
+			for (ItemStack item : e.getNewItems().values()) {
+				if (item == null) return;
+				if (item.isSimilar(w.getGUIBackground())) e.setCancelled(true);
+			}
 		}
 
 		@EventHandler
@@ -627,7 +646,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 			ItemStack item = e.getItem();
 			Inventory inv = e.getDestination();
 			if (inv instanceof PlayerInventory) return;
-			if (inv.getHolder() != null && inv.getHolder() instanceof Wrapper.CancelHolder) e.setCancelled(true);
+			if (inv.getHolder() instanceof Wrapper.CancelHolder) e.setCancelled(true);
 
 			if (item.isSimilar(w.getGUIBackground())) e.setCancelled(true);
 
@@ -638,6 +657,9 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
 	private static final List<ChatColor> COLORS = Arrays.stream(ChatColor.values()).filter(ChatColor::isColor).collect(Collectors.toList());
 
+	private static final String SETTING_TAG = "setting";
+
+	private static final String BUSINESS_TAG = "business";
 	private static final Map<String, Consumer<InventoryClickEvent>> CLICK_ITEMS = new HashMap<String, Consumer<InventoryClickEvent>>() {{
 			put("economy_scroll", e -> {
 				ItemStack item = e.getCurrentItem();
@@ -651,11 +673,14 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				inv.setItem(e.getSlot(), newEcon.getIcon());
 			});
 
-			put("business", e -> {
+			put(BUSINESS_TAG, e -> {
+				if (!(e.getWhoClicked() instanceof Player)) return;
+				Player p = (Player) e.getWhoClicked();
+
 				ItemStack item = e.getCurrentItem();
 				String name = ChatColor.stripColor(item.getItemMeta().getDisplayName()).toLowerCase();
 				Business b = Business.getByName(name);
-				e.getWhoClicked().openInventory(w.generateBusinessData(b));
+				p.openInventory(w.generateBusinessData(b, p));
 			});
 
 			put("product:buy", e -> {
@@ -670,7 +695,6 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 					return;
 				}
 
-				List<BusinessProduct> products = new ArrayList<>();
 				BusinessProduct pr = (BusinessProduct) w.getNBTProduct(item, PRODUCT_TAG);
 
 				if (np.getBalance(pr.getEconomy()) < pr.getPrice().getAmount()) {
@@ -803,7 +827,6 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 			put("economy:wheel:add_product", e -> {
 				get("economy:wheel").accept(e);
 
-				int slot = e.getRawSlot();
 				ItemStack item = e.getCurrentItem();
 				Economy econ = Economy.getEconomy(w.getNBTString(item, ECON_TAG));
 
@@ -872,6 +895,20 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				np.remove(econ, amount);
 				bP.getBusiness().removeResource(product);
 				p.getInventory().addItem(product);
+
+				Business b = bP.getBusiness();
+				Product bPr = new Product(bP);
+				BusinessStatistics stats = b.getStatistics();
+				BusinessStatistics.Transaction t = new BusinessStatistics.Transaction(p, bPr, System.currentTimeMillis());
+				stats.setLastTransaction(t);
+				stats.setTotalSales(stats.getTotalSales() + product.getAmount());
+
+				ItemStack clone = product.clone();
+				clone.setAmount(1);
+				Product bPrS = new Product(clone, bPr.getPrice());
+				stats.getProductSales().put(bPrS, stats.getProductSales().getOrDefault(bPrS, 0) + product.getAmount());
+				b.saveBusiness();
+
 				String material = product.hasItemMeta() && product.getItemMeta().hasDisplayName() ? product.getItemMeta().getDisplayName() : WordUtils.capitalizeFully(product.getType().name().replace('_', ' '));
 
 				p.sendMessage(String.format(Novaconomy.get("success.business.purchase"), material, bP.getBusiness().getName()));
@@ -881,14 +918,14 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				NovaPlayer owner = new NovaPlayer(bP.getBusiness().getOwner());
 				owner.add(econ, amount);
 
-				if (owner.isOnline() && NovaConfig.getConfiguration().hasNotifications()) {
+				if (owner.isOnline() && owner.hasNotifications()) {
 					String name = p.getDisplayName() == null ? p.getName() : p.getDisplayName();
 					Player bOwner = owner.getOnlinePlayer();
 					bOwner.sendMessage(String.format(Novaconomy.get("notification.business.purchase"), name, material));
 					XSound.ENTITY_ARROW_HIT_PLAYER.play(bOwner, 3F, 2F);
 				}
 
-				PlayerPurchaseProductEvent event = new PlayerPurchaseProductEvent(p, bP, size);
+				PlayerPurchaseProductEvent event = new PlayerPurchaseProductEvent(p, bP, t, size);
 				Bukkit.getPluginManager().callEvent(event);
 			});
 
@@ -1030,14 +1067,224 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				p.sendMessage(String.format(getMessage("success.economy.convert"), String.format("%,.2f", take) + takeEcon.getSymbol(), String.format("%,.2f", give) + "" + giveEcon.getSymbol()));
 			});
 
-			put("no:exchange", e -> {
+			put("no:close_effect", e -> {
 				e.getWhoClicked().closeInventory();
 				XSound.BLOCK_NOTE_BLOCK_PLING.play(e.getWhoClicked(), 3F, 0F);
 			});
 
 			put("next:bank_balance", e -> CHANGE_PAGE_TRICONSUMER.accept(e, 1, CommandWrapper.getBankBalanceGUI()));
 			put("prev:bank_balance", e -> CHANGE_PAGE_TRICONSUMER.accept(e, -1, CommandWrapper.getBankBalanceGUI()));
+
+			put(SETTING_TAG, e -> {
+				if (!(e.getWhoClicked() instanceof Player)) return;
+				Player p = (Player) e.getWhoClicked();
+				ItemStack item = e.getCurrentItem();
+				String section = w.getNBTString(item, SETTING_TAG);
+
+				getCommandWrapper().settings(p, section);
+			});
+
+			put("setting_toggle", e -> {
+				if (!(e.getWhoClicked() instanceof Player)) return;
+				Player p = (Player) e.getWhoClicked();
+				ItemStack item = e.getCurrentItem();
+				String display = w.getNBTString(item, "display");
+				String section = w.getNBTString(item, "section");
+				String setting = w.getNBTString(item, SETTING_TAG);
+				boolean value = w.getNBTBoolean(item, "value");
+
+				ItemStack nItem = new ItemStack(value ? CommandWrapper.redWool() : CommandWrapper.limeWool());
+				ItemMeta meta = nItem.getItemMeta();
+				meta.setDisplayName(ChatColor.YELLOW + display + ": " + (value ? ChatColor.RED + Novaconomy.get("constants.off") : ChatColor.GREEN + Novaconomy.get("constants.on")));
+				if (!value) {
+					meta.addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1, true);
+					meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+				}
+				nItem.setItemMeta(meta);
+
+				nItem = w.setID(nItem, "setting_toggle");
+				nItem = w.setNBT(nItem, "display", display);
+				nItem = w.setNBT(nItem, "section", section);
+				nItem = w.setNBT(nItem, SETTING_TAG, setting);
+				nItem = w.setNBT(nItem, "value", !value);
+
+				e.getView().setItem(e.getRawSlot(), nItem);
+				p.updateInventory();
+
+				if (value) XSound.BLOCK_NOTE_BLOCK_PLING.play(p, 3F, 0F); else XSound.ENTITY_ARROW_HIT_PLAYER.play(p, 3F, 2F);
+
+				if (section.equalsIgnoreCase(BUSINESS_TAG)) {
+					Business b = Business.getByOwner(p);
+					Settings.Business sett = Settings.Business.valueOf(setting);
+					b.setSetting(sett, !value);
+
+					BusinessSettingChangeEvent event = new BusinessSettingChangeEvent(b, value, !value, sett);
+					Bukkit.getPluginManager().callEvent(event);
+				} else {
+				    NovaPlayer np = new NovaPlayer(p);
+					Settings.Personal sett = Settings.Personal.valueOf(setting);
+					np.setSetting(sett, !value);
+
+					PlayerSettingChangeEvent event = new PlayerSettingChangeEvent(p, value, !value, sett);
+					Bukkit.getPluginManager().callEvent(event);
+				}
+			});
+
+			put("back:settings", e -> {
+				if (!(e.getWhoClicked() instanceof Player)) return;
+				Player p = (Player) e.getWhoClicked();
+				getCommandWrapper().settings(p, null);
+			});
+
+			put("business:home", e -> {
+				if (!(e.getWhoClicked() instanceof Player)) return;
+				Player p = (Player) e.getWhoClicked();
+				ItemStack item = e.getCurrentItem();
+				boolean anonymous = w.getNBTBoolean(item, "anonymous");
+				Business b = Business.getById(UUID.fromString(w.getNBTString(item, BUSINESS_TAG)));
+
+				if (anonymous) {
+					p.sendMessage(Novaconomy.get("plugin.prefix") + ChatColor.RED + Novaconomy.get("constants.business.anonymous_home"));
+					return;
+				}
+
+				if (!b.hasHome()) {
+					p.sendMessage(b.isOwner(p) ? getMessage("error.business.no_home") : String.format(getMessage("error.business.no_home_user"), b.getName()));
+					return;
+				}
+
+				if (b.getHome().distanceSquared(p.getLocation()) < 16) {
+					p.sendMessage(getMessage("error.business.too_close_home"));
+					return;
+				}
+
+				p.sendMessage(ChatColor.DARK_AQUA + Novaconomy.get("constants.teleporting"));
+				p.teleport(b.getHome());
+				XSound.ENTITY_ENDERMAN_TELEPORT.play(p, 3F, 1F);
+			});
+
+			put("business:settings", e -> {
+				if (!(e.getWhoClicked() instanceof Player)) return;
+				Player p = (Player) e.getWhoClicked();
+				getCommandWrapper().settings(p, BUSINESS_TAG);
+			});
+
+			put("business:statistics", e -> {
+				if (!(e.getWhoClicked() instanceof Player)) return;
+				Player p = (Player) e.getWhoClicked();
+				ItemStack item = e.getCurrentItem();
+				Business b = Business.getById(UUID.fromString(w.getNBTString(item, BUSINESS_TAG)));
+				boolean anonymous = w.getNBTBoolean(item, "anonymous");
+
+				if (anonymous) {
+					p.sendMessage(Novaconomy.get("plugin.prefix") + ChatColor.RED + Novaconomy.get("constants.business.anonymous_statistics"));
+					return;
+				}
+
+				getCommandWrapper().statistics(p, b);
+			});
+
+			put("back:business", e -> {
+				if (!(e.getWhoClicked() instanceof Player)) return;
+				Player p = (Player) e.getWhoClicked();
+				ItemStack item = e.getCurrentItem();
+				Business b = Business.getById(UUID.fromString(w.getNBTString(item, BUSINESS_TAG)));
+
+				p.openInventory(w.generateBusinessData(b, p));
+				XSound.BLOCK_ENDER_CHEST_OPEN.play(p, 3F, 0.5F);
+			});
+
+			put("business:rating", e -> {
+				if (!(e.getWhoClicked() instanceof Player)) return;
+				Player p = (Player) e.getWhoClicked();
+				Inventory inv = e.getView().getTopInventory();
+
+				ItemStack item = e.getCurrentItem();
+				double rating = w.getNBTDouble(item, "rating");
+				int newRating = (int) (rating + 1 > 4 ? 0 : rating + 1);
+
+				ItemStack nItem = item.clone();
+				nItem.setType(RATING_MATS[newRating]);
+				ItemMeta meta = nItem.getItemMeta();
+				meta.setDisplayName(ChatColor.YELLOW + "" + (newRating + 1) + "⭐");
+				nItem.setItemMeta(meta);
+				nItem = w.setID(nItem, "business:rating");
+				nItem = w.setNBT(nItem, "rating", newRating);
+				inv.setItem(e.getSlot(), nItem);
+
+				ItemStack confirm = inv.getItem(21);
+				String comment = w.getNBTString(confirm, "comment");
+				String business = w.getNBTString(confirm, BUSINESS_TAG);
+
+				ItemStack nConfirm = confirm.clone();
+				nConfirm = w.setID(nConfirm, "yes:business_rate");
+				nConfirm = w.setNBT(nConfirm, "rating", newRating);
+				nConfirm = w.setNBT(nConfirm, "comment", comment);
+				nConfirm = w.setNBT(nConfirm, BUSINESS_TAG, business);
+				inv.setItem(21, nConfirm);
+
+				(newRating > 1 ? XSound.ENTITY_ARROW_HIT_PLAYER : XSound.BLOCK_NOTE_BLOCK_PLING).play(p, 3F, 0.4F * (newRating + 1));
+			});
+
+			put("yes:business_rate", e -> {
+				if (!(e.getWhoClicked() instanceof Player)) return;
+				Player p = (Player) e.getWhoClicked();
+				NovaPlayer np = new NovaPlayer(p);
+				ItemStack item = e.getCurrentItem();
+
+				int rating = (int) w.getNBTDouble(item, "rating") + 1;
+				UUID businessId = UUID.fromString(w.getNBTString(item, BUSINESS_TAG));
+				String comment = w.getNBTString(item, "comment");
+
+				Rating r = new Rating(p, businessId, rating, System.currentTimeMillis(), comment);
+				Business b = Business.getById(businessId);
+
+				PlayerRateBusinessEvent event = new PlayerRateBusinessEvent(p, b, r);
+				Bukkit.getPluginManager().callEvent(event);
+
+				if (!event.isCancelled()) {
+					np.setRating(event.getRating());
+					p.closeInventory();
+					p.sendMessage(String.format(getMessage("success.business.rate"), b.getName(), rating));
+					XSound.ENTITY_ARROW_HIT_PLAYER.play(p, 3F, 2F);
+				}
+			});
+
+			put("business:discover", e -> {
+				if (!(e.getWhoClicked() instanceof Player)) return;
+				Player p = (Player) e.getWhoClicked();
+				ItemStack item = e.getCurrentItem();
+				Business b = Business.getById(UUID.fromString(w.getNBTString(item, BUSINESS_TAG)));
+
+				p.openInventory(w.generateBusinessData(b, p));
+				XSound.BLOCK_ENDER_CHEST_OPEN.play(p, 3F, 0.5F);
+			});
+
+			put("product:edit_price", e -> {
+				if (!(e.getWhoClicked() instanceof Player)) return;
+				Player p = (Player) e.getWhoClicked();
+				ItemStack item = e.getCurrentItem();
+
+				double price = w.getNBTDouble(item, PRICE_TAG);
+				Economy econ = Economy.getEconomy(UUID.fromString(w.getNBTString(item, ECON_TAG)));
+				BusinessProduct pr = (BusinessProduct) w.getNBTProduct(item, PRODUCT_TAG);
+				Business b = pr.getBusiness();
+
+				b.getProduct(pr.getItem()).setPrice(new Price(econ, price));
+
+				String display = pr.getItem().hasItemMeta() && pr.getItem().getItemMeta().hasDisplayName() ? pr.getItem().getItemMeta().getDisplayName() : WordUtils.capitalizeFully(pr.getItem().getType().name().replace('_', ' '));
+				p.sendMessage(String.format(getMessage("success.business.edit_price"), display, String.format("%,.2f", price) + econ.getSymbol()));
+				p.closeInventory();
+			});
 		}
+	};
+
+	private static final Material[] RATING_MATS = new Material[] {
+			Material.DIRT,
+			Material.COAL,
+			Material.IRON_INGOT,
+			Material.GOLD_INGOT,
+			Material.DIAMOND
 	};
 
 	@FunctionalInterface
@@ -1188,7 +1435,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				i++;
 			}
 
-			if (np.isOnline() && NovaConfig.getConfiguration().hasNotifications())
+			if (np.isOnline() && np.hasNotifications())
 				np.getOnlinePlayer().sendMessage(String.format(getMessage("notification.interest"), i + " ", i == 1 ? get("constants.economy") : get("constants.economies")));
 		}
 	}
@@ -1254,10 +1501,9 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 	}
 
 	private static void sendTaxNotifications(Collection<NovaPlayer> players, Map<NovaPlayer, Map<Economy, Double>> missedMap) {
-		Novaconomy plugin = getPlugin(Novaconomy.class);
-		if (!plugin.hasNotifications()) return;
 		for (NovaPlayer np : players) {
 			if (!np.getPlayer().isOnline()) continue;
+			if (!np.hasNotifications()) continue;
 			int j = missedMap.get(np).size();
 			int i = Economy.getTaxableEconomies().size() - j;
 			if (j > 0)
@@ -1285,6 +1531,9 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		add(Product.class);
 		add(BusinessProduct.class);
 		add(Bounty.class);
+		add(BusinessStatistics.class);
+		add(BusinessStatistics.Transaction.class);
+		add(Rating.class);
 	}};
 
 	private void loadPlaceholders() {
@@ -1383,7 +1632,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		metrics.addCustomChart(new SingleLineChart("economy_count", () -> Economy.getEconomies().size()));
 		metrics.addCustomChart(new SingleLineChart("business_count", () -> Business.getBusinesses().size()));
 		metrics.addCustomChart(new SingleLineChart("bounty_count", () -> {
-			AtomicInteger count = new AtomicInteger(0);
+			AtomicInteger count = new AtomicInteger();
 			for (OfflinePlayer p : Bukkit.getOfflinePlayers()) count.addAndGet(new NovaPlayer(p).getOwnedBounties().size());
 			return count.get();
 		}));
@@ -1440,8 +1689,8 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 	}
 
 	private boolean isIncludedIn(List<String> list, OfflinePlayer p) {
-		if (list == null || list.size() < 1) return false;
-		AtomicBoolean b = new AtomicBoolean(false);
+		if (list == null || list.isEmpty()) return false;
+		AtomicBoolean b = new AtomicBoolean();
 
 		for (String s : list) {
 			Pattern patt = Pattern.compile(s);
@@ -1583,6 +1832,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 			boolean ignore = sec.getBoolean("using_ignore", true);
 			boolean online = sec.getBoolean("online", false);
 			List<String> ignored = sec.getStringList("ignore");
+			boolean deposit = sec.getBoolean("deposit", true);
 
 			List<Price> prices = new ArrayList<>();
 			String amount = sec.get("amount").toString();
@@ -1603,7 +1853,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				opt.ifPresent(entry -> prices.add(new Price(entry)));
 			}
 
-			events.add(new CustomTaxEvent(k, name, prices, perm, msg, ignore, ignored, online));
+			events.add(new CustomTaxEvent(k, name, prices, perm, msg, ignore, ignored, online, deposit));
 		});
 
 		return events;
@@ -1611,7 +1861,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
 	@Override
 	public boolean isIgnoredTax(@NotNull OfflinePlayer p, @Nullable NovaConfig.CustomTaxEvent event) {
-		AtomicBoolean state = new AtomicBoolean(false);
+		AtomicBoolean state = new AtomicBoolean();
 
 		FileConfiguration config = NovaConfig.getPlugin().getConfig();
 		List<String> ignore = config.getStringList("Taxes.Ignore");

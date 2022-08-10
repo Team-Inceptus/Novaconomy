@@ -10,33 +10,43 @@ import us.teaminceptus.novaconomy.api.economy.Economy;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Represents a Sellable Product
  */
-public class Product implements ConfigurationSerializable {
+public class Product implements ConfigurationSerializable, Comparable<Product> {
 
     private ItemStack item;
 
     private Price price;
 
     /**
-     * Constructs a Business Product.
+     * Constructs a Product.
      * @param item Item to sell
      * @param price Price to sell at
      * @throws IllegalArgumentException if item or price is null
      */
     public Product(@NotNull ItemStack item, @NotNull Price price) throws IllegalArgumentException {
-        Validate.notNull(item, "Item cannot be null");
-        Validate.notNull(price, "Price cannot be null");
-        Validate.notNull(price.getEconomy(), "Price Economy cannot be null");
+        if (item == null) throw new IllegalArgumentException("Item cannot be null");
+        if (price == null) throw new IllegalArgumentException("Price cannot be null");
+        if (price.getEconomy() == null) throw new IllegalArgumentException("Price Economy cannot be null");
 
         this.item = item;
         this.price = price;
     }
 
     /**
-     * Constructs a Business Product.
+     * Constructs a Product from a Business Product.
+     * @param product Business Product to construct from
+     * @throws NullPointerException if product is null
+     */
+    public Product(@NotNull BusinessProduct product) throws NullPointerException {
+        this(product.getItem(), product.getPrice());
+    }
+
+    /**
+     * Constructs a Product.
      * @param item Item to sell
      * @param econ Economy to sell at
      * @param amount Price at selling
@@ -63,7 +73,7 @@ public class Product implements ConfigurationSerializable {
      */
     @NotNull
     public Product setItem(@NotNull ItemStack item) throws IllegalArgumentException {
-        Validate.notNull(item, "Item cannot be null");
+        if (item == null) throw new IllegalArgumentException("Item cannot be null");
         this.item = item;
         return this;
     }
@@ -84,6 +94,15 @@ public class Product implements ConfigurationSerializable {
     @NotNull
     public Economy getEconomy() {
         return price.getEconomy();
+    }
+
+    /**
+     * Fetches the Product's Price Amount.
+     * @return Price Amount Product is selling at
+     */
+    @NotNull
+    public double getAmount() {
+        return price.getAmount();
     }
 
     /**
@@ -116,6 +135,19 @@ public class Product implements ConfigurationSerializable {
         }};
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Product product = (Product) o;
+        return item.equals(product.item) && price.equals(product.price);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(item, price);
+    }
+
     /**
      * Deserializes a Product into a Map.
      * @param serial Serialization from {@link #serialize()}
@@ -131,5 +163,10 @@ public class Product implements ConfigurationSerializable {
         } catch (ClassCastException | NullPointerException e) {
             throw new IllegalArgumentException(e);
         }
+    }
+
+    @Override
+    public int compareTo(@NotNull Product p) {
+        return Double.compare(this.getAmount(), p.getAmount());
     }
 }

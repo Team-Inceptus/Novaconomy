@@ -50,11 +50,6 @@ public final class Wrapper1_8_R3 implements Wrapper {
     }
 
     @Override
-    public void openBook(Player p, org.bukkit.inventory.ItemStack book) {
-        ((CraftPlayer) p).getHandle().openBook(CraftItemStack.asNMSCopy(book));
-    }
-
-    @Override
     public org.bukkit.inventory.ItemStack getGUIBackground() {
         org.bukkit.inventory.ItemStack item = new org.bukkit.inventory.ItemStack(Material.STAINED_GLASS_PANE, 1, (short)15);
         ItemMeta meta = item.getItemMeta();

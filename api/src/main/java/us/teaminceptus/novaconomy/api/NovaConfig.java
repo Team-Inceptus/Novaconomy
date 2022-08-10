@@ -272,6 +272,7 @@ public interface NovaConfig  {
         private List<Price> prices;
         private boolean usingIgnore;
         private String message;
+        private boolean depositing;
 
         private List<String> ignore;
 
@@ -285,8 +286,9 @@ public interface NovaConfig  {
          * @param usingIgnore Whether the event is including the default ignore list.
          * @param ignore The list of Permissions, Players or Groups that are not affected.
          * @param online Whether the event is only called when the player is online.
+         * @param deposit Whether the event will deposit into the global bank
          */
-        public CustomTaxEvent(String identifier, String name, List<Price> prices, String permission, String message, boolean usingIgnore, List<String> ignore, boolean online) {
+        public CustomTaxEvent(String identifier, String name, List<Price> prices, String permission, String message, boolean usingIgnore, List<String> ignore, boolean online, boolean deposit) {
             this.identifier = identifier;
             this.name = name;
             this.prices = prices;
@@ -295,6 +297,7 @@ public interface NovaConfig  {
             this.ignore = ignore;
             this.online = online;
             this.message = message;
+            this.depositing = deposit;
         }
 
         /**
@@ -430,6 +433,22 @@ public interface NovaConfig  {
         public void setIgnore(@NotNull Collection<? extends String> ignore) throws IllegalArgumentException {
             if (ignore == null) throw new IllegalArgumentException("Ignore List cannot be null");
             this.ignore = new ArrayList<>(ignore);
+        }
+
+        /**
+         * Whether this Event is depositing into the global bank.
+         * @return true if depositing, else false
+         */
+        public boolean isDepositing() {
+            return depositing;
+        }
+
+        /**
+         * Sets whether this Event is depositing into the global bank.
+         * @param deposit true if depositing, else false
+         */
+        public void setDepositing(boolean deposit) {
+            this.depositing = deposit;
         }
     }
 

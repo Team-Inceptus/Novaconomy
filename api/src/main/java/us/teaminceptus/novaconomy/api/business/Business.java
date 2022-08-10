@@ -1,10 +1,8 @@
 package us.teaminceptus.novaconomy.api.business;
 
+import com.google.common.util.concurrent.AtomicDouble;
 import org.apache.commons.lang.Validate;
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.Material;
-import org.bukkit.OfflinePlayer;
+import org.bukkit.*;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.bukkit.enchantments.Enchantment;
@@ -14,7 +12,9 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.api.NovaConfig;
+import us.teaminceptus.novaconomy.api.NovaPlayer;
 import us.teaminceptus.novaconomy.api.events.business.BusinessCreateEvent;
+import us.teaminceptus.novaconomy.api.settings.Settings;
 import us.teaminceptus.novaconomy.api.util.BusinessProduct;
 import us.teaminceptus.novaconomy.api.util.Product;
 
@@ -38,17 +38,29 @@ public final class Business implements ConfigurationSerializable {
 
     private final Material icon;
 
+    private final long creationDate;
+
+    private Location home = null;
+
+    BusinessStatistics stats;
+
     private final List<BusinessProduct> products = new ArrayList<>();
+
+    private final Map<Settings.Business, Boolean> settings = new HashMap<>();
 
     private final List<ItemStack> resources = new ArrayList<>();
 
-    private Business(String name, Material icon, OfflinePlayer owner, Collection<Product> products, Collection<ItemStack> resources, boolean save) {
+    private Business(String name, Material icon, OfflinePlayer owner, Collection<Product> products, Collection<ItemStack> resources, BusinessStatistics stats, Map<Settings.Business, Boolean> settings, long creationDate, boolean save) {
         this.id = UUID.nameUUIDFromBytes(name.getBytes(StandardCharsets.UTF_8));
         this.name = name;
         this.icon = icon;
         this.owner = owner;
+        this.creationDate = creationDate;
+        this.stats = stats == null ? new BusinessStatistics(this) : stats;
         if (products != null) products.forEach(p -> this.products.add(new BusinessProduct(p, this)));
         if (resources != null) this.resources.addAll(resources);
+        if (settings != null) this.settings.putAll(settings);
+        else for (Settings.Business b : Settings.Business.values()) this.settings.put(b, b.getDefaultValue());
         if (save) saveBusiness();
     }
 
@@ -80,6 +92,44 @@ public final class Business implements ConfigurationSerializable {
     public UUID getUniqueId() { return this.id; }
 
     /**
+     * Fetches the Business's Home Location.
+     * @return Business Home Location, or null if not found
+     */
+    @Nullable
+    public Location getHome() { return this.home; }
+
+    /**
+     * Whether this Busienss has a home set.
+     * @return true if home set, else false
+     */
+    public boolean hasHome() {
+        return this.home != null;
+    }
+
+    /**
+     * Sets the Business's Home Location.
+     * @param home Business Home Location
+     */
+    public void setHome(@Nullable Location home) {
+        setHome(home, true);
+    }
+
+    private void setHome(Location home, boolean save) {
+        this.home = home;
+        if (save) saveBusiness();
+    }
+
+    /**
+     * Whether this Player is the owner of this Business.
+     * @param p Player to check
+     * @return true if owner, else false
+     */
+    public boolean isOwner(@Nullable OfflinePlayer p) {
+        if (p == null) return false;
+        return this.owner.getUniqueId().equals(p.getUniqueId());
+    }
+
+    /**
      * Fetches the List of Products this Business is selling.
      * @return Products to add
      */
@@ -89,18 +139,28 @@ public final class Business implements ConfigurationSerializable {
     @Override
     public Map<String, Object> serialize() {
         Map<String, ItemStack> map = new HashMap<>();
-        AtomicInteger index = new AtomicInteger(0);
+        AtomicInteger index = new AtomicInteger();
         resources.forEach(i -> map.put(index.getAndIncrement() + "", i));
 
         List<Product> p = new ArrayList<>();
         products.forEach(pr -> p.add(new Product(pr.getItem(), pr.getPrice())));
 
+        Map<String, Boolean> settings = this.settings
+                .entrySet()
+                .stream()
+                .collect(Collectors.toMap(e -> e.getKey().name().toLowerCase(), Map.Entry::getValue));
+
         return new HashMap<String, Object>() {{
             put("name", name);
             put("owner", owner);
+            put("creation_date", creationDate);
             put("icon", icon.name());
             put("resources", map);
             put("products", p);
+            put("stats", stats);
+            put("settings", settings);
+
+            if (home != null) put("home", home);
         }};
     }
 
@@ -149,7 +209,13 @@ public final class Business implements ConfigurationSerializable {
         });
 
         this.resources.addAll(res.values());
+
+        AtomicInteger amount = new AtomicInteger();
+        res.values().stream().map(ItemStack::getAmount).forEach(amount::addAndGet);
+        this.stats.totalResources += amount.get();
+
         saveBusiness();
+
         return this;
     }
 
@@ -173,7 +239,7 @@ public final class Business implements ConfigurationSerializable {
     public int getTotalStock(@Nullable ItemStack item) {
         if (item == null) return 0;
 
-        AtomicInteger count = new AtomicInteger(0);
+        AtomicInteger count = new AtomicInteger();
         List<ItemStack> items = new ArrayList<>(resources).stream().filter(i -> i.isSimilar(item)).collect(Collectors.toList());
 
         items.forEach(i -> count.addAndGet(i.getAmount()));
@@ -272,7 +338,7 @@ public final class Business implements ConfigurationSerializable {
     public boolean isProduct(@Nullable ItemStack i) {
         if (i == null) return false;
         ItemStack item = i.clone();
-        AtomicBoolean state = new AtomicBoolean(false);
+        AtomicBoolean state = new AtomicBoolean();
         for (BusinessProduct p : this.products) {
             ItemStack pr = p.getItem();
 
@@ -290,7 +356,7 @@ public final class Business implements ConfigurationSerializable {
      */
     public boolean isProduct(@Nullable Material m) {
         if (m == null) return false;
-        AtomicBoolean state = new AtomicBoolean(false);
+        AtomicBoolean state = new AtomicBoolean();
         this.products.forEach(p -> {
             if (p.getItem().getType() == m) state.set(true);
         });
@@ -358,6 +424,57 @@ public final class Business implements ConfigurationSerializable {
     }
 
     /**
+     * Fetches a Setting Value for this Business.
+     * @param setting Setting to check
+     * @return Setting Value, or false if setting is null
+     */
+    public boolean getSetting(@Nullable Settings.Business setting) {
+        if (setting == null) return false;
+        return this.settings.getOrDefault(setting, setting.getDefaultValue());
+    }
+
+    /**
+     * Fetches a list of all ratings for this Business.
+     * @return List of Ratings
+     */
+    @NotNull
+    public List<Rating> getRatings() {
+        List<Rating> ratings = new ArrayList<>();
+
+        for (OfflinePlayer p : Bukkit.getOfflinePlayers()) {
+            NovaPlayer np = new NovaPlayer(p);
+            if (!np.hasRating(this)) continue;
+
+            ratings.add(new Rating(p, this, np.getRatingLevel(this), np.getLastRating(this).getTime(), np.getRatingComment(this)));
+        }
+
+        return ratings;
+    }
+
+    /**
+     * Fetches the average rating level for this Business.
+     * @return Average Rating Level
+     */
+    public double getAverageRating() {
+        AtomicDouble average = new AtomicDouble();
+        getRatings().forEach(r -> average.addAndGet(r.getRatingLevel()));
+        return average.get() / getRatings().size();
+    }
+
+    /**
+     * Sets a Setting Value for this Business.
+     * @param setting Setting to set
+     * @param value Value of the new setting
+     * @return this Business, for chaining
+     */
+    @NotNull
+    public Business setSetting(@NotNull Settings.Business setting, boolean value) {
+        this.settings.put(setting, value);
+        saveBusiness();
+        return this;
+    }
+
+    /**
      * Deserializes a Map into a Business.
      * @param serial Serialization from {@link #serialize()}
      * @return Deserialized Business
@@ -369,13 +486,26 @@ public final class Business implements ConfigurationSerializable {
 
         Map<String, ItemStack> res = (Map<String, ItemStack>) serial.get("resources");
         List<ItemStack> resources = new ArrayList<>(res.values());
+        Location home = serial.containsKey("home") ? (Location) serial.get("home") : null;
 
-        return new Business(
+        Map<Settings.Business, Boolean> settings = serial.containsKey("settings") ? ((Map<String, Boolean>) serial.get("settings"))
+                .entrySet()
+                .stream()
+                .collect(Collectors.toMap(e -> Settings.Business.valueOf(e.getKey().toUpperCase()), Map.Entry::getValue)) : null;
+
+        long creationDate = serial.containsKey("creation_date") ? (long) serial.get("creation_date") : 1242518400000L;
+
+        Business b = new Business(
                 (String) serial.get("name"),
                 Material.valueOf((String) serial.get("icon")),
                 (OfflinePlayer) serial.get("owner"),
-                (List<Product>) serial.get("products"), resources, false
+                (List<Product>) serial.get("products"), resources,
+                (BusinessStatistics) serial.get("stats"),
+                settings, creationDate, false
         );
+        b.setHome(home, false);
+
+        return b;
     }
 
     /**
@@ -491,6 +621,24 @@ public final class Business implements ConfigurationSerializable {
     }
 
     /**
+     * Fetches the Business's Statistics.
+     * @return Business Statistics
+     */
+    @NotNull
+    public BusinessStatistics getStatistics() {
+        return this.stats;
+    }
+
+    /**
+     * Fetches the Business's Creation Date.
+     * @return Business Creation Date, or May 17, 2009 (MC's Birth Date) if not set
+     */
+    @NotNull
+    public Date getCreationDate() {
+        return new Date(creationDate);
+    }
+
+    /**
      * Represents a Business Builder
      */
     public static final class Builder {
@@ -539,11 +687,11 @@ public final class Business implements ConfigurationSerializable {
          */
         @NotNull
         public Business build() throws IllegalArgumentException, UnsupportedOperationException {
-            Validate.notNull(owner, "Owner cannot be null");
+            if (owner == null) throw new IllegalArgumentException("Owner cannot be null");
             Validate.notNull(name, "Name cannot be null");
             Validate.notNull(icon, "Icon cannot be null");
 
-            Business b = new Business(name, icon, owner, null, null, false);
+            Business b = new Business(name, icon, owner, null, null, null, null,  System.currentTimeMillis(),false);
 
             if (Business.exists(name)) throw new UnsupportedOperationException("Business already exists");
 

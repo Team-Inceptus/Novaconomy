@@ -1,16 +1,14 @@
 package us.teaminceptus.novaconomy;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.TextComponent;
-import net.minecraft.server.v1_13_R1.*;
+import net.minecraft.server.v1_13_R1.ItemStack;
+import net.minecraft.server.v1_13_R1.NBTTagCompound;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.Ageable;
-import org.bukkit.craftbukkit.v1_13_R1.entity.CraftPlayer;
 import org.bukkit.craftbukkit.v1_13_R1.inventory.CraftItemStack;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -50,21 +48,7 @@ public final class Wrapper1_13_R1 implements Wrapper {
         return CraftItemStack.asBukkitCopy(nmsitem);
     }
 
-    @Override
-    public void openBook(Player p, org.bukkit.inventory.ItemStack book) {
-        int slot = p.getInventory().getHeldItemSlot();
-        org.bukkit.inventory.ItemStack old = p.getInventory().getItem(slot);
-        p.getInventory().setItem(slot, book);
 
-        ByteBuf buf = Unpooled.buffer(256);
-        buf.setByte(0, 0);
-        buf.writerIndex(1);
-
-        PacketPlayOutCustomPayload packet = new PacketPlayOutCustomPayload(new MinecraftKey("minecraft:book_open"), new PacketDataSerializer(buf));
-        PlayerConnection pc = ((CraftPlayer) p).getHandle().playerConnection;
-        pc.sendPacket(packet);
-        p.getInventory().setItem(slot, old);
-    }
 
     @Override
     public org.bukkit.inventory.ItemStack getGUIBackground() {

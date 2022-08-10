@@ -53,6 +53,16 @@ public final class Bounty implements ConfigurationSerializable, Comparable<Bount
     }
 
     /**
+     * Whether this Player is the owner of this Bounty.
+     * @param p Player to check
+     * @return true if owner, else false
+     */
+    public boolean isOwner(@Nullable OfflinePlayer p) {
+        if (p == null) return false;
+        return p.getUniqueId().equals(owner.getUniqueId());
+    }
+
+    /**
      * Fetches the Economy this Bounty has been placed in.
      * @return Bounty Economy
      */

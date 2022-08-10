@@ -50,10 +50,7 @@ public final class Wrapper1_8_R2 implements Wrapper {
         return CraftItemStack.asBukkitCopy(nmsitem);
     }
 
-    @Override
-    public void openBook(Player p, org.bukkit.inventory.ItemStack book) {
-        ((CraftPlayer) p).getHandle().openBook(CraftItemStack.asNMSCopy(book));
-    }
+
 
     @Override
     public org.bukkit.inventory.ItemStack getGUIBackground() {
