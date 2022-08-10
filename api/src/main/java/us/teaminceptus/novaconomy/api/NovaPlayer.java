@@ -423,10 +423,10 @@ public final class NovaPlayer {
     /**
      * Fetches a Personal Setting for this Player.
      * @param setting Setting to fetch
-     * @return Setting value, or default if not found/null
+     * @return Setting value, default if not found, or false if null
      */
     public boolean getSetting(@Nullable Settings.Personal setting) {
-        if (setting == null) return setting.getDefaultValue();
+        if (setting == null) return false;
         return pConfig.getBoolean("settings." + setting.name().toLowerCase(), setting.getDefaultValue());
     }
 
