@@ -445,7 +445,7 @@ public final class Business implements ConfigurationSerializable {
             NovaPlayer np = new NovaPlayer(p);
             if (!np.hasRating(this)) continue;
 
-            ratings.add(new Rating(p, this, np.getRatingLevel(this), np.getRatingComment(this)));
+            ratings.add(new Rating(p, this, np.getRatingLevel(this), np.getLastRating(this).getTime(), np.getRatingComment(this)));
         }
 
         return ratings;

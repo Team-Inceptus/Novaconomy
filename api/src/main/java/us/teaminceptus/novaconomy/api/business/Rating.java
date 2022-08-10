@@ -4,7 +4,9 @@ import com.google.common.base.Preconditions;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -22,23 +24,26 @@ public final class Rating implements ConfigurationSerializable, Comparable<Ratin
 
     private final String comment;
 
+    private final long timestamp;
+
     /**
      * Constructs a Rating.
      * @param owner Owner of the Rating
      * @param businessId ID of the Business that the Rating is for
      * @param level Level of the Rating
+     * @param timestamp Timestamp of the Rating
      * @param comment Optional Comment on the rating
-     * @throws IllegalArgumentException if owner / business is null, or level is negative / greater than 5
+     * @throws IllegalArgumentException if owner / business is null
      */
-    public Rating(@NotNull OfflinePlayer owner, @NotNull UUID businessId, int level, String comment) throws IllegalArgumentException {
+    public Rating(@NotNull OfflinePlayer owner, @NotNull UUID businessId, int level, long timestamp, String comment) throws IllegalArgumentException {
         Preconditions.checkNotNull(owner, "Owner cannot be null");
         Preconditions.checkNotNull(businessId, "Business cannot be null");
-        Preconditions.checkArgument(level >= 0 && level < 5, "Level must be between 0 and 5");
 
         this.owner = owner;
         this.businessId = businessId;
         this.level = level;
         this.comment = comment;
+        this.timestamp = timestamp;
     }
 
     /**
@@ -46,11 +51,12 @@ public final class Rating implements ConfigurationSerializable, Comparable<Ratin
      * @param owner Owner of the Rating
      * @param business Business that the Rating is for
      * @param level Level of the Rating
+     * @param timestamp Timestamp of the Rating
      * @param comment Optional comment on the Rating
      * @throws IllegalArgumentException if owner / business is null, or level is negative / greater than 5
      */
-    public Rating(@NotNull OfflinePlayer owner, @NotNull Business business, int level, String comment) throws IllegalArgumentException {
-        this(owner, business.getUniqueId(), level, comment);
+    public Rating(@NotNull OfflinePlayer owner, @NotNull Business business, int level, long timestamp, String comment) throws IllegalArgumentException {
+        this(owner, business.getUniqueId(), level, timestamp, comment);
     }
 
     /**
@@ -58,10 +64,11 @@ public final class Rating implements ConfigurationSerializable, Comparable<Ratin
      * @param owner Owner of the Rating
      * @param businessId ID of the Business that the Rating is for
      * @param level Level of the Rating
+     * @param timestamp Timestamp of the Rating
      * @throws IllegalArgumentException if owner / business is null, or level is negative / greater than 5
      */
-    public Rating(@NotNull OfflinePlayer owner, @NotNull UUID businessId, int level) throws IllegalArgumentException {
-        this(owner, businessId, level, "");
+    public Rating(@NotNull OfflinePlayer owner, @NotNull UUID businessId, int level, long timestamp) throws IllegalArgumentException {
+        this(owner, businessId, level, timestamp, "");
     }
 
     /**
@@ -69,10 +76,11 @@ public final class Rating implements ConfigurationSerializable, Comparable<Ratin
      * @param owner Owner of the Rating
      * @param business Business that the Rating is for
      * @param level Level of the Rating
+     * @param timestamp Timestamp of the Rating
      * @throws IllegalArgumentException if owner / business is null, or level is negative / greater than 5
      */
-    public Rating(@NotNull OfflinePlayer owner, @NotNull Business business, int level) throws IllegalArgumentException {
-        this(owner, business.getUniqueId(), level);
+    public Rating(@NotNull OfflinePlayer owner, @NotNull Business business, int level, long timestamp) throws IllegalArgumentException {
+        this(owner, business.getUniqueId(), level, timestamp);
     }
 
     /**
@@ -82,6 +90,16 @@ public final class Rating implements ConfigurationSerializable, Comparable<Ratin
     @NotNull
     public OfflinePlayer getOwner() {
         return owner;
+    }
+
+    /**
+     * Whether this Player is the owner of this rating.
+     * @param p Player to check
+     * @return true if player is owner, else false
+     */
+    public boolean isOwner(@Nullable OfflinePlayer p) {
+        if (p == null) return false;
+        return p.getUniqueId().equals(owner.getUniqueId());
     }
 
     /**
@@ -110,6 +128,14 @@ public final class Rating implements ConfigurationSerializable, Comparable<Ratin
         return comment;
     }
 
+    /**
+     * Fetches the timestamp of this rating.
+     * @return Timestamp of the Rating
+     */
+    public Date getTimestamp() {
+        return new Date(timestamp);
+    }
+
     @Override
     public int compareTo(@NotNull Rating r) {
         return Integer.compare(level, r.level);
@@ -122,6 +148,7 @@ public final class Rating implements ConfigurationSerializable, Comparable<Ratin
             put("business", businessId.toString());
             put("level", level);
             put("comment", comment);
+            put("timestamp", timestamp);
         }};
     }
 
@@ -137,6 +164,7 @@ public final class Rating implements ConfigurationSerializable, Comparable<Ratin
                     (OfflinePlayer) serial.get("owner"),
                     UUID.fromString((String) serial.get("business")),
                     (int) serial.get("level"),
+                    (long) serial.get("timestamp"),
                     (String) serial.get("comment"));
         } catch (NullPointerException | ClassCastException e) {
             throw new IllegalArgumentException(e);

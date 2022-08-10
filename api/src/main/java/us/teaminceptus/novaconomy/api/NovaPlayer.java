@@ -15,8 +15,8 @@ import us.teaminceptus.novaconomy.api.bounty.Bounty;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.business.Rating;
 import us.teaminceptus.novaconomy.api.economy.Economy;
-import us.teaminceptus.novaconomy.api.events.player.PlayerDepositEvent;
-import us.teaminceptus.novaconomy.api.events.player.PlayerWithdrawEvent;
+import us.teaminceptus.novaconomy.api.events.player.economy.PlayerDepositEvent;
+import us.teaminceptus.novaconomy.api.events.player.economy.PlayerWithdrawEvent;
 import us.teaminceptus.novaconomy.api.settings.Settings;
 import us.teaminceptus.novaconomy.api.util.Price;
 import us.teaminceptus.novaconomy.api.util.Product;
@@ -476,6 +476,7 @@ public final class NovaPlayer {
      * Sets the rating for this Business by this player.
      * @param business Business to set the rating for
      * @param rating Rating to set
+     * @param comment Comment on the rating
      * @throws IllegalArgumentException if rating is less than 0 (no rating) / greater than 5, or business is null
      */
     public void setRating(@NotNull Business business, int rating, @Nullable String comment) throws IllegalArgumentException {
@@ -500,7 +501,7 @@ public final class NovaPlayer {
     @NotNull
     public Date getLastRating(@Nullable Business b) {
         if (b == null) return new Date();
-        return new Date(pConfig.getLong("ratings." + b.getUniqueId() + ".last_rating", System.currentTimeMillis()));
+        return new Date(pConfig.getLong("ratings." + b.getUniqueId() + ".last_rating", 0));
     }
 
     /**
@@ -582,12 +583,14 @@ public final class NovaPlayer {
         // Ratings
         if (!pConfig.isConfigurationSection("ratings")) pConfig.createSection("ratings");
         for (Business b : Business.getBusinesses()) {
+            if (b.isOwner(this.p)) continue;
+
             if (!pConfig.isConfigurationSection("ratings." + b.getUniqueId()))
                 pConfig.createSection("ratings." + b.getUniqueId());
 
             ConfigurationSection rating = pConfig.getConfigurationSection("ratings." + b.getUniqueId());
             if (!rating.isInt("rating")) rating.set("rating", 0);
-            if (!rating.isInt("last_rating") && !rating.isLong("last_ratings")) rating.set("last_rating", 0L);
+            if (!rating.isInt("last_rating") && !rating.isLong("last_rating")) rating.set("last_rating", 0L);
             if (!rating.isSet("comment")) rating.set("comment", "");
         }
 
