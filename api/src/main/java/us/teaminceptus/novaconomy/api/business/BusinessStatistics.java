@@ -125,7 +125,7 @@ public final class BusinessStatistics implements ConfigurationSerializable {
 
     int totalResources = 0;
 
-    private Map<Product, Integer> productSales = new HashMap<>();
+    private final Map<Product, Integer> productSales = new HashMap<>();
 
     BusinessStatistics(UUID businessId) {
         this.businessId = businessId;

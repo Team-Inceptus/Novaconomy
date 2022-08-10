@@ -15,7 +15,7 @@ public class PlayerPurchaseProductEvent extends PlayerEconomyEvent {
 
     private final BusinessStatistics.Transaction transaction;
 
-    private int amount;
+    private final int amount;
 
     /**
      * Constructs a PlayerPurchaseProductEvent.
