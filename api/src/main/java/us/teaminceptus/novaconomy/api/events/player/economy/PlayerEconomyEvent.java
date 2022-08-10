@@ -1,4 +1,4 @@
-package us.teaminceptus.novaconomy.api.events.player;
+package us.teaminceptus.novaconomy.api.events.player.economy;
 
 import org.bukkit.entity.Player;
 import org.bukkit.event.HandlerList;
@@ -14,7 +14,6 @@ public abstract class PlayerEconomyEvent extends PlayerEvent {
     private final double amount;
     private final Economy econ;
     private static final HandlerList HANDLERS = new HandlerList();
-
 
     /**
      * Represents an Economy-Related Event
