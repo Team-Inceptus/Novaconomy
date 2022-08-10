@@ -7,6 +7,23 @@ With the freedom to have your own symbols, icons, conversion rates, and even int
 
 <h2 style="text-decoration: underline;">📓Changelog</h2>
 
+### 👔 1.5.0 Update: Outstanding Organizations
+- New Features:
+  - Business Rating System, allowing others to rate your business.
+  - Business Statistics, allowing you to track how your business is doing.
+  - Personal and Business Settings, for optimizing your own plugin experience.
+    - You can now specify if you personally want to receive notifications.
+    - Configuration Notifications will serve as a default value and will not override any personal settings.
+  - Added Finnish, Swedish, and Norwegian Bokmål translations.
+- Bug Fixes:
+  - Messages Cleanup & Color Fixes
+  - Fixed Blocks being taken out of inventory when clicking too fast
+  - Other Code Cleanup
+- Other Improvements:
+  - Business Discovery, for searching random businesses to increase advertisement.
+  - Edit Pricing for Products
+  - Deposit to Bank Option on Custom Tax Events
+
 ### 💰 1.4.0 Update: "It's High Noon"
 - New Features:
   - Created custom Tax Events, callable from "/taxevent" command (requires `novaconomy.admin.tax_event`)
@@ -42,6 +59,8 @@ unlimited stock and set the prices to whatever you want!
 - [x] Treasury API Hook
 - [x] Bounties
 - [x] Custom Tax Events
+- [x] Player/Business Settings
+- [ ] Business Advertising
 - [ ] Business Investing
 - [ ] Novaconomy Stock Market
 
