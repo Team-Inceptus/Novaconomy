@@ -164,21 +164,23 @@ public interface Wrapper {
         stats = setNBT(stats, "anonymous", !pStats);
         inv.setItem(14, stats);
 
-        if (b.getRatings().size() > 1) {
+        if (!b.getRatings().isEmpty()) {
+            boolean pRating = b.getSetting(Settings.Business.PUBLIC_RATING) || b.isOwner(viewer);
             double avg = b.getAverageRating();
-            int avgI = (int) Math.floor(avg);
+            int avgI = (int) Math.round(avg - 1);
 
-            ItemStack rating = new ItemStack(pStats ? CommandWrapper.RATING_MATS[avgI] : Material.BARRIER);
+            ItemStack rating = new ItemStack(pRating ? CommandWrapper.RATING_MATS[avgI] : Material.BARRIER);
             ItemMeta rMeta = rating.getItemMeta();
-            rMeta.setDisplayName(pStats ? ChatColor.YELLOW + String.format("%,.1f", avg) + "⭐" : ChatColor.RED + get("constants.business.anonymous_rating"));
+            rMeta.setDisplayName(pRating ? ChatColor.YELLOW + String.format("%,.1f", avg) + "⭐" : ChatColor.RED + get("constants.business.anonymous_rating"));
+            if (b.isOwner(viewer) && !b.getSetting(Settings.Business.PUBLIC_RATING)) rMeta.setLore(Collections.singletonList(ChatColor.YELLOW + get("constants.business.hidden")));
             rating.setItemMeta(rMeta);
-            inv.setItem(13, rating);
+            inv.setItem(44, rating);
         }
 
         ItemStack icon = new ItemStack(b.getIcon());
         ItemMeta iMeta = icon.getItemMeta();
         iMeta.setDisplayName(ChatColor.GOLD + b.getName());
-        iMeta.setLore(Collections.singletonList(ChatColor.YELLOW + "ID: " + b.getUniqueId()));
+        iMeta.setLore(Collections.singletonList(ChatColor.YELLOW + "ID: " + b.getUniqueId().toString().replace("-", "")));
         icon.setItemMeta(iMeta);
         inv.setItem(15, icon);
 
@@ -221,7 +223,7 @@ public interface Wrapper {
                     if (item.isSimilar(res)) index.getAndAdd(res.getAmount());
                 });
 
-                lore.add(String.format(get("constants.business.stock_left"), index.get()));
+                lore.add(String.format(get("constants.business.stock_left"), String.format("%,.0f", (double) index.get())));
             }
 
             meta.setLore(lore);
