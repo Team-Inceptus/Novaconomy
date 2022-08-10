@@ -5,7 +5,7 @@
     <version>1.5.0-SNAPSHOT</version>
 
     <name>Novaconomy-Parent</name>
-    <description>Multi-Economy Plugin made for Spigot 1.8+</description>
+    <description>Multi-Economy and Business Plugin made for Spigot 1.8+</description>
     <packaging>pom</packaging>
     <url>https://github.com/Team-Inceptus/Novaconomy/</url>
 
@@ -34,7 +34,6 @@
             <distribution>repo</distribution>
         </license>
     </licenses>
-
 
     <ciManagement>
         <system>GitHub Actions</system>
@@ -181,7 +180,7 @@
 	<repositories>
         <repository>
             <id>spigot-repo</id>
-            <name>Spigot API Repository</name>
+            <name>Spigot-API Repository</name>
             <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
         </repository>
         <repository>
@@ -197,15 +196,23 @@
         </repository>
         <repository>
             <id>jeff-media-public</id>
+            <name>Jeff-Media Repository</name>
             <url>https://hub.jeff-media.com/nexus/repository/jeff-media-public/</url>
         </repository>
         <repository>
             <id>placeholderapi</id>
+            <name>PlaceholderAPI Repository</name>
             <url>https://repo.extendedclip.com/content/repositories/placeholderapi/</url>
         </repository>
         <repository>
             <id>jitpack.io</id>
+            <name>JitPack</name>
             <url>https://jitpack.io</url>
+        </repository>
+        <repository>
+            <id>minecraft-repo</id>
+            <name>Minecraft Repository</name>
+            <url>https://libraries.minecraft.net/</url>
         </repository>
 	</repositories>
 </project>
