@@ -104,7 +104,15 @@ public final class Settings {
         /**
          * Whether consumers of the Business can teleport to its home.
          */
-        PUBLIC_HOME("constants.settings.name.public_home")
+        PUBLIC_HOME("constants.settings.name.public_home"),
+        /**
+         * Whether the consumers of the Business can see the rating.
+         */
+        PUBLIC_RATING("constants.settings.name.public_rating"),
+        /**
+         * Whether this business is discoverable.
+         */
+        PUBLIC_DISCOVERY("constants.settings.name.public_discovery"),
         ;
 
         private final boolean defaultValue;
