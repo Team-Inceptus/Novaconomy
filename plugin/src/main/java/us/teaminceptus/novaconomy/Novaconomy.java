@@ -813,7 +813,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				int nextI = sortedList.indexOf(econ.getName()) + 1;
 				Economy next = sortedList.size() == 1 ? econ : Economy.getEconomy(sortedList.get(nextI == sortedList.size() ? 0 : nextI));
 
-				item.setType(next.getIcon().getType());
+				item.setType(next.getIconType());
 				item = w.setNBT(item, ECON_TAG, next.getName().toLowerCase());
 
 				ItemMeta meta = item.getItemMeta();
