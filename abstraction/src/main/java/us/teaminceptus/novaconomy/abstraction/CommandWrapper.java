@@ -255,6 +255,12 @@ public interface CommandWrapper {
         econ1 = w.setNBT(econ1, "amount", amount);
         inv.setItem(12, econ1);
 
+        ItemStack paper = new ItemStack(Material.PAPER);
+        ItemMeta pMeta = paper.getItemMeta();
+        pMeta.setDisplayName(ChatColor.YELLOW + "->");
+        paper.setItemMeta(pMeta);
+        inv.setItem(13, paper);
+
         Economy economy2 = economies.get(1);
         ItemStack econ2 = new ItemStack(economy2.getIcon());
         ItemMeta e2Meta = econ2.getItemMeta();
