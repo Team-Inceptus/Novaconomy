@@ -407,7 +407,7 @@ public interface CommandWrapper {
         sender.sendMessage(getMessage(key));
     }
 
-    default void balanceLeaderboard(Player p, Economy econ ) {
+    default void balanceLeaderboard(Player p, Economy econ) {
         if (!p.hasPermission("novaconomy.user.leaderboard")) {
             p.sendMessage(getMessage("error.permission"));
             return;
@@ -429,6 +429,7 @@ public interface CommandWrapper {
         ItemMeta tMeta = type.getItemMeta();
         if (economy) {
             type.setType(econ.getIconType());
+            modelData(type, econ.getCustomModelData());
             tMeta.setDisplayName(ChatColor.AQUA + econ.getName());
         } else tMeta.setDisplayName(ChatColor.AQUA + get("constants.all_economies"));
         type.setItemMeta(tMeta);
@@ -613,6 +614,7 @@ public interface CommandWrapper {
         prLore.add(String.format(get("constants.business.price"), price, econ.getSymbol()));
 
         ItemStack economyWheel = new ItemStack(econ.getIconType());
+        modelData(economyWheel, econ.getCustomModelData());
         economyWheel = w.setNBT(economyWheel, "economy", econ.getName().toLowerCase());
         economyWheel = w.setID(economyWheel, "economy:wheel:add_product");
 
@@ -1530,6 +1532,21 @@ public interface CommandWrapper {
         return head;
     }
 
+    static void modelData(ItemStack item, int data) {
+        ItemMeta meta = item.getItemMeta();
+        try {
+            Method m = meta.getClass().getDeclaredMethod("setCustomModelData", Integer.class);
+            m.setAccessible(true);
+            m.invoke(meta, data);
+        } catch (NoSuchMethodException ignored) {}
+        catch (ReflectiveOperationException e) {
+            Bukkit.getLogger().severe(e.getClass().getSimpleName());
+            Bukkit.getLogger().severe(e.getMessage());
+            for (StackTraceElement s : e.getStackTrace()) Bukkit.getLogger().severe(s.toString());
+        }
+        item.setItemMeta(meta);
+    }
+
     static List<Inventory> getBankBalanceGUI() {
         List<Inventory> invs = new ArrayList<>();
 
@@ -1565,6 +1582,7 @@ public interface CommandWrapper {
             List<Economy> elist = new ArrayList<>(econs.subList(i * 28, Math.min((i + 1) * 28, econs.size())));
             elist.forEach(econ -> {
                 ItemStack item = new ItemStack(econ.getIconType());
+                modelData(item, econ.getCustomModelData());
                 ItemMeta iMeta = item.getItemMeta();
                 iMeta.setDisplayName(ChatColor.AQUA + String.format("%,.2f", Bank.getBalance(econ)) + "" + econ.getSymbol());
                 List<String> topDonors = new ArrayList<>();

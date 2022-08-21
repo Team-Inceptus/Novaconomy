@@ -17,6 +17,7 @@ import us.teaminceptus.novaconomy.api.NovaPlayer;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -37,6 +38,8 @@ public final class Economy implements ConfigurationSerializable {
     private final UUID uid;
 
     private boolean interestEnabled;
+
+    private int customModelData;
 
     private Economy(String section, String name, ItemStack icon, char symbol, boolean naturalIncrease, double conversionScale) {
         this.symbol = symbol;
@@ -65,6 +68,7 @@ public final class Economy implements ConfigurationSerializable {
         serial.put("increase-naturally", this.hasNaturalIncrease);
         serial.put("conversion-scale", this.conversionScale);
         serial.put("interest", this.interestEnabled);
+        serial.put("custom-model-data", this.customModelData);
         return serial;
     }
 
@@ -79,9 +83,10 @@ public final class Economy implements ConfigurationSerializable {
      */
     public static Economy deserialize(@Nullable Map<String, Object> serial) throws NullPointerException {
         if (serial == null) return null;
-        Economy econ = new Economy(serial.get("section").toString(), serial.get("name").toString(), (ItemStack) serial.get("icon"), serial.get("symbol").toString().charAt(0), (boolean) serial.get("increase-naturally"), (double) serial.get("conversion-scale"));
+        Economy econ = new Economy(serial.get("section").toString(), serial.get("name").toString(), (ItemStack) serial.get("icon"), serial.get("symbol").toString().charAt(0), (boolean) serial.getOrDefault("increase-naturally", true), (double) serial.getOrDefault("conversion-scale", 1));
 
-        econ.interestEnabled = (boolean) serial.get("interest");
+        econ.interestEnabled = (boolean) serial.getOrDefault("interest", true);
+        econ.customModelData = (int) serial.getOrDefault("custom-model-data", 0);
 
         return econ;
     }
@@ -318,8 +323,6 @@ public final class Economy implements ConfigurationSerializable {
         return convertAmount(this, to, fromAmount);
     }
 
-
-
     /**
      * Get the Economy's unique identifier.
      * @return Unique Identifier
@@ -373,6 +376,14 @@ public final class Economy implements ConfigurationSerializable {
     }
 
     /**
+     * Fetches the custom model data integer for this Economy.
+     * @return Custom Model Data Integer
+     */
+    public int getCustomModelData() {
+        return customModelData;
+    }
+
+    /**
      * Fetches an Economy by its unique symbol.
      * @param symbol Symbol to find
      * @return Economy found, or null if not found
@@ -401,6 +412,7 @@ public final class Economy implements ConfigurationSerializable {
         ItemStack icon;
         boolean increaseNaturally;
         double conversionScale;
+        int modelData;
 
         private Builder() {
             this.icon = new ItemStack(Material.GOLD_INGOT);
@@ -439,8 +451,23 @@ public final class Economy implements ConfigurationSerializable {
             ItemStack icon = new ItemStack(iconM);
             ItemMeta meta = icon.getItemMeta();
             meta.setDisplayName(ChatColor.AQUA + this.name);
-            icon.setItemMeta(meta);
 
+            int modelData = Economy.getEconomies().size() + 1;
+
+            try {
+                Method m = meta.getClass().getDeclaredMethod("setCustomModelData", Integer.class);
+                m.setAccessible(true);
+                m.invoke(meta, modelData);
+
+                this.modelData = modelData;
+            } catch (NoSuchMethodException ignored) {}
+            catch (ReflectiveOperationException e) {
+                Bukkit.getLogger().severe(e.getClass().getSimpleName());
+                Bukkit.getLogger().severe(e.getMessage());
+                for (StackTraceElement s : e.getStackTrace()) Bukkit.getLogger().severe(s.toString());
+            }
+
+            icon.setItemMeta(meta);
             this.icon = icon;
 
             return this;
@@ -490,11 +517,12 @@ public final class Economy implements ConfigurationSerializable {
 
             for (Economy econ : Economy.getEconomies()) if (econ.getSymbol() == this.symbol) throw new UnsupportedOperationException("Symbol is taken");
 
-
             FileConfiguration config = NovaConfig.getEconomiesConfig();
             ConfigurationSection es = config.createSection(this.name.toLowerCase());
 
             Economy econ = new Economy(es.getName(), this.name, this.icon, this.symbol, this.increaseNaturally, this.conversionScale);
+            econ.customModelData = modelData;
+
             es.set("economy", econ);
             es.set("last_saved_timestamp", System.currentTimeMillis());
 
