@@ -111,7 +111,7 @@
 
     <build>
         <finalName>${project.name}-${project.version}</finalName>
-        <defaultGoal>package clean install</defaultGoal>
+        <defaultGoal>clean install</defaultGoal>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
