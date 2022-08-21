@@ -113,7 +113,7 @@ public final class NovaPlayer {
      * @return Player Balance
      * @throws IllegalArgumentException if economy is null
      */
-    public double getBalance(Economy econ) throws IllegalArgumentException {
+    public double getBalance(@NotNull Economy econ) throws IllegalArgumentException {
         if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
         return pConfig.getConfigurationSection("economies").getConfigurationSection(econ.getName().toLowerCase()).getDouble("balance");
     }
