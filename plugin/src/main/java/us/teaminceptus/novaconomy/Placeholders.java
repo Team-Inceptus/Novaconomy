@@ -54,6 +54,10 @@ class Placeholders extends PlaceholderExpansion {
             if (Business.exists(p)) return Business.getByOwner(p).getUniqueId().toString();
             return "";
         });
+        put("business_icon", p -> {
+            if (Business.exists(p)) return Business.getByOwner(p).getIcon().getType().toString();
+            return "";
+        });
         put("all_balances", p -> {
             AtomicDouble bal = new AtomicDouble();
             Economy.getEconomies().forEach(e -> bal.addAndGet(new NovaPlayer(p).getBalance(e)));
