@@ -422,7 +422,12 @@ public interface CommandWrapper {
         boolean economy = econ != null;
 
         Function<NovaPlayer, Double> func = economy ? np -> np.getBalance(econ) : NovaPlayer::getTotalBalance;
-        List<NovaPlayer> players = new ArrayList<>(Arrays.stream(Bukkit.getOfflinePlayers()).map(NovaPlayer::new).sorted(Comparator.comparing(func).reversed()).collect(Collectors.toList())).subList(0, Math.min(Bukkit.getOfflinePlayers().length, 15));
+        List<NovaPlayer> players = new ArrayList<>(Arrays.stream(Bukkit.getOfflinePlayers())
+                .map(NovaPlayer::new)
+                .filter(np -> np.getSetting(Settings.Personal.PUBLIC_BALANCE))
+                .sorted(Comparator.comparing(func).reversed())
+                .collect(Collectors.toList()))
+                .subList(0, Math.min(Bukkit.getOfflinePlayers().length, 15));
 
         Inventory inv = w.genGUI(54, get("constants.balance_leaderboard"), new Wrapper.CancelHolder());
 

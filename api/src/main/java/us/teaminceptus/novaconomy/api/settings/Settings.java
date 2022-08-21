@@ -65,7 +65,13 @@ public final class Settings {
         /**
          * Whether the Player will receive plugin notifications
          */
-        NOTIFICATIONS("constants.settings.name.notifications", NovaConfig.getConfiguration()::hasNotifications);
+        NOTIFICATIONS("constants.settings.name.notifications", NovaConfig.getConfiguration()::hasNotifications),
+        /**
+         * Whether the player's balance is publicly visible
+         */
+        PUBLIC_BALANCE("constants.settings.name.public_balance"),
+
+        ;
 
         private final BooleanSupplier defaultValue;
         private final String dKey;
