@@ -341,6 +341,7 @@ public interface CommandWrapper {
                 String.format(get("constants.economy.natural_increase"), econ.hasNaturalIncrease() + ""),
                 String.format(get("constants.economy.symbol"), econ.getSymbol() + ""),
                 String.format(get("constants.economy.scale"), Math.floor(econ.getConversionScale() * 100) / 100 + ""),
+                String.format(get("constants.economy.custom_model_data"), String.format("%,.0f", (double) econ.getCustomModelData()))
         };
         sender.sendMessage(String.join("\n", components));
     }
