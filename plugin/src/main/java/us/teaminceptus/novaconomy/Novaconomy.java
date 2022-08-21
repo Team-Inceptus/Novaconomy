@@ -70,6 +70,8 @@ import us.teaminceptus.novaconomy.vault.VaultRegistry;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.security.SecureRandom;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -306,32 +308,61 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				if (nt.getSelfBounties().stream().anyMatch(b -> b.getOwner().getUniqueId().equals(p.getUniqueId()))) return;
 			}
 
-			String id = en.getType().name();
-			if (ModifierReader.isIgnored(p, id)) return;
+			new BukkitRunnable() {
+				@Override
+				public void run() {
+					String id = en.getType().name();
+					String category = "";
 
-			double iAmount = en.getMaxHealth();
-			if (p.getEquipment().getItemInHand() != null) {
-				ItemStack hand = p.getEquipment().getItemInHand();
-				if (hand.hasItemMeta() && hand.getItemMeta().hasEnchant(Enchantment.LOOT_BONUS_MOBS))
-					iAmount += hand.getItemMeta().getEnchantLevel(Enchantment.LOOT_BONUS_MOBS) * (r.nextInt(4) + 6);
-			}
+					try {
+						Method m = LivingEntity.class.getDeclaredMethod("getCategory");
+						m.setAccessible(true);
+						Object o = m.invoke(en);
+						if (o != null) category = o.toString();
+					} catch (NoSuchMethodException ignored) {
+					} catch (ReflectiveOperationException err) {
+						plugin.getLogger().severe(err.getClass().getSimpleName());
+						plugin.getLogger().severe(err.getMessage());
+						for (StackTraceElement s : err.getStackTrace()) plugin.getLogger().severe(s.toString());
+					}
 
-			if (ModifierReader.getModifier("Killing") != null && r.nextInt(100) < getKillChance()) {
-				Map<String, Set<Map<Economy, Double>>> entry = ModifierReader.getModifier("Killing");
-				if (entry.containsKey(id)) {
-					Set<Map<Economy, Double>> value = entry.get(id);
-					List<String> msgs = new ArrayList<>();
-					for (Map<Economy, Double> map : value)
-						for (Economy econ : map.keySet()) {
-							double amount = map.get(econ);
-							if (amount <= 0) continue;
-							msgs.add(callAddBalanceEvent(p, econ, amount, false));
+					double iAmount = en.getMaxHealth();
+					if (p.getEquipment().getItemInHand() != null) {
+						ItemStack hand = p.getEquipment().getItemInHand();
+						if (hand.hasItemMeta() && hand.getItemMeta().hasEnchant(Enchantment.LOOT_BONUS_MOBS))
+							iAmount += hand.getItemMeta().getEnchantLevel(Enchantment.LOOT_BONUS_MOBS) * (r.nextInt(4) + 6);
+					}
+
+					if (ModifierReader.getModifier("Killing") == null) return;
+
+					Map<String, Set<Map<Economy, Double>>> entry = ModifierReader.getModifier("Killing");
+					if (ModifierReader.isIgnored(p, id)) return;
+					if (!entry.containsKey(id) && ModifierReader.isIgnored(p, category)) return;
+
+					double fIAmount = iAmount;
+					String fCategory = category;
+
+					new BukkitRunnable() {
+						@Override
+						public void run() {
+							if (r.nextInt(100) < getKillChance()) if (entry.containsKey(id) || entry.containsKey(fCategory)) {
+								Set<Map<Economy, Double>> value = entry.getOrDefault(id, entry.get(fCategory));
+								List<String> msgs = new ArrayList<>();
+								for (Map<Economy, Double> map : value)
+									for (Economy econ : map.keySet()) {
+										double amount = map.get(econ);
+										if (amount <= 0) continue;
+										msgs.add(callAddBalanceEvent(p, econ, amount, false));
+									}
+
+								sendUpdateActionbar(p, msgs);
+							} else update(p, fIAmount);
 						}
-
-					sendUpdateActionbar(p, msgs);
-				} else update(p, iAmount);
-			}
+					}.runTask(plugin);
+				}
+			}.runTaskAsynchronously(plugin);
 		}
+
 		@EventHandler
 		public void moneyIncrease(BlockBreakEvent e) {
 			if (e.isCancelled()) return;
@@ -342,7 +373,6 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 			Player p = e.getPlayer();
 
 			String id = b.getType().name();
-			if (ModifierReader.isIgnored(p, id)) return;
 
 			double add = e.getExpToDrop() == 0 && ores.contains(b.getType()) ? r.nextInt(3) : e.getExpToDrop();
 			if (p.getEquipment().getItemInHand() != null) {
@@ -351,36 +381,68 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 					add += hand.getItemMeta().getEnchantLevel(Enchantment.LOOT_BONUS_BLOCKS) * (r.nextInt(3) + 4);
 			}
 
-			if (!w.isAgeable(b) && ModifierReader.getModifier("Mining") != null && r.nextInt(100) < getMiningChance()) {
-				Map<String, Set<Map<Economy, Double>>> entry = ModifierReader.getModifier("Mining");
-				if (entry.containsKey(id)) {
-					Set<Map<Economy, Double>> value = entry.get(id);
-					List<String> msgs = new ArrayList<>();
-					for (Map<Economy, Double> map : value)
-						for (Economy econ : map.keySet()) {
-							double amount = map.get(econ);
-							if (amount <= 0) continue;
-							msgs.add(callAddBalanceEvent(p, econ, amount, false));
-						}
+			String mod = w.isAgeable(b) ? "Farming" : "Mining";
+			if (ModifierReader.getModifier(mod) == null) return;
+			Map<String, Set<Map<Economy, Double>>> entry = ModifierReader.getModifier(mod);
 
-					sendUpdateActionbar(p, msgs);
-				} else update(p, add);
-			}
-			else if (w.isAgeable(b) && ModifierReader.getModifier("Farming") != null && r.nextInt(100) < getFarmingChance()) {
-				Map<String, Set<Map<Economy, Double>>> entry = ModifierReader.getModifier("Farming");
-				if (entry.containsKey(id)) {
-					Set<Map<Economy, Double>> value = entry.get(id);
-					List<String> msgs = new ArrayList<>();
-					for (Map<Economy, Double> map : value)
-						for (Economy econ : map.keySet()) {
-							double amount = map.get(econ);
-							if (amount <= 0) continue;
-							msgs.add(callAddBalanceEvent(p, econ, amount, false));
-						}
+			String tagName = null;
+			boolean tagIgnore = false;
 
-					sendUpdateActionbar(p, msgs);
-				} else update(p, add);
+			try {
+				Class<?> keyed = Class.forName("org.bukkit.Keyed");
+				Class<?> tag = Class.forName("org.bukkit.Tag");
+
+				for (Field f : tag.getFields()) {
+					if (!keyed.isInstance(b.getType())) break;
+
+					String name = f.getName();
+					if (name.startsWith("ENTITY_TYPES")) continue;
+					if (name.startsWith("REGISTRY")) continue;
+
+					if (!tag.isAssignableFrom(f.getType())) continue;
+
+					if (ModifierReader.isIgnored(p, name)) {
+						tagIgnore = true;
+						break;
+					}
+
+					if (!entry.containsKey(name)) continue;
+
+					Method isTagged = tag.getDeclaredMethod("isTagged", keyed);
+					isTagged.setAccessible(true);
+
+					Object tagObj = f.get(null);
+					if (tagObj == null) continue;
+
+					if ((boolean) isTagged.invoke(tagObj, b.getType())) if (entry.containsKey(name)) {
+						tagName = name;
+						break;
+					}
+				}
+			} catch (ClassNotFoundException | NoSuchMethodException | ClassCastException ignored) {}
+			catch (Exception err) {
+				plugin.getLogger().severe(err.getClass().getSimpleName());
+				plugin.getLogger().severe(err.getMessage());
+				for (StackTraceElement s : err.getStackTrace()) plugin.getLogger().severe(s.toString());
 			}
+
+			if (ModifierReader.isIgnored(p, id)) return;
+			if (!entry.containsKey(id) && tagIgnore) return;
+
+			int chance = mod.equalsIgnoreCase("Farming") ? getFarmingChance() : getMiningChance();
+
+			if (r.nextInt(100) < chance) if (entry.containsKey(id) || tagName != null) {
+				Set<Map<Economy, Double>> value = entry.getOrDefault(id, entry.get(tagName));
+				List<String> msgs = new ArrayList<>();
+				for (Map<Economy, Double> map : value)
+					for (Economy econ : map.keySet()) {
+						double amount = map.get(econ);
+						if (amount <= 0) continue;
+						msgs.add(callAddBalanceEvent(p, econ, amount, false));
+					}
+
+				sendUpdateActionbar(p, msgs);
+			} else update(p, add);
 		}
 		
 		@EventHandler
@@ -441,8 +503,8 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 			double previousBal = np.getBalance(econ);
 
 			PlayerChangeBalanceEvent event = new PlayerChangeBalanceEvent(p, econ, increase, previousBal, previousBal + increase, true);
-
 			Bukkit.getPluginManager().callEvent(event);
+
 			if (!event.isCancelled()) {
 				np.add(econ, increase);
 
@@ -1075,6 +1137,17 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
 			put("next:bank_balance", e -> CHANGE_PAGE_TRICONSUMER.accept(e, 1, CommandWrapper.getBankBalanceGUI()));
 			put("prev:bank_balance", e -> CHANGE_PAGE_TRICONSUMER.accept(e, -1, CommandWrapper.getBankBalanceGUI()));
+
+			put("next:balance", e -> {
+				if (!(e.getWhoClicked() instanceof Player)) return;
+				Player p = (Player) e.getWhoClicked();
+				CHANGE_PAGE_TRICONSUMER.accept(e, 1, CommandWrapper.getBalancesGUI(p));
+			});
+			put("prev:balance", e -> {
+				if (!(e.getWhoClicked() instanceof Player)) return;
+				Player p = (Player) e.getWhoClicked();
+				CHANGE_PAGE_TRICONSUMER.accept(e, 1, CommandWrapper.getBalancesGUI(p));
+			});
 
 			put(SETTING_TAG, e -> {
 				if (!(e.getWhoClicked() instanceof Player)) return;
