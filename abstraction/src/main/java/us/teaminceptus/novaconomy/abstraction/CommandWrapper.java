@@ -1548,7 +1548,6 @@ public interface CommandWrapper {
         }
         item.setItemMeta(meta);
     }
-
     static List<Inventory> getBalancesGUI(OfflinePlayer p) {
         List<Inventory> invs = new ArrayList<>();
         NovaPlayer np = new NovaPlayer(p);
