@@ -70,13 +70,25 @@ NaturalCauses:
   Modifiers:
 
     # In sections, write your item type (i.e. DIAMOND_ORE, case insensitive) with your currency amount and symbol in front or back.
-
+    #
+    # In versions 1.5.1 and up, we now support Block Tags: https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Tag.html (the ones with "Material" in between <>)
+    # Tags are case insensitive
+    #
+    # **Tags are only available in 1.13 and up**
     Mining: {} # Remove this when adding
       # DIAMOND_ORE: 120$
+      # fences: 5D
 
     # For all Entity Types: https://hub.spigotmc.org/javadocs/spigot/org/bukkit/entity/EntityType.html
+    #
+    # In versions 1.5.1 and up, we now support Categories: https://hub.spigotmc.org/javadocs/spigot/org/bukkit/entity/EntityCategory.html
+    # The mob's entity type will take priority over the category
+    #
+    # **Categories are only available in 1.17 and up**
+    #
     Killing: {} # Remove this when adding
       # zombie: [D100, 150$]
+      # undead: 50$
 
     # Fishing Modifiers look at the entity or item you caught.
     # For all Entity Types: https://hub.spigotmc.org/javadocs/spigot/org/bukkit/entity/EntityType.html

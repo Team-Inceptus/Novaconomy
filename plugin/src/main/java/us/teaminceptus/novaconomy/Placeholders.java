@@ -45,8 +45,17 @@ class Placeholders extends PlaceholderExpansion {
             if (Business.exists(p)) return String.valueOf(Business.getByOwner(p).getProducts().size());
             return "";
         });
+        put("business_resource_count", p -> {
+            if (Business.exists(p)) return String.valueOf(Business.getByOwner(p).getResources().size());
+            return "";
+        });
+
         put("business_id", p -> {
             if (Business.exists(p)) return Business.getByOwner(p).getUniqueId().toString();
+            return "";
+        });
+        put("business_icon", p -> {
+            if (Business.exists(p)) return Business.getByOwner(p).getIcon().getType().toString();
             return "";
         });
         put("all_balances", p -> {
@@ -61,6 +70,19 @@ class Placeholders extends PlaceholderExpansion {
         put("last_deposit_timestamp", p -> String.valueOf(new NovaPlayer(p).getLastBankDeposit().getTimestamp()));
         put("last_deposit_amount", p -> String.valueOf(new NovaPlayer(p).getLastBankDeposit().getAmount()));
         put("last_deposit_economy", p -> String.valueOf(new NovaPlayer(p).getLastBankDeposit().getEconomy().getName()));
+
+        put("business_product_purchases", p -> {
+            if (Business.exists(p)) return String.valueOf(Business.getByOwner(p).getStatistics().getTotalSales());
+            return "";
+        });
+        put("business_last_transaction_timestamp", p -> {
+            if (Business.exists(p)) return String.valueOf(Business.getByOwner(p).getStatistics().getLastTransaction().getTimestamp().getTime());
+            return "";
+        });
+        put("business_last_transaction_amount", p -> {
+            if (Business.exists(p)) return String.valueOf(Business.getByOwner(p).getStatistics().getLastTransaction().getProduct().getAmount());
+            return "";
+        });
     }};
 
     private static final Map<String, BiFunction<OfflinePlayer, String, String>> OFFLINE_ARG_PH = new HashMap<String, BiFunction<OfflinePlayer, String, String>>() {{
@@ -86,7 +108,7 @@ class Placeholders extends PlaceholderExpansion {
 
     @Override
     public @NotNull String getVersion() {
-        return "1.0.1";
+        return "1.0.2";
     }
 
     // Impl

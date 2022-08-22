@@ -157,13 +157,9 @@ public interface CommandWrapper {
             return;
         }
 
-        NovaPlayer np = new NovaPlayer(p);
-        List<String> balanceInfo = new ArrayList<>();
-
-        for (Economy econ : Economy.getEconomies())
-            balanceInfo.add(ChatColor.GOLD + econ.getName() + ChatColor.AQUA + " - " + ChatColor.GREEN + String.format("%,.2f", Math.floor(np.getBalance(econ) * 100) / 100) + econ.getSymbol());
-
-        p.sendMessage(get("command.balance.balances") + "\n\n" + String.join("\n", balanceInfo.toArray(new String[0])));
+        p.sendMessage(get("command.loading"));
+        p.openInventory(getBalancesGUI(p).get(0));
+        XSound.ENTITY_ARROW_HIT_PLAYER.play(p, 3F, 2F);
     }
 
     default void reloadConfig(CommandSender sender) {
@@ -255,6 +251,12 @@ public interface CommandWrapper {
         econ1 = w.setNBT(econ1, "amount", amount);
         inv.setItem(12, econ1);
 
+        ItemStack paper = new ItemStack(Material.PAPER);
+        ItemMeta pMeta = paper.getItemMeta();
+        pMeta.setDisplayName(ChatColor.YELLOW + "->");
+        paper.setItemMeta(pMeta);
+        inv.setItem(13, paper);
+
         Economy economy2 = economies.get(1);
         ItemStack econ2 = new ItemStack(economy2.getIcon());
         ItemMeta e2Meta = econ2.getItemMeta();
@@ -335,6 +337,7 @@ public interface CommandWrapper {
                 String.format(get("constants.economy.natural_increase"), econ.hasNaturalIncrease() + ""),
                 String.format(get("constants.economy.symbol"), econ.getSymbol() + ""),
                 String.format(get("constants.economy.scale"), Math.floor(econ.getConversionScale() * 100) / 100 + ""),
+                String.format(get("constants.economy.custom_model_data"), String.format("%,.0f", (double) econ.getCustomModelData()))
         };
         sender.sendMessage(String.join("\n", components));
     }
@@ -401,7 +404,7 @@ public interface CommandWrapper {
         sender.sendMessage(getMessage(key));
     }
 
-    default void balanceLeaderboard(Player p, Economy econ ) {
+    default void balanceLeaderboard(Player p, Economy econ) {
         if (!p.hasPermission("novaconomy.user.leaderboard")) {
             p.sendMessage(getMessage("error.permission"));
             return;
@@ -415,7 +418,12 @@ public interface CommandWrapper {
         boolean economy = econ != null;
 
         Function<NovaPlayer, Double> func = economy ? np -> np.getBalance(econ) : NovaPlayer::getTotalBalance;
-        List<NovaPlayer> players = new ArrayList<>(Arrays.stream(Bukkit.getOfflinePlayers()).map(NovaPlayer::new).sorted(Comparator.comparing(func).reversed()).collect(Collectors.toList())).subList(0, Math.min(Bukkit.getOfflinePlayers().length, 15));
+        List<NovaPlayer> players = new ArrayList<>(Arrays.stream(Bukkit.getOfflinePlayers())
+                .map(NovaPlayer::new)
+                .filter(np -> np.getSetting(Settings.Personal.PUBLIC_BALANCE))
+                .sorted(Comparator.comparing(func).reversed())
+                .collect(Collectors.toList()))
+                .subList(0, Math.min(Bukkit.getOfflinePlayers().length, 15));
 
         Inventory inv = w.genGUI(54, get("constants.balance_leaderboard"), new Wrapper.CancelHolder());
 
@@ -423,6 +431,7 @@ public interface CommandWrapper {
         ItemMeta tMeta = type.getItemMeta();
         if (economy) {
             type.setType(econ.getIconType());
+            modelData(type, econ.getCustomModelData());
             tMeta.setDisplayName(ChatColor.AQUA + econ.getName());
         } else tMeta.setDisplayName(ChatColor.AQUA + get("constants.all_economies"));
         type.setItemMeta(tMeta);
@@ -607,6 +616,7 @@ public interface CommandWrapper {
         prLore.add(String.format(get("constants.business.price"), price, econ.getSymbol()));
 
         ItemStack economyWheel = new ItemStack(econ.getIconType());
+        modelData(economyWheel, econ.getCustomModelData());
         economyWheel = w.setNBT(economyWheel, "economy", econ.getName().toLowerCase());
         economyWheel = w.setID(economyWheel, "economy:wheel:add_product");
 
@@ -1524,20 +1534,91 @@ public interface CommandWrapper {
         return head;
     }
 
+    static void modelData(ItemStack item, int data) {
+        ItemMeta meta = item.getItemMeta();
+        try {
+            Method m = meta.getClass().getDeclaredMethod("setCustomModelData", Integer.class);
+            m.setAccessible(true);
+            m.invoke(meta, data);
+        } catch (NoSuchMethodException ignored) {}
+        catch (ReflectiveOperationException e) {
+            Bukkit.getLogger().severe(e.getClass().getSimpleName());
+            Bukkit.getLogger().severe(e.getMessage());
+            for (StackTraceElement s : e.getStackTrace()) Bukkit.getLogger().severe(s.toString());
+        }
+        item.setItemMeta(meta);
+    }
+    static List<Inventory> getBalancesGUI(OfflinePlayer p) {
+        List<Inventory> invs = new ArrayList<>();
+        NovaPlayer np = new NovaPlayer(p);
+
+        ItemStack nextA = new ItemStack(Material.ARROW);
+        ItemMeta nMeta = nextA.getItemMeta();
+        nMeta.setDisplayName(ChatColor.AQUA + get("constants.next"));
+        nextA.setItemMeta(nMeta);
+        nextA = w.setID(nextA, "next:balance");
+
+        ItemStack backA = new ItemStack(Material.ARROW);
+        ItemMeta bMeta = backA.getItemMeta();
+        bMeta.setDisplayName(ChatColor.RED + get("constants.prev"));
+        backA.setItemMeta(bMeta);
+        backA = w.setID(backA, "prev:balance");
+
+        List<Economy> econs = new ArrayList<>(Economy.getEconomies()).stream().sorted(Comparator.comparing(Economy::getName)).collect(Collectors.toList());
+        int pageCount = (int) Math.floor((econs.size() - 1D) / 28D) + 1;
+        for (int i = 0; i < pageCount; i++) {
+            Inventory inv = w.genGUI(54, get("constants.balances") + " - " + String.format(get("constants.page"), i + 1), new Wrapper.CancelHolder());
+
+            ItemStack head = createPlayerHead(p);
+            ItemMeta meta = head.getItemMeta();
+            meta.setDisplayName(ChatColor.GOLD + p.getName());
+            head.setItemMeta(meta);
+            inv.setItem(4, head);
+
+            if (pageCount > 1 && i < pageCount - 1) {
+                ItemStack next = nextA.clone();
+                next = w.setNBT(next, "page", i);
+                inv.setItem(48, next);
+            }
+
+            if (i > 0) {
+                ItemStack back = backA.clone();
+                back = w.setNBT(back, "page", i);
+                inv.setItem(50, back);
+            }
+
+            List<Economy> elist = new ArrayList<>(econs.subList(i * 28, Math.min((i + 1) * 28, econs.size())));
+            elist.forEach(econ -> {
+                ItemStack item = econ.getIcon().clone();
+                ItemMeta eMeta = item.getItemMeta();
+                eMeta.setLore(Collections.singletonList(
+                        ChatColor.GOLD + String.format("%,.2f", np.getBalance(econ)) + econ.getSymbol()
+                ));
+                item.setItemMeta(eMeta);
+                inv.addItem(item);
+            });
+
+            invs.add(inv);
+        }
+
+        return invs;
+    }
+
+
     static List<Inventory> getBankBalanceGUI() {
         List<Inventory> invs = new ArrayList<>();
 
-        ItemStack nextArrow = new ItemStack(Material.ARROW);
-        ItemMeta nMeta = nextArrow.getItemMeta();
+        ItemStack nextA = new ItemStack(Material.ARROW);
+        ItemMeta nMeta = nextA.getItemMeta();
         nMeta.setDisplayName(ChatColor.AQUA + get("constants.next"));
-        nextArrow.setItemMeta(nMeta);
-        nextArrow = w.setID(nextArrow, "next:bank_balance");
+        nextA.setItemMeta(nMeta);
+        nextA = w.setID(nextA, "next:bank_balance");
 
-        ItemStack backArrow = new ItemStack(Material.ARROW);
-        ItemMeta bMeta = backArrow.getItemMeta();
+        ItemStack backA = new ItemStack(Material.ARROW);
+        ItemMeta bMeta = backA.getItemMeta();
         bMeta.setDisplayName(ChatColor.RED + get("constants.prev"));
-        backArrow.setItemMeta(bMeta);
-        backArrow = w.setID(backArrow, "prev:bank_balance");
+        backA.setItemMeta(bMeta);
+        backA = w.setID(backA, "prev:bank_balance");
 
         List<Economy> econs = new ArrayList<>(Economy.getEconomies()).stream().sorted(Comparator.comparing(Economy::getName)).collect(Collectors.toList());
         int pageCount = (int) Math.floor((econs.size() - 1D) / 28D) + 1;
@@ -1545,13 +1626,13 @@ public interface CommandWrapper {
             Inventory inv = w.genGUI(54, get("constants.bank.balance") + " - " + String.format(get("constants.page"), i + 1), new Wrapper.CancelHolder());
 
             if (pageCount > 1 && i < pageCount - 1) {
-                ItemStack next = nextArrow.clone();
+                ItemStack next = nextA.clone();
                 next = w.setNBT(next, "page", i);
                 inv.setItem(48, next);
             }
 
             if (i > 0) {
-                ItemStack back = backArrow.clone();
+                ItemStack back = backA.clone();
                 back = w.setNBT(back, "page", i);
                 inv.setItem(50, back);
             }
@@ -1559,12 +1640,13 @@ public interface CommandWrapper {
             List<Economy> elist = new ArrayList<>(econs.subList(i * 28, Math.min((i + 1) * 28, econs.size())));
             elist.forEach(econ -> {
                 ItemStack item = new ItemStack(econ.getIconType());
+                modelData(item, econ.getCustomModelData());
+
                 ItemMeta iMeta = item.getItemMeta();
                 iMeta.setDisplayName(ChatColor.AQUA + String.format("%,.2f", Bank.getBalance(econ)) + "" + econ.getSymbol());
                 List<String> topDonors = new ArrayList<>();
                 topDonors.add(ChatColor.YELLOW + get("constants.bank.top_donors"));
                 topDonors.add(" ");
-
                 List<String> topDonorsNames = NovaPlayer.getTopDonators(econ, 5).stream().map(NovaPlayer::getPlayerName).collect(Collectors.toList());
                 List<Double> topDonorsAmounts = NovaPlayer.getTopDonators(econ, 5).stream().map(n -> n.getDonatedAmount(econ)).collect(Collectors.toList());
                 for (int j = 0; j < topDonorsNames.size(); j++)

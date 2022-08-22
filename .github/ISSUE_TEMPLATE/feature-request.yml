@@ -15,6 +15,7 @@ body:
         - Optimization
         - Compatibility
         - API Support/Hook
+        - General Feature
         - Other
     validations:
       required: true
