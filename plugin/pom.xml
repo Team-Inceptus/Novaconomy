@@ -87,7 +87,7 @@
         <dependency>
             <groupId>com.jeff_media</groupId>
             <artifactId>SpigotUpdateChecker</artifactId>
-            <version>2.3.0</version>
+            <version>3.0.0</version>
             <scope>compile</scope>
         </dependency>
         <dependency>
