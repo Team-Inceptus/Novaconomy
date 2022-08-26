@@ -1,9 +1,5 @@
 package us.teaminceptus.novaconomy;
 
-import net.md_5.bungee.api.ChatMessageType;
-import net.md_5.bungee.api.chat.BaseComponent;
-import net.md_5.bungee.api.chat.TextComponent;
-import net.minecraft.server.v1_16_R2.*;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.block.Block;
@@ -13,12 +9,13 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
-import us.teaminceptus.novaconomy.abstraction.Wrapper;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import net.md_5.bungee.api.ChatMessageType;
+import net.md_5.bungee.api.chat.BaseComponent;
+import net.md_5.bungee.api.chat.TextComponent;
+import net.minecraft.server.v1_16_R2.ItemStack;
+import net.minecraft.server.v1_16_R2.NBTTagCompound;
+import us.teaminceptus.novaconomy.abstraction.Wrapper;
 
 public final class Wrapper1_16_R2 implements Wrapper {
 
@@ -74,37 +71,6 @@ public final class Wrapper1_16_R2 implements Wrapper {
         item.setItemMeta(meta);
 
         return item;
-    }
-
-    private Object getData(NBTBase b) {
-        switch (b.getTypeId()) {
-            case 1: return ((NBTTagByte) b).asByte();
-            case 2: return ((NBTTagShort) b).asShort();
-            case 3: return ((NBTTagInt) b).asInt();
-            case 4: return ((NBTTagLong) b).asLong();
-            case 5: return ((NBTTagFloat) b).asFloat();
-            case 6: return ((NBTTagDouble) b).asDouble();
-            case 7: return ((NBTTagByteArray) b).getBytes();
-            case 8: return b.asString();
-            case 9: {
-                List<Object> l = new ArrayList<>();
-
-                NBTTagList list = (NBTTagList) b;
-                for (NBTBase nbtBase : list) l.add(getData(nbtBase));
-                return l;
-            }
-            case 10: {
-                NBTTagCompound c = (NBTTagCompound) b;
-                Map<String, Object> map = new HashMap<>();
-
-                c.getKeys().forEach(s -> map.put(s, getData(c.get(s))));
-                return map;
-            }
-            case 11: return ((NBTTagIntArray) b).getInts();
-            case 12: return ((NBTTagLongArray) b).getLongs();
-
-            default: return null;
-        }
     }
 
     @Override

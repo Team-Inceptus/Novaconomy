@@ -1,25 +1,29 @@
 package us.teaminceptus.novaconomy;
 
-import org.bukkit.Bukkit;
-import org.bukkit.Material;
-import org.bukkit.OfflinePlayer;
-import org.bukkit.Server;
-import org.bukkit.command.*;
-import org.bukkit.entity.Player;
-import org.bukkit.plugin.Plugin;
-import us.teaminceptus.novaconomy.abstraction.CommandWrapper;
-import us.teaminceptus.novaconomy.abstraction.Wrapper;
-import us.teaminceptus.novaconomy.api.NovaConfig;
-import us.teaminceptus.novaconomy.api.NovaPlayer;
-import us.teaminceptus.novaconomy.api.business.Business;
-import us.teaminceptus.novaconomy.api.economy.Economy;
-
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import org.bukkit.Bukkit;
+import org.bukkit.Material;
+import org.bukkit.OfflinePlayer;
+import org.bukkit.Server;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandMap;
+import org.bukkit.command.CommandSender;
+import org.bukkit.command.PluginCommand;
+import org.bukkit.command.TabExecutor;
+import org.bukkit.entity.Player;
+import org.bukkit.plugin.Plugin;
+
+import us.teaminceptus.novaconomy.abstraction.CommandWrapper;
+import us.teaminceptus.novaconomy.abstraction.Wrapper;
+import us.teaminceptus.novaconomy.api.NovaConfig;
+import us.teaminceptus.novaconomy.api.business.Business;
+import us.teaminceptus.novaconomy.api.economy.Economy;
 
 public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
 
@@ -788,7 +792,7 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
 
                             OfflinePlayer target = Wrapper.getPlayer(args[1]);
 
-                            if (p == null) {
+                            if (target == null) {
                                 sender.sendMessage(getMessage("error.argument.player"));
                                 return false;
                             }
@@ -845,7 +849,6 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
             case "rate": {
                 if (!(sender instanceof Player)) return false;
                 Player p = (Player) sender;
-                NovaPlayer np = new NovaPlayer(p);
 
                 if (args.length < 1) {
                     sender.sendMessage(getMessage("error.argument.business"));

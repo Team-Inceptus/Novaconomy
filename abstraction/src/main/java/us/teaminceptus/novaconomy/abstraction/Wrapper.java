@@ -207,8 +207,6 @@ public interface Wrapper {
 
             List<String> lore = meta.hasLore() ? meta.getLore() : new ArrayList<>();
             lore.add(" ");
-
-            AtomicInteger i = new AtomicInteger();
             lore.add(String.format(get("constants.business.price"), String.format("%,.2f", p.getAmount()).replace("D", ""), p.getEconomy().getSymbol() + ""));
 
             boolean stock = true;

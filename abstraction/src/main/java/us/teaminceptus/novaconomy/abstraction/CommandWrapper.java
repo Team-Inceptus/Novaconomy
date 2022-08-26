@@ -135,7 +135,6 @@ public interface CommandWrapper {
 
     default void help(CommandSender sender) {
         List<String> commandInfo = new ArrayList<>();
-        Plugin plugin = getPlugin();
         for (String name : COMMANDS.keySet()) {
             PluginCommand pcmd = Bukkit.getPluginCommand(name);
 
