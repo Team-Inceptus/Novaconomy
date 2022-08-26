@@ -16,14 +16,14 @@ import java.util.stream.Collectors;
  */
 public class VaultRegistry {
 
-    private final Novaconomy plugin;
+    // private final Novaconomy plugin;
 
     /**
      * Constructs the VaultRegistry.
      * @param plugin Plugin to use
      */
     public VaultRegistry(Novaconomy plugin) {
-        this.plugin = plugin;
+        // this.plugin = plugin;
         reloadVault();
     }
 

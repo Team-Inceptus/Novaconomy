@@ -31,10 +31,10 @@ import static us.teaminceptus.novaconomy.Novaconomy.getPlayer;
 public final class TreasuryRegistry implements EconomyProvider {
 
     static final String TREASURY_ACCOUNTS = "TreasuryAccounts";
-    private final Novaconomy plugin;
+    // private final Novaconomy plugin;
 
     public TreasuryRegistry(Novaconomy plugin) {
-        this.plugin = plugin;
+        // this.plugin = plugin;
 
         ConfigurationSerialization.registerClass(TreasuryAccount.class);
         TreasuryAccount.global = NovaConfig.getGlobalStorage();

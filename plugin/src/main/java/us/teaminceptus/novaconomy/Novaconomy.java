@@ -211,41 +211,6 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 	 */
 	public static String getMessage(String key) { return prefix + get(key); }
 
-	private static void updateRunnables() {
-		Novaconomy plugin = getPlugin(Novaconomy.class);
-
-		config = plugin.getConfig();
-		interest = config.getConfigurationSection("Interest");
-		ncauses = config.getConfigurationSection("NaturalCauses");
-
-		try { if (INTEREST_RUNNABLE.getTaskId() != -1) INTEREST_RUNNABLE.cancel(); } catch (IllegalStateException ignored) {}
-		try { if (TAXES_RUNNABLE.getTaskId() != -1) TAXES_RUNNABLE.cancel(); } catch (IllegalStateException ignored) {}
-
-		INTEREST_RUNNABLE = new BukkitRunnable() {
-			@Override
-			public void run() {
-				if (!(NovaConfig.getConfiguration().isInterestEnabled())) { cancel(); return; }
-				runInterest();
-			}
-		};
-
-		TAXES_RUNNABLE = new BukkitRunnable() {
-			@Override
-			public void run() {
-				if (!(NovaConfig.getConfiguration().hasAutomaticTaxes())) { cancel(); return; }
-				runTaxes();
-			}
-		};
-
-		new BukkitRunnable() {
-			@Override
-			public void run() {
-				INTEREST_RUNNABLE.runTaskTimer(plugin, plugin.getInterestTicks(), plugin.getInterestTicks());
-				TAXES_RUNNABLE.runTaskTimer(plugin, plugin.getTaxesTicks(), plugin.getTaxesTicks());
-			}
-		}.runTask(plugin);
-	}
-
 	private static final Set<Material> ores = new HashSet<>(Arrays.stream(Material.values()).filter(m -> m.name().endsWith("ORE") || m.name().equalsIgnoreCase("ANCIENT_DEBRIS")).collect(Collectors.toSet()));
 
 	private class Events implements Listener {
