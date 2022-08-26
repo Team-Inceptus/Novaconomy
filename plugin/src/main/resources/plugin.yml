@@ -1,5 +1,5 @@
 name: ${project.name}
-version: 1.5.1
+version: 1.6.0
 description: ${project.description}
 author: Team Inceptus
 website: ${project.url}
