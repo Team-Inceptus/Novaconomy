@@ -111,7 +111,7 @@ public enum Language {
             str.close();
             return ChatColor.translateAlternateColorCodes('&', p.getProperty(key, "Unknown Value"));
         } catch (IOException e) {
-            NovaConfig.getLogger().severe(e.getMessage());
+            NovaConfig.print(e);
             return "Unknown Value";
         }
     }
