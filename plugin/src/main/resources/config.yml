@@ -217,3 +217,23 @@ Bounties:
 
   # Whether Bounties are enabled
   Enabled: true
+
+# Business Section
+Business:
+
+  # Market Taxing
+  MarketTax:
+
+    # Whether Market Tax is enabled
+    #
+    # Market Tax is a tax added to the price of items sold in a player's business
+    # market that goes to the shares of the product's MATERIAL.
+    Enabled: true
+
+    # The value to multiply the price by that will be added
+    # Example:
+    #
+    # Subtotal (Price) = 100$
+    # Market Tax = 0.05 or 5%
+    # Total = 100$ + (100$ * 5%) = 105$
+    Value: 0.05 # 5% Market Tax
