@@ -55,7 +55,7 @@ public final class NovaPlayer {
         if (!pFile.exists()) try {
             pFile.createNewFile();
         } catch (IOException e) {
-            NovaConfig.getLogger().severe(e.getMessage());
+            NovaConfig.print(e);
         }
 
         pConfig = YamlConfiguration.loadConfiguration(pFile);
@@ -136,8 +136,7 @@ public final class NovaPlayer {
         try {
             pConfig.save(pFile);
         } catch (IOException e) {
-            NovaConfig.getLogger().info("Error saving player file");
-            NovaConfig.getLogger().severe(e.getMessage());
+            NovaConfig.print(e);
         }
     }
 
@@ -491,6 +490,25 @@ public final class NovaPlayer {
     public void setRating(@NotNull Rating r) {
         Preconditions.checkNotNull(r, "Rating cannot be null");
         setRating(r.getBusinessId(), r.getRatingLevel(), r.getComment());
+    }
+
+    /**
+     * Fetches the Rating for this Business.
+     * @param b Business to fetch the rating for
+     * @return Rating for this Business, or null if not found / business is null
+     */
+    @Nullable
+    public Rating getRating(@Nullable Business b) {
+        if (b == null) return null;
+
+        UUID id = b.getUniqueId();
+        if (!pConfig.isLong("ratings." + id + ".last_rating")) return null;
+
+        long time = pConfig.getLong("ratings." + id + ".last_rating", 0);
+        int level = pConfig.getInt("ratings." + id + ".rating", 0);
+        String comment = pConfig.getString("ratings." + id + ".comment", "");
+
+        return new Rating(p, id, level, time, comment);
     }
 
     /**
