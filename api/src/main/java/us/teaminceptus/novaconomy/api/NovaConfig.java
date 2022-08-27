@@ -31,27 +31,23 @@ public interface NovaConfig  {
     }
 
     /**
-     * Reloads Novaconomy's Language Files.
-     * @deprecated Languages are no longer stored in the plugin folder
-     * @param replace if should replace files (defaults to false)
-     */
-    @Deprecated
-    static void reloadLanguages(boolean replace) {
-    }
-    /**
-     * Reloads Novaconomy's Language Files.
-     * @deprecated Languages are no longer stored in the plugin folder
-     */
-    @Deprecated
-    static void reloadLanguages() {
-        reloadLanguages(false);
-    }
-
-    /**
      * Fetches the file of the main config.yml.
      * @return Configuration File
      */
     static File getConfigFile() { return new File(getDataFolder(), "config.yml"); }
+
+    static File getBusinessesFolder() { return new File(getDataFolder(), "businesses"); }
+
+    /**
+     * Prints a Throwable in the Plugin's Namespace and Format.
+     * @param t Throwable to print
+     */
+    static void print(Throwable t) {
+        getLogger().severe(t.getClass().getSimpleName());
+        getLogger().severe("-----------");
+        getLogger().severe(t.getMessage());
+        for (StackTraceElement element : t.getStackTrace()) getLogger().severe(element.toString());
+    }
 
     /**
      * Whether or not Notifications is turned on inside of the configuration.
@@ -112,13 +108,12 @@ public interface NovaConfig  {
 
     /**
      * Fetches the File that businesses.yml belongs to.
+     * @deprecated Businesses are now stored in individual files
      * @return businesses.yml File
      */
+    @Deprecated
     static File getBusinessFile() {
-        File f = new File(getDataFolder(), "businesses.yml");
-        if (!f.exists()) getPlugin().saveResource("businesses.yml", false);
-
-        return f;
+        return new File(getDataFolder(), "businesses.yml");
     }
 
     /**
@@ -131,10 +126,12 @@ public interface NovaConfig  {
 
     /**
      * Loads the businesses.yml file.
+     * @deprecated Businesses are now stored in individual files
      * @return Businesses File
      */
+    @Deprecated
     static FileConfiguration loadBusinesses() {
-        return YamlConfiguration.loadConfiguration(getBusinessFile());
+        return null;
     }
 
     /**
@@ -254,6 +251,12 @@ public interface NovaConfig  {
         if (!config.isConfigurationSection("Bounties")) config.createSection("Bounties");
         if (!config.isBoolean("Bounties.Enabled")) config.set("Bounties.Enabled", true);
         if (!config.isBoolean("Bounties.Broadcast")) config.set("Bounties.Broadcast", true);
+
+        if (!config.isConfigurationSection("Business")) config.createSection("Business");
+
+        if (!config.isConfigurationSection("Business.MarketTax")) config.createSection("Business.MarketTax");
+        if (!config.isBoolean("Business.MarketTax.Enabled")) config.set("Business.MarketTax.Enabled", true);
+        if (!config.isDouble("Business.MarketTax.Value") && !config.isInt("Business.MarketTax.Value")) config.set("Business.MarketTax.Value", 0.05D);
 
         try { config.save(f); } catch (IOException e) { getPlugin().getLogger().severe(e.getMessage()); }
 
