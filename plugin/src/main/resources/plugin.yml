@@ -81,6 +81,11 @@ permissions:
     default: op
     children:
       novaconomy.economy: true
+  novaconomy.economy.custom_model_data:
+    description: Access to change economy icon's custom model data
+    default: op
+    children:
+      novaconomy.economy: true
 
   # User
   novaconomy.user:

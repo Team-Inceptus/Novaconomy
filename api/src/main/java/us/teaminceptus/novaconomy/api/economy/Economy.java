@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
 /**
  * Represents an Economy
  */
-public final class Economy implements ConfigurationSerializable {
+public final class Economy implements ConfigurationSerializable, Comparable<Economy> {
 
     private static final String IGNORE_TAXES = "Taxes.Automatic.Ignore";
     private final char symbol;
@@ -124,6 +124,15 @@ public final class Economy implements ConfigurationSerializable {
     }
 
     /**
+     * Sets the custom model data integer of this economy
+     * @param customModelData Custom Model Data
+     */
+    public void setCustomModelData(int customModelData) {
+        this.customModelData = customModelData;
+        saveFile();
+    }
+
+    /**
      * Whether this Economy is taxable.
      * <br><br>
      * This value is not serialized with the Economy and is changable from config.yml.
@@ -162,7 +171,7 @@ public final class Economy implements ConfigurationSerializable {
         try {
             config.save(NovaConfig.getEconomiesFile());
         } catch (IOException e) {
-            NovaConfig.getLogger().severe(e.getMessage());
+            NovaConfig.print(e);
         }
     }
 
@@ -193,7 +202,7 @@ public final class Economy implements ConfigurationSerializable {
             try {
                 pConfig.save(new File(NovaConfig.getPlugin().getDataFolder().getPath() + "/players", p.getUniqueId() + ".yml"));
             } catch (IOException e) {
-                NovaConfig.getLogger().severe(e.getMessage());
+                NovaConfig.print(e);
             }
         }
 
@@ -201,7 +210,7 @@ public final class Economy implements ConfigurationSerializable {
             config.save(new File(NovaConfig.getPlugin().getDataFolder(), "economies.yml"));
         } catch (IOException e) {
             NovaConfig.getLogger().info("Error removing economy " + econ.getName());
-            NovaConfig.getLogger().severe(e.getMessage());
+            NovaConfig.print(e);
         }
         NovaConfig.getConfiguration().reloadHooks();
     }
@@ -402,6 +411,11 @@ public final class Economy implements ConfigurationSerializable {
         return new Economy.Builder();
     }
 
+    @Override
+    public int compareTo(@NotNull Economy o) {
+        return this.getName().compareTo(o.getName());
+    }
+
     /**
      * Class used for Creating Economies
      * @see Economy#builder()
@@ -529,7 +543,7 @@ public final class Economy implements ConfigurationSerializable {
             try {
                 config.save(NovaConfig.getEconomiesFile());
             } catch (IOException e) {
-                NovaConfig.getLogger().severe(e.getMessage());
+                NovaConfig.print(e);
             }
 
             NovaConfig.getConfiguration().reloadHooks();
