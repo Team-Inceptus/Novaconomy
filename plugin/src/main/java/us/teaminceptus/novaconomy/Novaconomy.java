@@ -1426,7 +1426,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 			wrapperVersion = tempV;
 			return (CommandWrapper) Class.forName(Novaconomy.class.getPackage().getName() + ".CommandWrapperV" + wrapperVersion).getConstructor(Plugin.class).newInstance(NovaConfig.getPlugin());
 		} catch (Exception e) {
-			NovaConfig.getLogger().severe(e.getMessage());
+			NovaConfig.print(e);
 			return null;
 		}
 	}
@@ -1586,7 +1586,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 	private void loadVault() {
 		if (hasVault()) {
 			getLogger().info("Vault Found! Hooking...");
-			new VaultRegistry(this);
+			VaultRegistry.reloadVault();
 		}
 	}
 
@@ -1611,16 +1611,31 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 			if (!(economyFile.exists())) economyFile.createNewFile();
 			if (!(playerDir.exists())) playerDir.mkdir();
 		} catch (IOException e) {
-			getLogger().severe("Error loading files & folders");
-			getLogger().severe(e.getMessage());
+			NovaConfig.print(e);
 		}
 		economiesFile = YamlConfiguration.loadConfiguration(economyFile);
 		config = this.getConfig();
 		interest = config.getConfigurationSection("Interest");
 		ncauses = config.getConfigurationSection("NaturalCauses");
 
+		File businessesDir = new File(getDataFolder(), "businesses");
+		if (!businessesDir.exists()) businessesDir.mkdir();
+
 		File businesses = new File(getDataFolder(), "businesses.yml");
-		if (!businesses.exists()) saveResource("businesses.yml", false);
+		if (businesses.exists()) {
+			getLogger().warning("Businesses are now stored in individual files. Automatically migrating...");
+
+			FileConfiguration bConfig = YamlConfiguration.loadConfiguration(businesses);
+			bConfig.getValues(false).forEach((k, v) -> {
+				if (!(v instanceof Business)) return;
+				Business b = (Business) v;
+				b.saveBusiness();
+			});
+
+			businesses.delete();
+
+			getLogger().info("Migration complete!");
+		}
 
 		File globalF = new File(getDataFolder(), "global.yml");
 		if (!globalF.exists()) saveResource("global.yml", false);

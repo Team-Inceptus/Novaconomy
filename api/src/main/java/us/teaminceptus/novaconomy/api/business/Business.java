@@ -4,6 +4,7 @@ import com.google.common.util.concurrent.AtomicDouble;
 import org.apache.commons.lang.Validate;
 import org.bukkit.*;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.ItemFlag;
@@ -18,6 +19,7 @@ import us.teaminceptus.novaconomy.api.settings.Settings;
 import us.teaminceptus.novaconomy.api.util.BusinessProduct;
 import us.teaminceptus.novaconomy.api.util.Product;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -32,11 +34,13 @@ public final class Business implements ConfigurationSerializable {
 
     private final UUID id;
 
-    private final String name;
+    private String name;
 
     private final OfflinePlayer owner;
 
-    private final Material icon;
+    private final File file;
+
+    private Material icon;
 
     private final long creationDate;
 
@@ -50,17 +54,23 @@ public final class Business implements ConfigurationSerializable {
 
     private final List<ItemStack> resources = new ArrayList<>();
 
-    private Business(String name, Material icon, OfflinePlayer owner, Collection<Product> products, Collection<ItemStack> resources, BusinessStatistics stats, Map<Settings.Business, Boolean> settings, long creationDate, boolean save) {
-        this.id = UUID.nameUUIDFromBytes(name.getBytes(StandardCharsets.UTF_8));
+    private Business(UUID uid, String name, Material icon, OfflinePlayer owner, Collection<Product> products, Collection<ItemStack> resources, BusinessStatistics stats, Map<Settings.Business, Boolean> settings, long creationDate, boolean save) {
+        this.id = uid;
         this.name = name;
         this.icon = icon;
         this.owner = owner;
+
+        this.file = new File(NovaConfig.getBusinessesFolder(), id + ".yml");
+
         this.creationDate = creationDate;
-        this.stats = stats == null ? new BusinessStatistics(this) : stats;
+        this.stats = stats == null ? new BusinessStatistics(id) : stats;
+
         if (products != null) products.forEach(p -> this.products.add(new BusinessProduct(p, this)));
         if (resources != null) this.resources.addAll(resources);
+
         if (settings != null) this.settings.putAll(settings);
         else for (Settings.Business b : Settings.Business.values()) this.settings.put(b, b.getDefaultValue());
+
         if (save) saveBusiness();
     }
 
@@ -114,6 +124,30 @@ public final class Business implements ConfigurationSerializable {
         setHome(home, true);
     }
 
+    /**
+     * Sets the icon of this Business.
+     * @param icon Business Icon
+     * @throws IllegalArgumentException if icon is null
+     */
+    public void setIcon(@NotNull Material icon) throws IllegalArgumentException {
+        Validate.notNull(icon, "Icon cannot be null");
+        this.icon = icon;
+        saveBusiness();
+    }
+
+    /**
+     * Sets the name of this Business.
+     * @param name Business Name
+     * @throws IllegalArgumentException if name is null or empty
+     */
+    public void setName(@NotNull String name) throws IllegalArgumentException {
+        if (name == null) throw new IllegalArgumentException("Name cannot be null");
+        if (name.isEmpty()) throw new IllegalArgumentException("Name cannot be empty");
+
+        this.name = name;
+        saveBusiness();
+    }
+
     private void setHome(Location home, boolean save) {
         this.home = home;
         if (save) saveBusiness();
@@ -151,6 +185,7 @@ public final class Business implements ConfigurationSerializable {
                 .collect(Collectors.toMap(e -> e.getKey().name().toLowerCase(), Map.Entry::getValue));
 
         return new HashMap<String, Object>() {{
+            put("id", id.toString());
             put("name", name);
             put("owner", owner);
             put("creation_date", creationDate);
@@ -442,11 +477,14 @@ public final class Business implements ConfigurationSerializable {
         List<Rating> ratings = new ArrayList<>();
 
         for (OfflinePlayer p : Bukkit.getOfflinePlayers()) {
+            if (owner.getUniqueId().equals(p.getUniqueId())) continue;
             NovaPlayer np = new NovaPlayer(p);
             if (!np.hasRating(this)) continue;
 
-            ratings.add(new Rating(p, this, np.getRatingLevel(this), np.getLastRating(this).getTime(), np.getRatingComment(this)));
+            ratings.add(np.getRating(this));
         }
+
+        ratings = ratings.stream().filter(Objects::nonNull).collect(Collectors.toList());
 
         return ratings;
     }
@@ -495,12 +533,16 @@ public final class Business implements ConfigurationSerializable {
 
         long creationDate = serial.containsKey("creation_date") ? (long) serial.get("creation_date") : 1242518400000L;
 
+        String name = (String) serial.get("name");
+        UUID uid = serial.containsKey("id") ? UUID.fromString((String) serial.get("id")) : UUID.nameUUIDFromBytes(name.getBytes());
+
         Business b = new Business(
-                (String) serial.get("name"),
+                uid,
+                name,
                 Material.valueOf((String) serial.get("icon")),
                 (OfflinePlayer) serial.get("owner"),
                 (List<Product>) serial.get("products"), resources,
-                (BusinessStatistics) serial.get("stats"),
+                (BusinessStatistics) serial.getOrDefault("stats", null),
                 settings, creationDate, false
         );
         b.setHome(home, false);
@@ -512,10 +554,14 @@ public final class Business implements ConfigurationSerializable {
      * Saves this Business to the Businesses File.
      */
     public void saveBusiness() {
-        FileConfiguration config = NovaConfig.loadBusinesses();
-        config.set(this.id.toString(), this);
+        FileConfiguration config = YamlConfiguration.loadConfiguration(file);
+        config.set(id.toString(), this);
 
-        try { config.save(NovaConfig.getBusinessFile()); } catch (IOException e) { NovaConfig.getLogger().severe(e.getMessage()); }
+        try {
+            config.save(file);
+        } catch (IOException e) {
+            NovaConfig.print(e);
+        }
     }
 
     /**
@@ -525,9 +571,13 @@ public final class Business implements ConfigurationSerializable {
     @NotNull
     public static List<Business> getBusinesses() {
         List<Business> businesses = new ArrayList<>();
-        FileConfiguration config = NovaConfig.loadBusinesses();
+        for (File f : NovaConfig.getBusinessesFolder().listFiles()) {
+            if (f.isDirectory()) continue;
+            if (!f.getName().endsWith(".yml")) continue;
 
-        config.getKeys(false).forEach(s -> businesses.add((Business) config.get(s)));
+            FileConfiguration config = YamlConfiguration.loadConfiguration(f);
+            businesses.add((Business) config.get(f.getName().split("\\.")[0]));
+        }
 
         return businesses;
     }
@@ -571,10 +621,7 @@ public final class Business implements ConfigurationSerializable {
      */
     public static void remove(@Nullable Business b) {
         if (b == null) return;
-        FileConfiguration config = NovaConfig.loadBusinesses();
-
-        config.set(b.id.toString(), null);
-        try { config.save(NovaConfig.getBusinessFile()); } catch (IOException e) { NovaConfig.getLogger().severe(e.getMessage()); }
+        b.file.delete();
     }
 
     /**
@@ -597,7 +644,7 @@ public final class Business implements ConfigurationSerializable {
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, name, owner, icon);
+        return Objects.hash(id, owner);
     }
 
     /**
@@ -689,9 +736,10 @@ public final class Business implements ConfigurationSerializable {
         public Business build() throws IllegalArgumentException, UnsupportedOperationException {
             if (owner == null) throw new IllegalArgumentException("Owner cannot be null");
             Validate.notNull(name, "Name cannot be null");
+            if (name.isEmpty()) throw new IllegalArgumentException("Name cannot be empty");
             Validate.notNull(icon, "Icon cannot be null");
 
-            Business b = new Business(name, icon, owner, null, null, null, null,  System.currentTimeMillis(),false);
+            Business b = new Business(UUID.nameUUIDFromBytes(name.getBytes()), name, icon, owner, null, null, null, null,  System.currentTimeMillis(),false);
 
             if (Business.exists(name)) throw new UnsupportedOperationException("Business already exists");
 
