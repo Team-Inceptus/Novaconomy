@@ -1,5 +1,7 @@
 package us.teaminceptus.novaconomy;
 
+import net.md_5.bungee.api.chat.BaseComponent;
+import net.minecraft.server.v1_9_R2.*;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.block.Block;
@@ -10,12 +12,6 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.material.Crops;
-
-import net.md_5.bungee.api.chat.BaseComponent;
-import net.minecraft.server.v1_9_R2.ChatComponentText;
-import net.minecraft.server.v1_9_R2.ItemStack;
-import net.minecraft.server.v1_9_R2.NBTTagCompound;
-import net.minecraft.server.v1_9_R2.PacketPlayOutChat;
 import us.teaminceptus.novaconomy.abstraction.Wrapper;
 
 public final class Wrapper1_9_R2 implements Wrapper {
@@ -29,6 +25,13 @@ public final class Wrapper1_9_R2 implements Wrapper {
     @Override
     public void sendActionbar(Player p, BaseComponent component) {
         sendActionbar(p, component.toLegacyText());
+    }
+
+    @Override
+    @SuppressWarnings("deprecation")
+    public boolean isItem(Material m) {
+        if (m == Material.AIR) return false;
+        return Item.getById(m.getId()) != null;
     }
 
     @Override

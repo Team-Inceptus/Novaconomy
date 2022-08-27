@@ -1,10 +1,7 @@
 package us.teaminceptus.novaconomy;
 
 import net.md_5.bungee.api.chat.BaseComponent;
-import net.minecraft.server.v1_8_R3.ChatComponentText;
-import net.minecraft.server.v1_8_R3.ItemStack;
-import net.minecraft.server.v1_8_R3.NBTTagCompound;
-import net.minecraft.server.v1_8_R3.PacketPlayOutChat;
+import net.minecraft.server.v1_8_R3.*;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.block.Block;
@@ -22,6 +19,13 @@ public final class Wrapper1_8_R3 implements Wrapper {
     public void sendActionbar(Player p, String message) {
         PacketPlayOutChat packet = new PacketPlayOutChat(new ChatComponentText(message), (byte)2);
         ((CraftPlayer) p).getHandle().playerConnection.sendPacket(packet);
+    }
+
+    @Override
+    @SuppressWarnings("deprecation")
+    public boolean isItem(Material m) {
+        if (m == Material.AIR) return false;
+        return Item.getById(m.getId()) != null;
     }
 
     @Override

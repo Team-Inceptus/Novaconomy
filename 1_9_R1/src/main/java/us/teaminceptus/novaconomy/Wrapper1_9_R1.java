@@ -1,10 +1,7 @@
 package us.teaminceptus.novaconomy;
 
 import net.md_5.bungee.api.chat.BaseComponent;
-import net.minecraft.server.v1_9_R1.ChatComponentText;
-import net.minecraft.server.v1_9_R1.ItemStack;
-import net.minecraft.server.v1_9_R1.NBTTagCompound;
-import net.minecraft.server.v1_9_R1.PacketPlayOutChat;
+import net.minecraft.server.v1_9_R1.*;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.block.Block;
@@ -28,6 +25,13 @@ public final class Wrapper1_9_R1 implements Wrapper {
     @Override
     public void sendActionbar(Player p, BaseComponent component) {
         sendActionbar(p, component.toLegacyText());
+    }
+
+    @Override
+    @SuppressWarnings("deprecation")
+    public boolean isItem(Material m) {
+        if (m == Material.AIR) return false;
+        return Item.getById(m.getId()) != null;
     }
 
     @Override
