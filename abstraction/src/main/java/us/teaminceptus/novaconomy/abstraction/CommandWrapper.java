@@ -39,6 +39,7 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -543,8 +544,11 @@ public interface CommandWrapper {
             return;
         }
 
-        if (confirm) Business.remove(b);
-        else sender.sendMessage(String.format(getMessage("constants.confirm_command"), "/business remove confirm"));
+        if (confirm) {
+            Business.remove(b);
+            sender.sendMessage(getMessage("success.business.delete"));
+        }
+        else sender.sendMessage(String.format(getMessage("constants.confirm_command"), "/business remove <business> confirm"));
     }
 
     default void businessInfo(Player p) {
@@ -655,7 +659,7 @@ public interface CommandWrapper {
         } catch (IllegalArgumentException e) {
             p.sendMessage(getMessage("error.argument"));
         } catch (UnsupportedOperationException e) {
-            p.sendMessage(getMessage("error.business.exists"));
+            p.sendMessage(getMessage("error.business.exists_name"));
         }
     }
 
@@ -1065,7 +1069,7 @@ public interface CommandWrapper {
                 return;
             }
 
-            settings = w.genGUI(27, get("constants.settings." + (business ? BUSINESS_TAG : "player")), new Wrapper.CancelHolder());
+            settings = w.genGUI(36, get("constants.settings." + (business ? BUSINESS_TAG : "player")), new Wrapper.CancelHolder());
 
             BiConsumer<Settings.NovaSetting<Boolean>, Boolean> func = (sett, value) -> {
                 ItemStack item = new ItemStack(value ? limeWool() : redWool());
@@ -1104,7 +1108,7 @@ public interface CommandWrapper {
 
             back = w.setID(back, "back:settings");
 
-            settings.setItem(22, back);
+            settings.setItem(31, back);
         }
 
         p.openInventory(settings);
@@ -1124,7 +1128,8 @@ public interface CommandWrapper {
         ItemStack owner = w.createSkull(anonymous ? null : b.getOwner());
         ItemMeta oMeta = owner.getItemMeta();
         oMeta.setDisplayName(anonymous ? ChatColor.AQUA + get("constants.business.anonymous") : String.format(get("constants.business.owner"), b.getOwner().getName()));
-        if (b.isOwner(p) && !b.getSetting(Settings.Business.PUBLIC_OWNER)) oMeta.setLore(Collections.singletonList(ChatColor.YELLOW + get("constants.business.hidden")));
+        if (b.isOwner(p) && !b.getSetting(Settings.Business.PUBLIC_OWNER))
+            oMeta.setLore(Collections.singletonList(ChatColor.YELLOW + get("constants.business.hidden")));
         owner.setItemMeta(oMeta);
         stats.setItem(12, owner);
 
@@ -1144,7 +1149,7 @@ public interface CommandWrapper {
                 String.format(get("constants.business.stats.global.ratings"), String.format("%,.0f", (double) b.getRatings().size()))
         ));
         sold.setItemMeta(sMeta);
-        stats.setItem(21, sold);
+        stats.setItem(20, sold);
 
         final ItemStack latest;
         if (statistics.hasLatestTransaction()) {
@@ -1158,8 +1163,10 @@ public interface CommandWrapper {
             lMeta.setDisplayName(ChatColor.YELLOW + get("constants.business.stats.global.latest"));
             String display = prI.hasItemMeta() && prI.getItemMeta().hasDisplayName() ? prI.getItemMeta().getDisplayName() : WordUtils.capitalizeFully(prI.getType().name().replace('_', ' '));
             lMeta.setLore(Arrays.asList(
-                    ChatColor.AQUA + (buyer.isOnline() && buyer.getPlayer().getDisplayName() != null ? buyer.getPlayer().getDisplayName() : buyer.getName()) + ":",
-                    ChatColor.WHITE + display + " (" + prI.getAmount() + ")" + ChatColor.GOLD + " | " + ChatColor.BLUE + String.format("%,.2f", pr.getAmount() * prI.getAmount()) + pr.getEconomy().getSymbol()
+                    ChatColor.AQUA + "" + ChatColor.UNDERLINE + (buyer.isOnline() && buyer.getPlayer().getDisplayName() != null ? buyer.getPlayer().getDisplayName() : buyer.getName()),
+                    " ",
+                    ChatColor.WHITE + display + " (" + prI.getAmount() + ")" + ChatColor.GOLD + " | " + ChatColor.BLUE + String.format("%,.2f", pr.getAmount() * prI.getAmount()) + pr.getEconomy().getSymbol(),
+                    ChatColor.DARK_AQUA + formatTimeAgo(latestT.getTimestamp().getTime())
             ));
             latest.setItemMeta(lMeta);
         } else {
@@ -1168,12 +1175,55 @@ public interface CommandWrapper {
             lMeta.setDisplayName(ChatColor.RESET + get("constants.business.no_transactions"));
             latest.setItemMeta(lMeta);
         }
-        stats.setItem(22, latest);
+        stats.setItem(21, latest);
+
+        Map<Product, Integer> productSales = statistics.getProductSales();
+
+        ItemStack totalMoney = new ItemStack(Material.GOLD_INGOT);
+        ItemMeta mMeta = totalMoney.getItemMeta();
+        mMeta.setDisplayName(ChatColor.YELLOW + get("constants.business.stats.global.total_made"));
+        List<String> lore = new ArrayList<>();
+
+        List<Economy> econs = Economy.getEconomies().stream().sorted(Collections.reverseOrder(Comparator.comparing(Economy::getName))).collect(Collectors.toList());
+        Map<Economy, Double> totals = new HashMap<>();
+
+        AtomicInteger i = new AtomicInteger();
+        for (Economy econ : econs) {
+            if (i.get() > 5) {
+                i.set(-1);
+                break;
+            }
+
+            double total = 0;
+            for (Product pr : productSales.keySet().stream().filter(pr -> pr.getEconomy().equals(econ)).collect(Collectors.toSet()))
+                total += pr.getAmount() * productSales.get(pr);
+
+            if (total == 0) continue;
+            totals.put(econ, total);
+            i.incrementAndGet();
+        }
+
+        List<Map.Entry<Economy, Double>> sortedTotals = totals.entrySet().stream().sorted(Collections.reverseOrder(Map.Entry.comparingByValue())).collect(Collectors.toList());
+
+        boolean switcher = false;
+        for (Map.Entry<Economy, Double> entry : sortedTotals) {
+            Economy econ = entry.getKey();
+            double total = entry.getValue();
+
+            lore.add((switcher ? ChatColor.AQUA : ChatColor.BLUE) + String.format("%,.2f", total) + econ.getSymbol());
+            switcher = !switcher;
+        }
+
+        if (i.get() == -1) lore.add(ChatColor.WHITE + "...");
+        mMeta.setLore(lore);
+
+        totalMoney.setItemMeta(mMeta);
+        stats.setItem(23, totalMoney);
 
         final ItemStack top;
 
-        if (statistics.getProductSales().size() > 0) {
-            List<Map.Entry<Product, Integer>> topProd = statistics.getProductSales()
+        if (productSales.size() > 0) {
+            List<Map.Entry<Product, Integer>> topProd = productSales
                     .entrySet()
                     .stream()
                     .sorted(Collections.reverseOrder(Map.Entry.comparingByValue()))
@@ -1183,22 +1233,22 @@ public interface CommandWrapper {
             ItemMeta tMeta = top.getItemMeta();
             tMeta.setDisplayName(ChatColor.YELLOW + "" + ChatColor.UNDERLINE + get("constants.business.stats.global.top"));
 
-            List<String> lore = new ArrayList<>();
-            lore.add(" ");
+            List<String> pLore = new ArrayList<>();
+            pLore.add(" ");
 
-            for (int i = 0; i < Math.min(5, topProd.size()); i++) {
-                Map.Entry<Product, Integer> entry = topProd.get(i);
+            for (int j = 0; j < Math.min(5, topProd.size()); j++) {
+                Map.Entry<Product, Integer> entry = topProd.get(j);
                 Product pr = entry.getKey();
                 int sales = entry.getValue();
-                int num = i + 1;
+                int num = j + 1;
 
                 ItemStack item = pr.getItem();
                 String display = item.hasItemMeta() && item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : WordUtils.capitalizeFully(item.getType().name().replace('_', ' '));
 
-                lore.add(ChatColor.YELLOW + "#" + num + ") " + ChatColor.RESET + display + ChatColor.GOLD + " - " + ChatColor.BLUE + String.format("%,.2f", pr.getAmount()) + pr.getEconomy().getSymbol() + ChatColor.GOLD + " | " + ChatColor.AQUA + String.format("%,.0f", (double) sales));
+                pLore.add(ChatColor.YELLOW + "#" + num + ") " + ChatColor.RESET + display + ChatColor.GOLD + " - " + ChatColor.BLUE + String.format("%,.2f", pr.getAmount()) + pr.getEconomy().getSymbol() + ChatColor.GOLD + " | " + ChatColor.AQUA + String.format("%,.0f", (double) sales));
             }
 
-            tMeta.setLore(lore);
+            tMeta.setLore(pLore);
             top.setItemMeta(tMeta);
         } else {
             top = new ItemStack(Material.PAPER);
@@ -1206,7 +1256,7 @@ public interface CommandWrapper {
             tMeta.setDisplayName(ChatColor.RESET + get("constants.business.no_products"));
             top.setItemMeta(tMeta);
         }
-        stats.setItem(23, top);
+        stats.setItem(24, top);
 
         ItemStack back = new ItemStack(Material.ARROW);
         ItemMeta bMeta = back.getItemMeta();
@@ -1423,6 +1473,49 @@ public interface CommandWrapper {
         items.forEach(select::addItem);
 
         p.openInventory(select);
+    }
+
+    default void setBusinessName(Player p, String name) {
+        if (!Business.exists(p)) {
+            p.sendMessage(getMessage("error.business.not_an_owner"));
+            return;
+        }
+
+        Business b = Business.getByOwner(p);
+        if (name.isEmpty()) {
+            p.sendMessage(getMessage("error.argument.empty"));
+            return;
+        }
+
+        Business other = Business.getByName(name);
+        if (other != null && !other.equals(b)) {
+            p.sendMessage(getMessage("error.business.exists_name"));
+            return;
+        }
+
+        b.setName(name);
+        p.sendMessage(String.format(getMessage("success.business.set_name"), name));
+    }
+
+    default void setBusinessIcon(Player p, Material icon) {
+        if (!Business.exists(p)) {
+            p.sendMessage(getMessage("error.business.not_an_owner"));
+            return;
+        }
+
+        Business b = Business.getByOwner(p);
+        b.setIcon(icon);
+        p.sendMessage(String.format(getMessage("success.business.set_icon"), WordUtils.capitalizeFully(icon.name().replace("_", " "))));
+    }
+
+    default void setEconomyModel(CommandSender sender, Economy econ, int data) {
+        if (!sender.hasPermission("novaconomy.economy.custom_model_data")) {
+            sender.sendMessage(getMessage("error.permission.argument"));
+            return;
+        }
+
+        econ.setCustomModelData(data);
+        sender.sendMessage(String.format(getMessage("success.economy.set_model_data"), econ.getName(), data));
     }
 
     // Util Classes & Other Static Methods

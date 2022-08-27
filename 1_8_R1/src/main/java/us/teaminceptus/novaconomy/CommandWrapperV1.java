@@ -1,5 +1,18 @@
 package us.teaminceptus.novaconomy;
 
+import org.bukkit.Bukkit;
+import org.bukkit.Material;
+import org.bukkit.OfflinePlayer;
+import org.bukkit.Server;
+import org.bukkit.command.*;
+import org.bukkit.entity.Player;
+import org.bukkit.plugin.Plugin;
+import us.teaminceptus.novaconomy.abstraction.CommandWrapper;
+import us.teaminceptus.novaconomy.abstraction.Wrapper;
+import us.teaminceptus.novaconomy.api.NovaConfig;
+import us.teaminceptus.novaconomy.api.business.Business;
+import us.teaminceptus.novaconomy.api.economy.Economy;
+
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -7,27 +20,11 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.bukkit.Bukkit;
-import org.bukkit.Material;
-import org.bukkit.OfflinePlayer;
-import org.bukkit.Server;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandMap;
-import org.bukkit.command.CommandSender;
-import org.bukkit.command.PluginCommand;
-import org.bukkit.command.TabExecutor;
-import org.bukkit.entity.Player;
-import org.bukkit.plugin.Plugin;
-
-import us.teaminceptus.novaconomy.abstraction.CommandWrapper;
-import us.teaminceptus.novaconomy.abstraction.Wrapper;
-import us.teaminceptus.novaconomy.api.NovaConfig;
-import us.teaminceptus.novaconomy.api.business.Business;
-import us.teaminceptus.novaconomy.api.economy.Economy;
-
 public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
 
     private final Plugin plugin;
+
+    private static final Wrapper w = Wrapper.getWrapper();
 
     public CommandWrapperV1(Plugin plugin) {
         this.plugin = plugin;
@@ -44,7 +41,7 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
             if (aliases != null && aliases.length > 0) cmd.setAliases(Arrays.asList(aliases));
             return cmd;
         } catch (Exception e) {
-            NovaConfig.getLogger().severe(e.getMessage());
+            NovaConfig.print(e);
             return null;
         }
     }
@@ -58,7 +55,7 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
             CommandMap map = (CommandMap) bukkitmap.get(srv);
             map.register(cmd.getName(), cmd);
         } catch (Exception e) {
-            NovaConfig.getLogger().severe(e.getMessage());
+            NovaConfig.print(e);
         }
     }
 
@@ -380,6 +377,38 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
 
                         break;
                     }
+                    case "modeldata":
+                    case "custommodeldata":
+                    case "setcustommodeldata":
+                    case "setmodeldata": {
+                        if (!economyCount(sender)) return false;
+
+                        if (args.length < 2) {
+                            sender.sendMessage(getMessage("error.argument.economy"));
+                            return false;
+                        }
+
+                        if (!Economy.exists(args[1])) {
+                            sender.sendMessage(getMessage("error.economy.inexistent"));
+                            return false;
+                        }
+
+                        Economy econ = Economy.getEconomy(args[1]);
+
+                        try {
+                            if (args.length < 3) {
+                                sender.sendMessage(getMessage("error.argument.amount"));
+                                return false;
+                            }
+
+                            int data = Integer.parseInt(args[2]);
+                            setEconomyModel(sender, econ, data);
+                        } catch (NumberFormatException e) {
+                            sender.sendMessage(getMessage("error.argument.amount"));
+                            return false;
+                        }
+                        break;
+                    }
                     default: {
                         sender.sendMessage(getMessage("error.argument"));
                         return false;
@@ -435,6 +464,11 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                         Material icon = Material.matchMaterial(args[2]);
 
                         if (icon == null) {
+                            sender.sendMessage(getMessage("error.argument.icon"));
+                            return false;
+                        }
+
+                        if (!w.isItem(icon)) {
                             sender.sendMessage(getMessage("error.argument.icon"));
                             return false;
                         }
@@ -595,6 +629,42 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                             return false;
                         }
 
+                        break;
+                    }
+                    case "setname": case "name": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
+                        if (args.length < 2) {
+                            sender.sendMessage(getMessage("error.argument.name"));
+                            return false;
+                        }
+
+                        setBusinessName(p, args[1]);
+                        break;
+                    }
+                    case "seticon": case "icon": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
+                        if (args.length < 2) {
+                            sender.sendMessage(getMessage("error.argument.icon"));
+                            return false;
+                        }
+
+                        Material icon = Material.matchMaterial(args[1]);
+
+                        if (icon == null) {
+                            sender.sendMessage(getMessage("error.argument.icon"));
+                            return false;
+                        }
+
+                        if (!w.isItem(icon)) {
+                            sender.sendMessage(getMessage("error.argument.icon"));
+                            return false;
+                        }
+
+                        setBusinessIcon(p, icon);
                         break;
                     }
                     default: {
@@ -900,18 +970,19 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                     case 1: {
                         suggestions.add("info");
 
-                        if (sender.hasPermission("novaconomy.economy")) suggestions.addAll(Arrays.asList("check", "createcheck", "create", "delete", "addbal", "setbalance", "removebal", "addbalance", "removebalance", "setbal"));
+                        if (sender.hasPermission("novaconomy.economy")) suggestions.addAll(Arrays.asList(
+                                "check", "createcheck", "create", "delete", "addbal", "setbalance",
+                                "removebal", "addbalance", "removebalance", "setbal", "setmodeldata", "setcustommodeldata", "modeldata", "custommodeldata"));
                         return suggestions;
                     }
                     case 2: {
                         if (!(args[0].equalsIgnoreCase("create")))
-                            for (Economy econ : Economy.getEconomies()) suggestions.add(econ.getName());
+                            suggestions.addAll(Economy.getEconomies().stream().map(Economy::getName).collect(Collectors.toList()));
 
                         return suggestions;
                     }
                     case 3: {
-                        if (args[0].toLowerCase().contains("bal"))
-                            for (Player p : Bukkit.getOnlinePlayers()) suggestions.add(p.getName());
+                        if (args[0].toLowerCase().contains("bal")) suggestions.addAll(Bukkit.getOnlinePlayers().stream().map(Player::getName).collect(Collectors.toList()));
                         else if (args[0].equalsIgnoreCase("create"))
                             suggestions.addAll(Arrays.asList("$", "%", "Q", "L", "P", "A", "a", "r", "R", "C", "c", "D", "d", "W", "w", "B", "b"));
 
@@ -919,14 +990,13 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                     }
                     case 4: {
                         if (args[0].equalsIgnoreCase("create"))
-                            for (Material m : Material.values()) suggestions.add("minecraft:" + m.name().toLowerCase());
+                            suggestions.addAll(Arrays.stream(Material.values()).filter(w::isItem).map(Material::name).map(String::toLowerCase).collect(Collectors.toList()));
 
                         return suggestions;
                     }
                     case 6: {
                         if (args[0].equalsIgnoreCase("create"))
                             suggestions.addAll(Arrays.asList("true", "false"));
-
 
                         return suggestions;
                     }
@@ -951,7 +1021,8 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                 switch (args.length) {
                     case 1:
                         suggestions.addAll(Arrays.asList("info", "information", "query", "create", "addproduct", "addp", "removeproduct", "removep",
-                                "addresource", "stock", "addr", "addstock", "rating", "setting", "settings", "price", "editprice", "stats", "statistics", "discover"));
+                                "addresource", "stock", "addr", "addstock", "rating", "setting", "settings", "price", "editprice", "stats", "statistics", "discover",
+                                "setname", "name", "seticon", "icon"));
                         return suggestions;
 
                     case 2:
@@ -960,7 +1031,7 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                     case 3:
                         switch (args[0].toLowerCase()) {
                             case "create":
-                                suggestions.addAll(Arrays.stream(Material.values()).map(Material::name).map(String::toLowerCase).collect(Collectors.toSet()));
+                                suggestions.addAll(Arrays.stream(Material.values()).filter(w::isItem).map(Material::name).map(String::toLowerCase).collect(Collectors.toSet()));
                                 break;
                             case "rating":
                                 suggestions.addAll(Arrays.stream(Bukkit.getOfflinePlayers()).map(OfflinePlayer::getName).collect(Collectors.toSet()));

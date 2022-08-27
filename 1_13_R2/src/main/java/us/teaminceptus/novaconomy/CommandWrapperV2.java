@@ -23,6 +23,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public final class CommandWrapperV2 implements CommandWrapper {
 
@@ -40,8 +42,14 @@ public final class CommandWrapperV2 implements CommandWrapper {
 
             handler.getAutoCompleter().registerParameterSuggestions(Economy.class, SuggestionProvider.of(() -> toStringList(Economy::getName, Economy.getEconomies())));
 
-            handler.registerValueResolver(Material.class, ctx -> Material.matchMaterial(ctx.popForParameter()));
-            handler.getAutoCompleter().registerParameterSuggestions(Material.class, SuggestionProvider.of(() -> toStringList(m -> m.name().toLowerCase(), Material.values())));
+            handler.registerValueResolver(Material.class, ctx -> {
+                Material m = Material.matchMaterial(ctx.popForParameter());
+                if (m == null) throw new CommandErrorException(getMessage("error.argument.icon"));
+                if (!m.isItem()) throw new CommandErrorException(getMessage("error.argument.icon"));
+                if (m == Material.AIR) throw new CommandErrorException(getMessage("error.argument.icon"));
+                return m;
+            });
+            handler.getAutoCompleter().registerParameterSuggestions(Material.class, SuggestionProvider.of(() -> toStringList(m -> m.name().toLowerCase(), Arrays.stream(Material.values()).filter(Material::isItem).filter(m -> m != Material.AIR))));
 
             handler.registerValueResolver(Business.class, ctx -> {
                 Business b = Business.getByName(ctx.popForParameter());
@@ -89,6 +97,10 @@ public final class CommandWrapperV2 implements CommandWrapper {
     @SafeVarargs
     private static <T> List<String> toStringList(Function<T, String> func, T... elements) {
         return toStringList(func, Arrays.asList(elements));
+    }
+
+    private static <T> List<String> toStringList(Function<T, String> func, Stream<T> stream) {
+        return toStringList(func, stream.collect(Collectors.toList()));
     }
 
     // Lamp Impl
@@ -224,8 +236,14 @@ public final class CommandWrapperV2 implements CommandWrapper {
         @CommandPermission("novaconomy.user.business.home")
         public void setHome(Player p) { wrapper.businessHome(p, true); }
 
+        @Subcommand({"setname", "name"})
+        public void setName(Player p, String name) { wrapper.setBusinessName(p, name); }
+
+        @Subcommand({"seticon", "icon"})
+        public void setIcon(Player p, Material icon) { wrapper.setBusinessIcon(p, icon); }
+
         @Subcommand("delete")
-        public void deleteBusiness(Player p, @Default String confirm) { wrapper.deleteBusiness(p, confirm.equalsIgnoreCase("confirm")); }
+        public void deleteBusiness(Player p, @Default("") String confirm) { wrapper.deleteBusiness(p, confirm.equalsIgnoreCase("confirm")); }
 
         @Subcommand({"statistics", "stats"})
         public void statistics(Player p) { wrapper.statistics(p, Business.getByOwner(p));}
@@ -240,7 +258,8 @@ public final class CommandWrapperV2 implements CommandWrapper {
         public void discoverBusiness(Player p) { wrapper.discoverBusinesses(p); }
 
         @Subcommand("remove")
-        public void removeBusiness(CommandSender sender, Business b, @Default String confirm) { wrapper.removeBusiness(sender, b, confirm.equalsIgnoreCase("confirm"));}
+        @CommandPermission("novaconomy.admin.delete_business")
+        public void removeBusiness(CommandSender sender, Business b, @Default("") String confirm) { wrapper.removeBusiness(sender, b, confirm.equalsIgnoreCase("confirm"));}
 
         @Subcommand({"editprice", "price"})
         public void editPrice(Player p, @Range(min = 0.01) double newPrice, @Optional Economy economy) { wrapper.editPrice(p, newPrice, economy); }
@@ -326,6 +345,12 @@ public final class CommandWrapperV2 implements CommandWrapper {
         @CommandPermission("novaconomy.economy.removebalance")
         public void removeBalance(CommandSender sender, Economy economy, Player target, @Range(min = 0) double amount) {
             wrapper.removeBalance(sender, economy, target, amount);
+        }
+
+        @Subcommand({"setmodeldata", "setcustommodeldata", "modeldata", "custommodeldata"})
+        @CommandPermission("novaconomy.economy.custom_model_data")
+        public void setCustomModelData(CommandSender sender, Economy economy, int modelData) {
+            wrapper.setEconomyModel(sender, economy, modelData);
         }
 
         @Subcommand({"check", "createcheck"})
