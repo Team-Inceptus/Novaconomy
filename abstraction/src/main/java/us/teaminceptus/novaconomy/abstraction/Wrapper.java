@@ -26,6 +26,8 @@ import us.teaminceptus.novaconomy.api.util.Product;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -63,7 +65,16 @@ public interface Wrapper {
         return setNBT(item, "id", id);
     }
 
-    default boolean isItem(Material m) { return true; }
+    default boolean isItem(Material m) {
+        try {
+            Method isItem = Material.class.getDeclaredMethod("isItem");
+            isItem.setAccessible(true);
+            return (boolean) isItem.invoke(m);
+        } catch (NoSuchMethodException | InvocationTargetException e) {
+            NovaConfig.print(e);
+        } catch (ReflectiveOperationException ignored) {}
+        return true;
+    }
 
     double getNBTDouble(ItemStack item, String key);
 
@@ -252,6 +263,8 @@ public interface Wrapper {
                     rating.setItemMeta(rMeta);
                     inv.setItem(44, rating);
                 } else inv.setItem(44, getGUIBackground());
+
+                b.saveBusiness();
             }
         }.runTaskAsynchronously(NovaConfig.getPlugin());
 
@@ -267,32 +280,15 @@ public interface Wrapper {
         if (size % 9 > 0) return null;
 
         Inventory inv = Bukkit.createInventory(holder, size, name);
-        ItemStack guiBG = getGUIBackground();
+        ItemStack bg = getGUIBackground();
 
         if (size < 27) return inv;
 
-        for (int i = 0; i < 9; i++) inv.setItem(i, guiBG);
-
-        for (int i = size - 9; i < size; i++) inv.setItem(i, guiBG);
-
-        if (size >= 27) {
-            inv.setItem(9, guiBG);
-            inv.setItem(17, guiBG);
-        }
-
-        if (size >= 36) {
-            inv.setItem(18, guiBG);
-            inv.setItem(26, guiBG);
-        }
-
-        if (size >= 45) {
-            inv.setItem(27, guiBG);
-            inv.setItem(35, guiBG);
-        }
-
-        if (size == 54) {
-            inv.setItem(36, guiBG);
-            inv.setItem(44, guiBG);
+        for (int i = 0; i < 9; i++) inv.setItem(i, bg);
+        for (int i = size - 9; i < size; i++) inv.setItem(i, bg);
+        for (int i = 1; i < Math.floor((double) size / 9D) - 1; i++) {
+            inv.setItem(i * 9, bg);
+            inv.setItem(((i + 1) * 9) - 1, bg);
         }
 
         return inv;
@@ -349,9 +345,9 @@ public interface Wrapper {
             }
 
         } catch (IOException e) {
-            Bukkit.getLogger().severe(e.getClass().getName());
-            Bukkit.getLogger().severe(e.getMessage());
-            for (StackTraceElement s : e.getStackTrace()) Bukkit.getLogger().severe(s.toString());
+            NovaConfig.print(e);
+        } catch (Exception e) {
+            return null;
         }
         else return Bukkit.getPlayer(UUID.nameUUIDFromBytes(("OfflinePlayer:" + name).getBytes(StandardCharsets.UTF_8)));
         return null;
