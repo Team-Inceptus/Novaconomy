@@ -13,8 +13,8 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.api.NovaConfig;
-import us.teaminceptus.novaconomy.api.NovaPlayer;
 import us.teaminceptus.novaconomy.api.events.business.BusinessCreateEvent;
+import us.teaminceptus.novaconomy.api.player.NovaPlayer;
 import us.teaminceptus.novaconomy.api.settings.Settings;
 import us.teaminceptus.novaconomy.api.util.BusinessProduct;
 import us.teaminceptus.novaconomy.api.util.Product;
@@ -65,7 +65,10 @@ public final class Business implements ConfigurationSerializable {
         this.creationDate = creationDate;
         this.stats = stats == null ? new BusinessStatistics(id) : stats;
 
-        if (products != null) products.forEach(p -> this.products.add(new BusinessProduct(p, this)));
+        if (products != null) products.stream()
+                .filter(Objects::nonNull)
+                .filter(p -> p.getPrice().getEconomy() != null)
+                .forEach(p -> { try { this.products.add(new BusinessProduct(p, this)); } catch (IllegalArgumentException ignored) {/* Economy was removed */} });
         if (resources != null) this.resources.addAll(resources);
 
         if (settings != null) this.settings.putAll(settings);
@@ -168,7 +171,10 @@ public final class Business implements ConfigurationSerializable {
      * @return Products to add
      */
     @NotNull
-    public List<BusinessProduct> getProducts() { return this.products; }
+    public List<BusinessProduct> getProducts() {
+        this.products.removeIf(p -> p.getPrice().getEconomy() == null);
+        return this.products;
+    }
 
     @Override
     public Map<String, Object> serialize() {
@@ -304,6 +310,22 @@ public final class Business implements ConfigurationSerializable {
         if (products == null) return this;
         if (products.length < 1) return this;
         return removeProduct(Arrays.asList(products));
+    }
+
+    /**
+     * Removes an Array of ItemStacks from this Business's Products.
+     * @param items Products to Remove
+     * @return this Business, for chaining
+     */
+    @NotNull
+    public Business removeProduct(@Nullable ItemStack... items) {
+        if (items == null) return this;
+        if (items.length < 1) return this;
+
+        for (ItemStack item : items) this.products.removeIf(p -> isProduct(item));
+        saveBusiness();
+
+        return this;
     }
 
     /**
@@ -459,6 +481,15 @@ public final class Business implements ConfigurationSerializable {
     }
 
     /**
+     * <p>Fetches any extra stock that are no longer products in the Business.</p>
+     * <p>This method can be used to fetch stock of products that sold on deleted economies.</p>
+     * @return Extra Stock
+     */
+    public List<ItemStack> getLeftoverStock() {
+        return getResources().stream().filter(i -> !isProduct(i)).collect(Collectors.toList());
+    }
+
+    /**
      * Fetches a Setting Value for this Business.
      * @param setting Setting to check
      * @return Setting Value, or false if setting is null
@@ -556,6 +587,7 @@ public final class Business implements ConfigurationSerializable {
     public void saveBusiness() {
         FileConfiguration config = YamlConfiguration.loadConfiguration(file);
         config.set(id.toString(), this);
+        config.set("last_saved", System.currentTimeMillis());
 
         try {
             config.save(file);
@@ -590,7 +622,10 @@ public final class Business implements ConfigurationSerializable {
     @Nullable
     public static Business getById(@Nullable UUID uid) {
         if (uid == null) return null;
-        return getBusinesses().stream().filter(b -> b.id.equals(uid)).findFirst().orElse(null);
+        File f = new File(NovaConfig.getBusinessesFolder(), uid + ".yml");
+        if (!f.exists()) return null;
+        FileConfiguration config = YamlConfiguration.loadConfiguration(f);
+        return (Business) config.get(uid.toString());
     }
 
     /**
