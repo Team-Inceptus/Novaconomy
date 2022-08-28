@@ -42,7 +42,7 @@ permissions:
     description: Access to all Economy actions
     default: op
   novaconomy.economy.create:
-    description: Access to creating Economies
+    description: Access to creating and editing Economies
     default: op
     children:
       novaconomy.economy: true
@@ -78,11 +78,6 @@ permissions:
       novaconomy.economy: true
   novaconomy.economy.interest:
     description: Access to enable/disable interest
-    default: op
-    children:
-      novaconomy.economy: true
-  novaconomy.economy.custom_model_data:
-    description: Access to change economy icon's custom model data
     default: op
     children:
       novaconomy.economy: true
@@ -123,6 +118,11 @@ permissions:
       novaconomy.user: true
   novaconomy.user.rate:
     description: Access to rate other businesses
+    default: true
+    children:
+      novaconomy.user: true
+  novaconomy.user.stats:
+    description: Access to view self and others statistics
     default: true
     children:
       novaconomy.user: true
