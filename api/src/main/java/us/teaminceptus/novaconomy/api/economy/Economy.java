@@ -13,7 +13,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.api.NovaConfig;
-import us.teaminceptus.novaconomy.api.NovaPlayer;
+import us.teaminceptus.novaconomy.api.player.NovaPlayer;
 
 import java.io.File;
 import java.io.IOException;
@@ -31,9 +31,9 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
     private final char symbol;
     private final String section;
     private final String name;
-    private final ItemStack icon;
-    private final boolean hasNaturalIncrease;
-    private final double conversionScale;
+    private ItemStack icon;
+    private boolean hasNaturalIncrease;
+    private double conversionScale;
 
     private final UUID uid;
 
@@ -94,7 +94,7 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
     // Other
 
     /**
-     * Whether or not this Economy supports interest
+     * Whether this Economy supports interest
      * @return true if allows, else false
      */
     public boolean hasInterest() {
@@ -112,11 +112,12 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
      * Fetches a set of Economies that have {@link #hasTax()} to true.
      * @return Set of Taxable Economies
      */
+    @NotNull
     public static Set<Economy> getTaxableEconomies() { return getEconomies().stream().filter(Economy::hasTax).collect(Collectors.toSet()); }
 
     /**
      * Set the interest acception state of this economy
-     * @param interest Whether or not to allow interest
+     * @param interest Whether to allow interest
      */
     public void setInterest(boolean interest) {
         this.interestEnabled = interest;
@@ -129,6 +130,63 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
      */
     public void setCustomModelData(int customModelData) {
         this.customModelData = customModelData;
+        saveFile();
+    }
+
+    /**
+     * Sets the icon of this economy.
+     * @param icon Icon of the economy
+     * @throws IllegalArgumentException if icon is null
+     */
+    public void setIcon(@NotNull ItemStack icon) throws IllegalArgumentException {
+        if (icon == null) throw new IllegalArgumentException("Icon cannot be null");
+        this.icon = icon;
+        saveFile();
+    }
+
+    /**
+     * Sets the icon of this economy.
+     * @param m Icon of the economy
+     * @throws IllegalArgumentException if icon is null
+     */
+    public void setIcon(@NotNull Material m) throws IllegalArgumentException {
+        if (m == null) throw new IllegalArgumentException("Icon cannot be null");
+
+        ItemStack item = new ItemStack(m);
+        ItemMeta meta = icon.getItemMeta();
+        meta.setDisplayName(ChatColor.AQUA + this.name);
+
+        try {
+            Method setModelData = meta.getClass().getDeclaredMethod("setCustomModelData", Integer.class);
+            setModelData.setAccessible(true);
+            setModelData.invoke(meta, this.customModelData);
+        } catch (NoSuchMethodException ignored) {}
+        catch (ReflectiveOperationException e) {
+            NovaConfig.print(e);
+        }
+        item.setItemMeta(meta);
+
+        this.icon = item;
+        saveFile();
+    }
+
+    /**
+     * Sets whether this economy naturally increases.
+     * @param increase Whether to increase naturally
+     */
+    public void setIncreaseNaturally(boolean increase) {
+        this.hasNaturalIncrease = increase;
+        saveFile();
+    }
+
+    /**
+     * Sets the conversion scale of this Economy.
+     * @param scale Conversion Scale
+     * @throws IllegalArgumentException if scale is less than 0
+     */
+    public void setConversionScale(double scale) throws IllegalArgumentException {
+        if (scale <= 0) throw new IllegalArgumentException("Conversion Scale must be greater than 0");
+        this.conversionScale = scale;
         saveFile();
     }
 
@@ -221,11 +279,11 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
      * @return Found Economy, or null if none found
      * @throws IllegalArgumentException if name is null
      */
+    @Nullable
     public static Economy getEconomy(@NotNull String name) throws IllegalArgumentException {
         Validate.notNull(name, "Name is null");
-        ConfigurationSection section = NovaConfig.getEconomiesConfig().getConfigurationSection(name.toLowerCase());
-        if (section != null) return (Economy) section.get("economy");
-        else return null;
+        for (Economy econ : getEconomies()) if (econ.getName().equalsIgnoreCase(name)) return econ;
+        return null;
     }
 
     /**
@@ -258,7 +316,7 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
     }
 
     /**
-     * Whether or not this economy will naturally increase (not the same as Interest)
+     * Whether this economy will naturally increase (not the same as Interest)
      * <p>
      * An economy increasing naturally means that it increases from NaturalCauses (i.e. Mining, Fishing). Specific events can be turned off in the configuration.
      * <p>
@@ -476,9 +534,7 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
                 this.modelData = modelData;
             } catch (NoSuchMethodException ignored) {}
             catch (ReflectiveOperationException e) {
-                Bukkit.getLogger().severe(e.getClass().getSimpleName());
-                Bukkit.getLogger().severe(e.getMessage());
-                for (StackTraceElement s : e.getStackTrace()) Bukkit.getLogger().severe(s.toString());
+                NovaConfig.print(e);
             }
 
             icon.setItemMeta(meta);
@@ -499,7 +555,7 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
 
         /**
          * Set whether or not this economy increases naturally (i.e. Increases from Mining)
-         * @param increaseNaturally Whether or not this economy should increase from Natural Causes
+         * @param increaseNaturally Whether this economy should increase from Natural Causes
          * @return Builder Class, for chaining
          */
         public Builder setIncreaseNaturally(boolean increaseNaturally) {
@@ -511,8 +567,10 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
          * Set the Conversion Scale (used to convert the value to other economies)
          * @param scale Scale of this economy
          * @return Builder Class, for chaining
+         * @throws IllegalArgumentException if scale is not positive
          */
-        public Builder setConversionScale(double scale) {
+        public Builder setConversionScale(double scale) throws IllegalArgumentException {
+            if (scale <= 0) throw new IllegalArgumentException("Scale must be positive");
             this.conversionScale = scale;
             return this;
         }
