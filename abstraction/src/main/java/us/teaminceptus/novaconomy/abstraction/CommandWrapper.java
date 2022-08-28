@@ -22,15 +22,16 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.ChatPaginator;
 import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.NovaConfig;
-import us.teaminceptus.novaconomy.api.NovaPlayer;
 import us.teaminceptus.novaconomy.api.bank.Bank;
-import us.teaminceptus.novaconomy.api.bounty.Bounty;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.business.BusinessStatistics;
 import us.teaminceptus.novaconomy.api.business.Rating;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.events.CommandTaxEvent;
 import us.teaminceptus.novaconomy.api.events.player.economy.PlayerPayEvent;
+import us.teaminceptus.novaconomy.api.player.Bounty;
+import us.teaminceptus.novaconomy.api.player.NovaPlayer;
+import us.teaminceptus.novaconomy.api.player.PlayerStatistics;
 import us.teaminceptus.novaconomy.api.settings.Settings;
 import us.teaminceptus.novaconomy.api.util.Price;
 import us.teaminceptus.novaconomy.api.util.Product;
@@ -67,6 +68,7 @@ public interface CommandWrapper {
         put("taxevent", Arrays.asList("customtax"));
         put("settings", Arrays.asList("novasettings", "nsettings"));
         put("rate", Arrays.asList("nrate", "novarate", "ratebusiness"));
+        put("statistics", Arrays.asList("stats", "pstats", "pstatistics", "playerstats", "playerstatistics", "nstats", "nstatistics"));
     }};
 
     Map<String, String> COMMAND_PERMISSION = new HashMap<String, String>() {{
@@ -83,6 +85,7 @@ public interface CommandWrapper {
        put("taxevent", "novaconomy.admin.tax_event");
        put("settings", "novaconomy.user.settings");
        put("rate", "novaconomy.user.rate");
+       put("statistics", "novaconomy.user.stats");
     }};
 
     Map<String, String> COMMAND_DESCRIPTION = new HashMap<String, String>() {{
@@ -101,6 +104,7 @@ public interface CommandWrapper {
        put("taxevent", "Call a Custom Tax Event from the configuration");
        put("settings", "Manage your Novaconomy Settings");
        put("rate", "Rate a Novaconomy Business");
+       put("statistics", "View your Novaconomy Statistics");
     }};
 
     Map<String, String> COMMAND_USAGE = new HashMap<String, String>() {{
@@ -119,6 +123,7 @@ public interface CommandWrapper {
        put("taxevent", "/taxevent <event> [<self>]");
        put("settings", "/settings [<business|personal>]");
        put("rate", "/rate <business> [<comment>]");
+       put("statistics", "/statistics");
     }};
 
     static Plugin getPlugin() {
@@ -1115,7 +1120,7 @@ public interface CommandWrapper {
         XSound.BLOCK_ANVIL_USE.play(p, 3F, 1.5F);
     }
 
-    default void statistics(Player p, Business b) {
+    default void businessStatistics(Player p, Business b) {
         if (b == null) {
             p.sendMessage(getMessage("error.business.not_an_owner"));
             return;
@@ -1509,13 +1514,137 @@ public interface CommandWrapper {
     }
 
     default void setEconomyModel(CommandSender sender, Economy econ, int data) {
-        if (!sender.hasPermission("novaconomy.economy.custom_model_data")) {
+        if (!sender.hasPermission("novaconomy.economy.create")) {
             sender.sendMessage(getMessage("error.permission.argument"));
             return;
         }
 
         econ.setCustomModelData(data);
         sender.sendMessage(String.format(getMessage("success.economy.set_model_data"), econ.getName(), data));
+    }
+
+    default void setEconomyIcon(CommandSender sender, Economy econ, Material icon) {
+        if (!sender.hasPermission("novaconomy.economy.create")) {
+            sender.sendMessage(getMessage("error.permission.argument"));
+            return;
+        }
+
+        if (!w.isItem(icon)) {
+            sender.sendMessage(getMessage("error.argument.icon"));
+            return;
+        }
+
+        econ.setIcon(icon);
+        sender.sendMessage(String.format(getMessage("success.economy.set_icon"), econ.getName(), WordUtils.capitalizeFully(icon.name().replace("_", " "))));
+    }
+
+    default void setEconomyScale(CommandSender sender, Economy econ, double scale) {
+        if (!sender.hasPermission("novaconomy.economy.create")) {
+            sender.sendMessage(getMessage("error.permission.argument"));
+            return;
+        }
+
+        econ.setConversionScale(scale);
+        sender.sendMessage(String.format(getMessage("success.economy.set_scale"), econ.getName(), scale));
+    }
+
+    default void setEconomyNatural(CommandSender sender, Economy econ, boolean naturalIncrease) {
+        if (!sender.hasPermission("novaconomy.economy.create")) {
+            sender.sendMessage(getMessage("error.permission.argument"));
+            return;
+        }
+
+        econ.setIncreaseNaturally(naturalIncrease);
+        sender.sendMessage(getMessage("success.economy." + (naturalIncrease ? "enable" : "disable") + "_natural"));
+    }
+
+    default void playerStatistics(Player p, OfflinePlayer target) {
+        Player op = target.getPlayer();
+        boolean online = op != null;
+        if (!p.hasPermission("novaconomy.user.stats")) {
+            op.sendMessage(getMessage("error.permission"));
+            return;
+        }
+
+        NovaPlayer np = new NovaPlayer(target);
+        PlayerStatistics stats = np.getStatistics();
+
+        Inventory inv = w.genGUI(36, get("constants.player_statistics"), new Wrapper.CancelHolder());
+
+        ItemStack head = createPlayerHead(target);
+        ItemMeta hMeta = head.getItemMeta();
+        hMeta.setDisplayName(ChatColor.LIGHT_PURPLE + get("constants.player_statistics"));
+        hMeta.setLore(Collections.singletonList(ChatColor.YELLOW + (online && op.getDisplayName() == null ? target.getName() : op.getDisplayName())));
+        head.setItemMeta(hMeta);
+        inv.setItem(4, head);
+
+        ItemStack maxBal = new ItemStack(Material.EMERALD_BLOCK);
+        ItemMeta mbMeta = maxBal.getItemMeta();
+        mbMeta.setDisplayName(ChatColor.YELLOW + get("constants.player_statistics.highest_balance"));
+
+        String s = stats.getHighestBalance() == null ? String.format("%,.2f", np.getTotalBalance()) : stats.getHighestBalance().toString();
+        mbMeta.setLore(Collections.singletonList(ChatColor.GOLD + s));
+        maxBal.setItemMeta(mbMeta);
+        inv.setItem(10, maxBal);
+
+        ItemStack purchased = new ItemStack(Material.DIAMOND_CHESTPLATE);
+        ItemMeta pMeta = purchased.getItemMeta();
+        pMeta.setDisplayName(ChatColor.YELLOW + get("constants.player_statistics.products_purchased"));
+        pMeta.setLore(Collections.singletonList(ChatColor.GOLD + String.format("%,.0f", (double) stats.getProductsPurchased())));
+        purchased.setItemMeta(pMeta);
+        inv.setItem(12, purchased);
+
+        ItemStack bank = new ItemStack(Material.GOLD_INGOT);
+        ItemMeta bMeta = bank.getItemMeta();
+        bMeta.setDisplayName(ChatColor.YELLOW + get("constants.player_statistics.bank"));
+        bMeta.setLore(Arrays.asList(
+                String.format(get("constants.player_statistics.bank.total_withdrawn"), String.format("%,.2f", stats.getTotalWithdrawn()))
+        ));
+        bank.setItemMeta(bMeta);
+        inv.setItem(14, bank);
+
+        op.openInventory(inv);
+        XSound.BLOCK_ANVIL_USE.play(p, 3F, 1.5F);
+    }
+
+    default void businessRecover(Player p) {
+        if (!Business.exists(p)) {
+            p.sendMessage(getMessage("error.business.not_an_owner"));
+            return;
+        }
+
+        Business b = Business.getByOwner(p);
+        if (b.getLeftoverStock().size() == 0) {
+            p.sendMessage(getMessage("error.business.no_leftover_stock"));
+            return;
+        }
+
+        if (p.getInventory().firstEmpty() == -1) {
+            p.sendMessage(getMessage("error.player.full_inventory"));
+            return;
+        }
+
+        boolean overflow = false;
+
+        List<ItemStack> items = new ArrayList<>();
+
+        Iterator<ItemStack> it = b.getLeftoverStock().iterator();
+        while(it.hasNext()) {
+            ItemStack item = it.next();
+            if (p.getInventory().firstEmpty() == -1) {
+                overflow = true;
+                break;
+            }
+            items.add(item);
+            it.remove();
+        }
+
+        if (b.getLeftoverStock().size() > 0) overflow = true;
+        b.removeResource(items);
+        p.getInventory().addItem(items.toArray(new ItemStack[0]));
+
+        p.sendMessage(getMessage("success.business.recover"));
+        if (overflow) p.sendMessage(get("constants.business.stock_overflow"));
     }
 
     // Util Classes & Other Static Methods
@@ -1597,6 +1726,8 @@ public interface CommandWrapper {
         SkullMeta meta = (SkullMeta) head.getItemMeta();
         meta.setOwner(p.getName());
         head.setItemMeta(meta);
+        head = w.setID(head, "player_stats");
+        head = w.setNBT(head, "player", p.getUniqueId().toString());
         return head;
     }
 
@@ -1634,9 +1765,7 @@ public interface CommandWrapper {
             m.invoke(meta, data);
         } catch (NoSuchMethodException ignored) {}
         catch (ReflectiveOperationException e) {
-            Bukkit.getLogger().severe(e.getClass().getSimpleName());
-            Bukkit.getLogger().severe(e.getMessage());
-            for (StackTraceElement s : e.getStackTrace()) Bukkit.getLogger().severe(s.toString());
+            NovaConfig.print(e);
         }
         item.setItemMeta(meta);
     }

@@ -409,6 +409,112 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                         }
                         break;
                     }
+                    case "seticon": case "icon": {
+                        if (!sender.hasPermission("novaconomy.economy.create")) {
+                            sender.sendMessage(getMessage("error.permission.argument"));
+                            return false;
+                        }
+                        if (!economyCount(sender)) return false;
+
+                        if (args.length < 2) {
+                            sender.sendMessage(getMessage("error.argument.economy"));
+                            return false;
+                        }
+
+                        if (!Economy.exists(args[1])) {
+                            sender.sendMessage(getMessage("error.economy.inexistent"));
+                            return false;
+                        }
+
+                        Economy econ = Economy.getEconomy(args[1]);
+
+                        if (args.length < 3) {
+                            sender.sendMessage(getMessage("error.argument.icon"));
+                            return false;
+                        }
+
+                        Material m = Material.matchMaterial(args[2]);
+
+                        if (m == null) {
+                            sender.sendMessage(getMessage("error.argument.icon"));
+                            return false;
+                        }
+
+                        setEconomyIcon(sender, econ, m);
+                        break;
+                    }
+                    case "setconversionscale":
+                    case "setscale":
+                    case "conversionscale":
+                    case "scale": {
+                        if (!sender.hasPermission("novaconomy.economy.create")) {
+                            sender.sendMessage(getMessage("error.permission.argument"));
+                            return false;
+                        }
+                        if (!economyCount(sender)) return false;
+
+                        if (args.length < 2) {
+                            sender.sendMessage(getMessage("error.argument.economy"));
+                            return false;
+                        }
+
+                        if (!Economy.exists(args[1])) {
+                            sender.sendMessage(getMessage("error.economy.inexistent"));
+                            return false;
+                        }
+
+                        Economy econ = Economy.getEconomy(args[1]);
+
+                        try {
+                            if (args.length < 3) {
+                                sender.sendMessage(getMessage("error.argument.amount"));
+                                return false;
+                            }
+
+                            double scale = Double.parseDouble(args[2]);
+                            setEconomyScale(sender, econ, scale);
+                        } catch (NumberFormatException e) {
+                            sender.sendMessage(getMessage("error.argument.amount"));
+                            return false;
+                        }
+                        break;
+                    }
+                    case "setnaturalincrease":
+                    case "setnatural":
+                    case "natural":
+                    case "naturalincrease": {
+                        if (!sender.hasPermission("novaconomy.economy.create")) {
+                            sender.sendMessage(getMessage("error.permission.argument"));
+                            return false;
+                        }
+                        if (!economyCount(sender)) return false;
+
+                        if (args.length < 2) {
+                            sender.sendMessage(getMessage("error.argument.economy"));
+                            return false;
+                        }
+
+                        if (!Economy.exists(args[1])) {
+                            sender.sendMessage(getMessage("error.economy.inexistent"));
+                            return false;
+                        }
+
+                        Economy econ = Economy.getEconomy(args[1]);
+
+                        if (args.length < 3) {
+                            sender.sendMessage(getMessage("error.argument.bool"));
+                            return false;
+                        }
+
+                        if (!args[2].equalsIgnoreCase("true") && !args[2].equalsIgnoreCase("false")) {
+                            sender.sendMessage(getMessage("error.argument.bool"));
+                            return false;
+                        }
+
+                        boolean naturalIncrease = Boolean.parseBoolean(args[2].toLowerCase());
+                        setEconomyNatural(sender, econ, naturalIncrease);
+                        break;
+                    }
                     default: {
                         sender.sendMessage(getMessage("error.argument"));
                         return false;
@@ -555,7 +661,7 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                             return false;
                         }
 
-                        statistics(p, Business.getByOwner(p));
+                        businessStatistics(p, Business.getByOwner(p));
                         break;
                     }
                     case "rating": {
@@ -665,6 +771,12 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                         }
 
                         setBusinessIcon(p, icon);
+                        break;
+                    }
+                    case "recover": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+                        businessRecover(p);
                         break;
                     }
                     default: {
@@ -936,6 +1048,23 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                 rate(p, b, comment);
                 break;
             }
+            case "statistics": {
+                if (!(sender instanceof Player)) return false;
+                Player p = (Player) sender;
+
+                OfflinePlayer target = p;
+
+                if (args.length > 1) {
+                    target = Wrapper.getPlayer(args[0]);
+                    if (target == null) {
+                        sender.sendMessage(getMessage("error.argument.player"));
+                        return false;
+                    }
+                }
+
+                playerStatistics(p, target);
+                break;
+            }
             default: {
                 sender.sendMessage(getMessage("error.argument"));
                 return false;
@@ -972,7 +1101,9 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
 
                         if (sender.hasPermission("novaconomy.economy")) suggestions.addAll(Arrays.asList(
                                 "check", "createcheck", "create", "delete", "addbal", "setbalance",
-                                "removebal", "addbalance", "removebalance", "setbal", "setmodeldata", "setcustommodeldata", "modeldata", "custommodeldata"));
+                                "removebal", "addbalance", "removebalance", "setbal", "setmodeldata", "setcustommodeldata", "modeldata", "custommodeldata",
+                                "seticon", "icon", "setconversionscale", "conversionscale", "setscale", "scale", "setnaturalincrease", "naturalincrease",
+                                "setnatural", "natural"));
                         return suggestions;
                     }
                     case 2: {
@@ -982,9 +1113,28 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                         return suggestions;
                     }
                     case 3: {
-                        if (args[0].toLowerCase().contains("bal")) suggestions.addAll(Bukkit.getOnlinePlayers().stream().map(Player::getName).collect(Collectors.toList()));
-                        else if (args[0].equalsIgnoreCase("create"))
-                            suggestions.addAll(Arrays.asList("$", "%", "Q", "L", "P", "A", "a", "r", "R", "C", "c", "D", "d", "W", "w", "B", "b"));
+                        switch (args[0].toLowerCase()) {
+                            case "bal": {
+                                suggestions.addAll(Bukkit.getOnlinePlayers().stream().map(Player::getName).collect(Collectors.toList()));
+                                return suggestions;
+                            }
+                            case "create": {
+                                suggestions.addAll(Arrays.asList("$", "%", "Q", "L", "P", "A", "a", "r", "R", "C", "c", "D", "d", "W", "w", "B", "b"));
+                                return suggestions;
+                            }
+                            case "seticon": case "icon": {
+                                suggestions.addAll(Arrays.stream(Material.values()).filter(w::isItem).map(Material::name).map(String::toLowerCase).collect(Collectors.toList()));
+                                return suggestions;
+                            }
+                            case "setnaturalincrease":
+                            case "naturalincrease":
+                            case "setnatural":
+                            case "natural": {
+                                suggestions.addAll(Arrays.asList("true", "false"));
+                                return suggestions;
+                            }
+                        }
+
 
                         return suggestions;
                     }
@@ -1022,7 +1172,7 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                     case 1:
                         suggestions.addAll(Arrays.asList("info", "information", "query", "create", "addproduct", "addp", "removeproduct", "removep",
                                 "addresource", "stock", "addr", "addstock", "rating", "setting", "settings", "price", "editprice", "stats", "statistics", "discover",
-                                "setname", "name", "seticon", "icon"));
+                                "setname", "name", "seticon", "icon", "recover"));
                         return suggestions;
 
                     case 2:
