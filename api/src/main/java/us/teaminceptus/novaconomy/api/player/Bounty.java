@@ -1,4 +1,4 @@
-package us.teaminceptus.novaconomy.api.bounty;
+package us.teaminceptus.novaconomy.api.player;
 
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
@@ -6,7 +6,6 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import us.teaminceptus.novaconomy.api.NovaPlayer;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 
 import java.io.File;
@@ -227,9 +226,15 @@ public final class Bounty implements ConfigurationSerializable, Comparable<Bount
             if (config.isSet(key)) throw new UnsupportedOperationException("Bounty already exists");
             Bounty b = new Bounty(owner.getPlayer(), econ, amount, target);
 
+            owner.stats.totalBountiesCreated++;
+
             if (config.getConfigurationSection("bounties") == null) config.createSection("bounties");
             config.set(key, b);
             try { config.save(f); } catch (IOException e) { Bukkit.getLogger().severe(e.getMessage()); }
+
+            NovaPlayer targetN = new NovaPlayer(target);
+            targetN.stats.totalBountiesHad++;
+            targetN.save();
 
             return b;
         }

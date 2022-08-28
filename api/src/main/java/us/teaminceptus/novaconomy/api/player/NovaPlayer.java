@@ -1,8 +1,9 @@
-package us.teaminceptus.novaconomy.api;
+package us.teaminceptus.novaconomy.api.player;
 
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.AtomicDouble;
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -10,8 +11,8 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.bank.Bank;
-import us.teaminceptus.novaconomy.api.bounty.Bounty;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.business.Rating;
 import us.teaminceptus.novaconomy.api.economy.Economy;
@@ -39,10 +40,12 @@ public final class NovaPlayer {
     private final File pFile;
     private final FileConfiguration pConfig;
 
+    final PlayerStatistics stats;
+
     /**
-     * Creates a new Player.
-     * @param p Player to use
-     * @throws IllegalArgumentException if p is null
+     * Creates a new NovaPlayer.
+     * @param p OfflinePlayer to use
+     * @throws IllegalArgumentException if player is null
      */
     public NovaPlayer(@NotNull OfflinePlayer p) throws IllegalArgumentException {
         if (p == null) throw new IllegalArgumentException("Player is null");
@@ -58,7 +61,17 @@ public final class NovaPlayer {
             NovaConfig.print(e);
         }
 
-        pConfig = YamlConfiguration.loadConfiguration(pFile);
+        this.pConfig = YamlConfiguration.loadConfiguration(pFile);
+
+        PlayerStatistics stats;
+        try {
+            stats = pConfig.contains("stats") ? (PlayerStatistics) pConfig.get("stats") : new PlayerStatistics(p);
+        } catch (ClassCastException e) {
+            NovaConfig.print(e);
+            stats = new PlayerStatistics(p);
+        }
+
+        this.stats = stats;
 
         reloadValues();
     }
@@ -129,15 +142,35 @@ public final class NovaPlayer {
         if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
 
         pConfig.set("economies." + econ.getName().toLowerCase() + ".balance", newBal);
+
+        if (newBal > stats.highestBalance) {
+            stats.highestBalance = newBal;
+            stats.highestBalanceEconomy = econ;
+        }
         save();
     }
-    
-    private void save() {
+
+    /**
+     * <p>Saves this player's information to the file.</p>
+     * <p>Information will be automatically saved with wrapper methods, so this method does not need to be called again.</p>
+     */
+    public void save() {
+        pConfig.set("stats", this.stats);
+
         try {
             pConfig.save(pFile);
         } catch (IOException e) {
             NovaConfig.print(e);
         }
+    }
+
+    /**
+     * Fetches the statistics of this Player.
+     * @return PlayerStatistics of this player
+     */
+    @NotNull
+    public PlayerStatistics getStatistics() {
+        return this.stats;
     }
 
     /**
@@ -149,6 +182,7 @@ public final class NovaPlayer {
     public void add(@NotNull Economy econ, double add) throws IllegalArgumentException {
         if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
 
+        stats.moneyAdded += add;
         setBalance(econ, getBalance(econ) + add);
     }
 
@@ -231,6 +265,8 @@ public final class NovaPlayer {
         pConfig.set(LBW + ".amount", amount);
         pConfig.set(LBW + ".economy", econ.getName());
         pConfig.set(LBW + ".timestamp", System.currentTimeMillis());
+
+        stats.totalWithdrawn += amount;
         save();
 
         PlayerWithdrawEvent event = new PlayerWithdrawEvent(getOnlinePlayer(), amount, econ, System.currentTimeMillis());
@@ -537,7 +573,7 @@ public final class NovaPlayer {
      * Fetches the comment on the rating for this Business.
      * @param b Business to fetch the comment for
      * @return Comment on the rating, may be empty
-     * @throws IllegalArgumentException if bussiness is null
+     * @throws IllegalArgumentException if business is null
      */
     @NotNull
     public String getRatingComment(@NotNull Business b) throws IllegalArgumentException {
@@ -553,6 +589,61 @@ public final class NovaPlayer {
     public boolean hasRating(@Nullable Business b) {
         if (b == null) return false;
         return getRatingLevel(b) != 0;
+    }
+
+    /**
+     * Fetches the amount of shares this player owns for this Material.
+     * @param m Material to check
+     * @return Amount of shares player owns, or 0 if not found
+     */
+    public long getShareAmount(@NotNull Material m) {
+        if (m == null) return 0;
+        return pConfig.getLong("market.shares." + m.name().toLowerCase(), 0);
+    }
+
+    /**
+     * Sets the amount of shares this player owns for this Material.
+     * @param m Material to set
+     * @param amount Amount of shares to set
+     * @throws IllegalArgumentException if share amount is negative
+     */
+    public void setShareAmount(@NotNull Material m, long amount) throws IllegalArgumentException {
+        if (m == null) return;
+        if (amount < 0) throw new IllegalArgumentException("Share amount cannot be negative");
+
+        if (amount > 0) pConfig.set("market.shares." + m.name().toLowerCase(), amount);
+        else pConfig.set("market.shares." + m.name().toLowerCase(), null);
+        save();
+    }
+
+    /**
+     * Removes ownership of all shares for this Material.
+     * @param m Material to remove
+     */
+    public void removeAllShares(@NotNull Material m) {
+        setShareAmount(m, 0);
+    }
+
+    /**
+     * Adds shares for this Material.
+     * @param m Material to add shares for
+     * @param amount Amount of shares to add
+     */
+    public void addShares(@NotNull Material m, long amount) {
+        if (m == null) return;
+
+        stats.totalSharesPurchased += amount;
+        setShareAmount(m, getShareAmount(m) + amount);
+    }
+
+    /**
+     * Remove shares for this Material.
+     * @param m Material to remove shares for
+     * @param amount Amount of shares to remove
+     */
+    public void removeShares(@NotNull Material m, long amount) {
+        if (m == null) return;
+        addShares(m, -amount);
     }
 
     private void reloadValues() {
@@ -600,7 +691,19 @@ public final class NovaPlayer {
 
         // Ratings
         if (!pConfig.isConfigurationSection("ratings")) pConfig.createSection("ratings");
-        for (Business b : Business.getBusinesses()) {
+        for (String key : pConfig.getConfigurationSection("ratings").getKeys(false)) {
+            final Business b;
+            try {
+                b = Business.getById(UUID.fromString(key));
+            } catch (IllegalArgumentException e) {
+                continue;
+            }
+
+            if (b == null) {
+                pConfig.set("ratings." + key, null);
+                continue;
+            }
+
             if (b.isOwner(this.p)) continue;
 
             if (!pConfig.isConfigurationSection("ratings." + b.getUniqueId()))
@@ -610,6 +713,24 @@ public final class NovaPlayer {
             if (!rating.isInt("rating")) rating.set("rating", 0);
             if (!rating.isInt("last_rating") && !rating.isLong("last_rating")) rating.set("last_rating", 0L);
             if (!rating.isSet("comment")) rating.set("comment", "");
+        }
+
+        // Market
+        if (!pConfig.isConfigurationSection("market")) pConfig.createSection("market");
+        ConfigurationSection market = pConfig.getConfigurationSection("market");
+
+        if (!market.isConfigurationSection("shares")) market.createSection("shares");
+        for (Map.Entry<String, Object> entry : market.getConfigurationSection("shares").getValues(false).entrySet()) {
+            String k = entry.getKey();
+            Object v = entry.getValue();
+
+            Material m = Material.matchMaterial(k);
+            if (m == null) {
+                market.set(k, null);
+                continue;
+            }
+
+            if (!(v instanceof Long) && !(v instanceof Integer)) market.set(k, null);
         }
 
         save();
