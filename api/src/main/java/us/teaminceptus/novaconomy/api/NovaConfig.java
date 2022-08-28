@@ -9,6 +9,7 @@ import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.api.economy.Economy;
+import us.teaminceptus.novaconomy.api.player.NovaPlayer;
 import us.teaminceptus.novaconomy.api.util.Price;
 
 import java.io.File;
@@ -36,11 +37,17 @@ public interface NovaConfig  {
      */
     static File getConfigFile() { return new File(getDataFolder(), "config.yml"); }
 
+    /**
+     * Fetches the folder that all Businesses are stored.
+     * @return Businesses Folder
+     * @since 1.6.0
+     */
     static File getBusinessesFolder() { return new File(getDataFolder(), "businesses"); }
 
     /**
      * Prints a Throwable in the Plugin's Namespace and Format.
      * @param t Throwable to print
+     * @since 1.6.0
      */
     static void print(Throwable t) {
         getLogger().severe(t.getClass().getSimpleName());
@@ -50,7 +57,7 @@ public interface NovaConfig  {
     }
 
     /**
-     * Whether or not Notifications is turned on inside of the configuration.
+     * Whether Notifications is turned on inside of the configuration.
      * @return true if notifications, else false
      */
     boolean hasNotifications();
@@ -102,7 +109,7 @@ public interface NovaConfig  {
             m.setAccessible(true);
             m.invoke(null);
         } catch (Exception e) {
-            getPlugin().getLogger().severe(e.getMessage());
+            print(e);
         }
     }
 
@@ -561,25 +568,25 @@ public interface NovaConfig  {
 
     /**
      * Sets whether or not farming should increase money.
-     * @param increase Whether or not farming should increase money
+     * @param increase Whether farming should increase money
      */
     void setFarmingIncrease(boolean increase);
 
     /**
      * Sets whether or not mining should increase money.
-     * @param increase Whether or not mining should increase money
+     * @param increase Whether mining should increase money
      */
     void setMiningIncrease(boolean increase);
 
     /**
      * Sets whether or not killing something should increase money.
-     * @param increase Whether or not killing something should increase money
+     * @param increase Whether killing something should increase money
      */
     void setKillIncrease(boolean increase);
 
     /**
      * Sets whether or not dying should decrease money.
-     * @param decrease Whether or not dying should decrease money
+     * @param decrease Whether dying should decrease money
      */
     void setDeathDecrease(boolean decrease);
 
@@ -771,4 +778,30 @@ public interface NovaConfig  {
     default boolean isIgnoredTax(OfflinePlayer p) {
         return isIgnoredTax(p, null);
     }
+
+    /**
+     * Whether the Stock Market is currently enabled.
+     * @return true if enabled, else false
+     */
+    boolean isMarketEnabled();
+
+    /**
+     * Sets whether the Stock Market is currently enabled.
+     * @param enabled true if enabled, else false
+     */
+    void setMarketEnabled(boolean enabled);
+
+    /**
+     * Fetches the Market Tax percentage.
+     * @return Market Tax percentage
+     */
+    double getMarketTax();
+
+    /**
+     * Sets the Market Tax percentage.
+     * @param tax Market Tax percentage
+     * @throws IllegalArgumentException if tax is 0 or less
+     */
+    void setMarketTax(double tax) throws IllegalArgumentException;
+
 }

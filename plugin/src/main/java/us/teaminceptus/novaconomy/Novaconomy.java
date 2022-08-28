@@ -44,8 +44,6 @@ import us.teaminceptus.novaconomy.abstraction.CommandWrapper;
 import us.teaminceptus.novaconomy.abstraction.Wrapper;
 import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.NovaConfig;
-import us.teaminceptus.novaconomy.api.NovaPlayer;
-import us.teaminceptus.novaconomy.api.bounty.Bounty;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.business.BusinessStatistics;
 import us.teaminceptus.novaconomy.api.business.Rating;
@@ -61,6 +59,9 @@ import us.teaminceptus.novaconomy.api.events.player.PlayerRateBusinessEvent;
 import us.teaminceptus.novaconomy.api.events.player.PlayerSettingChangeEvent;
 import us.teaminceptus.novaconomy.api.events.player.economy.PlayerChangeBalanceEvent;
 import us.teaminceptus.novaconomy.api.events.player.economy.PlayerPurchaseProductEvent;
+import us.teaminceptus.novaconomy.api.player.Bounty;
+import us.teaminceptus.novaconomy.api.player.NovaPlayer;
+import us.teaminceptus.novaconomy.api.player.PlayerStatistics;
 import us.teaminceptus.novaconomy.api.settings.Settings;
 import us.teaminceptus.novaconomy.api.util.BusinessProduct;
 import us.teaminceptus.novaconomy.api.util.Price;
@@ -292,7 +293,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 					}
 
 					double iAmount = en.getMaxHealth();
-					if (p.getEquipment().getItemInHand() != null) {
+					if (p.getEquipment().getItemInHand() != null && plugin.hasEnchantBonus()) {
 						ItemStack hand = p.getEquipment().getItemInHand();
 						if (hand.hasItemMeta() && hand.getItemMeta().hasEnchant(Enchantment.LOOT_BONUS_MOBS))
 							iAmount += hand.getItemMeta().getEnchantLevel(Enchantment.LOOT_BONUS_MOBS) * (r.nextInt(4) + 6);
@@ -340,7 +341,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 			String id = b.getType().name();
 
 			double add = e.getExpToDrop() == 0 && ores.contains(b.getType()) ? r.nextInt(3) : e.getExpToDrop();
-			if (p.getEquipment().getItemInHand() != null) {
+			if (p.getEquipment().getItemInHand() != null && plugin.hasEnchantBonus()) {
 				ItemStack hand = p.getEquipment().getItemInHand();
 				if (hand.hasItemMeta() && hand.getItemMeta().hasEnchant(Enchantment.LOOT_BONUS_BLOCKS))
 					add += hand.getItemMeta().getEnchantLevel(Enchantment.LOOT_BONUS_BLOCKS) * (r.nextInt(3) + 4);
@@ -423,7 +424,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
 			double iAmount = e.getExpToDrop();
 
-			if (p.getEquipment().getItemInHand() != null) {
+			if (p.getEquipment().getItemInHand() != null && plugin.hasEnchantBonus()) {
 				ItemStack hand = p.getEquipment().getItemInHand();
 
 				if (hand.hasItemMeta()) {
@@ -571,16 +572,17 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
 			double divider = getDeathDivider();
 
-			for (EquipmentSlot s : EquipmentSlot.values()) {
-				if (s == EquipmentSlot.HAND || s.name().equalsIgnoreCase("OFF_HAND")) continue;
+			if (plugin.hasEnchantBonus())
+				for (EquipmentSlot s : EquipmentSlot.values()) {
+					if (s == EquipmentSlot.HAND || s.name().equalsIgnoreCase("OFF_HAND")) continue;
 
-				ItemStack item = getItem(p.getEquipment(), s);
-				if (item == null) continue;
-				if (!item.hasItemMeta()) continue;
+					ItemStack item = getItem(p.getEquipment(), s);
+					if (item == null) continue;
+					if (!item.hasItemMeta()) continue;
 
-				if (item.getItemMeta().hasEnchant(Enchantment.PROTECTION_ENVIRONMENTAL))
-					divider *= Math.max(Math.min(item.getEnchantmentLevel(Enchantment.PROTECTION_ENVIRONMENTAL) / 2, 4), 1);
-			}
+					if (item.getItemMeta().hasEnchant(Enchantment.PROTECTION_ENVIRONMENTAL))
+						divider *= Math.max(Math.min(item.getEnchantmentLevel(Enchantment.PROTECTION_ENVIRONMENTAL) / 2, 4), 1);
+				}
 
 
 			if (ModifierReader.getModifier("Death") != null && ModifierReader.getModifier("Death").containsKey(id)) {
@@ -921,20 +923,31 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				}
 
 				np.remove(econ, amount);
+
+				PlayerStatistics pStats = np.getStatistics();
+				pStats.setProductsPurchased(pStats.getProductsPurchased() + size);
+
 				bP.getBusiness().removeResource(product);
 				p.getInventory().addItem(product);
 
 				Business b = bP.getBusiness();
 				Product bPr = new Product(bP);
-				BusinessStatistics stats = b.getStatistics();
+				BusinessStatistics bStats = b.getStatistics();
+				bStats.setTotalSales(bStats.getTotalSales() + product.getAmount());
+
 				BusinessStatistics.Transaction t = new BusinessStatistics.Transaction(p, bPr, System.currentTimeMillis());
-				stats.setLastTransaction(t);
-				stats.setTotalSales(stats.getTotalSales() + product.getAmount());
+				bStats.setLastTransaction(t);
+
+				List<BusinessStatistics.Transaction> newTransactions = new ArrayList<>(pStats.getTransactionHistory());
+				newTransactions.add(t);
+				if (newTransactions.size() > 10) newTransactions.remove(0);
+				pStats.setTransactionHistory(newTransactions);
+				np.save();
 
 				ItemStack clone = product.clone();
 				clone.setAmount(1);
 				Product bPrS = new Product(clone, bPr.getPrice());
-				stats.getProductSales().put(bPrS, stats.getProductSales().getOrDefault(bPrS, 0) + product.getAmount());
+				bStats.getProductSales().put(bPrS, bStats.getProductSales().getOrDefault(bPrS, 0) + product.getAmount());
 				b.saveBusiness();
 
 				String material = product.hasItemMeta() && product.getItemMeta().hasDisplayName() ? product.getItemMeta().getDisplayName() : WordUtils.capitalizeFully(product.getType().name().replace('_', ' '));
@@ -1220,7 +1233,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 					return;
 				}
 
-				getCommandWrapper().statistics(p, b);
+				getCommandWrapper().businessStatistics(p, b);
 			});
 
 			put("back:business", e -> {
@@ -1314,6 +1327,14 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				String display = pr.getItem().hasItemMeta() && pr.getItem().getItemMeta().hasDisplayName() ? pr.getItem().getItemMeta().getDisplayName() : WordUtils.capitalizeFully(pr.getItem().getType().name().replace('_', ' '));
 				p.sendMessage(String.format(getMessage("success.business.edit_price"), display, String.format("%,.2f", price) + econ.getSymbol()));
 				p.closeInventory();
+			});
+			put("player_stats", e -> {
+				if (!(e.getWhoClicked() instanceof Player)) return;
+				ItemStack item = e.getCurrentItem();
+				Player p = (Player) e.getWhoClicked();
+				OfflinePlayer target = Bukkit.getOfflinePlayer(UUID.fromString(w.getNBTString(item, "player")));
+
+				getCommandWrapper().playerStatistics(p, target);
 			});
 		}
 	};
@@ -1573,6 +1594,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		add(BusinessStatistics.class);
 		add(BusinessStatistics.Transaction.class);
 		add(Rating.class);
+		add(PlayerStatistics.class);
 	}};
 
 	private void loadPlaceholders() {
@@ -1621,21 +1643,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		File businessesDir = new File(getDataFolder(), "businesses");
 		if (!businessesDir.exists()) businessesDir.mkdir();
 
-		File businesses = new File(getDataFolder(), "businesses.yml");
-		if (businesses.exists()) {
-			getLogger().warning("Businesses are now stored in individual files. Automatically migrating...");
-
-			FileConfiguration bConfig = YamlConfiguration.loadConfiguration(businesses);
-			bConfig.getValues(false).forEach((k, v) -> {
-				if (!(v instanceof Business)) return;
-				Business b = (Business) v;
-				b.saveBusiness();
-			});
-
-			businesses.delete();
-
-			getLogger().info("Migration complete!");
-		}
+		loadLegacyBusinesses();
 
 		File globalF = new File(getDataFolder(), "global.yml");
 		if (!globalF.exists()) saveResource("global.yml", false);
@@ -1694,6 +1702,24 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		getLogger().info("Loaded Dependencies...");
 		saveConfig();
 		getLogger().info("Successfully loaded Novaconomy");
+	}
+
+	private void loadLegacyBusinesses() {
+		File businesses = new File(getDataFolder(), "businesses.yml");
+		if (businesses.exists()) {
+			getLogger().warning("Businesses are now stored in individual files. Automatically migrating...");
+
+			FileConfiguration bConfig = YamlConfiguration.loadConfiguration(businesses);
+			bConfig.getValues(false).forEach((k, v) -> {
+				if (!(v instanceof Business)) return;
+				Business b = (Business) v;
+				b.saveBusiness();
+			});
+
+			businesses.delete();
+
+			getLogger().info("Migration complete!");
+		}
 	}
 
 	private static final int PLUGIN_ID = 15322;
@@ -1841,7 +1867,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
 	@Override
 	public boolean hasEnchantBonus() {
-		return config.getBoolean("NaturalCauses.EnchantBonus", true);
+		return ncauses.getBoolean("EnchantBonus", true);
 	}
 
 	@Override
@@ -1943,6 +1969,29 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		}
 
 		return state.get();
+	}
+
+	@Override
+	public boolean isMarketEnabled() {
+		return config.getBoolean("Business.Market.Enabled", true);
+	}
+
+	@Override
+	public void setMarketEnabled(boolean enabled) {
+		config.set("Business.Market.Enabled", enabled);
+		saveConfig();
+	}
+
+	@Override
+	public double getMarketTax() {
+		return config.getDouble("Business.Market.MarketTax", 0.05);
+	}
+
+	@Override
+	public void setMarketTax(double tax) throws IllegalArgumentException {
+		if (tax <= 0) throw new IllegalArgumentException("Tax must be greater than 0");
+		config.set("Business.Market.MarketTax", tax);
+		saveConfig();
 	}
 
 	@Override
@@ -2054,6 +2103,41 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 	@Override
 	public double getDeathDivider() {
 		return ncauses.getDouble("DeathDivider");
+	}
+
+	private static void updateRunnables() {
+		Novaconomy plugin = getPlugin(Novaconomy.class);
+
+		config = plugin.getConfig();
+		interest = config.getConfigurationSection("Interest");
+		ncauses = config.getConfigurationSection("NaturalCauses");
+
+		try { if (INTEREST_RUNNABLE.getTaskId() != -1) INTEREST_RUNNABLE.cancel(); } catch (IllegalStateException ignored) {}
+		try { if (TAXES_RUNNABLE.getTaskId() != -1) TAXES_RUNNABLE.cancel(); } catch (IllegalStateException ignored) {}
+
+		INTEREST_RUNNABLE = new BukkitRunnable() {
+			@Override
+			public void run() {
+				if (!(NovaConfig.getConfiguration().isInterestEnabled())) { cancel(); return; }
+				runInterest();
+			}
+		};
+
+		TAXES_RUNNABLE = new BukkitRunnable() {
+			@Override
+			public void run() {
+				if (!(NovaConfig.getConfiguration().hasAutomaticTaxes())) { cancel(); return; }
+				runTaxes();
+			}
+		};
+
+		new BukkitRunnable() {
+			@Override
+			public void run() {
+				INTEREST_RUNNABLE.runTaskTimer(plugin, plugin.getInterestTicks(), plugin.getInterestTicks());
+				TAXES_RUNNABLE.runTaskTimer(plugin, plugin.getTaxesTicks(), plugin.getTaxesTicks());
+			}
+		}.runTask(plugin);
 	}
 
 }

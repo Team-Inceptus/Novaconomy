@@ -2,9 +2,9 @@ package us.teaminceptus.novaconomy.vault;
 
 import net.milkbowl.vault.economy.AbstractEconomy;
 import net.milkbowl.vault.economy.EconomyResponse;
-import us.teaminceptus.novaconomy.api.NovaPlayer;
 import us.teaminceptus.novaconomy.api.bank.Bank;
 import us.teaminceptus.novaconomy.api.economy.Economy;
+import us.teaminceptus.novaconomy.api.player.NovaPlayer;
 
 import java.util.List;
 import java.util.stream.Collectors;

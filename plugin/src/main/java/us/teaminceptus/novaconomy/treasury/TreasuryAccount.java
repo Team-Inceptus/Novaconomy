@@ -10,7 +10,6 @@ import me.lokka30.treasury.api.economy.response.EconomySubscriber;
 import me.lokka30.treasury.api.economy.transaction.EconomyTransaction;
 import me.lokka30.treasury.api.economy.transaction.EconomyTransactionInitiator;
 import me.lokka30.treasury.api.economy.transaction.EconomyTransactionType;
-import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
@@ -94,9 +93,7 @@ class TreasuryAccount implements NonPlayerAccount, ConfigurationSerializable {
     private void save() {
         treasuryAccounts.set(id, this);
         try { global.save(globalF); } catch (IOException e) {
-            Bukkit.getLogger().severe(e.getClass().getSimpleName());
-            Bukkit.getLogger().severe(e.getMessage());
-            for (StackTraceElement s : e.getStackTrace()) Bukkit.getLogger().severe(s.toString());
+            NovaConfig.print(e);
         }
     }
 

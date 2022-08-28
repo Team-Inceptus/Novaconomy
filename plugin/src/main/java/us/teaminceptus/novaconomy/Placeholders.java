@@ -4,9 +4,9 @@ import com.google.common.util.concurrent.AtomicDouble;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import org.bukkit.OfflinePlayer;
 import org.jetbrains.annotations.NotNull;
-import us.teaminceptus.novaconomy.api.NovaPlayer;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.economy.Economy;
+import us.teaminceptus.novaconomy.api.player.NovaPlayer;
 
 import java.util.ArrayList;
 import java.util.HashMap;
