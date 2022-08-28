@@ -30,7 +30,6 @@ public class Product implements ConfigurationSerializable, Comparable<Product> {
     public Product(@NotNull ItemStack item, @NotNull Price price) throws IllegalArgumentException {
         if (item == null) throw new IllegalArgumentException("Item cannot be null");
         if (price == null) throw new IllegalArgumentException("Price cannot be null");
-        if (price.getEconomy() == null) throw new IllegalArgumentException("Price Economy cannot be null");
 
         this.item = item;
         this.price = price;

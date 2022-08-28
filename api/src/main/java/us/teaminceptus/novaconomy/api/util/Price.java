@@ -156,17 +156,14 @@ public final class Price implements ConfigurationSerializable, Comparable<Price>
 
     @Override
     public String toString() {
-        return "Price{" +
-                "econ=" + econ.getUniqueId() +
-                ", amount=" + amount +
-                '}';
+        return String.format("%,.2f", amount) + econ.getSymbol();
     }
 
     @Override
     public Map<String, Object> serialize() {
         return new HashMap<String, Object>() {{
             put("amount", amount);
-            put("economy", econ.getName().toLowerCase());
+            if (econ != null) put("economy", econ.getName().toLowerCase());
         }};
     }
 
@@ -180,8 +177,10 @@ public final class Price implements ConfigurationSerializable, Comparable<Price>
     public static Price deserialize(@Nullable Map<String, Object> serial) throws IllegalArgumentException {
         if (serial == null) return null;
 
+        Economy econ = serial.containsKey("economy") ? Economy.getEconomy((String) serial.get("economy")) : null;
+
         try {
-            return new Price(Economy.getEconomy((String) serial.get("economy")), (double) serial.get("amount"));
+            return new Price(econ, (double) serial.get("amount"));
         } catch (ClassCastException | NullPointerException e) {
             throw new IllegalArgumentException(e);
         }
