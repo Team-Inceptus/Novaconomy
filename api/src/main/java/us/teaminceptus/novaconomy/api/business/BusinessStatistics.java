@@ -1,5 +1,6 @@
 package us.teaminceptus.novaconomy.api.business;
 
+import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.bukkit.inventory.ItemStack;
@@ -9,6 +10,7 @@ import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.util.Price;
 import us.teaminceptus.novaconomy.api.util.Product;
 
+import java.io.Serializable;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -17,13 +19,13 @@ import java.util.UUID;
 /**
  * Utility Class for Business Statistics
  */
-public final class BusinessStatistics implements ConfigurationSerializable {
+public final class BusinessStatistics implements ConfigurationSerializable, Serializable {
 
     /**
      * Represents a Transaction for a Business
      */
-    public static final class Transaction implements ConfigurationSerializable {
-        private final OfflinePlayer buyer;
+    public static final class Transaction implements ConfigurationSerializable, Serializable {
+        private final UUID buyer;
         private final Product product;
         private final long timestamp;
 
@@ -34,7 +36,7 @@ public final class BusinessStatistics implements ConfigurationSerializable {
          * @param timestamp Time that the Transaction was made
          */
         public Transaction(@Nullable OfflinePlayer buyer, @Nullable Product product, long timestamp) {
-            this.buyer = buyer;
+            this.buyer = buyer.getUniqueId();
             this.product = product;
             this.timestamp = timestamp;
         }
@@ -56,7 +58,7 @@ public final class BusinessStatistics implements ConfigurationSerializable {
          */
         @Nullable
         public OfflinePlayer getBuyer() {
-            return buyer;
+            return Bukkit.getOfflinePlayer(buyer);
         }
 
         /**
@@ -78,9 +80,10 @@ public final class BusinessStatistics implements ConfigurationSerializable {
         }
 
         @Override
+        @Deprecated
         public Map<String, Object> serialize() {
             return new HashMap<String, Object>() {{
-                put("buyer", buyer);
+                put("buyer", buyer.toString());
                 put("item", product == null ? null : product.getItem());
                 put("economy", product == null ? null : product.getEconomy().getUniqueId().toString());
                 put("amount", product == null ? null : product.getAmount());
@@ -91,18 +94,23 @@ public final class BusinessStatistics implements ConfigurationSerializable {
         /**
          * Deserializes a Map into a Transaction.
          * @param serial Serialization from {@link #serialize()}
+         * @deprecated Bukkit Serialization is no longer used
          * @return Deserialized Transaction, or null if serial is null
          * @throws IllegalArgumentException if an argument is missing/malformed
          */
         @Nullable
+        @Deprecated
         public static Transaction deserialize(@NotNull Map<String, Object> serial) throws IllegalArgumentException {
             if (serial == null) return null;
 
             long num = serial.get("timestamp") instanceof Integer ? (int) serial.get("timestamp") : (long) serial.get("timestamp");
 
+            Object buyerO = serial.get("buyer");
+            OfflinePlayer buyer = buyerO instanceof OfflinePlayer ? (OfflinePlayer) buyerO : Bukkit.getOfflinePlayer(UUID.fromString((String) buyerO));
+
             try {
                 return new Transaction(
-                        (OfflinePlayer) serial.get("buyer"),
+                        buyer,
                         new Product(
                                 (ItemStack) serial.get("item"),
                                 new Price(
@@ -203,6 +211,7 @@ public final class BusinessStatistics implements ConfigurationSerializable {
     }
 
     @Override
+    @Deprecated
     public Map<String, Object> serialize() {
         return new HashMap<String, Object>() {{
             put("business_id", businessId.toString());
@@ -218,10 +227,12 @@ public final class BusinessStatistics implements ConfigurationSerializable {
     /**
      * Deserializes a Map into a BusinessStatistics.
      * @param serial Serialization from {@link #serialize()}
+     * @deprecated Bukkit Serialization is no longer used
      * @return Deserialized BusinessStatistics, or null if serial is null
      * @throws IllegalArgumentException if an argument is malformed
      * @throws NullPointerException if ID is missing
      */
+    @Deprecated
     @Nullable
     @SuppressWarnings("unchecked")
     public static BusinessStatistics deserialize(@NotNull Map<String, Object> serial) throws IllegalArgumentException, NullPointerException {

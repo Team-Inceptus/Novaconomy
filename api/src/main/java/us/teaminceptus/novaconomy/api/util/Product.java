@@ -8,6 +8,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -15,7 +16,7 @@ import java.util.Objects;
 /**
  * Represents a Sellable Product
  */
-public class Product implements ConfigurationSerializable, Comparable<Product> {
+public class Product implements ConfigurationSerializable, Comparable<Product>, Serializable {
 
     private ItemStack item;
 
