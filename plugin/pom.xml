@@ -79,10 +79,13 @@
     </build>
 
     <dependencies>
+        <!-- Compile Dependencies -->
+
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>novaconomy-api</artifactId>
             <version>${project.version}</version>
+            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>com.jeff_media</groupId>
@@ -97,11 +100,23 @@
             <scope>compile</scope>
         </dependency>
         <dependency>
+            <groupId>net.wesjd</groupId>
+            <artifactId>anvilgui</artifactId>
+            <version>1.5.3-SNAPSHOT</version>
+            <scope>compile</scope>
+        </dependency>
+
+        <!-- Spigot -->
+
+        <dependency>
             <groupId>org.spigotmc</groupId>
             <artifactId>spigot-api</artifactId>
             <version>1.8-R0.1-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
+
+        <!-- Plugin Add-ons -->
+
         <dependency>
             <groupId>me.clip</groupId>
             <artifactId>placeholderapi</artifactId>
@@ -120,7 +135,9 @@
             <version>1.2.0</version>
             <scope>provided</scope>
         </dependency>
+
         <!-- Abstraction -->
+
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>novaconomy-1_8_R1</artifactId>
