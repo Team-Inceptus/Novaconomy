@@ -35,6 +35,8 @@ public final class PlayerStatistics implements ConfigurationSerializable {
 
     double totalSharesPurchased;
 
+    double totalMoneySpent;
+
     private final List<BusinessStatistics.Transaction> transactionHistory = new ArrayList<>();
 
     PlayerStatistics(OfflinePlayer player) {
@@ -52,14 +54,15 @@ public final class PlayerStatistics implements ConfigurationSerializable {
         PlayerStatistics stats = new PlayerStatistics(Bukkit.getOfflinePlayer(UUID.fromString(serial.get("player").toString())));
 
         try {
-            stats.highestBalance = (double) serial.get("highest_balance");
+            stats.highestBalance = (double) serial.getOrDefault("highest_balance", 0);
             stats.highestBalanceEconomy = serial.containsKey("highest_balance_economy") ? Economy.getEconomy(UUID.fromString(serial.get("highest_balance_economy").toString())) : null;
-            stats.productsPurchased = (int) serial.get("products_purchased");
-            stats.moneyAdded = (double) serial.get("money_added");
-            stats.totalWithdrawn = (double) serial.get("total_withdrawn");
-            stats.totalBountiesCreated = (double) serial.get("total_bounties_created");
-            stats.totalBountiesHad = (double) serial.get("total_bounties_had");
-            stats.totalSharesPurchased = (double) serial.get("total_shares_purchased");
+            stats.productsPurchased = (int) serial.getOrDefault("products_purchased", 0);
+            stats.moneyAdded = (double) serial.getOrDefault("money_added", 0);
+            stats.totalWithdrawn = (double) serial.getOrDefault("total_withdrawn", 0);
+            stats.totalBountiesCreated = (double) serial.getOrDefault("total_bounties_created", 0);
+            stats.totalBountiesHad = (double) serial.getOrDefault("total_bounties_had", 0);
+            stats.totalSharesPurchased = (double) serial.getOrDefault("total_shares_purchased", 0);
+            stats.totalMoneySpent = (double) serial.getOrDefault("total_money_spent", 0);
 
             stats.transactionHistory.addAll((List<BusinessStatistics.Transaction>) serial.get("transaction_history"));
         } catch (ClassCastException | NullPointerException e) {
@@ -92,6 +95,14 @@ public final class PlayerStatistics implements ConfigurationSerializable {
      */
     public double getTotalMoneyAdded() {
         return moneyAdded;
+    }
+
+    /**
+     * Fetches the total amount of money this player has spent.
+     * @return Total Money Spent
+     */
+    public double getTotalMoneySpent() {
+        return totalMoneySpent;
     }
 
     /**
@@ -175,6 +186,7 @@ public final class PlayerStatistics implements ConfigurationSerializable {
             put("total_bounties_had", totalBountiesHad);
             put("transaction_history", transactionHistory);
             put("total_shares_purchased", totalSharesPurchased);
+            put("total_money_spent", totalMoneySpent);
 
             if (highestBalanceEconomy != null) put("highest_balance_economy", highestBalanceEconomy.getUniqueId().toString());
         }};
