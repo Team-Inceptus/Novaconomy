@@ -195,6 +195,7 @@ public final class NovaPlayer {
     public void remove(@NotNull Economy econ, double remove) throws IllegalArgumentException {
         if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
 
+        stats.totalMoneySpent += remove;
         setBalance(econ, getBalance(econ) - remove);
     }
 
