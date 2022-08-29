@@ -264,7 +264,11 @@ public interface Wrapper {
                     inv.setItem(44, rating);
                 } else inv.setItem(44, getGUIBackground());
 
-                b.saveBusiness();
+                ItemStack keywords = new ItemStack(Material.ANVIL);
+                ItemMeta kMeta = keywords.getItemMeta();
+
+                keywords.setItemMeta(kMeta);
+
             }
         }.runTaskAsynchronously(NovaConfig.getPlugin());
 
