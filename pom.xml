@@ -225,5 +225,10 @@
             <name>Minecraft Repository</name>
             <url>https://libraries.minecraft.net/</url>
         </repository>
+        <repository>
+            <id>codemc-snapshots</id>
+            <name>CodeMC Repository</name>
+            <url>https://repo.codemc.io/repository/maven-snapshots/</url>
+        </repository>
 	</repositories>
 </project>

@@ -2105,6 +2105,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		return ncauses.getDouble("DeathDivider");
 	}
 
+	@SuppressWarnings("unused")
 	private static void updateRunnables() {
 		Novaconomy plugin = getPlugin(Novaconomy.class);
 
