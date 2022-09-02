@@ -29,9 +29,9 @@ public final class PlayerStatistics implements ConfigurationSerializable {
 
     double moneyAdded;
 
-    double totalBountiesCreated;
+    int totalBountiesCreated;
 
-    double totalBountiesHad;
+    int totalBountiesHad;
 
     double totalSharesPurchased;
 
@@ -59,8 +59,8 @@ public final class PlayerStatistics implements ConfigurationSerializable {
             stats.productsPurchased = (int) serial.getOrDefault("products_purchased", 0);
             stats.moneyAdded = (double) serial.getOrDefault("money_added", 0);
             stats.totalWithdrawn = (double) serial.getOrDefault("total_withdrawn", 0);
-            stats.totalBountiesCreated = (double) serial.getOrDefault("total_bounties_created", 0);
-            stats.totalBountiesHad = (double) serial.getOrDefault("total_bounties_had", 0);
+            stats.totalBountiesCreated = (int) serial.getOrDefault("total_bounties_created", 0);
+            stats.totalBountiesHad = (int) serial.getOrDefault("total_bounties_had", 0);
             stats.totalSharesPurchased = (double) serial.getOrDefault("total_shares_purchased", 0);
             stats.totalMoneySpent = (double) serial.getOrDefault("total_money_spent", 0);
 
@@ -127,7 +127,7 @@ public final class PlayerStatistics implements ConfigurationSerializable {
      * Fetches the total amount of bounties this Player has created.
      * @return Total amount of bounties this Player has created
      */
-    public double getTotalBountiesCreated() {
+    public int getTotalBountiesCreated() {
         return totalBountiesCreated;
     }
 
@@ -135,7 +135,7 @@ public final class PlayerStatistics implements ConfigurationSerializable {
      * Fetches the total amount of bounties this Player has been the target of.
      * @return Total amount of bounties this Player has been the target of
      */
-    public double getTotalBountiesTargeted() {
+    public int getTotalBountiesTargeted() {
         return totalBountiesHad;
     }
 
