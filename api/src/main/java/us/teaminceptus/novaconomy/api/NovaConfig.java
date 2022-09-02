@@ -42,6 +42,7 @@ public interface NovaConfig  {
      * @return Businesses Folder
      * @since 1.6.0
      */
+    @NotNull
     static File getBusinessesFolder() { return new File(getDataFolder(), "businesses"); }
 
     /**
@@ -49,7 +50,7 @@ public interface NovaConfig  {
      * @param t Throwable to print
      * @since 1.6.0
      */
-    static void print(Throwable t) {
+    static void print(@NotNull Throwable t) {
         getLogger().severe(t.getClass().getSimpleName());
         getLogger().severe("-----------");
         getLogger().severe(t.getMessage());
