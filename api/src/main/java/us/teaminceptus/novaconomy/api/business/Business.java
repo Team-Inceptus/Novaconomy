@@ -1,54 +1,31 @@
 package us.teaminceptus.novaconomy.api.business;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.OptionalDataException;
-import java.io.Serializable;
-import java.lang.reflect.Method;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
-
+import com.google.common.collect.ImmutableList;
+import com.google.common.util.concurrent.AtomicDouble;
 import org.apache.commons.lang.Validate;
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.OfflinePlayer;
+import org.bukkit.*;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
+import org.bukkit.configuration.serialization.DelegateDeserialization;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.util.concurrent.AtomicDouble;
-
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.events.business.BusinessCreateEvent;
 import us.teaminceptus.novaconomy.api.player.NovaPlayer;
 import us.teaminceptus.novaconomy.api.settings.Settings;
 import us.teaminceptus.novaconomy.api.util.BusinessProduct;
 import us.teaminceptus.novaconomy.api.util.Product;
+
+import java.io.*;
+import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 /**
  * Represents a Novaconomy Business
@@ -640,10 +617,11 @@ public final class Business implements ConfigurationSerializable, Serializable {
         os.writeObject(this.name);
         os.writeObject(this.icon.name());
         os.writeObject(this.owner.getUniqueId());
-        os.writeObject(this.stats);
         os.writeObject(this.settings);
         os.writeLong(this.creationDate);
-        os.writeObject(this.home.serialize());
+
+        Map<String, Object> home = this.home == null ? new HashMap<>(0) : this.home.serialize();
+        os.writeObject(home);
 
         List<Map<String, Object>> res = new ArrayList<>();
         for (ItemStack i : resources) {
@@ -665,18 +643,21 @@ public final class Business implements ConfigurationSerializable, Serializable {
         os.writeObject(prods);
 
         os.writeObject(this.keywords);
+
+        stats.writeStats(os);
     }
 
     @SuppressWarnings("unchecked")
-    private static Business readBusiness(ObjectInputStream os) throws IOException, ReflectiveOperationException, ClassNotFoundException {
+    private static Business readBusiness(ObjectInputStream os) throws IOException, ReflectiveOperationException {
         UUID id = (UUID) os.readObject();
         String name = (String) os.readObject();
         Material icon = Material.valueOf((String) os.readObject());
         OfflinePlayer owner = Bukkit.getOfflinePlayer((UUID) os.readObject());
-        BusinessStatistics stats = (BusinessStatistics) os.readObject();
         Map<Settings.Business, Boolean> settings = (Map<Settings.Business, Boolean>) os.readObject();
         long creationDate = os.readLong();
-        Location home = Location.deserialize((Map<String, Object>) os.readObject());
+
+        Map<String, Object> homeMap = (Map<String, Object>) os.readObject();
+        Location home = homeMap.isEmpty() ? null : Location.deserialize(homeMap);
 
         List<Map<String, Object>> res = (List<Map<String, Object>>) os.readObject();
         List<ItemStack> resources = new ArrayList<>();
@@ -684,29 +665,37 @@ public final class Business implements ConfigurationSerializable, Serializable {
             Map<String, Object> sItem = new HashMap<>(m);
 
             ItemMeta base = Bukkit.getItemFactory().getItemMeta(Material.valueOf((String) m.get("type")));
-            Method deserialize = base.getClass().getDeclaredMethod("deserialize", Map.class);
+            DelegateDeserialization deserialization = base.getClass().getAnnotation(DelegateDeserialization.class);
+            Method deserialize = deserialization.value().getDeclaredMethod("deserialize", Map.class);
             deserialize.setAccessible(true);
-            
-            sItem.put("meta", (ItemMeta) deserialize.invoke(m.get("meta")));
+
+            sItem.put("meta", deserialize.invoke(null, m.get("meta")));
             ItemStack i = ItemStack.deserialize(m);
             resources.add(i);
         }
 
         List<Map<String, Object>> prods = (List<Map<String, Object>>) os.readObject();
         List<Product> products = new ArrayList<>();
+
         for (Map<String, Object> m : prods) {
             Map<String, Object> sItem = new HashMap<>(m);
             Map<String, Object> item = new HashMap<>((Map<String, Object>) m.get("item"));
+
             ItemMeta base = Bukkit.getItemFactory().getItemMeta(Material.valueOf((String) item.get("type")));
-            Method deserialize = base.getClass().getDeclaredMethod("deserialize", Map.class);
+            DelegateDeserialization deserialization = base.getClass().getAnnotation(DelegateDeserialization.class);
+            Method deserialize = deserialization.value().getDeclaredMethod("deserialize", Map.class);
             deserialize.setAccessible(true);
             
-            item.put("meta", (ItemMeta) deserialize.invoke(item.get("meta")));
+            item.put("meta", deserialize.invoke(null, item.get("meta")));
             sItem.put("item", ItemStack.deserialize(item));
             products.add(Product.deserialize(sItem));
         }
 
         List<String> keywords = (List<String>) os.readObject();
+
+        BusinessStatistics stats = BusinessStatistics.readStats(os);
+        os.close();
+
         Business b = new Business(id, name, icon, owner, products, resources, stats, settings, creationDate, keywords, false);
         b.setHome(home, false);
         return b;

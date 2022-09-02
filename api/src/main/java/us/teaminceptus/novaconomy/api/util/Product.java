@@ -91,7 +91,7 @@ public class Product implements ConfigurationSerializable, Comparable<Product>, 
      * Fetches the Product's Economy.
      * @return Economy Product is purchased with
      */
-    @NotNull
+    @Nullable
     public Economy getEconomy() {
         return price.getEconomy();
     }
