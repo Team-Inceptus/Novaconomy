@@ -1200,7 +1200,7 @@ public interface CommandWrapper {
             }
 
             double total = 0;
-            for (Product pr : productSales.keySet().stream().filter(pr -> pr.getEconomy().equals(econ)).collect(Collectors.toSet()))
+            for (Product pr : productSales.keySet().stream().filter(pr -> econ.equals(pr.getEconomy())).collect(Collectors.toSet()))
                 total += pr.getAmount() * productSales.get(pr);
 
             if (total == 0) continue;
@@ -1581,16 +1581,20 @@ public interface CommandWrapper {
         ItemStack maxBal = new ItemStack(Material.EMERALD_BLOCK);
         ItemMeta mbMeta = maxBal.getItemMeta();
         mbMeta.setDisplayName(ChatColor.YELLOW + get("constants.player_statistics.highest_balance"));
-
         String s = stats.getHighestBalance() == null ? String.format("%,.2f", np.getTotalBalance()) : stats.getHighestBalance().toString();
+
         mbMeta.setLore(Collections.singletonList(ChatColor.GOLD + s));
         maxBal.setItemMeta(mbMeta);
         inv.setItem(10, maxBal);
 
         ItemStack purchased = new ItemStack(Material.DIAMOND_CHESTPLATE);
         ItemMeta pMeta = purchased.getItemMeta();
-        pMeta.setDisplayName(ChatColor.YELLOW + get("constants.player_statistics.products_purchased"));
-        pMeta.setLore(Collections.singletonList(ChatColor.GOLD + String.format("%,.0f", (double) stats.getProductsPurchased())));
+        pMeta.setDisplayName(ChatColor.YELLOW + get("constants.player_statistics.business"));
+        pMeta.setLore(Arrays.asList(
+                ChatColor.GOLD + String.format(get("constants.player_statistics.business.products_purchased"), String.format("%,.0f", (double) stats.getProductsPurchased())),
+                ChatColor.AQUA + String.format(get("constants.player_statistics.business.money_spent"), String.format("%,.2f", stats.getTotalMoneySpent()))
+        ));
+
         purchased.setItemMeta(pMeta);
         inv.setItem(12, purchased);
 
@@ -1602,6 +1606,43 @@ public interface CommandWrapper {
         ));
         bank.setItemMeta(bMeta);
         inv.setItem(14, bank);
+
+        Material bountyM = Material.BOW;
+        try {
+            bountyM = Material.valueOf("TARGET");
+        } catch (IllegalArgumentException ignored) {}
+
+        ItemStack bounty = new ItemStack(bountyM);
+        ItemMeta boMeta = bounty.getItemMeta();
+        boMeta.setDisplayName(ChatColor.YELLOW + get("constants.player_statistics.bounty"));
+        boMeta.setLore(Arrays.asList(
+                ChatColor.RED + String.format(get("constants.player_statistics.bounty.created"), String.format("%,.0f", (double) stats.getTotalBountiesCreated())),
+                ChatColor.DARK_RED + String.format(get("constants.player_statistics.bounty.had"), String.format("%,.0f", (double) stats.getTotalBountiesTargeted()))
+        ));
+        bounty.setItemMeta(boMeta);
+        inv.setItem(16, bounty);
+
+        ItemStack history = new ItemStack(Material.BOOK);
+        ItemMeta hiMeta = history.getItemMeta();
+        hiMeta.setDisplayName(ChatColor.YELLOW + get("constants.player_statistics.history"));
+
+        List<String> lore = new ArrayList<>();
+        List<BusinessStatistics.Transaction> transactions = stats.getTransactionHistory().stream().sorted(Collections.reverseOrder(Comparator.comparing(BusinessStatistics.Transaction::getTimestamp))).collect(Collectors.toList());
+
+        for (BusinessStatistics.Transaction t : transactions) {
+            Product pr = t.getProduct();
+            ItemStack prItem = pr.getItem();
+            String display = prItem.hasItemMeta() && prItem.getItemMeta().hasDisplayName() ? prItem.getItemMeta().getDisplayName() : WordUtils.capitalizeFully(prItem.getType().name().replace("_", " "));
+            lore.add(ChatColor.WHITE + display + " (" + prItem.getAmount() + ")"
+                + ChatColor.GOLD + " - "
+                + ChatColor.BLUE + pr.getPrice()
+                + ChatColor.GOLD + " | "
+                + ChatColor.DARK_AQUA + formatTimeAgo(t.getTimestamp().getTime()));
+        }
+
+        hiMeta.setLore(lore);
+        history.setItemMeta(hiMeta);
+        inv.setItem(22, history);
 
         op.openInventory(inv);
         XSound.BLOCK_ANVIL_USE.play(p, 3F, 1.5F);
@@ -1691,7 +1732,7 @@ public interface CommandWrapper {
         if (seconds >= 2 && seconds < 60) return String.format(get("constants.time.ago.seconds_ago"), String.format("%,.0f", seconds));
 
         double minutes = seconds / 60D;
-        if (minutes < 60) return get("constants.time.ago.minutes_ago");
+        if (minutes < 60) return String.format(get("constants.time.ago.minutes_ago"), String.format("%,.0f", minutes));
 
         double hours = minutes / 60D;
         if (hours < 24) return String.format(get("constants.time.ago.hours_ago"), String.format("%,.0f", hours));
