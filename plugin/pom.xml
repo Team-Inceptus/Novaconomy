@@ -99,12 +99,6 @@
             <version>3.0.0</version>
             <scope>compile</scope>
         </dependency>
-        <dependency>
-            <groupId>net.wesjd</groupId>
-            <artifactId>anvilgui</artifactId>
-            <version>1.5.3-SNAPSHOT</version>
-            <scope>compile</scope>
-        </dependency>
 
         <!-- Spigot -->
 

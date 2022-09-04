@@ -231,4 +231,13 @@
             <url>https://repo.codemc.io/repository/maven-snapshots/</url>
         </repository>
 	</repositories>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.jetbrains</groupId>
+            <artifactId>annotations-java5</artifactId>
+            <version>23.0.0</version>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
 </project>
