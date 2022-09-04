@@ -3,6 +3,8 @@ package us.teaminceptus.novaconomy.api.events.player.economy;
 import org.bukkit.entity.Player;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.player.PlayerEvent;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 
 /**
@@ -21,7 +23,7 @@ public abstract class PlayerEconomyEvent extends PlayerEvent {
      * @param amount Amount involved
      * @param econ Economy involved
      */
-    public PlayerEconomyEvent(Player who, double amount, Economy econ) {
+    public PlayerEconomyEvent(Player who, double amount, @Nullable Economy econ) {
         super(who);
         this.amount = amount;
         this.econ = econ;
@@ -37,6 +39,7 @@ public abstract class PlayerEconomyEvent extends PlayerEvent {
      * @return Event Handlers
      * @see HandlerList
      */
+    @NotNull
     public static HandlerList getHanderList() { return HANDLERS; }
 
     /**
@@ -51,6 +54,7 @@ public abstract class PlayerEconomyEvent extends PlayerEvent {
      * Fetch the Economy involved in this event
      * @return {@link Economy} involved
      */
+    @Nullable
     public Economy getEconomy() {
         return this.econ;
     }

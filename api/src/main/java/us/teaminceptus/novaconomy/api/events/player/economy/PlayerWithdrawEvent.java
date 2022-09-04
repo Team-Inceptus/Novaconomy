@@ -2,6 +2,7 @@ package us.teaminceptus.novaconomy.api.events.player.economy;
 
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 
 /**
@@ -18,7 +19,7 @@ public class PlayerWithdrawEvent extends PlayerEconomyEvent {
      * @param econ      Economy involved
      * @param timestamp Timestamp of the withdraw
      */
-    public PlayerWithdrawEvent(Player who, double amount, Economy econ, long timestamp) {
+    public PlayerWithdrawEvent(Player who, double amount, @Nullable Economy econ, long timestamp) {
         super(who, amount, econ);
         this.timestamp = timestamp;
     }
