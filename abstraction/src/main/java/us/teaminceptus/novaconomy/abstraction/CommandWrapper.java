@@ -1090,6 +1090,7 @@ public interface CommandWrapper {
                     meta.addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1, true);
                     meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
                 }
+
                 item.setItemMeta(meta);
 
                 item = w.setID(item, "setting_toggle");

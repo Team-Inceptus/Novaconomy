@@ -128,6 +128,21 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
     public static Set<Economy> getTaxableEconomies() { return getEconomies().stream().filter(Economy::hasTax).collect(Collectors.toSet()); }
 
     /**
+     * Fetches a set of Economies that have {@link #hasClickableReward()} to true.
+     * @return Set of Economies that can be rewarded on click
+     */
+    @NotNull
+    public static Set<Economy> getClickableRewardEconomies() { return getEconomies().stream().filter(Economy::hasClickableReward).collect(Collectors.toSet()); }
+
+    /**
+     * Whether this Economy is rewarded when a business is clicked on when advertising.
+     * @return true if rewarded, else false
+     */
+    public boolean hasClickableReward() {
+        return clickableReward;
+    }
+
+    /**
      * Set the interest acception state of this economy
      * @param interest Whether to allow interest
      */
@@ -199,6 +214,15 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
     public void setConversionScale(double scale) throws IllegalArgumentException {
         if (scale <= 0) throw new IllegalArgumentException("Conversion Scale must be greater than 0");
         this.conversionScale = scale;
+        saveFile();
+    }
+
+    /**
+     * Sets whether this economy is rewarded by clicking on a business icon when advertising.
+     * @param clickable true if clickable, else false
+     */
+    public void setHasClickableReward(boolean clickable) {
+        this.clickableReward = clickable;
         saveFile();
     }
 
