@@ -5,7 +5,6 @@ import com.google.common.util.concurrent.AtomicDouble;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -72,8 +71,6 @@ public final class NovaPlayer {
         }
 
         this.stats = stats;
-
-        reloadValues();
     }
 
     /**
@@ -128,7 +125,7 @@ public final class NovaPlayer {
      */
     public double getBalance(@NotNull Economy econ) throws IllegalArgumentException {
         if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
-        return pConfig.getConfigurationSection("economies").getConfigurationSection(econ.getName().toLowerCase()).getDouble("balance");
+        return pConfig.getConfigurationSection("economies").getConfigurationSection(econ.getName().toLowerCase()).getDouble("balance", 0);
     }
 
     /**
@@ -234,7 +231,7 @@ public final class NovaPlayer {
      */
     @NotNull
     public PlayerWithdrawEvent getLastBankWithdraw() {
-        return new PlayerWithdrawEvent(getOnlinePlayer(), pConfig.getDouble(LBW + ".amount"), Economy.getEconomy(pConfig.getString(LBW + ".economy")), pConfig.getLong(LBW + ".timestamp"));
+        return new PlayerWithdrawEvent(getOnlinePlayer(), pConfig.getDouble(LBW + ".amount", 0), Economy.getEconomy(pConfig.getString(LBW + ".economy", "")), pConfig.getLong(LBW + ".timestamp", 0));
     }
 
     /**
@@ -243,7 +240,7 @@ public final class NovaPlayer {
      */
     @NotNull
     public PlayerDepositEvent getLastBankDeposit() {
-        return new PlayerDepositEvent(getOnlinePlayer(), pConfig.getDouble(LBD + ".amount"), Economy.getEconomy(pConfig.getString(LBD + ".economy")), pConfig.getLong(LBD + ".timestamp"));
+        return new PlayerDepositEvent(getOnlinePlayer(), pConfig.getDouble(LBD + ".amount", 0), Economy.getEconomy(pConfig.getString(LBD + ".economy", "")), pConfig.getLong(LBD + ".timestamp", 0));
     }
 
     /**
@@ -305,6 +302,11 @@ public final class NovaPlayer {
     @NotNull
     public Map<Economy, Double> getAllDonatedAmounts() {
         Map<Economy, Double> amounts = new HashMap<>();
+        if (!pConfig.isConfigurationSection("donated")) {
+            pConfig.createSection("donated");
+            return amounts;
+        }
+
         pConfig.getConfigurationSection("donated").getValues(false).forEach((k, v) -> amounts.put(Economy.getEconomy(k), v instanceof Double ? (double) v : 0));
         return amounts;
     }
@@ -369,6 +371,11 @@ public final class NovaPlayer {
     @NotNull
     public Map<OfflinePlayer, Bounty> getOwnedBounties() {
         Map<OfflinePlayer, Bounty> bounties = new HashMap<>();
+        if (!pConfig.isConfigurationSection("bounties")) {
+            pConfig.createSection("bounties");
+            return bounties;
+        }
+
         pConfig.getConfigurationSection("bounties").getValues(false).forEach((k, v) -> bounties.put(Bukkit.getOfflinePlayer(UUID.fromString(k)), (Bounty) v));
         return bounties;
     }
@@ -645,95 +652,5 @@ public final class NovaPlayer {
     public void removeShares(@NotNull Material m, long amount) {
         if (m == null) return;
         addShares(m, -amount);
-    }
-
-    private void reloadValues() {
-        OfflinePlayer p = this.p;
-
-        // General Info
-        if (!pConfig.isString("name")) pConfig.set("name", p.getName());
-        if (!pConfig.isBoolean("op")) pConfig.set("op", p.isOp());
-
-        if (!pConfig.isConfigurationSection(LBW)) pConfig.createSection(LBW);
-        if (!pConfig.isLong(LBW + ".timestamp")) pConfig.set(LBW + ".timestamp", 0);
-        if (!pConfig.isDouble(LBW + ".amount")) pConfig.set(LBW + ".amount", 0);
-        if (!pConfig.isString(LBW + ".economy")) pConfig.set(LBW + ".economy", "");
-
-        if (!pConfig.isConfigurationSection(LBD)) pConfig.createSection(LBD);
-        if (!pConfig.isLong(LBD + ".timestamp")) pConfig.set(LBD + ".timestamp", 0);
-        if (!pConfig.isDouble(LBD + ".amount")) pConfig.set(LBD + ".amount", 0);
-        if (!pConfig.isString(LBD + ".economy")) pConfig.set(LBD + ".economy", "");
-
-        // Economies
-        if (!pConfig.isConfigurationSection("economies")) pConfig.createSection("economies");
-        ConfigurationSection economies = pConfig.getConfigurationSection("economies");
-
-        if (Economy.getEconomies().size() > 0)
-            for (Economy e : Economy.getEconomies()) {
-                String path = e.getName().toLowerCase();
-                if (!economies.isConfigurationSection(path)) economies.createSection(path);
-                ConfigurationSection econ = economies.getConfigurationSection(path);
-
-                if (!econ.isDouble("balance")) econ.set("balance", 0D);
-            }
-
-        // Donated & Bounties
-        if (!pConfig.isConfigurationSection("donated")) pConfig.createSection("donated");
-        if (!pConfig.isConfigurationSection("bounties")) pConfig.createSection("bounties");
-
-        // Settings
-        if (!pConfig.isConfigurationSection("settings")) pConfig.createSection("settings");
-        ConfigurationSection settings = pConfig.getConfigurationSection("settings");
-
-        for (Settings.Personal sett : Settings.Personal.values()) {
-            String key = sett.name().toLowerCase();
-            if (!settings.isBoolean(key)) settings.set(key, sett.getDefaultValue());
-        }
-
-        // Ratings
-        if (!pConfig.isConfigurationSection("ratings")) pConfig.createSection("ratings");
-        for (String key : pConfig.getConfigurationSection("ratings").getKeys(false)) {
-            final Business b;
-            try {
-                b = Business.getById(UUID.fromString(key));
-            } catch (IllegalArgumentException e) {
-                continue;
-            }
-
-            if (b == null) {
-                pConfig.set("ratings." + key, null);
-                continue;
-            }
-
-            if (b.isOwner(this.p)) continue;
-
-            if (!pConfig.isConfigurationSection("ratings." + b.getUniqueId()))
-                pConfig.createSection("ratings." + b.getUniqueId());
-
-            ConfigurationSection rating = pConfig.getConfigurationSection("ratings." + b.getUniqueId());
-            if (!rating.isInt("rating")) rating.set("rating", 0);
-            if (!rating.isInt("last_rating") && !rating.isLong("last_rating")) rating.set("last_rating", 0L);
-            if (!rating.isSet("comment")) rating.set("comment", "");
-        }
-
-        // Market
-        if (!pConfig.isConfigurationSection("market")) pConfig.createSection("market");
-        ConfigurationSection market = pConfig.getConfigurationSection("market");
-
-        if (!market.isConfigurationSection("shares")) market.createSection("shares");
-        for (Map.Entry<String, Object> entry : market.getConfigurationSection("shares").getValues(false).entrySet()) {
-            String k = entry.getKey();
-            Object v = entry.getValue();
-
-            Material m = Material.matchMaterial(k);
-            if (m == null) {
-                market.set(k, null);
-                continue;
-            }
-
-            if (!(v instanceof Long) && !(v instanceof Integer)) market.set(k, null);
-        }
-
-        save();
     }
 }
