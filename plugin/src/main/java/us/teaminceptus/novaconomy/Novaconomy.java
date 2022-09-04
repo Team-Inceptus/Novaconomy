@@ -2026,6 +2026,35 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 	}
 
 	@Override
+	public boolean isAdvertisingEnabled() {
+		return config.getBoolean("Business.Advertising.Enabled", true);
+	}
+
+	@Override
+	public void setAdvertisingEnabled(boolean enabled) {
+		config.set("Business.Advertising.Enabled", enabled);
+		saveConfig();
+	}
+
+	@Override
+	public double getBusinessAdvertisingReward() {
+		return config.getDouble("Business.Advertising.ClickReward", 5.0D);
+	}
+
+	@Override
+	public void setBusinessAdvertisingReward(double reward) {
+		config.set("Business.Advertising.ClickReward", reward);
+		saveConfig();
+	}
+
+	@Override
+	public void setLanguage(@NotNull Language language) throws IllegalArgumentException {
+		if (language == null) throw new IllegalArgumentException("Language cannot be null");
+		config.set("Language", language.getIdentifier());
+		saveConfig();
+	}
+
+	@Override
 	public boolean hasMiningIncrease() { return ncauses.getBoolean("MiningIncrease"); }
 
 	@Override
@@ -2035,16 +2064,16 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 	public boolean hasKillIncrease() { return ncauses.getBoolean("KillIncrease"); }
 
 	@Override
-	public String getLanguage() { return config.getString("Language"); }
+	public String getLanguage() { return config.getString("Language", "en"); }
 
 	@Override
-	public boolean hasDeathDecrease() { return ncauses.getBoolean("DeathDecrease"); }
+	public boolean hasDeathDecrease() { return ncauses.getBoolean("DeathDecrease", true); }
 
 	@Override
-	public boolean hasFarmingIncrease() { return ncauses.getBoolean("FarmingIncrease"); }
+	public boolean hasFarmingIncrease() { return ncauses.getBoolean("FarmingIncrease", true); }
 
 	@Override
-	public double getInterestMultiplier() { return interest.getDouble("ValueMultiplier"); }
+	public double getInterestMultiplier() { return interest.getDouble("ValueMultiplier", 1.03D); }
 
 	@Override
 	public void setInterestMultiplier(double multiplier) {
