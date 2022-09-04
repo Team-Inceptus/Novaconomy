@@ -1,14 +1,11 @@
 package us.teaminceptus.novaconomy.api.economy;
 
 import org.bukkit.Material;
-import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 
-import java.io.File;
+import java.io.*;
 import java.security.SecureRandom;
 import java.util.HashMap;
 import java.util.Map;
@@ -16,49 +13,51 @@ import java.util.Map;
 /**
  * Represents the Novaconomy Stock Market
  */
-public final class NovaMarket {
+@SuppressWarnings("unchecked")
+public final class NovaMarket implements Serializable {
 
     private static final SecureRandom r = new SecureRandom();
 
-    private static final File GLOBAL_FILE;
-    
-    private static final FileConfiguration GLOBAL;
-    private static final ConfigurationSection MARKET_SECTION;
-    
+    private static final File MARKET_FILE;
+
     private static final Map<Material, Long> SHARE_AMOUNT = new HashMap<>();
     private static final Map<Material, Double> SHARE_PRICE = new HashMap<>();
-    
+
     private NovaMarket() { throw new UnsupportedOperationException("Do not instantiate!"); }
-    
+
+    private static void save() {
+        try {
+            FileOutputStream fs = new FileOutputStream(MARKET_FILE);
+            ObjectOutputStream os = new ObjectOutputStream(new BufferedOutputStream(fs));
+
+            os.writeObject(SHARE_AMOUNT);
+            os.writeObject(SHARE_PRICE);
+
+            os.close();
+        } catch (IOException e) {
+            NovaConfig.print(e);
+        }
+    }
+
     static {
-        GLOBAL_FILE = new File(NovaConfig.getDataFolder(), "global.yml");
-        if (!GLOBAL_FILE.exists()) NovaConfig.getPlugin().saveResource("global.yml", false);
-        GLOBAL = YamlConfiguration.loadConfiguration(GLOBAL_FILE);
+        MARKET_FILE = new File(NovaConfig.getDataFolder(), "novamarket.dat");
 
-        if (!GLOBAL.isConfigurationSection("NovaMarket")) GLOBAL.createSection("NovaMarket");
-        MARKET_SECTION = GLOBAL.getConfigurationSection("NovaMarket");
+        try {
+            if (MARKET_FILE.exists()) {
+                FileInputStream fs = new FileInputStream(MARKET_FILE);
+                ObjectInputStream os = new ObjectInputStream(new BufferedInputStream(fs));
 
-        if (!MARKET_SECTION.isConfigurationSection("Shares")) MARKET_SECTION.createSection("Shares");
-        for (String k : MARKET_SECTION.getConfigurationSection("Shares").getKeys(false)) {
-            Material mat = Material.getMaterial(k);
-            if (mat == null) {
-                MARKET_SECTION.set("Shares." + k, null);
-                continue;
-            }
-            SHARE_AMOUNT.put(mat, MARKET_SECTION.getLong(k));
+                Map<Material, Long> shareAmount = (Map<Material, Long>) os.readObject();
+                Map<Material, Double> sharePrice = (Map<Material, Double>) os.readObject();
+
+                SHARE_AMOUNT.putAll(shareAmount);
+                SHARE_PRICE.putAll(sharePrice);
+
+                os.close();
+            } else MARKET_FILE.createNewFile();
+        } catch (IOException | ClassNotFoundException e) {
+            NovaConfig.print(e);
         }
-
-        if (!MARKET_SECTION.isConfigurationSection("Prices")) MARKET_SECTION.createSection("Prices");
-        for (String k : MARKET_SECTION.getConfigurationSection("Prices").getKeys(false)) {
-            Material mat = Material.getMaterial(k);
-            if (mat == null) {
-                MARKET_SECTION.set("Prices." + k, null);
-                continue;
-            }
-            SHARE_PRICE.put(mat, MARKET_SECTION.getDouble(k));
-        }
-
-        save();
     }
 
     /**
@@ -124,18 +123,6 @@ public final class NovaMarket {
      */
     public static void removeAmount(@NotNull Material mat, long remove) throws IllegalArgumentException {
         addAmount(mat, -remove);
-    }
-
-    private static void save() {
-        for (Map.Entry<Material, Long> e : SHARE_AMOUNT.entrySet())
-            MARKET_SECTION.set("Shares." + e.getKey().name(), e.getValue());
-
-        for (Map.Entry<Material, Double> e : SHARE_PRICE.entrySet())
-            MARKET_SECTION.set("Prices." + e.getKey().name(), e.getValue());
-
-        try { GLOBAL.save(GLOBAL_FILE); } catch (Exception e) {
-            NovaConfig.print(e);
-        }
     }
 
 }
