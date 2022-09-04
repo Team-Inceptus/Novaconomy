@@ -779,6 +779,60 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                         businessRecover(p);
                         break;
                     }
+                    case "keywords":
+                    case "keyword": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
+                        if (args.length < 2) {
+                            listKeywords(p);
+                            break;
+                        }
+
+                        switch (args[1].toLowerCase()) {
+                            case "list":
+                            case "l": {
+                                listKeywords(p);
+                                break;
+                            }
+                            case "add": {
+                                if (args.length < 3) {
+                                    sender.sendMessage(getMessage("error.argument.keywords"));
+                                    return false;
+                                }
+
+                                List<String> keywords = new ArrayList<>(Arrays.asList(args).subList(2, args.length));
+                                addKeywords(p, keywords.toArray(new String[0]));
+                                break;
+                            }
+                            case "remove":
+                            case "delete": {
+                                if (args.length < 3) {
+                                    sender.sendMessage(getMessage("error.argument.keywords"));
+                                    return false;
+                                }
+
+                                List<String> keywords = new ArrayList<>(Arrays.asList(args).subList(2, args.length));
+                                removeKeywords(p, keywords.toArray(new String[0]));
+                                break;
+                            }
+                            default: {
+                                sender.sendMessage(getMessage("error.argument"));
+                                break;
+                            }
+                        }
+
+                        break;
+                    }
+                    case "advertising":
+                    case "ads":
+                    case "advertise": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
+                        businessAdvertising(p);
+                        break;
+                    }
                     default: {
                         sender.sendMessage(getMessage("error.argument"));
                         return false;
@@ -1172,11 +1226,22 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                     case 1:
                         suggestions.addAll(Arrays.asList("info", "information", "query", "create", "addproduct", "addp", "removeproduct", "removep",
                                 "addresource", "stock", "addr", "addstock", "rating", "setting", "settings", "price", "editprice", "stats", "statistics", "discover",
-                                "setname", "name", "seticon", "icon", "recover"));
+                                "setname", "name", "seticon", "icon", "recover", "keyword", "keywords"));
                         return suggestions;
 
                     case 2:
-                        if (args[0].equalsIgnoreCase("query")) suggestions.addAll(Business.getBusinesses().stream().map(Business::getName).collect(Collectors.toSet()));
+                        switch (args[0].toLowerCase()) {
+                            case "query": {
+                                suggestions.addAll(Business.getBusinesses().stream().map(Business::getName).collect(Collectors.toSet()));
+                                break;
+                            }
+                            case "keyword":
+                            case "keywords": {
+                                suggestions.addAll(Arrays.asList("add", "remove", "delete", "list", "l"));
+                                break;
+                            }
+                        }
+
                         return suggestions;
                     case 3:
                         switch (args[0].toLowerCase()) {

@@ -32,58 +32,67 @@ public final class CommandWrapperV2 implements CommandWrapper {
     private static BukkitCommandHandler handler;
 
     public CommandWrapperV2(Plugin plugin) {
-        if (handler == null) {
-            handler = BukkitCommandHandler.create(plugin);
+        if (handler != null) return;
 
-            handler.registerValueResolver(Economy.class, ctx -> {
-                Economy econ = Economy.getEconomy(ctx.popForParameter());
-                if (econ == null) throw new CommandErrorException(getMessage("error.argument.economy"));
-                return econ;
-            });
+        handler = BukkitCommandHandler.create(plugin);
 
-            handler.getAutoCompleter().registerParameterSuggestions(Economy.class, SuggestionProvider.of(() -> toStringList(Economy::getName, Economy.getEconomies())));
+        handler.registerValueResolver(Economy.class, ctx -> {
+            Economy econ = Economy.getEconomy(ctx.popForParameter());
+            if (econ == null) throw new CommandErrorException(getMessage("error.argument.economy"));
+            return econ;
+        });
 
-            handler.registerValueResolver(Material.class, ctx -> {
-                Material m = Material.matchMaterial(ctx.popForParameter());
-                if (m == null) throw new CommandErrorException(getMessage("error.argument.icon"));
-                if (!m.isItem()) throw new CommandErrorException(getMessage("error.argument.icon"));
-                if (m == Material.AIR) throw new CommandErrorException(getMessage("error.argument.icon"));
-                return m;
-            });
-            handler.getAutoCompleter().registerParameterSuggestions(Material.class, SuggestionProvider.of(() -> toStringList(m -> m.name().toLowerCase(), Arrays.stream(Material.values()).filter(Material::isItem).filter(m -> m != Material.AIR))));
+        handler.getAutoCompleter().registerParameterSuggestions(Economy.class, SuggestionProvider.of(() -> toStringList(Economy::getName, Economy.getEconomies())));
 
-            handler.registerValueResolver(Business.class, ctx -> {
-                Business b = Business.getByName(ctx.popForParameter());
-                if (b == null) throw new CommandErrorException(getMessage("error.argument.business"));
-                return b;
-            });
-            handler.getAutoCompleter().registerParameterSuggestions(Business.class, SuggestionProvider.of(() -> toStringList(Business::getName, Business.getBusinesses())));
+        handler.registerValueResolver(Material.class, ctx -> {
+            Material m = Material.matchMaterial(ctx.popForParameter());
+            if (m == null) throw new CommandErrorException(getMessage("error.argument.icon"));
+            if (!m.isItem()) throw new CommandErrorException(getMessage("error.argument.icon"));
+            if (m == Material.AIR) throw new CommandErrorException(getMessage("error.argument.icon"));
+            return m;
+        });
+        handler.getAutoCompleter().registerParameterSuggestions(Material.class, SuggestionProvider.of(() -> toStringList(m -> m.name().toLowerCase(), Arrays.stream(Material.values()).filter(Material::isItem).filter(m -> m != Material.AIR))));
 
-            handler.getAutoCompleter().registerParameterSuggestions(boolean.class, SuggestionProvider.of("true", "false"));
+        handler.registerValueResolver(Business.class, ctx -> {
+            Business b = Business.getByName(ctx.popForParameter());
+            if (b == null) throw new CommandErrorException(getMessage("error.argument.business"));
+            return b;
+        });
+        handler.getAutoCompleter().registerParameterSuggestions(Business.class, SuggestionProvider.of(() -> toStringList(Business::getName, Business.getBusinesses())));
 
-            handler.registerValueResolver(OfflinePlayer.class, ctx -> {
-                String value = ctx.popForParameter();
-                if (value.equalsIgnoreCase("me")) return ((BukkitCommandActor) ctx.actor()).requirePlayer();
-                OfflinePlayer p = Wrapper.getPlayer(value);
-                if (p == null) throw new CommandErrorException(getMessage("error.argument.player"));
-                return p;
-            });
+        handler.getAutoCompleter().registerParameterSuggestions(boolean.class, SuggestionProvider.of("true", "false"));
 
-            handler.getAutoCompleter().registerParameterSuggestions(OfflinePlayer.class, SuggestionProvider.of(() -> toStringList(OfflinePlayer::getName, Bukkit.getOfflinePlayers())));
+        handler.registerValueResolver(OfflinePlayer.class, ctx -> {
+            String value = ctx.popForParameter();
+            if (value.equalsIgnoreCase("me")) return ((BukkitCommandActor) ctx.actor()).requirePlayer();
+            OfflinePlayer p = Wrapper.getPlayer(value);
+            if (p == null) throw new CommandErrorException(getMessage("error.argument.player"));
+            return p;
+        });
 
-            handler.getAutoCompleter().registerSuggestion("event", SuggestionProvider.of(() -> toStringList(NovaConfig.CustomTaxEvent::getIdentifier, NovaConfig.getConfiguration().getAllCustomEvents())));
-            handler.getAutoCompleter().registerSuggestion("settings", SuggestionProvider.of(Arrays.asList("business", "personal")));
+        handler.getAutoCompleter().registerParameterSuggestions(OfflinePlayer.class, SuggestionProvider.of(() -> toStringList(OfflinePlayer::getName, Arrays.asList(Bukkit.getOfflinePlayers()))));
 
-            handler.register(this);
-            new EconomyCommands(this);
-            new BusinessCommands(this);
-            new BankCommands(this);
-            new BountyCommands(this);
+        handler.getAutoCompleter().registerSuggestion("event", SuggestionProvider.of(() -> toStringList(NovaConfig.CustomTaxEvent::getIdentifier, NovaConfig.getConfiguration().getAllCustomEvents())));
+        handler.getAutoCompleter().registerSuggestion("settings", SuggestionProvider.of(Arrays.asList("business", "personal")));
 
-            handler.registerBrigadier();
-            handler.setLocale(Language.getCurrentLanguage().getLocale());
-            plugin.getLogger().info("Loaded Command Version v2 (1.13.2+)");
-        }
+        handler.registerValueResolver(KeywordCommand.class, ctx -> {
+            String value = ctx.popForParameter();
+            KeywordCommand cmd = KeywordCommand.matchBy(value);
+            if (cmd == null) throw new CommandErrorException(getMessage("error.argument"));
+            return cmd;
+        });
+
+        handler.getAutoCompleter().registerParameterSuggestions(KeywordCommand.class, SuggestionProvider.of(toStringList(KeywordCommand::getAliases, KeywordCommand.values())));
+
+        handler.register(this);
+        new EconomyCommands(this);
+        new BusinessCommands(this);
+        new BankCommands(this);
+        new BountyCommands(this);
+
+        handler.registerBrigadier();
+        handler.setLocale(Language.getCurrentLanguage().getLocale());
+        plugin.getLogger().info("Loaded Command Version v2 (1.13.2+)");
     }
 
     private static String getMessage(String key) {
@@ -97,13 +106,16 @@ public final class CommandWrapperV2 implements CommandWrapper {
         return list;
     }
 
-    @SafeVarargs
-    private static <T> List<String> toStringList(Function<T, String> func, T... elements) {
-        return toStringList(func, Arrays.asList(elements));
-    }
-
     private static <T> List<String> toStringList(Function<T, String> func, Stream<T> stream) {
         return toStringList(func, stream.collect(Collectors.toList()));
+    }
+
+    @SafeVarargs
+    private static <T> List<String> toStringList(Function<T, String[]> func, T... elements) {
+        List<String> list = new ArrayList<>();
+        for (T element : elements) list.addAll(Arrays.asList(func.apply(element)));
+
+        return list;
     }
 
     // Lamp Impl
@@ -276,6 +288,57 @@ public final class CommandWrapperV2 implements CommandWrapper {
 
         @Subcommand({"editprice", "price"})
         public void editPrice(Player p, @Range(min = 0.01) double newPrice, @Optional Economy economy) { wrapper.editPrice(p, newPrice, economy); }
+
+        @Subcommand({"keyword", "keywords"})
+        @CommandPermission("novaconomy.user.business.keywords")
+        public void keywords(Player p, @Named("subcommand") @Optional KeywordCommand cmd, @Optional String keywords) {
+            if (cmd == null) {
+                wrapper.listKeywords(p);
+                return;
+            }
+
+            switch (cmd) {
+                case ADD:
+                    wrapper.addKeywords(p, keywords == null ? null : keywords.split("[ ,]"));
+                    break;
+                case REMOVE:
+                    wrapper.removeKeywords(p, keywords == null ? null : keywords.split("[ ,]"));
+                    break;
+                default:
+                    wrapper.listKeywords(p);
+                    break;
+            }
+        }
+
+        @Subcommand({"advertising", "ads", "advertise"})
+        public void businessAdvertising(Player p) { wrapper.businessAdvertising(p); }
+    }
+
+    private enum KeywordCommand {
+
+        ADD("add"),
+        REMOVE("remove", "delete"),
+        LIST("list", "l")
+        ;
+
+        private final String[] aliases;
+
+        KeywordCommand(String... aliases) {
+            this.aliases = aliases;
+        }
+
+        public String[] getAliases() {
+            return aliases;
+        }
+
+        public static KeywordCommand matchBy(String name) {
+            for (KeywordCommand cmd : values()) {
+                if (cmd.name().equalsIgnoreCase(name)) return cmd;
+                for (String alias : cmd.aliases) if (alias.equalsIgnoreCase(name))
+                    return cmd;
+            }
+            return null;
+        }
     }
 
     @Command({"nbank", "bank", "globalbank", "gbank"})
