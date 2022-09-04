@@ -33,7 +33,7 @@ public final class PlayerStatistics implements ConfigurationSerializable {
 
     int totalBountiesHad;
 
-    double totalSharesPurchased;
+    int totalSharesPurchased;
 
     double totalMoneySpent;
 
@@ -49,6 +49,7 @@ public final class PlayerStatistics implements ConfigurationSerializable {
      * @return PlayerStatistics object
      * @throws IllegalArgumentException if map is missing keys or malformed
      */
+    @NotNull
     @SuppressWarnings("unchecked")
     public static PlayerStatistics deserialize(@NotNull Map<String, Object> serial) throws IllegalArgumentException {
         PlayerStatistics stats = new PlayerStatistics(Bukkit.getOfflinePlayer(UUID.fromString(serial.get("player").toString())));
@@ -61,7 +62,9 @@ public final class PlayerStatistics implements ConfigurationSerializable {
             stats.totalWithdrawn = (double) serial.getOrDefault("total_withdrawn", 0);
             stats.totalBountiesCreated = (int) serial.getOrDefault("total_bounties_created", 0);
             stats.totalBountiesHad = (int) serial.getOrDefault("total_bounties_had", 0);
-            stats.totalSharesPurchased = (double) serial.getOrDefault("total_shares_purchased", 0);
+
+            Object purchased = serial.getOrDefault("total_shares_purchased", 0);
+            stats.totalSharesPurchased = purchased instanceof Double ? ((Double) purchased).intValue() : (int) purchased;
             stats.totalMoneySpent = (double) serial.getOrDefault("total_money_spent", 0);
 
             stats.transactionHistory.addAll((List<BusinessStatistics.Transaction>) serial.get("transaction_history"));
@@ -151,7 +154,7 @@ public final class PlayerStatistics implements ConfigurationSerializable {
      * Fetches the total amount of Market Shares purchased.
      * @return Total amount of Market Shares purchased
      */
-    public double getTotalSharesPurchased() {
+    public int getTotalSharesPurchased() {
         return totalSharesPurchased;
     }
 
@@ -174,6 +177,7 @@ public final class PlayerStatistics implements ConfigurationSerializable {
         this.transactionHistory.addAll(history.subList(0, Math.min(history.size(), 10)));
     }
 
+    @NotNull
     @Override
     public Map<String, Object> serialize() {
         return new HashMap<String, Object>() {{
