@@ -41,7 +41,9 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
 
     private int customModelData;
 
-    private Economy(String section, String name, ItemStack icon, char symbol, boolean naturalIncrease, double conversionScale) {
+    private boolean clickableReward;
+
+    private Economy(String section, String name, ItemStack icon, char symbol, boolean naturalIncrease, double conversionScale, boolean clickable) {
         this.symbol = symbol;
         this.section = section;
         this.name = name;
@@ -49,6 +51,7 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
         this.hasNaturalIncrease = naturalIncrease;
         this.conversionScale = conversionScale;
         this.uid = UUID.nameUUIDFromBytes(name.getBytes(StandardCharsets.UTF_8));
+        this.clickableReward = clickable;
     }
 
     // Implementation & Recommended Implementation
@@ -69,6 +72,7 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
         serial.put("conversion-scale", this.conversionScale);
         serial.put("interest", this.interestEnabled);
         serial.put("custom-model-data", this.customModelData);
+        serial.put("clickable", this.clickableReward);
         return serial;
     }
 
@@ -83,7 +87,15 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
      */
     public static Economy deserialize(@Nullable Map<String, Object> serial) throws NullPointerException {
         if (serial == null) return null;
-        Economy econ = new Economy(serial.get("section").toString(), serial.get("name").toString(), (ItemStack) serial.get("icon"), serial.get("symbol").toString().charAt(0), (boolean) serial.getOrDefault("increase-naturally", true), (double) serial.getOrDefault("conversion-scale", 1));
+        Economy econ = new Economy(
+                serial.get("section").toString(),
+                serial.get("name").toString(),
+                (ItemStack) serial.get("icon"),
+                serial.get("symbol").toString().charAt(0),
+                (boolean) serial.getOrDefault("increase-naturally", true),
+                (double) serial.getOrDefault("conversion-scale", 1),
+                (boolean) serial.getOrDefault("clickable", true)
+        );
 
         econ.interestEnabled = (boolean) serial.getOrDefault("interest", true);
         econ.customModelData = (int) serial.getOrDefault("custom-model-data", 0);
@@ -484,13 +496,15 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
         ItemStack icon;
         boolean increaseNaturally;
         double conversionScale;
-        int modelData;
+        int customModelData;
+        boolean clickableReward;
 
         private Builder() {
             this.icon = new ItemStack(Material.GOLD_INGOT);
             this.symbol = '$';
             this.increaseNaturally = true;
             this.conversionScale = 1;
+            this.clickableReward = true;
         }
 
         /**
@@ -531,7 +545,7 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
                 m.setAccessible(true);
                 m.invoke(meta, modelData);
 
-                this.modelData = modelData;
+                this.customModelData = modelData;
             } catch (NoSuchMethodException ignored) {}
             catch (ReflectiveOperationException e) {
                 NovaConfig.print(e);
@@ -576,6 +590,26 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
         }
 
         /**
+         * Sets whether this Economy can be usedas a reward from host businesses when advertising.
+         * @param clickableReward true if clickable reward, else false
+         * @return Builder Class, for chaining
+         */
+        public Builder setClickableReward(boolean clickableReward) {
+            this.clickableReward = clickableReward;
+            return this;
+        }
+
+        /**
+         * Sets the custom model data integer for this Economy.
+         * @param modelData Custom Model Data Integer
+         * @return Builder Class, for chaining
+         */
+        public Builder setCustomModelData(int modelData) {
+            this.customModelData = modelData;
+            return this;
+        }
+
+        /**
          * Builds this economy
          * @return Created Economy
          * @throws IllegalArgumentException if name is null (icon's default is Gold Ingot)
@@ -592,8 +626,8 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
             FileConfiguration config = NovaConfig.getEconomiesConfig();
             ConfigurationSection es = config.createSection(this.name.toLowerCase());
 
-            Economy econ = new Economy(es.getName(), this.name, this.icon, this.symbol, this.increaseNaturally, this.conversionScale);
-            econ.customModelData = modelData;
+            Economy econ = new Economy(es.getName(), this.name, this.icon, this.symbol, this.increaseNaturally, this.conversionScale, this.clickableReward);
+            econ.customModelData = customModelData;
 
             es.set("economy", econ);
             es.set("last_saved_timestamp", System.currentTimeMillis());
