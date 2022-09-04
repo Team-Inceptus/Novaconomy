@@ -167,11 +167,11 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 							amount = amount.replaceAll("[\\[\\]]", "").replace(" ", "");
 							String[] amounts = amount.split(",");
 							for (String am : amounts) {
-								if (readString(am) == null) throw new IllegalArgumentException("No valid amount found for " + k + ": " + amount);
+								if (readString(am) == null) throw new IllegalArgumentException("No valid amount found for \"" + k + ": " + amount + "\"");
 								value.add(readString(am));
 							}
 						} else {
-							if (readString(amount) == null) throw new IllegalArgumentException("No valid amount found for " + k + ": " + amount);
+							if (readString(amount) == null) throw new IllegalArgumentException("No valid amount found for \"" + k + ": " + amount + "\"");
 							value.add(readString(amount));
 						}
 
@@ -710,6 +710,11 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				String name = ChatColor.stripColor(item.getItemMeta().getDisplayName()).toLowerCase();
 				Business b = Business.getByName(name);
 				p.openInventory(w.generateBusinessData(b, p));
+
+				if (!b.isOwner(p)) {
+					b.getStatistics().addView();
+					b.saveBusiness();
+				}
 			});
 
 			put("product:buy", e -> {
@@ -767,6 +772,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				}
 
 				ItemStack cancel = Items.cancel("no_product").clone();
+				cancel = w.setNBT(cancel, BUSINESS_TAG, pr.getBusiness().getUniqueId().toString());
 				inv.setItem(23, cancel);
 
 				ItemStack amountPane = new ItemStack(item.getType());
@@ -791,6 +797,8 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				int prev = (int) w.getNBTDouble(inv.getItem(22), AMOUNT_TAG);
 				int amount = (int) w.getNBTDouble(item, AMOUNT_TAG);
 				int newA = add ? Math.min(prev + amount, 64) : Math.max(prev - amount, 1);
+
+				ItemStack prItem = inv.getItem(13).clone();
 
 				ItemStack newAmount = inv.getItem(22).clone();
 				newAmount.setAmount(newA);
@@ -824,10 +832,19 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 			});
 
 			put("no:no_product", e -> {
-				HumanEntity en = e.getWhoClicked();
-				en.closeInventory();
-				en.sendMessage(Novaconomy.get("cancel.business.purchase"));
-				XSound.BLOCK_NOTE_BLOCK_PLING.play(en, 3F, 0F);
+				if (!(e.getWhoClicked() instanceof Player)) return;
+				Player p = (Player) e.getWhoClicked();
+				ItemStack item = e.getCurrentItem();
+				Business b = Business.getById(UUID.fromString(w.getNBTString(item, BUSINESS_TAG)));
+
+				p.sendMessage(Novaconomy.get("cancel.business.purchase"));
+				p.openInventory(w.generateBusinessData(b, p));
+				XSound.BLOCK_NOTE_BLOCK_PLING.play(p, 3F, 0F);
+
+				if (!b.isOwner(p)) {
+					b.getStatistics().addView();
+					b.saveBusiness();
+				}
 			});
 
 			put("economy:wheel", e -> {
@@ -1244,6 +1261,11 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
 				p.openInventory(w.generateBusinessData(b, p));
 				XSound.BLOCK_ENDER_CHEST_OPEN.play(p, 3F, 0.5F);
+
+				if (!b.isOwner(p)) {
+					b.getStatistics().addView();
+					b.saveBusiness();
+				}
 			});
 
 			put("business:rating", e -> {
@@ -1310,6 +1332,9 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
 				p.openInventory(w.generateBusinessData(b, p));
 				XSound.BLOCK_ENDER_CHEST_OPEN.play(p, 3F, 0.5F);
+
+				b.getStatistics().addView();
+				b.saveBusiness();
 			});
 
 			put("product:edit_price", e -> {
@@ -1335,6 +1360,12 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				OfflinePlayer target = Bukkit.getOfflinePlayer(UUID.fromString(w.getNBTString(item, "player")));
 
 				getCommandWrapper().playerStatistics(p, target);
+			});
+			put("business:advertising", e -> {
+				if (!(e.getWhoClicked() instanceof Player)) return;
+				Player p = (Player) e.getWhoClicked();
+
+				getCommandWrapper().businessAdvertising(p);
 			});
 		}
 	};
