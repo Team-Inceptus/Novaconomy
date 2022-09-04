@@ -175,6 +175,11 @@ permissions:
     default: true
     children:
       novaconomy.user.business: true
+  novaconomy.user.business.keywords:
+    description: Access to modifying and viewing Business Keywords
+    default: true
+    children:
+      novaconomy.user.business: true
 
   # User Bank
   novaconomy.user.bank:
