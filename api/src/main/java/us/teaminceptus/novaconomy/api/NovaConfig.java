@@ -266,6 +266,10 @@ public interface NovaConfig  {
         if (!config.isBoolean("Business.MarketTax.Enabled")) config.set("Business.MarketTax.Enabled", true);
         if (!config.isDouble("Business.MarketTax.Value") && !config.isInt("Business.MarketTax.Value")) config.set("Business.MarketTax.Value", 0.05D);
 
+        if (!config.isConfigurationSection("Business.Advertising")) config.createSection("Business.Advertising");
+        if (!config.isBoolean("Business.Advertising.Enabled")) config.set("Business.Advertising.Enabled", true);
+        if (!config.isDouble("Business.Advertising.ClickReward") && !config.isInt("Business.Advertising.ClickReward")) config.set("Business.Advertising.ClickReward", 5D);
+
         try { config.save(f); } catch (IOException e) { getPlugin().getLogger().severe(e.getMessage()); }
 
         return config;
@@ -804,5 +808,36 @@ public interface NovaConfig  {
      * @throws IllegalArgumentException if tax is 0 or less
      */
     void setMarketTax(double tax) throws IllegalArgumentException;
+
+    /**
+     * Fetches whether business advertising is enabled.
+     * @return true if enabled, else false
+     */
+    boolean isAdvertisingEnabled();
+
+    /**
+     * Sets whether business advertising is enabled.
+     * @param enabled true if enabled, else false
+     */
+    void setAdvertisingEnabled(boolean enabled);
+
+    /**
+     * Fetches the advertising reward for clicking on a business's icon.
+     * @return Advertising reward
+     */
+    double getBusinessAdvertisingReward();
+
+    /**
+     * Sets the advertising reward for clicking on a business's icon.
+     * @param reward Advertising reward
+     */
+    void setBusinessAdvertisingReward(double reward);
+
+    /**
+     * Sets the current language used by the plugin.
+     * @param language Language to use
+     * @throws IllegalArgumentException if language is null
+     */
+    void setLanguage(@NotNull Language language) throws IllegalArgumentException;
 
 }
