@@ -231,6 +231,8 @@ public final class BusinessStatistics implements ConfigurationSerializable, Seri
 
     int totalResources = 0;
 
+    private int views = 0;
+
     private final Map<Product, Integer> productSales = new HashMap<>();
 
     BusinessStatistics(UUID businessId) {
@@ -259,6 +261,7 @@ public final class BusinessStatistics implements ConfigurationSerializable, Seri
             prods.put(m, entry.getValue());
         }
         os.writeObject(prods);
+        os.writeInt(views);
     }
 
     @SuppressWarnings("unchecked")
@@ -289,6 +292,8 @@ public final class BusinessStatistics implements ConfigurationSerializable, Seri
         } catch (ReflectiveOperationException e) {
             NovaConfig.print(e);
         }
+
+        stats.views = is.available() > 0 ? is.readInt() : 0;
 
         return stats;
     }
@@ -336,6 +341,37 @@ public final class BusinessStatistics implements ConfigurationSerializable, Seri
     }
 
     /**
+     * Fetches the total amount of times this Business was viewed.
+     * @return Total Views
+     */
+    public int getViews() {
+        return views;
+    }
+
+    /**
+     * Sets the total amount of views for this Business.
+     * @param views Total Views
+     */
+    public void setViews(int views) {
+        this.views = views;
+    }
+
+    /**
+     * Adds to the total amount of views for this Business.
+     * @param views Views to add
+     */
+    public void addView(int views) {
+        this.views += views;
+    }
+
+    /**
+     * Adds one view to the total amount of views for this Business.
+     */
+    public void addView() {
+        addView(1);
+    }
+
+    /**
      * Fetches a Map of Products to how much was bought of it.
      * @return Product Sales
      */
@@ -370,6 +406,7 @@ public final class BusinessStatistics implements ConfigurationSerializable, Seri
                 put("total_resources", totalResources);
                 put("last_transaction", lastTransaction);
                 put("product_sales", productSales);
+                put("views", views);
             }});
         }};
     }
@@ -396,7 +433,8 @@ public final class BusinessStatistics implements ConfigurationSerializable, Seri
             s.totalResources = (int) data.get("total_resources");
             s.totalSales = (int) data.get("total_sales");
             s.lastTransaction = (Transaction) data.get("last_transaction");
-            s.productSales.putAll((Map<Product, Integer>) data.get("product_sales"));
+            s.productSales.putAll((Map<Product, Integer>) data.getOrDefault("product_sales", new HashMap<>()));
+            s.views = (int) data.getOrDefault("views", 0);
         } catch (ClassCastException e) {
             throw new IllegalArgumentException(e);
         } catch (NullPointerException ignored) {}
