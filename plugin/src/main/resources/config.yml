@@ -221,6 +221,16 @@ Bounties:
 # Business Section
 Business:
 
+  # Business Advertising
+  Advertising:
+
+    # Whether businesses can advertise
+    Enabled: true
+
+    # How much host businesses will be rewarded for having a click on their advertisement
+    # The Economy is randomly selected, and this value is multiplied by its conversion scale
+    ClickReward: 10
+
   # Stock Market
   Market:
 
