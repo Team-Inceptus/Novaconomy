@@ -1,6 +1,7 @@
 package us.teaminceptus.novaconomy.api.business;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.AtomicDouble;
 import org.apache.commons.lang.Validate;
 import org.bukkit.*;
@@ -17,14 +18,16 @@ import us.teaminceptus.novaconomy.api.events.business.BusinessCreateEvent;
 import us.teaminceptus.novaconomy.api.player.NovaPlayer;
 import us.teaminceptus.novaconomy.api.settings.Settings;
 import us.teaminceptus.novaconomy.api.util.BusinessProduct;
+import us.teaminceptus.novaconomy.api.util.Price;
 import us.teaminceptus.novaconomy.api.util.Product;
 
 import java.io.*;
 import java.lang.reflect.Method;
-import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 /**
@@ -36,6 +39,8 @@ public final class Business implements ConfigurationSerializable, Serializable {
      * Represents the Business File Suffix
      */
     public static final String BUSINESS_FILE_SUFFIX = ".nbusiness";
+
+    private static final SecureRandom r = new SecureRandom();
 
     private final UUID id;
 
@@ -61,9 +66,11 @@ public final class Business implements ConfigurationSerializable, Serializable {
 
     private final List<String> keywords = new ArrayList<>();
 
+    private double advertisingBalance;
+
     private Business(UUID uid, String name, Material icon, OfflinePlayer owner, Collection<Product> products, Collection<ItemStack> resources,
                      BusinessStatistics stats, Map<Settings.Business, Boolean> settings, long creationDate, List<String> keywords,
-                     boolean save) {
+                     double advertisingBalance, boolean save) {
         this.id = uid;
         this.name = name;
         this.icon = icon;
@@ -82,6 +89,7 @@ public final class Business implements ConfigurationSerializable, Serializable {
 
         this.settings.putAll(settings);
         this.keywords.addAll(keywords);
+        this.advertisingBalance = 0;
 
         if (save) saveBusiness();
     }
@@ -262,11 +270,10 @@ public final class Business implements ConfigurationSerializable, Serializable {
         this.resources.addAll(res.values());
 
         AtomicInteger amount = new AtomicInteger();
-        res.values().stream().map(ItemStack::getAmount).forEach(amount::addAndGet);
+        resources.stream().map(ItemStack::getAmount).forEach(amount::addAndGet);
         this.stats.totalResources += amount.get();
 
         saveBusiness();
-
         return this;
     }
 
@@ -378,6 +385,7 @@ public final class Business implements ConfigurationSerializable, Serializable {
                 }
             }
         });
+
         saveBusiness();
         return this;
     }
@@ -495,6 +503,7 @@ public final class Business implements ConfigurationSerializable, Serializable {
      * <p>This method can be used to fetch stock of products that sold on deleted economies.</p>
      * @return Extra Stock
      */
+    @NotNull
     public List<ItemStack> getLeftoverStock() {
         return getResources().stream().filter(i -> !isProduct(i)).collect(Collectors.toList());
     }
@@ -507,6 +516,18 @@ public final class Business implements ConfigurationSerializable, Serializable {
     public boolean getSetting(@Nullable Settings.Business setting) {
         if (setting == null) return false;
         return this.settings.getOrDefault(setting, setting.getDefaultValue());
+    }
+
+    /**
+     * Fetches an immutable version of all of the settings on this business.
+     * @return Immutable Map of Settings
+     */
+    @NotNull
+    public Map<Settings.Business, Boolean> getSettings() {
+        Map<Settings.Business, Boolean> dupl = new HashMap<>(this.settings);
+        for (Settings.Business value : Settings.Business.values()) dupl.putIfAbsent(value, value.getDefaultValue());
+
+        return ImmutableMap.copyOf(dupl);
     }
 
     /**
@@ -590,7 +611,7 @@ public final class Business implements ConfigurationSerializable, Serializable {
                 owner,
                 (List<Product>) serial.get("products"), resources,
                 (BusinessStatistics) serial.getOrDefault("stats", null),
-                settings, creationDate, keywords,false
+                settings, creationDate, keywords, 0,false
         );
         b.setHome(home, false);
 
@@ -598,7 +619,7 @@ public final class Business implements ConfigurationSerializable, Serializable {
     }
 
     /**
-     * Saves this Business to the Businesses File.
+     * Saves this Business to {@link #getBusinessFile()}.
      */
     public void saveBusiness() {
         try {
@@ -610,6 +631,15 @@ public final class Business implements ConfigurationSerializable, Serializable {
         } catch (IOException e) {
             NovaConfig.print(e);
         }
+    }
+
+    /**
+     * Fetches the file this business is stored in.
+     * @return Business File
+     */
+    @NotNull
+    public File getBusinessFile() {
+        return file;
     }
 
     private void writeBusiness(ObjectOutputStream os) throws IOException {
@@ -626,7 +656,8 @@ public final class Business implements ConfigurationSerializable, Serializable {
         List<Map<String, Object>> res = new ArrayList<>();
         for (ItemStack i : resources) {
             Map<String, Object> m = new HashMap<>(i.serialize());
-            m.put("meta", i.getItemMeta().serialize());
+            if (i.hasItemMeta()) m.put("meta", i.getItemMeta().serialize());
+
             res.add(m);
         }
         os.writeObject(res);
@@ -636,15 +667,17 @@ public final class Business implements ConfigurationSerializable, Serializable {
             Map<String, Object> m = new HashMap<>(p.serialize());
 
             Map<String, Object> item = new HashMap<>(p.getItem().serialize());
-            item.put("meta", p.getItem().getItemMeta().serialize());
+            if (p.getItem().hasItemMeta()) item.put("meta", p.getItem().getItemMeta().serialize());
+
             m.put("item", item);
             prods.add(m);
         }
         os.writeObject(prods);
-
         os.writeObject(this.keywords);
 
         stats.writeStats(os);
+
+        os.writeDouble(this.advertisingBalance);
     }
 
     @SuppressWarnings("unchecked")
@@ -669,8 +702,14 @@ public final class Business implements ConfigurationSerializable, Serializable {
             Method deserialize = deserialization.value().getDeclaredMethod("deserialize", Map.class);
             deserialize.setAccessible(true);
 
-            sItem.put("meta", deserialize.invoke(null, m.get("meta")));
+            Map<String, Object> sMeta = (Map<String, Object>) sItem.getOrDefault("meta", base.serialize());
+            if (sMeta == null) sMeta = base.serialize();
+
+            ItemMeta meta = (ItemMeta) deserialize.invoke(null, sMeta);
+            sItem.put("meta", meta);
             ItemStack i = ItemStack.deserialize(m);
+            i.setItemMeta(meta);
+
             resources.add(i);
         }
 
@@ -678,31 +717,41 @@ public final class Business implements ConfigurationSerializable, Serializable {
         List<Product> products = new ArrayList<>();
 
         for (Map<String, Object> m : prods) {
-            Map<String, Object> sItem = new HashMap<>(m);
-            Map<String, Object> item = new HashMap<>((Map<String, Object>) m.get("item"));
+            Map<String, Object> sProduct = new HashMap<>(m);
+            Map<String, Object> sItem = new HashMap<>((Map<String, Object>) m.get("item"));
 
-            ItemMeta base = Bukkit.getItemFactory().getItemMeta(Material.valueOf((String) item.get("type")));
+            ItemMeta base = Bukkit.getItemFactory().getItemMeta(Material.valueOf((String) sItem.get("type")));
             DelegateDeserialization deserialization = base.getClass().getAnnotation(DelegateDeserialization.class);
             Method deserialize = deserialization.value().getDeclaredMethod("deserialize", Map.class);
             deserialize.setAccessible(true);
-            
-            item.put("meta", deserialize.invoke(null, item.get("meta")));
-            sItem.put("item", ItemStack.deserialize(item));
-            products.add(Product.deserialize(sItem));
+
+            Map<String, Object> sMeta = (Map<String, Object>) sItem.getOrDefault("meta", base.serialize());
+            if (sMeta == null) sMeta = base.serialize();
+
+            ItemMeta meta = (ItemMeta) deserialize.invoke(null, sMeta);
+            sItem.put("meta", meta);
+            ItemStack item = ItemStack.deserialize(sItem);
+            item.setItemMeta(meta);
+
+            sProduct.put("item", item);
+            products.add(Product.deserialize(sProduct));
         }
 
         List<String> keywords = (List<String>) os.readObject();
 
         BusinessStatistics stats = BusinessStatistics.readStats(os);
+
+        double advertisingBalance = os.available() > 0 ? os.readDouble() : 0;
+
         os.close();
 
-        Business b = new Business(id, name, icon, owner, products, resources, stats, settings, creationDate, keywords, false);
+        Business b = new Business(id, name, icon, owner, products, resources, stats, settings, creationDate, keywords, advertisingBalance, false);
         b.setHome(home, false);
         return b;
     }
 
     /**
-     * Fetches all registered Businesses.
+     * Fetches an immutable version of all registered Businesses.
      * @return All Registered Businesses
      * @throws IllegalStateException if a business file is invalid
      */
@@ -731,7 +780,7 @@ public final class Business implements ConfigurationSerializable, Serializable {
             businesses.add(b);
         }
 
-        return businesses;
+        return ImmutableList.copyOf(businesses);
     }
 
     /**
@@ -769,7 +818,7 @@ public final class Business implements ConfigurationSerializable, Serializable {
     @Nullable
     public static Business getByName(@Nullable String name) {
         if (name == null) return null;
-        return getById(UUID.nameUUIDFromBytes(name.getBytes(StandardCharsets.UTF_8)));
+        return getBusinesses().stream().filter(b -> b.getName().equalsIgnoreCase(name)).findFirst().orElse(null);
     }
 
     /**
@@ -800,6 +849,68 @@ public final class Business implements ConfigurationSerializable, Serializable {
     public static boolean exists(@Nullable String name) {
         if (name == null) return false;
         return getByName(name) != null;
+    }
+
+    /**
+     * Fetches the Business's Advertising Balance.
+     * @return Advertising Balance
+     */
+    public double getAdvertisingBalance() {
+        return advertisingBalance;
+    }
+
+    /**
+     * Sets the Business's Advertising Balance.
+     * @param advertisingBalance Advertising Balance
+     * @return this business, for chaining
+     */
+    @NotNull
+    public Business setAdvertisingBalance(double advertisingBalance) {
+        this.advertisingBalance = advertisingBalance;
+        saveBusiness();
+        return this;
+    }
+
+    /**
+     * Adds to the Business's Advertising Balance.
+     * @param amount Amount to add
+     * @return this business, for chaining
+     */
+    @NotNull
+    public Business addAdvertisingBalance(double amount) {
+        return setAdvertisingBalance(advertisingBalance + amount);
+    }
+
+    /**
+     * Adds a keyword to the Business.
+     * @param price Price to add
+     * @return this business, for chaining
+     */
+    @NotNull
+    public Business addAdvertisingBalance(@Nullable Price price) {
+        if (price == null) return this;
+        return addAdvertisingBalance(price.getAmount() * price.getEconomy().getConversionScale());
+    }
+
+    /**
+     * Removes from the Business's Advertising Balance.
+     * @param amount Amount to remove
+     * @return this business, for chaining
+     */
+    @NotNull
+    public Business removeAdvertisingBalance(double amount) {
+        return setAdvertisingBalance(advertisingBalance - amount);
+    }
+
+    /**
+     * Removes from the Business's Advertising Balance.
+     * @param p Price to remove
+     * @return this business, for chaining
+     */
+    @NotNull
+    public Business removeAdvertisingBalance(@Nullable Price p) {
+        if (p == null) return this;
+        return removeAdvertisingBalance(p.getAmount() * p.getEconomy().getConversionScale());
     }
 
     @Override
@@ -846,7 +957,7 @@ public final class Business implements ConfigurationSerializable, Serializable {
 
     /**
      * Fetches the Business's Creation Date.
-     * @return Business Creation Date, or May 17, 2009 (MC's Birth Date) if not set
+     * @return Business Creation Date, or May 17, 2009 (MC's Birth Date) if not set / created before this was tracked
      */
     @NotNull
     public Date getCreationDate() {
@@ -875,9 +986,9 @@ public final class Business implements ConfigurationSerializable, Serializable {
      * Adds a collection of keywords to the Business.
      * @param keywords Keywords to add
      */
-    public void addKeywords(@Nullable Collection<String> keywords) {
+    public void addKeywords(@Nullable Iterable<String> keywords) {
         if (keywords == null) return;
-        this.keywords.addAll(keywords);
+        keywords.forEach(this.keywords::add);
         saveBusiness();
     }
 
@@ -887,17 +998,115 @@ public final class Business implements ConfigurationSerializable, Serializable {
      */
     public void removeKeywords(@Nullable String... keywords) {
         if (keywords == null) return;
-        removeKeywords(keywords);
+        removeKeywords(Arrays.asList(keywords));
     }
 
     /**
      * Removes a collection of keywords from the Business.
      * @param keywords Keywords to remove
      */
-    public void removeKeywords(@Nullable Collection<String> keywords) {
+    public void removeKeywords(@Nullable Iterable<String> keywords) {
         if (keywords == null) return;
-        this.keywords.removeAll(keywords);
+        keywords.forEach(this.keywords::remove);
         saveBusiness();
+    }
+
+    /**
+     * Whether this Business contains all of the keywords in this array.
+     * @param keywords Keywords to check
+     * @return true if all keywords are present, else false
+     */
+    public boolean hasAllKeywords(@Nullable String... keywords) {
+        if (keywords == null) return false;
+        return hasAllKeywords(Arrays.asList(keywords));
+    }
+
+    /**
+     * Whether this Business contains all of the keywords in this collection.
+     * @param keywords Keywords to check
+     * @return true if all keywords are present, else false
+     */
+    public boolean hasAllKeywords(@Nullable Iterable<String> keywords) {
+        if (keywords == null) return false;
+        try {
+            return new HashSet<>(this.keywords).containsAll(ImmutableList.copyOf(keywords));
+        } catch (NullPointerException e) {
+            return false;
+        }
+    }
+
+    /**
+     * Whether this Business contains any of the keywords in this array.
+     * @param keywords Keywords to check
+     * @return true if any keywords are present, else false
+     */
+    public boolean hasAnyKeywords(@Nullable String... keywords) {
+        if (keywords == null) return false;
+        return hasAnyKeywords(Arrays.asList(keywords));
+    }
+
+    /**
+     * Whether this Business contains any of the keywords in this collection.
+     * @param keywords Keywords to check
+     * @return true if any keywords are present, else false
+     */
+    public boolean hasAnyKeywords(@Nullable Iterable<String> keywords) {
+        if (keywords == null) return false;
+        Iterator<String> it = keywords.iterator();
+        try {
+            return this.keywords.stream().anyMatch(s -> it.hasNext() && it.next().equalsIgnoreCase(s));
+        } catch (NullPointerException e) {
+            return false;
+        }
+    }
+
+    /**
+     * Creates an integer representatino of the place this Businesses is in, according to its Advertising Balance.
+     * @return Place in Advertising Balance
+     */
+    public int getAdvertisingBalancePlace() {
+        int place = 1;
+        for (Business b : getBusinesses()) if (b.getAdvertisingBalance() > getAdvertisingBalance()) place++;
+
+        return place;
+    }
+
+    /**
+     * Fetches a random business based on its advertising balance.
+     * @return Random Business
+     */
+    @Nullable
+    public static Business randomAdvertisingBusiness() {
+        List<Business> businesses = getBusinesses();
+        if (businesses.isEmpty()) return null;
+
+        Map<Business, Double> minRange = new HashMap<>();
+        Map<Business, Double> maxRange = new HashMap<>();
+
+        AtomicReference<Double> total = new AtomicReference<>(0D);
+
+        businesses.forEach(b -> {
+            double bal = Math.floor(b.getAdvertisingBalance());
+
+            minRange.put(b, total.get());
+            maxRange.put(b, total.get() + bal);
+
+            total.updateAndGet(v -> v + bal + 1);
+        });
+
+        double rand = Math.floor(r.nextDouble() * total.get());
+
+        Business b = null;
+
+        for (Business business : businesses)
+            if (rand >= minRange.get(business) && rand <= maxRange.get(business)) {
+                b = business;
+                break;
+            }
+
+        if (b == null) throw new AssertionError("Random business is null!");
+
+        return b;
     }
 
     /**
@@ -1013,7 +1222,7 @@ public final class Business implements ConfigurationSerializable, Serializable {
             for (Settings.Business setting : Settings.Business.values()) settings.putIfAbsent(setting, setting.getDefaultValue());
 
             Business b = new Business(UUID.nameUUIDFromBytes(name.getBytes()), name, icon, owner,
-                    null, null, null, settings, System.currentTimeMillis(), keywords,false);
+                    null, null, null, settings, System.currentTimeMillis(), keywords, 0,false);
 
             if (Business.exists(name)) throw new UnsupportedOperationException("Business already exists");
 
