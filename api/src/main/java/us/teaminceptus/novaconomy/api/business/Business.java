@@ -14,6 +14,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.api.NovaConfig;
+import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.events.business.BusinessCreateEvent;
 import us.teaminceptus.novaconomy.api.player.NovaPlayer;
 import us.teaminceptus.novaconomy.api.settings.Settings;
@@ -625,9 +626,8 @@ public final class Business implements ConfigurationSerializable, Serializable {
         try {
             FileOutputStream fs = new FileOutputStream(this.file.getAbsoluteFile());
             ObjectOutputStream os = new ObjectOutputStream(new BufferedOutputStream(fs));
-
             writeBusiness(os);
-            os.close();
+            fs.close();
         } catch (IOException e) {
             NovaConfig.print(e);
         }
@@ -677,6 +677,7 @@ public final class Business implements ConfigurationSerializable, Serializable {
 
         stats.writeStats(os);
 
+        Bukkit.broadcastMessage(this.advertisingBalance + "");
         os.writeDouble(this.advertisingBalance);
     }
 
@@ -766,10 +767,8 @@ public final class Business implements ConfigurationSerializable, Serializable {
 
             try {
                 FileInputStream fs = new FileInputStream(f.getAbsolutePath());
-                ObjectInputStream os = new ObjectInputStream(new BufferedInputStream(fs));
-
-                b = readBusiness(os);
-                os.close();
+                b = readBusiness(new ObjectInputStream(new BufferedInputStream(fs)));
+                fs.close();
             } catch (OptionalDataException e) {
                 NovaConfig.print(e);
                 continue;
@@ -800,9 +799,8 @@ public final class Business implements ConfigurationSerializable, Serializable {
 
         try {
             FileInputStream fs = new FileInputStream(f.getAbsolutePath());
-            ObjectInputStream os = new ObjectInputStream(new BufferedInputStream(fs));
-
-            b = readBusiness(os);
+            b = readBusiness(new ObjectInputStream(new BufferedInputStream(fs)));
+            fs.close();
         } catch (IOException | ReflectiveOperationException e) {
             throw new IllegalStateException(e);
         }
@@ -882,7 +880,7 @@ public final class Business implements ConfigurationSerializable, Serializable {
     }
 
     /**
-     * Adds a keyword to the Business.
+     * Adds to the Business's Advertising Balance.
      * @param price Price to add
      * @return this business, for chaining
      */
@@ -893,6 +891,17 @@ public final class Business implements ConfigurationSerializable, Serializable {
     }
 
     /**
+     * Adds to the Business's Advertising Balance.
+     * @param amount Amount to add
+     * @param econ Economy to use with the Conversion Scale
+     * @return this business, for chaining
+     */
+    @NotNull
+    public Business addAdvertisingBalance(double amount, @Nullable Economy econ) {
+        return addAdvertisingBalance(amount * (econ == null ? 1 : econ.getConversionScale()));
+    }
+
+    /**
      * Removes from the Business's Advertising Balance.
      * @param amount Amount to remove
      * @return this business, for chaining
@@ -900,6 +909,17 @@ public final class Business implements ConfigurationSerializable, Serializable {
     @NotNull
     public Business removeAdvertisingBalance(double amount) {
         return setAdvertisingBalance(advertisingBalance - amount);
+    }
+
+    /**
+     * Removes from the Business's Advertising Balance.
+     * @param amount Amount to remove
+     * @param econ Economy to use with the Conversion Scale
+     * @return this business, for chaining
+     */
+    @NotNull
+    public Business removeAdvertisingBalance(double amount, @Nullable Economy econ) {
+        return removeAdvertisingBalance(amount * (econ == null ? 1 : econ.getConversionScale()));
     }
 
     /**
