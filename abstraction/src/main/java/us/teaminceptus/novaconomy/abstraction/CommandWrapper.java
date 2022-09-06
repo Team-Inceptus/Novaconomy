@@ -52,6 +52,7 @@ public interface CommandWrapper {
     Wrapper w = getWrapper();
 
     String BUSINESS_TAG = "business";
+    String AMOUNT_TAG = "amount";
     Map<String, List<String>> COMMANDS = new HashMap<String, List<String>>() {{
         put("ehelp", Arrays.asList("nhelp", "novahelp", "econhelp", "economyhelp"));
         put("economy", Arrays.asList("econ", "novaecon", "novaconomy", "necon"));
@@ -60,7 +61,7 @@ public interface CommandWrapper {
         put("exchange", Arrays.asList("convertgui", "convgui", "exch"));
         put("pay", Arrays.asList("givemoney", "novapay", "econpay", "givebal"));
         put("novaconomyreload", Arrays.asList("novareload", "nreload", "econreload"));
-        put(BUSINESS_TAG, Arrays.asList("nbusiness"));
+        put(BUSINESS_TAG, Arrays.asList("nbusiness", "b", "nb"));
         put("nbank", Arrays.asList("bank", "globalbank", "gbank"));
         put("createcheck", Arrays.asList("nc", "check", "novacheck", "ncheck"));
         put("balanceleaderboard", Arrays.asList("bleaderboard", "nleaderboard", "bl", "nl", "novaleaderboard", "balboard", "novaboard"));
@@ -253,14 +254,14 @@ public interface CommandWrapper {
         econ1.setItemMeta(e1Meta);
         econ1 = w.setID(econ1, "exchange:1");
         econ1 = w.setNBT(econ1, "economy", economy1.getUniqueId().toString());
-        econ1 = w.setNBT(econ1, "amount", amount);
+        econ1 = w.setNBT(econ1, AMOUNT_TAG, amount);
         inv.setItem(12, econ1);
 
-        ItemStack paper = new ItemStack(Material.PAPER);
-        ItemMeta pMeta = paper.getItemMeta();
-        pMeta.setDisplayName(ChatColor.YELLOW + "->");
-        paper.setItemMeta(pMeta);
-        inv.setItem(13, paper);
+        ItemStack arrow = new ItemStack(Material.PAPER);
+        ItemMeta arrowMeta = arrow.getItemMeta();
+        arrowMeta.setDisplayName(ChatColor.YELLOW + "->");
+        arrow.setItemMeta(arrowMeta);
+        inv.setItem(13, arrow);
 
         Economy economy2 = economies.get(1);
         ItemStack econ2 = new ItemStack(economy2.getIcon());
@@ -269,7 +270,7 @@ public interface CommandWrapper {
         econ2.setItemMeta(e2Meta);
         econ2 = w.setID(econ2, "exchange:2");
         econ2 = w.setNBT(econ2, "economy", economy2.getUniqueId().toString());
-        econ2 = w.setNBT(econ2, "amount", Math.floor(economy1.convertAmount(economy2, amount) * 100) / 100);
+        econ2 = w.setNBT(econ2, AMOUNT_TAG, Math.floor(economy1.convertAmount(economy2, amount) * 100) / 100);
         inv.setItem(14, econ2);
 
         ItemStack yes = new ItemStack(limeWool());
@@ -287,16 +288,6 @@ public interface CommandWrapper {
         inv.setItem(32, no);
 
         p.openInventory(inv);
-    }
-
-    static ItemStack limeWool() {
-        if (w.isLegacy()) return new ItemStack(Material.matchMaterial("WOOL"), 5);
-        else return new ItemStack(Material.matchMaterial("LIME_WOOL"));
-    }
-
-    static ItemStack redWool() {
-        if (w.isLegacy()) return new ItemStack(Material.matchMaterial("WOOL"), 14);
-        else return new ItemStack(Material.matchMaterial("RED_WOOL"));
     }
 
     default void createEconomy(CommandSender sender, String name, char symbol, Material icon, double scale, boolean naturalIncrease) {
@@ -618,9 +609,7 @@ public interface CommandWrapper {
         ItemStack product = p.getItemInHand().clone();
         product.setAmount(1);
 
-        List<String> sortedList = new ArrayList<>();
-        Economy.getEconomies().forEach(econ -> sortedList.add(econ.getName()));
-        sortedList.sort(String.CASE_INSENSITIVE_ORDER);
+        List<String> sortedList = Economy.getEconomies().stream().map(Economy::getName).sorted(String.CASE_INSENSITIVE_ORDER).collect(Collectors.toList());
         Economy econ = Economy.getEconomy(sortedList.get(0));
 
         Inventory inv = w.genGUI(36, pr.hasItemMeta() && pr.getItemMeta().hasDisplayName() ? pr.getItemMeta().getDisplayName() : WordUtils.capitalizeFully(pr.getType().name().replace('_', ' ')));
@@ -1850,7 +1839,96 @@ public interface CommandWrapper {
         p.openInventory(inv);
     }
 
+    default void businessAdvertisingChange(Player p, boolean deposit) {
+        if (!Business.exists(p)) {
+            p.sendMessage(getMessage("error.business.not_an_owner"));
+            return;
+        }
+
+        List<Economy> economies = Economy.getEconomies().stream().sorted(Comparator.comparing(Economy::getName)).collect(Collectors.toList());
+        if (economies.isEmpty()) {
+            p.sendMessage(getMessage("error.economy.none"));
+            return;
+        }
+
+        Economy first = economies.stream().findFirst().get();
+        Business b = Business.getByOwner(p);
+        NovaPlayer np = new NovaPlayer(p);
+
+        int[] amounts = {
+                1, 5, 10, 50, 100, 500, 1000, 5000, 10000
+        };
+
+        Inventory inv = w.genGUI(45, get("constants.business.advertising_" + (deposit ? "deposit" : "withdraw")), new Wrapper.CancelHolder());
+
+        for (int j = 0; j < 2; j++)
+            for (int i = 0; i < amounts.length; i++) {
+                int am = amounts[i];
+                boolean add = j == 0;
+
+                ItemStack change = new ItemStack(add ? limePane() : redPane());
+                ItemMeta cMeta = change.getItemMeta();
+                cMeta.setDisplayName((add ? ChatColor.GREEN + "+" : ChatColor.RED + "-") + String.format("%,.0f", (double)am));
+                change.setItemMeta(cMeta);
+                change = w.setID(change, "business:change_advertising");
+                change = w.setNBT(change, AMOUNT_TAG, am);
+                change = w.setNBT(change, BUSINESS_TAG, b.getUniqueId().toString());
+                change = w.setNBT(change, "add", add);
+                inv.setItem((j * 9) + i + 9, change);
+            }
+
+        ItemStack econWheel = new ItemStack(first.getIcon());
+        econWheel = w.setID(econWheel, "economy:wheel:change_advertising");
+        econWheel = w.setNBT(econWheel, "economy", first.getName().toLowerCase());
+        inv.setItem(31, econWheel);
+
+        ItemStack confirm = new ItemStack(limeWool());
+        ItemMeta cMeta = confirm.getItemMeta();
+        cMeta.setDisplayName(ChatColor.GREEN + get("constants.confirm"));
+        confirm.setItemMeta(cMeta);
+        confirm = w.setID(confirm, "yes:" + (deposit ? "deposit" : "withdraw") + "_advertising");
+        confirm = w.setNBT(confirm, BUSINESS_TAG, b.getUniqueId().toString());
+        confirm = w.setNBT(confirm, AMOUNT_TAG, 0);
+        inv.setItem(39, confirm);
+
+        ItemStack total = new ItemStack(Material.GOLD_INGOT);
+        ItemMeta tMeta = total.getItemMeta();
+        tMeta.setDisplayName(ChatColor.GOLD + "0" + first.getSymbol());
+        total.setItemMeta(tMeta);
+        inv.setItem(40, total);
+
+        ItemStack cancel = new ItemStack(redWool());
+        ItemMeta caMeta = cancel.getItemMeta();
+        caMeta.setDisplayName(ChatColor.RED + get("constants.cancel"));
+        cancel.setItemMeta(caMeta);
+        cancel = w.setID(cancel, "no:close_effect");
+        inv.setItem(41, cancel);
+
+        p.openInventory(inv);
+        XSound.ENTITY_ARROW_HIT_PLAYER.play(p, 3F, 2F);
+    }
+
     // Util Classes & Other Static Methods
+
+    static ItemStack limeWool() {
+        if (w.isLegacy()) return new ItemStack(Material.matchMaterial("WOOL"), 5);
+        else return new ItemStack(Material.matchMaterial("LIME_WOOL"));
+    }
+
+    static ItemStack redWool() {
+        if (w.isLegacy()) return new ItemStack(Material.matchMaterial("WOOL"), 14);
+        else return new ItemStack(Material.matchMaterial("RED_WOOL"));
+    }
+
+    static ItemStack limePane() {
+        if (w.isLegacy()) return new ItemStack(Material.matchMaterial("STAINED_GLASS_PANE"), 5);
+        else return new ItemStack(Material.matchMaterial("LIME_STAINED_GLASS_PANE"));
+    }
+
+    static ItemStack redPane() {
+        if (w.isLegacy()) return new ItemStack(Material.matchMaterial("STAINED_GLASS_PANE"), 14);
+        else return new ItemStack(Material.matchMaterial("RED_STAINED_GLASS_PANE"));
+    }
 
     class ReturnItemsHolder implements InventoryHolder {
 

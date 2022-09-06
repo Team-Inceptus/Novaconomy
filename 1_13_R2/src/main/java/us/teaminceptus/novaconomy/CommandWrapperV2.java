@@ -215,7 +215,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
     @CommandPermission("novaconomy.user.stats")
     public void playerStatistics(Player p, @Default("me") OfflinePlayer target) { CommandWrapper.super.playerStatistics(p, target); }
 
-    @Command({"business", "nbusiness"})
+    @Command({"business", "nbusiness", "nb", "b"})
     @Description("Manage your Novaconomy Business")
     @Usage("/business <create|info|delete|addproduct|stock|query|...> <args...>")
     private static final class BusinessCommands {
@@ -228,6 +228,9 @@ public final class CommandWrapperV2 implements CommandWrapper {
             BukkitCommandHandler handler = CommandWrapperV2.handler;
             handler.register(this);
         }
+
+        @Default
+        public void businessInfoDefault(Player p) { businessInfo(p); }
 
         @Subcommand({"info", "information"})
         public void businessInfo(Player p) { wrapper.businessInfo(p); }
@@ -290,28 +293,49 @@ public final class CommandWrapperV2 implements CommandWrapper {
         public void editPrice(Player p, @Range(min = 0.01) double newPrice, @Optional Economy economy) { wrapper.editPrice(p, newPrice, economy); }
 
         @Subcommand({"keyword", "keywords"})
+        @Default
         @CommandPermission("novaconomy.user.business.keywords")
-        public void keywords(Player p, @Named("subcommand") @Optional KeywordCommand cmd, @Optional String keywords) {
-            if (cmd == null) {
-                wrapper.listKeywords(p);
-                return;
-            }
+        public void keywords(Player p) {
+            wrapper.listKeywords(p);
+        }
 
-            switch (cmd) {
-                case ADD:
-                    wrapper.addKeywords(p, keywords == null ? null : keywords.split("[ ,]"));
-                    break;
-                case REMOVE:
-                    wrapper.removeKeywords(p, keywords == null ? null : keywords.split("[ ,]"));
-                    break;
-                default:
-                    wrapper.listKeywords(p);
-                    break;
-            }
+        @Subcommand({"keyword list", "keywords list", "keyword l", "keywords l"})
+        @CommandPermission("novaconomy.user.business.keywords")
+        public void keywordsList(Player p) { wrapper.listKeywords(p); }
+
+        @Subcommand({"keywords add", "keyword add"})
+        @CommandPermission("novaconomy.user.business.keywords")
+        public void addKeywords(Player p, String keywords) {
+            wrapper.addKeywords(p, keywords.split("[ ,]"));
+        }
+
+        @Subcommand({"keywords remove", "keyword remove", "keywords delete", "keyword delete"})
+        @CommandPermission("novaconomy.user.business.keywords")
+        public void removeKeywords(Player p, String keywords) {
+            wrapper.removeKeywords(p, keywords.split("[ ,]"));
         }
 
         @Subcommand({"advertising", "ads", "advertise"})
-        public void businessAdvertising(Player p) { wrapper.businessAdvertising(p); }
+        @Default
+        public void businessAdvertising(Player p) {
+            wrapper.businessAdvertising(p);
+        }
+
+        @Subcommand({"advertising addbalance", "ads addbalance", "advertise addbalance",
+                "advertising addbal", "ads addbal", "advertise addbal",
+                "advertising add", "ads add", "advertise add"})
+        public void addAdvertising(Player p) {
+            wrapper.businessAdvertisingChange(p, true);
+        }
+
+        @Subcommand({"advertising removebalance", "ads removebalance", "advertise removebalance",
+                "advertising removebal", "ads removebal", "advertise removebal",
+                "advertising remove", "ads remove", "advertise remove"})
+        public void removeAdvertising(Player p) {
+            wrapper.businessAdvertisingChange(p, false);
+        }
+
+
     }
 
     private enum KeywordCommand {
