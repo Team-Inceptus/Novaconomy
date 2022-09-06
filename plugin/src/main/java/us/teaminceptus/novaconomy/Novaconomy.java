@@ -1367,6 +1367,53 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
 				getCommandWrapper().businessAdvertising(p);
 			});
+			put("business:change_advertising", e -> {
+				if (!(e.getWhoClicked() instanceof Player)) return;
+				Player p = (Player) e.getWhoClicked();
+				Inventory inv = e.getView().getTopInventory();
+				ItemStack item = e.getCurrentItem();
+
+				Business b = Business.getById(UUID.fromString(w.getNBTString(item, BUSINESS_TAG)));
+				boolean add = w.getNBTBoolean(item, "add");
+				double amount = w.getNBTDouble(item, AMOUNT_TAG);
+				amount = add ? amount : -amount;
+
+				ItemStack econWheel = inv.getItem(31);
+				Economy econ = Economy.getEconomy(w.getNBTString(econWheel, ECON_TAG));
+
+				ItemStack confirm = inv.getItem(39);
+				double currentTotal = w.getNBTDouble(confirm, AMOUNT_TAG);
+				double newAmount = Math.max(currentTotal + amount, 0);
+				confirm = w.setNBT(confirm, AMOUNT_TAG, newAmount);
+				confirm = w.setNBT(confirm, BUSINESS_TAG, b.getUniqueId().toString());
+				inv.setItem(39, confirm);
+
+				ItemStack total = inv.getItem(40).clone();
+				ItemMeta tMeta = total.getItemMeta();
+				tMeta.setDisplayName(ChatColor.GOLD + String.format("%,.0f", newAmount) + econ.getSymbol());
+				total.setItemMeta(tMeta);
+				inv.setItem(40, total);
+
+				(add ? XSound.ENTITY_ARROW_HIT_PLAYER : XSound.BLOCK_NOTE_BLOCK_PLING).play(p, 3F, add ? 2F : 0F);
+			});
+			put("economy:wheel:change_advertising", e -> {
+				get("economy:wheel").accept(e);
+				Inventory inv = e.getView().getTopInventory();
+
+				ItemStack item = e.getCurrentItem();
+				Economy econ = Economy.getEconomy(w.getNBTString(item, ECON_TAG));
+
+				ItemStack confirm = inv.getItem(39);
+				double currentTotal = w.getNBTDouble(confirm, AMOUNT_TAG);
+
+				ItemStack total = inv.getItem(40).clone();
+				ItemMeta tMeta = total.getItemMeta();
+				tMeta.setDisplayName(ChatColor.GOLD + String.format("%,.0f", currentTotal) + econ.getSymbol());
+				total.setItemMeta(tMeta);
+				inv.setItem(40, total);
+			});
+			put("yes:deposit_advertising", e -> BUSINESS_ADVERTISING_BICONSUMER.accept(e, true));
+			put("yes:withdraw_advertising", e -> BUSINESS_ADVERTISING_BICONSUMER.accept(e, false));
 		}
 	};
 
@@ -1391,6 +1438,41 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
 		p.openInventory(nextInv);
 		XSound.ITEM_BOOK_PAGE_TURN.play(p, 3F, 2F);
+	};
+
+	private static final BiConsumer<InventoryClickEvent, Boolean> BUSINESS_ADVERTISING_BICONSUMER = (e, add) -> {
+		if (!(e.getWhoClicked() instanceof Player)) return;
+		Player p = (Player) e.getWhoClicked();
+		NovaPlayer np = new NovaPlayer(p);
+
+		ItemStack item = e.getCurrentItem();
+		Inventory inv = e.getView().getTopInventory();
+
+		Business b = Business.getById(UUID.fromString(w.getNBTString(item, BUSINESS_TAG)));
+		double amount = w.getNBTDouble(item, AMOUNT_TAG);
+
+		ItemStack econWheel = inv.getItem(31);
+		Economy econ = Economy.getEconomy(w.getNBTString(econWheel, ECON_TAG));
+
+		if (add && np.getBalance(econ) < amount) {
+			p.sendMessage(String.format(getMessage("error.economy.invalid_amount"), Novaconomy.get("constants.deposit")));
+			return;
+		}
+
+		String msg = String.format("%,.2f", amount) + econ.getSymbol();
+
+		if (add) {
+			np.remove(econ, amount);
+			b.addAdvertisingBalance(amount, econ);
+			p.sendMessage(String.format(getMessage("success.business.advertising_deposit"), msg, b.getName()));
+		} else {
+			np.add(econ, amount);
+			b.removeAdvertisingBalance(amount, econ);
+			p.sendMessage(String.format(getMessage("success.business.advertising_withdraw"), msg, b.getName()));
+		}
+
+		p.closeInventory();
+		XSound.ENTITY_ARROW_HIT_PLAYER.play(p, 3F, 2F);
 	};
 
 	private static final BiConsumer<InventoryClickEvent, Integer> EXCHANGE_BICONSUMER = (e, i) -> {
