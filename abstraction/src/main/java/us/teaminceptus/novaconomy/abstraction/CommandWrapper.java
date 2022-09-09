@@ -1853,10 +1853,9 @@ public interface CommandWrapper {
 
         Economy first = economies.stream().findFirst().get();
         Business b = Business.getByOwner(p);
-        NovaPlayer np = new NovaPlayer(p);
 
         int[] amounts = {
-                1, 5, 10, 50, 100, 500, 1000, 5000, 10000
+                1, 10, 50, 100, 500, 1000, 5000, 10000, 100000
         };
 
         Inventory inv = w.genGUI(45, get("constants.business.advertising_" + (deposit ? "deposit" : "withdraw")), new Wrapper.CancelHolder());

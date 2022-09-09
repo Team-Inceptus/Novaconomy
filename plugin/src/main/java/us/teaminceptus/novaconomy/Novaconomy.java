@@ -798,8 +798,6 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				int amount = (int) w.getNBTDouble(item, AMOUNT_TAG);
 				int newA = add ? Math.min(prev + amount, 64) : Math.max(prev - amount, 1);
 
-				ItemStack prItem = inv.getItem(13).clone();
-
 				ItemStack newAmount = inv.getItem(22).clone();
 				newAmount.setAmount(newA);
 				ItemMeta nMeta = newAmount.getItemMeta();
