@@ -627,7 +627,6 @@ public final class Business implements ConfigurationSerializable, Serializable {
             FileOutputStream fs = new FileOutputStream(this.file.getAbsoluteFile());
             ObjectOutputStream os = new ObjectOutputStream(new BufferedOutputStream(fs));
             writeBusiness(os);
-            fs.close();
         } catch (IOException e) {
             NovaConfig.print(e);
         }
@@ -679,6 +678,8 @@ public final class Business implements ConfigurationSerializable, Serializable {
 
         Bukkit.broadcastMessage(this.advertisingBalance + "");
         os.writeDouble(this.advertisingBalance);
+
+        os.close();
     }
 
     @SuppressWarnings("unchecked")
@@ -768,7 +769,6 @@ public final class Business implements ConfigurationSerializable, Serializable {
             try {
                 FileInputStream fs = new FileInputStream(f.getAbsolutePath());
                 b = readBusiness(new ObjectInputStream(new BufferedInputStream(fs)));
-                fs.close();
             } catch (OptionalDataException e) {
                 NovaConfig.print(e);
                 continue;
@@ -800,7 +800,6 @@ public final class Business implements ConfigurationSerializable, Serializable {
         try {
             FileInputStream fs = new FileInputStream(f.getAbsolutePath());
             b = readBusiness(new ObjectInputStream(new BufferedInputStream(fs)));
-            fs.close();
         } catch (IOException | ReflectiveOperationException e) {
             throw new IllegalStateException(e);
         }
