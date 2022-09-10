@@ -12,7 +12,9 @@ import java.util.Map;
 
 /**
  * Represents the Novaconomy Stock Market
+ * @deprecated Draft API
  */
+@Deprecated
 @SuppressWarnings("unchecked")
 public final class NovaMarket implements Serializable {
 

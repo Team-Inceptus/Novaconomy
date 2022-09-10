@@ -230,20 +230,3 @@ Business:
     # How much host businesses will be rewarded for having a click on their advertisement
     # The Economy is randomly selected, and this value is multiplied by its conversion scale
     ClickReward: 5
-
-  # Stock Market
-  Market:
-
-    # Whether the Stock Market is enabled
-    #
-    # Market Tax is a tax added to the price of items sold in a player's business
-    # market that goes to the shares of the product's MATERIAL.
-    Enabled: true
-
-    # The value to multiply the price by that will be added
-    # Example:
-    #
-    # Subtotal (Price) = 100$
-    # Market Tax = 0.05 or 5%
-    # Total = 100$ + (100$ * 5%) = 105$
-    MarketTax: 0.05 # 5% Market Tax
