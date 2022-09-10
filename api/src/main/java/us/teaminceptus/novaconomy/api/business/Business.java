@@ -5,6 +5,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.AtomicDouble;
 import org.apache.commons.lang.Validate;
 import org.bukkit.*;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.bukkit.configuration.serialization.DelegateDeserialization;
 import org.bukkit.enchantments.Enchantment;
@@ -13,6 +15,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.events.business.BusinessCreateEvent;
@@ -49,7 +52,7 @@ public final class Business implements ConfigurationSerializable, Serializable {
 
     private final OfflinePlayer owner;
 
-    private final File file;
+    private final File folder;
 
     private Material icon;
 
@@ -69,15 +72,17 @@ public final class Business implements ConfigurationSerializable, Serializable {
 
     private double advertisingBalance;
 
+    private List<Business> blacklist;
+
     private Business(UUID uid, String name, Material icon, OfflinePlayer owner, Collection<Product> products, Collection<ItemStack> resources,
                      BusinessStatistics stats, Map<Settings.Business, Boolean> settings, long creationDate, List<String> keywords,
-                     double advertisingBalance, boolean save) {
+                     double advertisingBalance, List<Business> blacklist, boolean save) {
         this.id = uid;
         this.name = name;
         this.icon = icon;
         this.owner = owner;
 
-        this.file = new File(NovaConfig.getBusinessesFolder(), id + BUSINESS_FILE_SUFFIX);
+        this.folder = new File(NovaConfig.getBusinessesFolder(), this.id.toString());
 
         this.creationDate = creationDate;
         this.stats = stats == null ? new BusinessStatistics(id) : stats;
@@ -90,7 +95,8 @@ public final class Business implements ConfigurationSerializable, Serializable {
 
         this.settings.putAll(settings);
         this.keywords.addAll(keywords);
-        this.advertisingBalance = 0;
+        this.advertisingBalance = advertisingBalance;
+        this.blacklist = blacklist;
 
         if (save) saveBusiness();
     }
@@ -576,9 +582,59 @@ public final class Business implements ConfigurationSerializable, Serializable {
     }
 
     /**
+     * Fetches a list of all Businesses that are prohibited from associating with this Business, such as with Advertising.
+     * @return List of Blacklisted Businesses
+     */
+    @NotNull
+    public List<Business> getBlacklist() {
+        return ImmutableList.copyOf(blacklist);
+    }
+
+    /**
+     * Adds a Business to this Business's blacklist.
+     * @param business Business to add
+     * @return this Business, for chaining
+     */
+    @NotNull
+    public Business blacklist(@NotNull Business business) {
+        if (this.blacklist.contains(business)) return this;
+        if (business.blacklist.contains(this)) return this;
+
+        this.blacklist.add(business);
+        saveBusiness();
+        return this;
+    }
+
+    /**
+     * Checks whether a Business is blacklisted from associating with this Business.
+     * @param business Business to check
+     * @return true if blacklisted, else false
+     */
+    public boolean isBlacklisted(@NotNull Business business) {
+        return this.blacklist.contains(business) || business.blacklist.contains(this);
+    }
+
+    /**
+     * Removes a Business from this Business's blacklist.
+     * @param business Business to remove
+     * @return this Business, for chaining
+     */
+    @NotNull
+    public Business unblacklist(@NotNull Business business) {
+        if (this.blacklist.contains(business)) {
+            this.blacklist.remove(business);
+            saveBusiness();
+        } else if (business.blacklist.contains(this)) {
+            business.blacklist.remove(this);
+            business.saveBusiness();
+        }
+        return this;
+    }
+
+    /**
      * Deserializes a Map into a Business.
      * @param serial Serialization from {@link #serialize()}
-     * @deprecated Bukkit Serialization is no longer used; this method exists only for the purposes of converting legacy businesses
+     * @deprecated Entire Bukkit Serialization is no longer used; this method exists only for the purposes of converting legacy businesses
      * @return Deserialized Business
      */
     @SuppressWarnings("unchecked")
@@ -612,7 +668,7 @@ public final class Business implements ConfigurationSerializable, Serializable {
                 owner,
                 (List<Product>) serial.get("products"), resources,
                 (BusinessStatistics) serial.getOrDefault("stats", null),
-                settings, creationDate, keywords, 0,false
+                settings, creationDate, keywords, 0, new ArrayList<>(), false
         );
         b.setHome(home, false);
 
@@ -620,49 +676,69 @@ public final class Business implements ConfigurationSerializable, Serializable {
     }
 
     /**
-     * Saves this Business to {@link #getBusinessFile()}.
+     * Saves this Business in {@link #getBusinessFolder()}.
      */
     public void saveBusiness() {
+        if (!folder.exists()) folder.mkdir();
+
         try {
-            FileOutputStream fs = new FileOutputStream(this.file.getAbsoluteFile());
-            ObjectOutputStream os = new ObjectOutputStream(new BufferedOutputStream(fs));
-            writeBusiness(os);
+            writeBusiness();
         } catch (IOException e) {
             NovaConfig.print(e);
         }
     }
 
     /**
-     * Fetches the file this business is stored in.
-     * @return Business File
+     * Fetches the folder this Business is stored in.
+     * @return Business Folder
      */
     @NotNull
-    public File getBusinessFile() {
-        return file;
+    public File getBusinessFolder() {
+        return folder;
     }
 
-    private void writeBusiness(ObjectOutputStream os) throws IOException {
-        os.writeObject(this.id);
-        os.writeObject(this.name);
-        os.writeObject(this.icon.name());
-        os.writeObject(this.owner.getUniqueId());
-        os.writeObject(this.settings);
-        os.writeLong(this.creationDate);
+    private void writeBusiness() throws IOException {
+        File info = new File(folder, "information.dat");
+        if (!info.exists()) info.createNewFile();
 
-        Map<String, Object> home = this.home == null ? new HashMap<>(0) : this.home.serialize();
-        os.writeObject(home);
+        // Permanent Information
 
-        List<Map<String, Object>> res = new ArrayList<>();
-        for (ItemStack i : resources) {
-            Map<String, Object> m = new HashMap<>(i.serialize());
-            if (i.hasItemMeta()) m.put("meta", i.getItemMeta().serialize());
+        FileOutputStream infoFs = new FileOutputStream(info);
+        ObjectOutputStream infoOs = new ObjectOutputStream(infoFs);
+        infoOs.writeObject(this.id);
+        infoOs.writeLong(this.creationDate);
+        infoOs.writeObject(this.owner.getUniqueId());
+        infoOs.close();
 
-            res.add(m);
-        }
-        os.writeObject(res);
+        // Statistics
+
+        File stats = new File(folder, "stats.yml");
+        if (!stats.exists()) stats.createNewFile();
+
+        FileConfiguration sConfig = YamlConfiguration.loadConfiguration(stats);
+        sConfig.set("stats", this.stats);
+        sConfig.save(stats);
+
+        // Settings
+
+        File settings = new File(folder, "settings.yml");
+        if (!settings.exists()) settings.createNewFile();
+
+        FileConfiguration seConfig = YamlConfiguration.loadConfiguration(settings);
+        if (!seConfig.isConfigurationSection("settings")) seConfig.createSection("settings");
+        for (Settings.Business setting : Settings.Business.values())
+            seConfig.set("settings." + setting.name().toLowerCase(), this.settings.getOrDefault(setting, setting.getDefaultValue()));
+
+        seConfig.save(settings);
+
+        File products = new File(folder, "products.dat");
+        if (!products.exists()) products.createNewFile();
+
+        FileOutputStream pFs = new FileOutputStream(products);
+        ObjectOutputStream pOs = new ObjectOutputStream(new BufferedOutputStream(pFs));
 
         List<Map<String, Object>> prods = new ArrayList<>();
-        for (Product p : products) {
+        for (Product p : this.products) {
             Map<String, Object> m = new HashMap<>(p.serialize());
 
             Map<String, Object> item = new HashMap<>(p.getItem().serialize());
@@ -671,52 +747,86 @@ public final class Business implements ConfigurationSerializable, Serializable {
             m.put("item", item);
             prods.add(m);
         }
-        os.writeObject(prods);
-        os.writeObject(this.keywords);
+        pOs.writeObject(prods);
+        pOs.close();
 
-        stats.writeStats(os);
+        // Resources
 
-        Bukkit.broadcastMessage(this.advertisingBalance + "");
-        os.writeDouble(this.advertisingBalance);
+        File sourcesF = new File(folder, "resources");
+        if (!sourcesF.exists()) sourcesF.mkdir();
 
-        os.close();
+        Set<Material> mats = this.products.stream().map(Product::getItem).map(ItemStack::getType).collect(Collectors.toSet());
+        for (Material mat : mats) {
+            List<ItemStack> added = this.resources.stream().filter(i -> i.getType() == mat).collect(Collectors.toList());
+
+            File matF = new File(sourcesF, mat.name().toLowerCase() + ".dat");
+            if (!matF.exists()) matF.createNewFile();
+
+            FileOutputStream matFs = new FileOutputStream(matF);
+            ObjectOutputStream matOs = new ObjectOutputStream(new BufferedOutputStream(matFs));
+
+            matOs.writeInt(added.stream().filter(i -> !i.hasItemMeta()).mapToInt(ItemStack::getAmount).sum());
+
+            List<Map<String, Object>> res = new ArrayList<>();
+            for (ItemStack i : added.stream().filter(ItemStack::hasItemMeta).collect(Collectors.toList())) {
+                Map<String, Object> m = new HashMap<>(i.serialize());
+                if (i.hasItemMeta()) m.put("meta", i.getItemMeta().serialize());
+
+                res.add(m);
+            }
+            matOs.writeObject(res);
+            matOs.close();
+        }
+
+        // Other Information
+
+        File other = new File(folder, "other.yml");
+        if (!other.exists()) other.createNewFile();
+
+        FileConfiguration oConfig = YamlConfiguration.loadConfiguration(other);
+        oConfig.set("name", this.name);
+        oConfig.set("icon", this.icon.name());
+        oConfig.set("keywords", this.keywords);
+        oConfig.set("home", this.home);
+        oConfig.set("adverising_balance", this.advertisingBalance);
+
+        List<String> blacklisted = this.blacklist.stream().map(Business::getUniqueId).map(UUID::toString).collect(Collectors.toList());
+        oConfig.set("blacklist", blacklisted);
+
+        oConfig.save(other);
     }
 
     @SuppressWarnings("unchecked")
-    private static Business readBusiness(ObjectInputStream os) throws IOException, ReflectiveOperationException {
-        UUID id = (UUID) os.readObject();
-        String name = (String) os.readObject();
-        Material icon = Material.valueOf((String) os.readObject());
-        OfflinePlayer owner = Bukkit.getOfflinePlayer((UUID) os.readObject());
-        Map<Settings.Business, Boolean> settings = (Map<Settings.Business, Boolean>) os.readObject();
-        long creationDate = os.readLong();
+    private static Business readBusiness(File folder) throws IOException, ReflectiveOperationException {
+        File info = new File(folder, "information.dat");
+        if (!info.exists()) throw new IllegalStateException("Business information file does not exist!");
 
-        Map<String, Object> homeMap = (Map<String, Object>) os.readObject();
-        Location home = homeMap.isEmpty() ? null : Location.deserialize(homeMap);
+        FileInputStream infoFs = new FileInputStream(info);
+        ObjectInputStream infoOs = new ObjectInputStream(infoFs);
+        UUID id = (UUID) infoOs.readObject();
+        long creationDate = infoOs.readLong();
+        OfflinePlayer owner = Bukkit.getOfflinePlayer((UUID) infoOs.readObject());
+        infoOs.close();
 
-        List<Map<String, Object>> res = (List<Map<String, Object>>) os.readObject();
-        List<ItemStack> resources = new ArrayList<>();
-        for (Map<String, Object> m : res) {
-            Map<String, Object> sItem = new HashMap<>(m);
+        File other = new File(folder, "other.yml");
+        if (!other.exists()) throw new IllegalStateException("Business \"other.yml\" file does not exist!");
 
-            ItemMeta base = Bukkit.getItemFactory().getItemMeta(Material.valueOf((String) m.get("type")));
-            DelegateDeserialization deserialization = base.getClass().getAnnotation(DelegateDeserialization.class);
-            Method deserialize = deserialization.value().getDeclaredMethod("deserialize", Map.class);
-            deserialize.setAccessible(true);
+        FileConfiguration oConfig = YamlConfiguration.loadConfiguration(other);
+        String name = oConfig.getString("name");
+        Material icon = Material.valueOf(oConfig.getString("icon"));
+        List<String> keywords = oConfig.getStringList("keywords");
+        Location home = (Location) oConfig.get("home");
+        double advertisingBalance = oConfig.getDouble("adverising_balance", 0);
+        List<Business> blacklist = oConfig.getStringList("blacklist").stream().map(UUID::fromString).map(Business::getById).collect(Collectors.toList());
 
-            Map<String, Object> sMeta = (Map<String, Object>) sItem.getOrDefault("meta", base.serialize());
-            if (sMeta == null) sMeta = base.serialize();
+        File products = new File(folder, "products.dat");
+        if (!products.exists()) throw new IllegalStateException("Business \"products.dat\" file does not exist!");
 
-            ItemMeta meta = (ItemMeta) deserialize.invoke(null, sMeta);
-            sItem.put("meta", meta);
-            ItemStack i = ItemStack.deserialize(m);
-            i.setItemMeta(meta);
+        FileInputStream pFs = new FileInputStream(products);
+        ObjectInputStream pOs = new ObjectInputStream(new BufferedInputStream(pFs));
 
-            resources.add(i);
-        }
-
-        List<Map<String, Object>> prods = (List<Map<String, Object>>) os.readObject();
-        List<Product> products = new ArrayList<>();
+        List<Map<String, Object>> prods = (List<Map<String, Object>>) pOs.readObject();
+        List<Product> product = new ArrayList<>();
 
         for (Map<String, Object> m : prods) {
             Map<String, Object> sProduct = new HashMap<>(m);
@@ -736,20 +846,66 @@ public final class Business implements ConfigurationSerializable, Serializable {
             item.setItemMeta(meta);
 
             sProduct.put("item", item);
-            products.add(Product.deserialize(sProduct));
+            product.add(Product.deserialize(sProduct));
         }
 
-        List<String> keywords = (List<String>) os.readObject();
+        File statsFile = new File(folder, "stats.yml");
+        if (!statsFile.exists()) throw new IllegalStateException("Business \"stats.yml\" file does not exist!");
 
-        BusinessStatistics stats = BusinessStatistics.readStats(os);
+        FileConfiguration sConfig = YamlConfiguration.loadConfiguration(statsFile);
+        BusinessStatistics stats = (BusinessStatistics) sConfig.get("stats");
 
-        double advertisingBalance = os.available() > 0 ? os.readDouble() : 0;
+        File settings = new File(folder, "settings.yml");
+        if (!settings.exists()) throw new IllegalStateException("Business \"settings.yml\" file does not exist!");
 
-        os.close();
+        FileConfiguration seConfig = YamlConfiguration.loadConfiguration(settings);
+        Map<Settings.Business, Boolean> settings1 = seConfig.getConfigurationSection("settings").getKeys(false)
+                .stream()
+                .collect(Collectors.toMap(k -> Settings.Business.valueOf(k.toUpperCase()), v -> seConfig.getBoolean("settings." + v)));
 
-        Business b = new Business(id, name, icon, owner, products, resources, stats, settings, creationDate, keywords, advertisingBalance, false);
-        b.setHome(home, false);
-        return b;
+        File sourcesF = new File(folder, "resources");
+        if (!sourcesF.exists()) sourcesF.mkdir();
+
+        List<ItemStack> resources = new ArrayList<>();
+        for (File matF : sourcesF.listFiles()) {
+            FileInputStream matFs = new FileInputStream(matF);
+            ObjectInputStream matOs = new ObjectInputStream(new BufferedInputStream(matFs));
+
+            int baseCount = matOs.readInt();
+            Material baseM = Material.valueOf(matF.getName().replace(".dat", "").toUpperCase());
+
+            while (baseCount > 0) {
+                int amount = Math.min(baseCount, baseM.getMaxStackSize());
+                ItemStack i = new ItemStack(baseM, amount);
+                resources.add(i);
+
+                baseCount -= amount;
+            }
+
+            List<Map<String, Object>> res = (List<Map<String, Object>>) matOs.readObject();
+            for (Map<String, Object> m : res) {
+                Map<String, Object> sItem = new HashMap<>(m);
+
+                ItemMeta base = Bukkit.getItemFactory().getItemMeta(Material.valueOf((String) m.get("type")));
+                DelegateDeserialization deserialization = base.getClass().getAnnotation(DelegateDeserialization.class);
+                Method deserialize = deserialization.value().getDeclaredMethod("deserialize", Map.class);
+                deserialize.setAccessible(true);
+
+                Map<String, Object> sMeta = (Map<String, Object>) sItem.getOrDefault("meta", base.serialize());
+                if (sMeta == null) sMeta = base.serialize();
+
+                ItemMeta meta = (ItemMeta) deserialize.invoke(null, sMeta);
+                sItem.put("meta", meta);
+                ItemStack i = ItemStack.deserialize(m);
+                i.setItemMeta(meta);
+
+                resources.add(i);
+            }
+
+            matOs.close();
+        }
+
+        return new Business(id, name, icon, owner, product, resources, stats, settings1, creationDate, keywords, advertisingBalance, blacklist, false);
     }
 
     /**
@@ -761,14 +917,12 @@ public final class Business implements ConfigurationSerializable, Serializable {
     public static List<Business> getBusinesses() throws IllegalStateException {
         List<Business> businesses = new ArrayList<>();
         for (File f : NovaConfig.getBusinessesFolder().listFiles()) {
-            if (f.isDirectory()) continue;
-            if (!f.getName().endsWith(BUSINESS_FILE_SUFFIX)) continue;
+            if (!f.isDirectory()) continue;
 
             Business b;
 
             try {
-                FileInputStream fs = new FileInputStream(f.getAbsolutePath());
-                b = readBusiness(new ObjectInputStream(new BufferedInputStream(fs)));
+                b = readBusiness(f.getAbsoluteFile());
             } catch (OptionalDataException e) {
                 NovaConfig.print(e);
                 continue;
@@ -792,14 +946,13 @@ public final class Business implements ConfigurationSerializable, Serializable {
     public static Business getById(@Nullable UUID uid) throws IllegalStateException {
         if (uid == null) return null;
 
-        File f = new File(NovaConfig.getBusinessesFolder(), uid + BUSINESS_FILE_SUFFIX);
+        File f = new File(NovaConfig.getBusinessesFolder(), uid.toString());
         if (!f.exists()) return null;
 
         Business b = null;
 
         try {
-            FileInputStream fs = new FileInputStream(f.getAbsolutePath());
-            b = readBusiness(new ObjectInputStream(new BufferedInputStream(fs)));
+            b = readBusiness(f);
         } catch (IOException | ReflectiveOperationException e) {
             throw new IllegalStateException(e);
         }
@@ -835,7 +988,7 @@ public final class Business implements ConfigurationSerializable, Serializable {
      */
     public static void remove(@Nullable Business b) {
         if (b == null) return;
-        b.file.delete();
+        b.folder.delete();
     }
 
     /**
@@ -1091,6 +1244,31 @@ public final class Business implements ConfigurationSerializable, Serializable {
     }
 
     /**
+     * Creates a Public Icon for this Business.
+     * @return Generated Public Icon
+     */
+    @NotNull
+    public ItemStack getPublicIcon() {
+        boolean pOwner = getSetting(Settings.Business.PUBLIC_OWNER);
+        boolean pRating = getSetting(Settings.Business.PUBLIC_RATING);
+
+        ItemStack icon = new ItemStack(getIcon().getType());
+        ItemMeta hMeta = icon.getItemMeta();
+        hMeta.setDisplayName(ChatColor.GOLD + this.name);
+        StringBuilder rB = new StringBuilder();
+        for (int j = 0; j < Math.round(getAverageRating()); j++) rB.append("⭐");
+
+        hMeta.setLore(Arrays.asList(
+                pOwner ? String.format(Language.getCurrentLanguage().getMessage("constants.business.owner"), owner.getName()) : Language.getCurrentLanguage().getMessage("constants.business.anonymous"),
+                ChatColor.AQUA + keywords.toString().replaceAll("[\\[\\]]", ""),
+                pRating ? ChatColor.YELLOW + rB.toString() : "")
+        );
+        icon.setItemMeta(hMeta);
+
+        return icon;
+    }
+
+    /**
      * Fetches a random business based on its advertising balance.
      * @return Random Business
      */
@@ -1105,6 +1283,7 @@ public final class Business implements ConfigurationSerializable, Serializable {
         AtomicReference<Double> total = new AtomicReference<>(0D);
 
         businesses.forEach(b -> {
+            if (b.getAdvertisingBalance() <= 0) return;
             double bal = Math.floor(b.getAdvertisingBalance());
 
             minRange.put(b, total.get());
@@ -1122,8 +1301,6 @@ public final class Business implements ConfigurationSerializable, Serializable {
                 b = business;
                 break;
             }
-
-        if (b == null) throw new AssertionError("Random business is null!");
 
         return b;
     }
@@ -1241,7 +1418,7 @@ public final class Business implements ConfigurationSerializable, Serializable {
             for (Settings.Business setting : Settings.Business.values()) settings.putIfAbsent(setting, setting.getDefaultValue());
 
             Business b = new Business(UUID.nameUUIDFromBytes(name.getBytes()), name, icon, owner,
-                    null, null, null, settings, System.currentTimeMillis(), keywords, 0,false);
+                    null, null, null, settings, System.currentTimeMillis(), keywords, 0, new ArrayList<>(), false);
 
             if (Business.exists(name)) throw new UnsupportedOperationException("Business already exists");
 
