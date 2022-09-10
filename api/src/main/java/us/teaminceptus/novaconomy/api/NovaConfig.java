@@ -89,15 +89,25 @@ public interface NovaConfig  {
 
     /**
      * Fetch the Economies File
+     * @deprecated Economies are no longer stored in a single file
      * @return Economies File
      */
-    static FileConfiguration getEconomiesConfig() { return YamlConfiguration.loadConfiguration(getEconomiesFile()); }
+    @Deprecated
+    static FileConfiguration getEconomiesConfig() { return null; }
 
     /**
      * Fetches the {@link File} related to ecnomies.yml.
+     * @deprecated Economies are no longer stored in a single file
      * @return File related to economies.yml
      */
+    @Deprecated
     static File getEconomiesFile() { return new File(getDataFolder(), "economies.yml"); }
+
+    /**
+     * Fetches the folder that all Economies are stored in.
+     * @return Economies Folder
+     */
+    static File getEconomiesFolder() { return new File(getDataFolder(), "economies"); }
 
     /**
      * Reloads the Interest and Taxes Runnables with new values from the configuration.
@@ -261,10 +271,6 @@ public interface NovaConfig  {
         if (!config.isBoolean("Bounties.Broadcast")) config.set("Bounties.Broadcast", true);
 
         if (!config.isConfigurationSection("Business")) config.createSection("Business");
-
-        if (!config.isConfigurationSection("Business.MarketTax")) config.createSection("Business.MarketTax");
-        if (!config.isBoolean("Business.MarketTax.Enabled")) config.set("Business.MarketTax.Enabled", true);
-        if (!config.isDouble("Business.MarketTax.Value") && !config.isInt("Business.MarketTax.Value")) config.set("Business.MarketTax.Value", 0.05D);
 
         if (!config.isConfigurationSection("Business.Advertising")) config.createSection("Business.Advertising");
         if (!config.isBoolean("Business.Advertising.Enabled")) config.set("Business.Advertising.Enabled", true);
