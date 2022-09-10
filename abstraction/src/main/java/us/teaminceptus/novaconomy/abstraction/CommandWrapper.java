@@ -32,6 +32,7 @@ import us.teaminceptus.novaconomy.api.events.player.economy.PlayerPayEvent;
 import us.teaminceptus.novaconomy.api.player.Bounty;
 import us.teaminceptus.novaconomy.api.player.NovaPlayer;
 import us.teaminceptus.novaconomy.api.player.PlayerStatistics;
+import us.teaminceptus.novaconomy.api.settings.SettingDescription;
 import us.teaminceptus.novaconomy.api.settings.Settings;
 import us.teaminceptus.novaconomy.api.util.Price;
 import us.teaminceptus.novaconomy.api.util.Product;
@@ -1080,6 +1081,14 @@ public interface CommandWrapper {
                     meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
                 }
 
+                if (sett.getDescription() != null) {
+                    SettingDescription desc = sett.getDescription();
+                    List<String> lore = new ArrayList<>();
+                    lore.add(" ");
+                    lore.addAll(Arrays.stream(ChatPaginator.wordWrap(desc.value(), 30)).map(s -> ChatColor.GRAY + s).collect(Collectors.toList()));
+                    meta.setLore(lore);
+                }
+
                 item.setItemMeta(meta);
 
                 item = w.setID(item, "setting_toggle");
@@ -1430,23 +1439,8 @@ public interface CommandWrapper {
                     if (businesses.size() > i) {
                         Business b = businesses.get(i);
 
-                        boolean pOwner = b.getSetting(Settings.Business.PUBLIC_OWNER);
-                        boolean pRating = b.getSetting(Settings.Business.PUBLIC_RATING);
-
-                        ItemStack icon = new ItemStack(b.getIcon().getType());
-                        ItemMeta hMeta = icon.getItemMeta();
-                        hMeta.setDisplayName(ChatColor.GOLD + b.getName());
-                        StringBuilder rB = new StringBuilder();
-                        for (int j = 0; j < Math.round(b.getAverageRating()); j++) rB.append("⭐");
-
-                        hMeta.setLore(Arrays.asList(
-                                pOwner ? String.format(get("constants.business.owner"), b.getOwner().getName()) : get("constants.business.anonymous"),
-                                pRating ? " " : "",
-                                pRating ? ChatColor.YELLOW + rB.toString() : "")
-                        );
-                        icon.setItemMeta(hMeta);
-
-                        icon = w.setID(icon, "business:discover");
+                        ItemStack icon = b.getPublicIcon();
+                        icon = w.setID(icon, "business:click");
                         icon = w.setNBT(icon, "business", b.getUniqueId().toString());
 
                         discover.setItem(index, icon);
@@ -1634,14 +1628,7 @@ public interface CommandWrapper {
         bounty.setItemMeta(boMeta);
         inv.setItem(16, bounty);
 
-        ItemStack shares = new ItemStack(Material.IRON_INGOT);
-        ItemMeta sMeta = shares.getItemMeta();
-        sMeta.setDisplayName(ChatColor.YELLOW + get("constants.player_statistics.market"));
-        sMeta.setLore(Arrays.asList(
-                ChatColor.DARK_GREEN + String.format(get("constants.player_statistics.market.shares"), String.format("%,.0f", (double) stats.getTotalSharesPurchased()))
-        ));
-        shares.setItemMeta(sMeta);
-        inv.setItem(21, shares);
+        inv.setItem(21, comingSoon());
 
         ItemStack history = new ItemStack(Material.BOOK);
         ItemMeta hiMeta = history.getItemMeta();
@@ -1657,6 +1644,8 @@ public interface CommandWrapper {
             lore.add(ChatColor.WHITE + display + " (" + prItem.getAmount() + ")"
                 + ChatColor.GOLD + " - "
                 + ChatColor.BLUE + pr.getPrice()
+                + ChatColor.GOLD + " @ "
+                + ChatColor.AQUA + (t.getBusiness() == null ? get("constants.unknown") : t.getBusiness().getName())
                 + ChatColor.GOLD + " | "
                 + ChatColor.DARK_AQUA + formatTimeAgo(t.getTimestamp().getTime()));
         }
@@ -1907,7 +1896,95 @@ public interface CommandWrapper {
         XSound.ENTITY_ARROW_HIT_PLAYER.play(p, 3F, 2F);
     }
 
+    default void setEconomyName(CommandSender sender, Economy econ, String name) {
+        if (!sender.hasPermission("novaconomy.economy.create")) {
+            sender.sendMessage(getMessage("error.permission.argument"));
+            return;
+        }
+
+        for (Economy other : Economy.getEconomies()) {
+            if (other.equals(econ)) continue;
+
+            if (other.getName().equalsIgnoreCase(name)) {
+                sender.sendMessage(getMessage("error.economy.name_exists"));
+                return;
+            }
+        }
+
+        String old = econ.getName();
+        econ.setName(name);
+        sender.sendMessage(String.format(getMessage("success.economy.set_name"), old, name));
+    }
+
+    default void listBlacklist(Player p) {
+        if (!Business.exists(p)) {
+            p.sendMessage(getMessage("error.business.not_an_owner"));
+            return;
+        }
+
+        Business b = Business.getByOwner(p);
+        List<Business> blacklist = b.getBlacklist();
+
+        if (blacklist.isEmpty()) {
+            p.sendMessage(getMessage("error.business.no_blacklist"));
+            return;
+        }
+
+        List<String> msgs = new ArrayList<>();
+        msgs.add(ChatColor.LIGHT_PURPLE + get("constants.business.blacklist"));
+        msgs.add(" ");
+        for (Business other : blacklist) {
+            if (msgs.size() > 15) {
+                msgs.add(ChatColor.WHITE + "...");
+                break;
+            }
+            msgs.add(ChatColor.GOLD + "- " + ChatColor.YELLOW + other.getName());
+        }
+
+        p.sendMessage(msgs.toArray(new String[0]));
+    }
+
+    default void addBlacklist(Player p, Business business) {
+        if (!Business.exists(p)) {
+            p.sendMessage(getMessage("error.business.not_an_owner"));
+            return;
+        }
+
+        Business b = Business.getByOwner(p);
+        if (b.isBlacklisted(business)) {
+            p.sendMessage(getMessage("error.business.exists_blacklist"));
+            return;
+        }
+
+        b.blacklist(business);
+        p.sendMessage(String.format(getMessage("success.business.add_blacklist"), business.getName()));
+    }
+
+    default void removeBlacklist(Player p, Business business) {
+        if (!Business.exists(p)) {
+            p.sendMessage(getMessage("error.business.not_an_owner"));
+            return;
+        }
+
+        Business b = Business.getByOwner(p);
+        if (!b.isBlacklisted(business)) {
+            p.sendMessage(getMessage("error.business.not_blacklisted"));
+            return;
+        }
+
+        b.unblacklist(business);
+        p.sendMessage(String.format(getMessage("success.business.remove_blacklist"), business.getName()));
+    }
+
     // Util Classes & Other Static Methods
+
+    static ItemStack comingSoon() {
+        ItemStack item = new ItemStack(Material.BEDROCK);
+        ItemMeta meta = item.getItemMeta();
+        meta.setDisplayName(ChatColor.DARK_PURPLE + get("constants.coming_soon"));
+        item.setItemMeta(meta);
+        return item;
+    }
 
     static ItemStack limeWool() {
         if (w.isLegacy()) return new ItemStack(Material.matchMaterial("WOOL"), 5);

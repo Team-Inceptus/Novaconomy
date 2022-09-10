@@ -75,15 +75,6 @@ public final class CommandWrapperV2 implements CommandWrapper {
         handler.getAutoCompleter().registerSuggestion("event", SuggestionProvider.of(() -> toStringList(NovaConfig.CustomTaxEvent::getIdentifier, NovaConfig.getConfiguration().getAllCustomEvents())));
         handler.getAutoCompleter().registerSuggestion("settings", SuggestionProvider.of(Arrays.asList("business", "personal")));
 
-        handler.registerValueResolver(KeywordCommand.class, ctx -> {
-            String value = ctx.popForParameter();
-            KeywordCommand cmd = KeywordCommand.matchBy(value);
-            if (cmd == null) throw new CommandErrorException(getMessage("error.argument"));
-            return cmd;
-        });
-
-        handler.getAutoCompleter().registerParameterSuggestions(KeywordCommand.class, SuggestionProvider.of(toStringList(KeywordCommand::getAliases, KeywordCommand.values())));
-
         handler.register(this);
         new EconomyCommands(this);
         new BusinessCommands(this);
@@ -335,34 +326,20 @@ public final class CommandWrapperV2 implements CommandWrapper {
             wrapper.businessAdvertisingChange(p, false);
         }
 
+        @Subcommand({"blacklist", "blist", "bl", "blackl",
+        "blacklist list", "blist list", "bl list", "blackl list",
+        "blacklist l", "blist l", "bl l", "blackl l"})
+        @Default
+        public void listBlacklist(Player p) { wrapper.listBlacklist(p); }
 
-    }
+        @Subcommand({"blacklist add", "blist add", "bl add", "blackl add"})
+        public void blacklistBusiness(Player p, Business business) { wrapper.addBlacklist(p, business); }
 
-    private enum KeywordCommand {
+        @Subcommand({"blacklist remove", "blist remove", "bl remove", "blackl remove",
+        "blacklist delete", "blist delete", "bl delete", "blackl delete"})
+        public void unblacklistBusiness(Player p, Business business) { wrapper.removeBlacklist(p, business); }
 
-        ADD("add"),
-        REMOVE("remove", "delete"),
-        LIST("list", "l")
-        ;
 
-        private final String[] aliases;
-
-        KeywordCommand(String... aliases) {
-            this.aliases = aliases;
-        }
-
-        public String[] getAliases() {
-            return aliases;
-        }
-
-        public static KeywordCommand matchBy(String name) {
-            for (KeywordCommand cmd : values()) {
-                if (cmd.name().equalsIgnoreCase(name)) return cmd;
-                for (String alias : cmd.aliases) if (alias.equalsIgnoreCase(name))
-                    return cmd;
-            }
-            return null;
-        }
     }
 
     @Command({"nbank", "bank", "globalbank", "gbank"})
@@ -474,6 +451,10 @@ public final class CommandWrapperV2 implements CommandWrapper {
         public void info(CommandSender sender, Economy economy) {
             wrapper.economyInfo(sender, economy);
         }
+
+        @Subcommand({"setname", "name"})
+        @CommandPermission("novaconomy.economy.create")
+        public void setName(CommandSender sender, Economy economy, String name) { wrapper.setEconomyName(sender, economy, name); }
     }
 
     @Command({"bounty", "novabounty", "nbounty"})
