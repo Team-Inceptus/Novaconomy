@@ -7,6 +7,7 @@ import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -29,8 +30,8 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
 
     private static final String IGNORE_TAXES = "Taxes.Automatic.Ignore";
     private final char symbol;
-    private final String section;
-    private final String name;
+    private final File file;
+    private String name;
     private ItemStack icon;
     private boolean hasNaturalIncrease;
     private double conversionScale;
@@ -43,14 +44,14 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
 
     private boolean clickableReward;
 
-    private Economy(String section, String name, ItemStack icon, char symbol, boolean naturalIncrease, double conversionScale, boolean clickable) {
+    private Economy(UUID id, String name, ItemStack icon, char symbol, boolean naturalIncrease, double conversionScale, boolean clickable) {
         this.symbol = symbol;
-        this.section = section;
+        this.file = new File(NovaConfig.getEconomiesFolder(), id.toString() + ".yml");
         this.name = name;
         this.icon = icon;
         this.hasNaturalIncrease = naturalIncrease;
         this.conversionScale = conversionScale;
-        this.uid = UUID.nameUUIDFromBytes(name.getBytes(StandardCharsets.UTF_8));
+        this.uid = id;
         this.clickableReward = clickable;
     }
 
@@ -64,7 +65,7 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
     @NotNull
     public Map<String, Object> serialize() {
         Map<String, Object> serial = new HashMap<>();
-        serial.put("section", this.section);
+        serial.put("id", this.uid.toString());
         serial.put("name", this.name);
         serial.put("icon", this.icon);
         serial.put("symbol", this.symbol);
@@ -87,9 +88,13 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
      */
     public static Economy deserialize(@Nullable Map<String, Object> serial) throws NullPointerException {
         if (serial == null) return null;
+
+        String name = (String) serial.get("name");
+        UUID id = UUID.fromString(serial.getOrDefault("id", UUID.nameUUIDFromBytes(name.getBytes(StandardCharsets.UTF_8)).toString()).toString());
+
         Economy econ = new Economy(
-                serial.get("section").toString(),
-                serial.get("name").toString(),
+                id,
+                name,
                 (ItemStack) serial.get("icon"),
                 serial.get("symbol").toString().charAt(0),
                 (boolean) serial.getOrDefault("increase-naturally", true),
@@ -148,7 +153,7 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
      */
     public void setInterest(boolean interest) {
         this.interestEnabled = interest;
-        saveFile();
+        saveEconomy();
     }
 
     /**
@@ -157,7 +162,17 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
      */
     public void setCustomModelData(int customModelData) {
         this.customModelData = customModelData;
-        saveFile();
+        saveEconomy();
+    }
+
+    /**
+     * Sets the economy's name.
+     * @param name Name of the economy
+     */
+    public void setName(@NotNull String name) {
+        if (name == null) throw new NullPointerException("Name cannot be null");
+        this.name = name;
+        saveEconomy();
     }
 
     /**
@@ -168,7 +183,7 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
     public void setIcon(@NotNull ItemStack icon) throws IllegalArgumentException {
         if (icon == null) throw new IllegalArgumentException("Icon cannot be null");
         this.icon = icon;
-        saveFile();
+        saveEconomy();
     }
 
     /**
@@ -194,7 +209,7 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
         item.setItemMeta(meta);
 
         this.icon = item;
-        saveFile();
+        saveEconomy();
     }
 
     /**
@@ -203,7 +218,7 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
      */
     public void setIncreaseNaturally(boolean increase) {
         this.hasNaturalIncrease = increase;
-        saveFile();
+        saveEconomy();
     }
 
     /**
@@ -214,7 +229,7 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
     public void setConversionScale(double scale) throws IllegalArgumentException {
         if (scale <= 0) throw new IllegalArgumentException("Conversion Scale must be greater than 0");
         this.conversionScale = scale;
-        saveFile();
+        saveEconomy();
     }
 
     /**
@@ -223,7 +238,7 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
      */
     public void setHasClickableReward(boolean clickable) {
         this.clickableReward = clickable;
-        saveFile();
+        saveEconomy();
     }
 
     /**
@@ -256,14 +271,15 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
     /**
      * Saves this Economy to its file.
      */
-    public void saveFile() {
-        FileConfiguration config = NovaConfig.getEconomiesConfig();
-        ConfigurationSection section = config.getConfigurationSection(this.section);
-        section.set("economy", this);
-        section.set("last_saved_timestamp", System.currentTimeMillis());
-
+    public void saveEconomy() {
         try {
-            config.save(NovaConfig.getEconomiesFile());
+            if (!this.file.exists()) this.file.createNewFile();
+
+            FileConfiguration config = YamlConfiguration.loadConfiguration(this.file);
+            config.set(this.uid.toString(), this);
+            config.set("last_saved_timestamp", System.currentTimeMillis());
+
+            config.save(this.file);
         } catch (IOException e) {
             NovaConfig.print(e);
         }
@@ -283,10 +299,6 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
      */
     public static void removeEconomy(@Nullable Economy econ) throws IllegalArgumentException {
         if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
-
-        FileConfiguration config = NovaConfig.getEconomiesConfig();
-
-        config.set(econ.getEconomySection().getCurrentPath(), null);
         for (OfflinePlayer p : Bukkit.getOfflinePlayers()) {
             NovaPlayer np = new NovaPlayer(p);
             FileConfiguration pConfig = np.getPlayerConfig();
@@ -300,12 +312,7 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
             }
         }
 
-        try {
-            config.save(new File(NovaConfig.getPlugin().getDataFolder(), "economies.yml"));
-        } catch (IOException e) {
-            NovaConfig.getLogger().info("Error removing economy " + econ.getName());
-            NovaConfig.print(e);
-        }
+        econ.file.delete();
         NovaConfig.getConfiguration().reloadHooks();
     }
 
@@ -376,8 +383,10 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
     public static Set<Economy> getEconomies() {
         Set<Economy> economies = new HashSet<>();
 
-        final FileConfiguration config = NovaConfig.getEconomiesConfig();
-        config.getKeys(false).forEach(key -> economies.add((Economy) config.getConfigurationSection(key).get("economy")));
+        for (File f : NovaConfig.getEconomiesFolder().listFiles()) {
+            UUID id = UUID.fromString(f.getName().replace(".yml", ""));
+            economies.add(getEconomy(id));
+        }
 
         return economies;
     }
@@ -390,9 +399,11 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
 
     /**
      * Return the ConfigurationSection that this Economy is stored in
+     * @deprecated Economies are no longer stored in an individual file
      * @return {@link ConfigurationSection} of this economy
      */
-    public ConfigurationSection getEconomySection() { return NovaConfig.getEconomiesConfig().getConfigurationSection(this.section); }
+    @Deprecated
+    public ConfigurationSection getEconomySection() { return null; }
 
     /**
      * Fetch the name of this economy
@@ -445,7 +456,7 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
 
     @Override
     public int hashCode() {
-        return Objects.hash(symbol, section, name, icon, hasNaturalIncrease, conversionScale, interestEnabled);
+        return Objects.hash(uid);
     }
 
     /**
@@ -474,8 +485,11 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
     public static Economy getEconomy(@Nullable UUID uid) {
         if (uid == null) return null;
 
-        for (Economy econ : Economy.getEconomies()) if (econ.getUniqueId().equals(uid)) return econ;
-        return null;
+        File f = new File(NovaConfig.getEconomiesFolder(), uid + ".yml");
+        if (!f.exists()) return null;
+
+        FileConfiguration config = YamlConfiguration.loadConfiguration(f);
+        return (Economy) config.get(uid.toString());
     }
 
     /**
@@ -641,26 +655,18 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
          */
         public Economy build() throws IllegalArgumentException, UnsupportedOperationException {
             if (this.name == null) throw new IllegalArgumentException("Name cannot be null");
+            UUID id = UUID.nameUUIDFromBytes(this.name.getBytes(StandardCharsets.UTF_8));
+            File file = new File(NovaConfig.getEconomiesFolder(), id + ".yml");
 
-            if (NovaConfig.getEconomiesConfig().getConfigurationSection(this.name.toLowerCase()) != null)
-                throw new UnsupportedOperationException("Economy already exists");
+            if (file.exists()) throw new UnsupportedOperationException("Economy already exists");
 
             for (Economy econ : Economy.getEconomies()) if (econ.getSymbol() == this.symbol) throw new UnsupportedOperationException("Symbol is taken");
 
-            FileConfiguration config = NovaConfig.getEconomiesConfig();
-            ConfigurationSection es = config.createSection(this.name.toLowerCase());
-
-            Economy econ = new Economy(es.getName(), this.name, this.icon, this.symbol, this.increaseNaturally, this.conversionScale, this.clickableReward);
+            FileConfiguration config = YamlConfiguration.loadConfiguration(file);
+            Economy econ = new Economy(id, this.name, this.icon, this.symbol, this.increaseNaturally, this.conversionScale, this.clickableReward);
             econ.customModelData = customModelData;
 
-            es.set("economy", econ);
-            es.set("last_saved_timestamp", System.currentTimeMillis());
-
-            try {
-                config.save(NovaConfig.getEconomiesFile());
-            } catch (IOException e) {
-                NovaConfig.print(e);
-            }
+            econ.saveEconomy();
 
             NovaConfig.getConfiguration().reloadHooks();
             return econ;
@@ -671,7 +677,7 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
     public String toString() {
         return "Economy{" +
                 "symbol=" + symbol +
-                ", section='" + section + '\'' +
+                ", id='" + uid + '\'' +
                 ", name='" + name + '\'' +
                 ", icon=" + icon +
                 ", hasNaturalIncrease=" + hasNaturalIncrease +
