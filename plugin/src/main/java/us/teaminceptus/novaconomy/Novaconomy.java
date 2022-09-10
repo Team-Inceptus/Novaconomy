@@ -950,7 +950,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				BusinessStatistics bStats = b.getStatistics();
 				bStats.setTotalSales(bStats.getTotalSales() + product.getAmount());
 
-				BusinessStatistics.Transaction t = new BusinessStatistics.Transaction(p, bPr, System.currentTimeMillis());
+				BusinessStatistics.Transaction t = new BusinessStatistics.Transaction(p, bP, System.currentTimeMillis());
 				bStats.setLastTransaction(t);
 
 				List<BusinessStatistics.Transaction> newTransactions = new ArrayList<>(pStats.getTransactionHistory());
@@ -972,7 +972,10 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				XSound.ENTITY_ARROW_HIT_PLAYER.play(p);
 
 				NovaPlayer owner = new NovaPlayer(bP.getBusiness().getOwner());
-				owner.add(econ, amount);
+				if (b.getSetting(Settings.Business.AUTOMATIC_DEPOSIT)) {
+					owner.add(econ, amount * 0.85);
+					b.addAdvertisingBalance(amount * 0.15, econ);
+				} else owner.add(econ, amount);
 
 				if (owner.isOnline() && owner.hasNotifications()) {
 					String name = p.getDisplayName() == null ? p.getName() : p.getDisplayName();
@@ -1322,7 +1325,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				}
 			});
 
-			put("business:discover", e -> {
+			put("business:click", e -> {
 				if (!(e.getWhoClicked() instanceof Player)) return;
 				Player p = (Player) e.getWhoClicked();
 				ItemStack item = e.getCurrentItem();
@@ -1331,8 +1334,10 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				p.openInventory(w.generateBusinessData(b, p));
 				XSound.BLOCK_ENDER_CHEST_OPEN.play(p, 3F, 0.5F);
 
-				b.getStatistics().addView();
-				b.saveBusiness();
+				if (!b.isOwner(p)) {
+					b.getStatistics().addView();
+					b.saveBusiness();
+				}
 			});
 
 			put("product:edit_price", e -> {
@@ -1735,7 +1740,13 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 	 */
 	@Override
 	public void onEnable() {
-		NovaConfig.loadConfig();
+		File economiesDir = new File(getDataFolder(), "economies");
+		if (!economiesDir.exists()) economiesDir.mkdir();
+		loadLegacyEconomies();
+
+		File businessesDir = new File(getDataFolder(), "businesses");
+		if (!businessesDir.exists()) businessesDir.mkdir();
+		loadLegacyBusinesses();
 
 		funcConfig = NovaConfig.loadFunctionalityFile();
 		playerDir = new File(getDataFolder(), "players");
@@ -1746,15 +1757,11 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		} catch (IOException e) {
 			NovaConfig.print(e);
 		}
-		economiesFile = YamlConfiguration.loadConfiguration(economyFile);
+
+		NovaConfig.loadConfig();
 		config = this.getConfig();
 		interest = config.getConfigurationSection("Interest");
 		ncauses = config.getConfigurationSection("NaturalCauses");
-
-		File businessesDir = new File(getDataFolder(), "businesses");
-		if (!businessesDir.exists()) businessesDir.mkdir();
-
-		loadLegacyBusinesses();
 
 		File globalF = new File(getDataFolder(), "global.yml");
 		if (!globalF.exists()) saveResource("global.yml", false);
@@ -1830,6 +1837,33 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 			businesses.delete();
 
 			getLogger().info("Migration complete!");
+		}
+	}
+
+	private void loadLegacyEconomies() {
+		File economies = new File(getDataFolder(), "economies.yml");
+
+		if (economies.exists()) {
+			getLogger().warning("Economies are now stored in individual files. Automatically migrating...");
+
+			FileConfiguration eConfig = YamlConfiguration.loadConfiguration(economies);
+			eConfig.getKeys(false).forEach(k -> {
+				ConfigurationSection sec = eConfig.getConfigurationSection(k);
+				if (sec == null) return;
+
+				Economy econ = (Economy) sec.get("economy");
+				if (econ == null) return;
+
+				econ.saveEconomy();
+			});
+
+			new BukkitRunnable() {
+				@Override
+				public void run() {
+					economies.delete();
+					getLogger().info("Migration complete!");
+				}
+			}.runTask(this);
 		}
 	}
 
