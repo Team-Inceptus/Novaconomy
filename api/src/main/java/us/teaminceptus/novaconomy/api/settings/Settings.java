@@ -152,6 +152,7 @@ public final class Settings {
         /**
          * Whether the Business allows advertising from other businesses.
          */
+        @SettingDescription("settings.business.advertising")
         EXTERNAL_ADVERTISEMENT("constants.settings.name.advertisement")
         ;
 
