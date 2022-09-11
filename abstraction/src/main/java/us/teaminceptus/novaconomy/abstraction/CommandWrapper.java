@@ -1628,8 +1628,6 @@ public interface CommandWrapper {
         bounty.setItemMeta(boMeta);
         inv.setItem(16, bounty);
 
-        inv.setItem(21, comingSoon());
-
         ItemStack history = new ItemStack(Material.BOOK);
         ItemMeta hiMeta = history.getItemMeta();
         hiMeta.setDisplayName(ChatColor.YELLOW + get("constants.player_statistics.history"));
@@ -1652,7 +1650,7 @@ public interface CommandWrapper {
 
         hiMeta.setLore(lore);
         history.setItemMeta(hiMeta);
-        inv.setItem(23, history);
+        inv.setItem(22, history);
 
         op.openInventory(inv);
         XSound.BLOCK_ANVIL_USE.play(p, 3F, 1.5F);
