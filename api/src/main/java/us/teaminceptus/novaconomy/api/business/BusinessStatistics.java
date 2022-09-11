@@ -54,7 +54,7 @@ public final class BusinessStatistics implements ConfigurationSerializable {
          * @param product Business Product bought
          */
         public Transaction(@Nullable OfflinePlayer buyer, @Nullable BusinessProduct product) {
-            this(buyer, product.getBusiness(), new Product(product), System.currentTimeMillis());
+            this(buyer, product == null ? null : product.getBusiness(), product == null ? null : new Product(product), System.currentTimeMillis());
         }
 
         /**
@@ -70,7 +70,7 @@ public final class BusinessStatistics implements ConfigurationSerializable {
             this.buyer = buyer == null ? null : buyer.getUniqueId();
             this.product = product;
             this.timestamp = timestamp;
-            this.business = business.getUniqueId();
+            this.business = business == null ? null : business.getUniqueId();
         }
 
         /**
@@ -81,7 +81,7 @@ public final class BusinessStatistics implements ConfigurationSerializable {
          * @throws IllegalArgumentException if timestamp is negative
          */
         public Transaction(@Nullable OfflinePlayer buyer, @Nullable BusinessProduct product, long timestamp) throws IllegalArgumentException {
-            this(buyer, product.getBusiness(), new Product(product), timestamp);
+            this(buyer, product == null ? null : product.getBusiness(), product == null ? null : new Product(product), timestamp);
         }
 
         /**
@@ -204,10 +204,10 @@ public final class BusinessStatistics implements ConfigurationSerializable {
             OfflinePlayer buyer = buyerO instanceof OfflinePlayer ? (OfflinePlayer) buyerO : Bukkit.getOfflinePlayer(UUID.fromString((String) buyerO));
 
             Object businessO = serial.get("business");
-            Business business = businessO == null ? null : Business.getById(UUID.fromString(businessO.toString()));
+            UUID business = businessO == null ? null : UUID.fromString(businessO.toString());
 
             try {
-                return new Transaction(buyer, business,
+                Transaction t = new Transaction(buyer, null,
                         new Product(
                                 (ItemStack) serial.get("item"),
                                 new Price(
@@ -216,6 +216,8 @@ public final class BusinessStatistics implements ConfigurationSerializable {
                                 )
                         ), num
                 );
+                t.business = business;
+                return t;
             } catch (NullPointerException | ClassCastException e) {
                 throw new IllegalArgumentException(e);
             }
