@@ -37,7 +37,7 @@ import java.util.stream.Collectors;
 /**
  * Represents a Novaconomy Business
  */
-public final class Business implements ConfigurationSerializable, Serializable {
+public final class Business implements ConfigurationSerializable {
 
     /**
      * Represents the Business File Suffix
