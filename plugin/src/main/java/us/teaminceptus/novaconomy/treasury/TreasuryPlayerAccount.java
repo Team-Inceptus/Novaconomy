@@ -6,8 +6,8 @@ import me.lokka30.treasury.api.economy.response.EconomySubscriber;
 import me.lokka30.treasury.api.economy.transaction.EconomyTransaction;
 import me.lokka30.treasury.api.economy.transaction.EconomyTransactionInitiator;
 import org.jetbrains.annotations.NotNull;
-import us.teaminceptus.novaconomy.api.NovaPlayer;
 import us.teaminceptus.novaconomy.api.economy.Economy;
+import us.teaminceptus.novaconomy.api.player.NovaPlayer;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -33,7 +33,7 @@ class TreasuryPlayerAccount implements PlayerAccount {
 
     @Override
     public Optional<String> getName() {
-        return Optional.of(np.getPlayer().getName());
+        return Optional.of(np.getPlayerName());
     }
 
     @Override

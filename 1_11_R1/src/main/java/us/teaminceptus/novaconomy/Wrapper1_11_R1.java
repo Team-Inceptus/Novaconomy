@@ -3,6 +3,7 @@ package us.teaminceptus.novaconomy;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.TextComponent;
+import net.minecraft.server.v1_11_R1.Item;
 import net.minecraft.server.v1_11_R1.ItemStack;
 import net.minecraft.server.v1_11_R1.NBTTagCompound;
 import org.bukkit.Material;
@@ -26,6 +27,13 @@ public final class Wrapper1_11_R1 implements Wrapper {
     @Override
     public void sendActionbar(Player p, BaseComponent component) {
         p.spigot().sendMessage(ChatMessageType.ACTION_BAR, component);
+    }
+
+    @Override
+    @SuppressWarnings("deprecation")
+    public boolean isItem(Material m) {
+        if (m == Material.AIR) return false;
+        return Item.getById(m.getId()) != null;
     }
 
     @Override
@@ -149,6 +157,7 @@ public final class Wrapper1_11_R1 implements Wrapper {
         switch (e.getHand()) {
             case OFF_HAND: e.getPlayer().getEquipment().setItemInOffHand(null);
             case HAND: e.getPlayer().getEquipment().setItemInMainHand(null);
+            default: break;
         }
     }
 }

@@ -9,6 +9,7 @@ import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.api.economy.Economy;
+import us.teaminceptus.novaconomy.api.player.NovaPlayer;
 import us.teaminceptus.novaconomy.api.util.Price;
 
 import java.io.File;
@@ -31,30 +32,33 @@ public interface NovaConfig  {
     }
 
     /**
-     * Reloads Novaconomy's Language Files.
-     * @deprecated Languages are no longer stored in the plugin folder
-     * @param replace if should replace files (defaults to false)
-     */
-    @Deprecated
-    static void reloadLanguages(boolean replace) {
-    }
-    /**
-     * Reloads Novaconomy's Language Files.
-     * @deprecated Languages are no longer stored in the plugin folder
-     */
-    @Deprecated
-    static void reloadLanguages() {
-        reloadLanguages(false);
-    }
-
-    /**
      * Fetches the file of the main config.yml.
      * @return Configuration File
      */
     static File getConfigFile() { return new File(getDataFolder(), "config.yml"); }
 
     /**
-     * Whether or not Notifications is turned on inside of the configuration.
+     * Fetches the folder that all Businesses are stored.
+     * @return Businesses Folder
+     * @since 1.6.0
+     */
+    @NotNull
+    static File getBusinessesFolder() { return new File(getDataFolder(), "businesses"); }
+
+    /**
+     * Prints a Throwable in the Plugin's Namespace and Format.
+     * @param t Throwable to print
+     * @since 1.6.0
+     */
+    static void print(@NotNull Throwable t) {
+        getLogger().severe(t.getClass().getSimpleName());
+        getLogger().severe("-----------");
+        getLogger().severe(t.getMessage());
+        for (StackTraceElement element : t.getStackTrace()) getLogger().severe(element.toString());
+    }
+
+    /**
+     * Whether Notifications is turned on inside of the configuration.
      * @return true if notifications, else false
      */
     boolean hasNotifications();
@@ -85,15 +89,25 @@ public interface NovaConfig  {
 
     /**
      * Fetch the Economies File
+     * @deprecated Economies are no longer stored in a single file
      * @return Economies File
      */
-    static FileConfiguration getEconomiesConfig() { return YamlConfiguration.loadConfiguration(getEconomiesFile()); }
+    @Deprecated
+    static FileConfiguration getEconomiesConfig() { return null; }
 
     /**
      * Fetches the {@link File} related to ecnomies.yml.
+     * @deprecated Economies are no longer stored in a single file
      * @return File related to economies.yml
      */
+    @Deprecated
     static File getEconomiesFile() { return new File(getDataFolder(), "economies.yml"); }
+
+    /**
+     * Fetches the folder that all Economies are stored in.
+     * @return Economies Folder
+     */
+    static File getEconomiesFolder() { return new File(getDataFolder(), "economies"); }
 
     /**
      * Reloads the Interest and Taxes Runnables with new values from the configuration.
@@ -106,19 +120,18 @@ public interface NovaConfig  {
             m.setAccessible(true);
             m.invoke(null);
         } catch (Exception e) {
-            getPlugin().getLogger().severe(e.getMessage());
+            print(e);
         }
     }
 
     /**
      * Fetches the File that businesses.yml belongs to.
+     * @deprecated Businesses are now stored in individual files
      * @return businesses.yml File
      */
+    @Deprecated
     static File getBusinessFile() {
-        File f = new File(getDataFolder(), "businesses.yml");
-        if (!f.exists()) getPlugin().saveResource("businesses.yml", false);
-
-        return f;
+        return new File(getDataFolder(), "businesses.yml");
     }
 
     /**
@@ -131,10 +144,12 @@ public interface NovaConfig  {
 
     /**
      * Loads the businesses.yml file.
+     * @deprecated Businesses are now stored in individual files
      * @return Businesses File
      */
+    @Deprecated
     static FileConfiguration loadBusinesses() {
-        return YamlConfiguration.loadConfiguration(getBusinessFile());
+        return null;
     }
 
     /**
@@ -254,6 +269,12 @@ public interface NovaConfig  {
         if (!config.isConfigurationSection("Bounties")) config.createSection("Bounties");
         if (!config.isBoolean("Bounties.Enabled")) config.set("Bounties.Enabled", true);
         if (!config.isBoolean("Bounties.Broadcast")) config.set("Bounties.Broadcast", true);
+
+        if (!config.isConfigurationSection("Business")) config.createSection("Business");
+
+        if (!config.isConfigurationSection("Business.Advertising")) config.createSection("Business.Advertising");
+        if (!config.isBoolean("Business.Advertising.Enabled")) config.set("Business.Advertising.Enabled", true);
+        if (!config.isDouble("Business.Advertising.ClickReward") && !config.isInt("Business.Advertising.ClickReward")) config.set("Business.Advertising.ClickReward", 5D);
 
         try { config.save(f); } catch (IOException e) { getPlugin().getLogger().severe(e.getMessage()); }
 
@@ -558,25 +579,25 @@ public interface NovaConfig  {
 
     /**
      * Sets whether or not farming should increase money.
-     * @param increase Whether or not farming should increase money
+     * @param increase Whether farming should increase money
      */
     void setFarmingIncrease(boolean increase);
 
     /**
      * Sets whether or not mining should increase money.
-     * @param increase Whether or not mining should increase money
+     * @param increase Whether mining should increase money
      */
     void setMiningIncrease(boolean increase);
 
     /**
      * Sets whether or not killing something should increase money.
-     * @param increase Whether or not killing something should increase money
+     * @param increase Whether killing something should increase money
      */
     void setKillIncrease(boolean increase);
 
     /**
      * Sets whether or not dying should decrease money.
-     * @param decrease Whether or not dying should decrease money
+     * @param decrease Whether dying should decrease money
      */
     void setDeathDecrease(boolean decrease);
 
@@ -768,4 +789,61 @@ public interface NovaConfig  {
     default boolean isIgnoredTax(OfflinePlayer p) {
         return isIgnoredTax(p, null);
     }
+
+    /**
+     * Whether the Stock Market is currently enabled.
+     * @return true if enabled, else false
+     */
+    boolean isMarketEnabled();
+
+    /**
+     * Sets whether the Stock Market is currently enabled.
+     * @param enabled true if enabled, else false
+     */
+    void setMarketEnabled(boolean enabled);
+
+    /**
+     * Fetches the Market Tax percentage.
+     * @return Market Tax percentage
+     */
+    double getMarketTax();
+
+    /**
+     * Sets the Market Tax percentage.
+     * @param tax Market Tax percentage
+     * @throws IllegalArgumentException if tax is 0 or less
+     */
+    void setMarketTax(double tax) throws IllegalArgumentException;
+
+    /**
+     * Fetches whether business advertising is enabled.
+     * @return true if enabled, else false
+     */
+    boolean isAdvertisingEnabled();
+
+    /**
+     * Sets whether business advertising is enabled.
+     * @param enabled true if enabled, else false
+     */
+    void setAdvertisingEnabled(boolean enabled);
+
+    /**
+     * Fetches the advertising reward for clicking on a business's icon.
+     * @return Advertising reward
+     */
+    double getBusinessAdvertisingReward();
+
+    /**
+     * Sets the advertising reward for clicking on a business's icon.
+     * @param reward Advertising reward
+     */
+    void setBusinessAdvertisingReward(double reward);
+
+    /**
+     * Sets the current language used by the plugin.
+     * @param language Language to use
+     * @throws IllegalArgumentException if language is null
+     */
+    void setLanguage(@NotNull Language language) throws IllegalArgumentException;
+
 }

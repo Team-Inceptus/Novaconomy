@@ -7,13 +7,14 @@ import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.api.NovaConfig;
-import us.teaminceptus.novaconomy.api.NovaPlayer;
+import us.teaminceptus.novaconomy.api.player.NovaPlayer;
 
 import java.io.File;
 import java.io.IOException;
@@ -25,15 +26,15 @@ import java.util.stream.Collectors;
 /**
  * Represents an Economy
  */
-public final class Economy implements ConfigurationSerializable {
+public final class Economy implements ConfigurationSerializable, Comparable<Economy> {
 
     private static final String IGNORE_TAXES = "Taxes.Automatic.Ignore";
     private final char symbol;
-    private final String section;
-    private final String name;
-    private final ItemStack icon;
-    private final boolean hasNaturalIncrease;
-    private final double conversionScale;
+    private final File file;
+    private String name;
+    private ItemStack icon;
+    private boolean hasNaturalIncrease;
+    private double conversionScale;
 
     private final UUID uid;
 
@@ -41,14 +42,17 @@ public final class Economy implements ConfigurationSerializable {
 
     private int customModelData;
 
-    private Economy(String section, String name, ItemStack icon, char symbol, boolean naturalIncrease, double conversionScale) {
+    private boolean clickableReward;
+
+    private Economy(UUID id, String name, ItemStack icon, char symbol, boolean naturalIncrease, double conversionScale, boolean clickable) {
         this.symbol = symbol;
-        this.section = section;
+        this.file = new File(NovaConfig.getEconomiesFolder(), id.toString() + ".yml");
         this.name = name;
         this.icon = icon;
         this.hasNaturalIncrease = naturalIncrease;
         this.conversionScale = conversionScale;
-        this.uid = UUID.nameUUIDFromBytes(name.getBytes(StandardCharsets.UTF_8));
+        this.uid = id;
+        this.clickableReward = clickable;
     }
 
     // Implementation & Recommended Implementation
@@ -61,7 +65,7 @@ public final class Economy implements ConfigurationSerializable {
     @NotNull
     public Map<String, Object> serialize() {
         Map<String, Object> serial = new HashMap<>();
-        serial.put("section", this.section);
+        serial.put("id", this.uid.toString());
         serial.put("name", this.name);
         serial.put("icon", this.icon);
         serial.put("symbol", this.symbol);
@@ -69,6 +73,7 @@ public final class Economy implements ConfigurationSerializable {
         serial.put("conversion-scale", this.conversionScale);
         serial.put("interest", this.interestEnabled);
         serial.put("custom-model-data", this.customModelData);
+        serial.put("clickable", this.clickableReward);
         return serial;
     }
 
@@ -83,7 +88,19 @@ public final class Economy implements ConfigurationSerializable {
      */
     public static Economy deserialize(@Nullable Map<String, Object> serial) throws NullPointerException {
         if (serial == null) return null;
-        Economy econ = new Economy(serial.get("section").toString(), serial.get("name").toString(), (ItemStack) serial.get("icon"), serial.get("symbol").toString().charAt(0), (boolean) serial.getOrDefault("increase-naturally", true), (double) serial.getOrDefault("conversion-scale", 1));
+
+        String name = (String) serial.get("name");
+        UUID id = UUID.fromString(serial.getOrDefault("id", UUID.nameUUIDFromBytes(name.getBytes(StandardCharsets.UTF_8)).toString()).toString());
+
+        Economy econ = new Economy(
+                id,
+                name,
+                (ItemStack) serial.get("icon"),
+                serial.get("symbol").toString().charAt(0),
+                (boolean) serial.getOrDefault("increase-naturally", true),
+                (double) serial.getOrDefault("conversion-scale", 1),
+                (boolean) serial.getOrDefault("clickable", true)
+        );
 
         econ.interestEnabled = (boolean) serial.getOrDefault("interest", true);
         econ.customModelData = (int) serial.getOrDefault("custom-model-data", 0);
@@ -94,7 +111,7 @@ public final class Economy implements ConfigurationSerializable {
     // Other
 
     /**
-     * Whether or not this Economy supports interest
+     * Whether this Economy supports interest
      * @return true if allows, else false
      */
     public boolean hasInterest() {
@@ -112,15 +129,116 @@ public final class Economy implements ConfigurationSerializable {
      * Fetches a set of Economies that have {@link #hasTax()} to true.
      * @return Set of Taxable Economies
      */
+    @NotNull
     public static Set<Economy> getTaxableEconomies() { return getEconomies().stream().filter(Economy::hasTax).collect(Collectors.toSet()); }
 
     /**
+     * Fetches a set of Economies that have {@link #hasClickableReward()} to true.
+     * @return Set of Economies that can be rewarded on click
+     */
+    @NotNull
+    public static Set<Economy> getClickableRewardEconomies() { return getEconomies().stream().filter(Economy::hasClickableReward).collect(Collectors.toSet()); }
+
+    /**
+     * Whether this Economy is rewarded when a business is clicked on when advertising.
+     * @return true if rewarded, else false
+     */
+    public boolean hasClickableReward() {
+        return clickableReward;
+    }
+
+    /**
      * Set the interest acception state of this economy
-     * @param interest Whether or not to allow interest
+     * @param interest Whether to allow interest
      */
     public void setInterest(boolean interest) {
         this.interestEnabled = interest;
-        saveFile();
+        saveEconomy();
+    }
+
+    /**
+     * Sets the custom model data integer of this economy
+     * @param customModelData Custom Model Data
+     */
+    public void setCustomModelData(int customModelData) {
+        this.customModelData = customModelData;
+        saveEconomy();
+    }
+
+    /**
+     * Sets the economy's name.
+     * @param name Name of the economy
+     */
+    public void setName(@NotNull String name) {
+        if (name == null) throw new NullPointerException("Name cannot be null");
+        this.name = name;
+        saveEconomy();
+    }
+
+    /**
+     * Sets the icon of this economy.
+     * @param icon Icon of the economy
+     * @throws IllegalArgumentException if icon is null
+     */
+    public void setIcon(@NotNull ItemStack icon) throws IllegalArgumentException {
+        if (icon == null) throw new IllegalArgumentException("Icon cannot be null");
+        this.icon = icon;
+        saveEconomy();
+    }
+
+    /**
+     * Sets the icon of this economy.
+     * @param m Icon of the economy
+     * @throws IllegalArgumentException if icon is null
+     */
+    public void setIcon(@NotNull Material m) throws IllegalArgumentException {
+        if (m == null) throw new IllegalArgumentException("Icon cannot be null");
+
+        ItemStack item = new ItemStack(m);
+        ItemMeta meta = icon.getItemMeta();
+        meta.setDisplayName(ChatColor.AQUA + this.name);
+
+        try {
+            Method setModelData = meta.getClass().getDeclaredMethod("setCustomModelData", Integer.class);
+            setModelData.setAccessible(true);
+            setModelData.invoke(meta, this.customModelData);
+        } catch (NoSuchMethodException ignored) {}
+        catch (ReflectiveOperationException e) {
+            NovaConfig.print(e);
+        }
+        item.setItemMeta(meta);
+
+        this.icon = item;
+        saveEconomy();
+    }
+
+    /**
+     * Sets whether this economy naturally increases.
+     * @param increase Whether to increase naturally
+     */
+    public void setIncreaseNaturally(boolean increase) {
+        this.hasNaturalIncrease = increase;
+        saveEconomy();
+    }
+
+    /**
+     * Sets the conversion scale of this Economy.
+     * @param scale Conversion Scale
+     * @throws IllegalArgumentException if scale is less than 0
+     */
+    public void setConversionScale(double scale) throws IllegalArgumentException {
+        if (scale <= 0) throw new IllegalArgumentException("Conversion Scale must be greater than 0");
+        this.conversionScale = scale;
+        saveEconomy();
+    }
+
+    /**
+     * Sets whether this economy is rewarded by clicking on a business icon when advertising.
+     * @param clickable true if clickable, else false
+     */
+    public void setHasClickableReward(boolean clickable) {
+        this.clickableReward = clickable;
+        saveEconomy();
     }
 
     /**
@@ -153,16 +271,17 @@ public final class Economy implements ConfigurationSerializable {
     /**
      * Saves this Economy to its file.
      */
-    public void saveFile() {
-        FileConfiguration config = NovaConfig.getEconomiesConfig();
-        ConfigurationSection section = config.getConfigurationSection(this.section);
-        section.set("economy", this);
-        section.set("last_saved_timestamp", System.currentTimeMillis());
-
+    public void saveEconomy() {
         try {
-            config.save(NovaConfig.getEconomiesFile());
+            if (!this.file.exists()) this.file.createNewFile();
+
+            FileConfiguration config = YamlConfiguration.loadConfiguration(this.file);
+            config.set(this.uid.toString(), this);
+            config.set("last_saved_timestamp", System.currentTimeMillis());
+
+            config.save(this.file);
         } catch (IOException e) {
-            NovaConfig.getLogger().severe(e.getMessage());
+            NovaConfig.print(e);
         }
     }
 
@@ -180,10 +299,6 @@ public final class Economy implements ConfigurationSerializable {
      */
     public static void removeEconomy(@Nullable Economy econ) throws IllegalArgumentException {
         if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
-
-        FileConfiguration config = NovaConfig.getEconomiesConfig();
-
-        config.set(econ.getEconomySection().getCurrentPath(), null);
         for (OfflinePlayer p : Bukkit.getOfflinePlayers()) {
             NovaPlayer np = new NovaPlayer(p);
             FileConfiguration pConfig = np.getPlayerConfig();
@@ -193,16 +308,11 @@ public final class Economy implements ConfigurationSerializable {
             try {
                 pConfig.save(new File(NovaConfig.getPlugin().getDataFolder().getPath() + "/players", p.getUniqueId() + ".yml"));
             } catch (IOException e) {
-                NovaConfig.getLogger().severe(e.getMessage());
+                NovaConfig.print(e);
             }
         }
 
-        try {
-            config.save(new File(NovaConfig.getPlugin().getDataFolder(), "economies.yml"));
-        } catch (IOException e) {
-            NovaConfig.getLogger().info("Error removing economy " + econ.getName());
-            NovaConfig.getLogger().severe(e.getMessage());
-        }
+        econ.file.delete();
         NovaConfig.getConfiguration().reloadHooks();
     }
 
@@ -212,11 +322,11 @@ public final class Economy implements ConfigurationSerializable {
      * @return Found Economy, or null if none found
      * @throws IllegalArgumentException if name is null
      */
+    @Nullable
     public static Economy getEconomy(@NotNull String name) throws IllegalArgumentException {
         Validate.notNull(name, "Name is null");
-        ConfigurationSection section = NovaConfig.getEconomiesConfig().getConfigurationSection(name.toLowerCase());
-        if (section != null) return (Economy) section.get("economy");
-        else return null;
+        for (Economy econ : getEconomies()) if (econ.getName().equalsIgnoreCase(name)) return econ;
+        return null;
     }
 
     /**
@@ -249,7 +359,7 @@ public final class Economy implements ConfigurationSerializable {
     }
 
     /**
-     * Whether or not this economy will naturally increase (not the same as Interest)
+     * Whether this economy will naturally increase (not the same as Interest)
      * <p>
      * An economy increasing naturally means that it increases from NaturalCauses (i.e. Mining, Fishing). Specific events can be turned off in the configuration.
      * <p>
@@ -273,8 +383,10 @@ public final class Economy implements ConfigurationSerializable {
     public static Set<Economy> getEconomies() {
         Set<Economy> economies = new HashSet<>();
 
-        final FileConfiguration config = NovaConfig.getEconomiesConfig();
-        config.getKeys(false).forEach(key -> economies.add((Economy) config.getConfigurationSection(key).get("economy")));
+        for (File f : NovaConfig.getEconomiesFolder().listFiles()) {
+            UUID id = UUID.fromString(f.getName().replace(".yml", ""));
+            economies.add(getEconomy(id));
+        }
 
         return economies;
     }
@@ -287,9 +399,11 @@ public final class Economy implements ConfigurationSerializable {
 
     /**
      * Return the ConfigurationSection that this Economy is stored in
+     * @deprecated Economies are no longer stored in an individual file
      * @return {@link ConfigurationSection} of this economy
      */
-    public ConfigurationSection getEconomySection() { return NovaConfig.getEconomiesConfig().getConfigurationSection(this.section); }
+    @Deprecated
+    public ConfigurationSection getEconomySection() { return null; }
 
     /**
      * Fetch the name of this economy
@@ -342,7 +456,7 @@ public final class Economy implements ConfigurationSerializable {
 
     @Override
     public int hashCode() {
-        return Objects.hash(symbol, section, name, icon, hasNaturalIncrease, conversionScale, interestEnabled);
+        return Objects.hash(uid);
     }
 
     /**
@@ -371,8 +485,11 @@ public final class Economy implements ConfigurationSerializable {
     public static Economy getEconomy(@Nullable UUID uid) {
         if (uid == null) return null;
 
-        for (Economy econ : Economy.getEconomies()) if (econ.getUniqueId().equals(uid)) return econ;
-        return null;
+        File f = new File(NovaConfig.getEconomiesFolder(), uid + ".yml");
+        if (!f.exists()) return null;
+
+        FileConfiguration config = YamlConfiguration.loadConfiguration(f);
+        return (Economy) config.get(uid.toString());
     }
 
     /**
@@ -402,6 +519,11 @@ public final class Economy implements ConfigurationSerializable {
         return new Economy.Builder();
     }
 
+    @Override
+    public int compareTo(@NotNull Economy o) {
+        return this.getName().compareTo(o.getName());
+    }
+
     /**
      * Class used for Creating Economies
      * @see Economy#builder()
@@ -412,13 +534,15 @@ public final class Economy implements ConfigurationSerializable {
         ItemStack icon;
         boolean increaseNaturally;
         double conversionScale;
-        int modelData;
+        int customModelData;
+        boolean clickableReward;
 
         private Builder() {
             this.icon = new ItemStack(Material.GOLD_INGOT);
             this.symbol = '$';
             this.increaseNaturally = true;
             this.conversionScale = 1;
+            this.clickableReward = true;
         }
 
         /**
@@ -459,12 +583,10 @@ public final class Economy implements ConfigurationSerializable {
                 m.setAccessible(true);
                 m.invoke(meta, modelData);
 
-                this.modelData = modelData;
+                this.customModelData = modelData;
             } catch (NoSuchMethodException ignored) {}
             catch (ReflectiveOperationException e) {
-                Bukkit.getLogger().severe(e.getClass().getSimpleName());
-                Bukkit.getLogger().severe(e.getMessage());
-                for (StackTraceElement s : e.getStackTrace()) Bukkit.getLogger().severe(s.toString());
+                NovaConfig.print(e);
             }
 
             icon.setItemMeta(meta);
@@ -485,7 +607,7 @@ public final class Economy implements ConfigurationSerializable {
 
         /**
          * Set whether or not this economy increases naturally (i.e. Increases from Mining)
-         * @param increaseNaturally Whether or not this economy should increase from Natural Causes
+         * @param increaseNaturally Whether this economy should increase from Natural Causes
          * @return Builder Class, for chaining
          */
         public Builder setIncreaseNaturally(boolean increaseNaturally) {
@@ -497,9 +619,31 @@ public final class Economy implements ConfigurationSerializable {
          * Set the Conversion Scale (used to convert the value to other economies)
          * @param scale Scale of this economy
          * @return Builder Class, for chaining
+         * @throws IllegalArgumentException if scale is not positive
          */
-        public Builder setConversionScale(double scale) {
+        public Builder setConversionScale(double scale) throws IllegalArgumentException {
+            if (scale <= 0) throw new IllegalArgumentException("Scale must be positive");
             this.conversionScale = scale;
+            return this;
+        }
+
+        /**
+         * Sets whether this Economy can be usedas a reward from host businesses when advertising.
+         * @param clickableReward true if clickable reward, else false
+         * @return Builder Class, for chaining
+         */
+        public Builder setClickableReward(boolean clickableReward) {
+            this.clickableReward = clickableReward;
+            return this;
+        }
+
+        /**
+         * Sets the custom model data integer for this Economy.
+         * @param modelData Custom Model Data Integer
+         * @return Builder Class, for chaining
+         */
+        public Builder setCustomModelData(int modelData) {
+            this.customModelData = modelData;
             return this;
         }
 
@@ -511,26 +655,18 @@ public final class Economy implements ConfigurationSerializable {
          */
         public Economy build() throws IllegalArgumentException, UnsupportedOperationException {
             if (this.name == null) throw new IllegalArgumentException("Name cannot be null");
+            UUID id = UUID.nameUUIDFromBytes(this.name.getBytes(StandardCharsets.UTF_8));
+            File file = new File(NovaConfig.getEconomiesFolder(), id + ".yml");
 
-            if (NovaConfig.getEconomiesConfig().getConfigurationSection(this.name.toLowerCase()) != null)
-                throw new UnsupportedOperationException("Economy already exists");
+            if (file.exists()) throw new UnsupportedOperationException("Economy already exists");
 
             for (Economy econ : Economy.getEconomies()) if (econ.getSymbol() == this.symbol) throw new UnsupportedOperationException("Symbol is taken");
 
-            FileConfiguration config = NovaConfig.getEconomiesConfig();
-            ConfigurationSection es = config.createSection(this.name.toLowerCase());
+            FileConfiguration config = YamlConfiguration.loadConfiguration(file);
+            Economy econ = new Economy(id, this.name, this.icon, this.symbol, this.increaseNaturally, this.conversionScale, this.clickableReward);
+            econ.customModelData = customModelData;
 
-            Economy econ = new Economy(es.getName(), this.name, this.icon, this.symbol, this.increaseNaturally, this.conversionScale);
-            econ.customModelData = modelData;
-
-            es.set("economy", econ);
-            es.set("last_saved_timestamp", System.currentTimeMillis());
-
-            try {
-                config.save(NovaConfig.getEconomiesFile());
-            } catch (IOException e) {
-                NovaConfig.getLogger().severe(e.getMessage());
-            }
+            econ.saveEconomy();
 
             NovaConfig.getConfiguration().reloadHooks();
             return econ;
@@ -541,7 +677,7 @@ public final class Economy implements ConfigurationSerializable {
     public String toString() {
         return "Economy{" +
                 "symbol=" + symbol +
-                ", section='" + section + '\'' +
+                ", id='" + uid + '\'' +
                 ", name='" + name + '\'' +
                 ", icon=" + icon +
                 ", hasNaturalIncrease=" + hasNaturalIncrease +

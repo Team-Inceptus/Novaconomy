@@ -2,7 +2,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>us.teaminceptus</groupId>
     <artifactId>novaconomy-parent</artifactId>
-    <version>1.5.1-SNAPSHOT</version>
+    <version>1.6.0-SNAPSHOT</version>
 
     <name>Novaconomy-Parent</name>
     <description>Multi-Economy and Business Plugin made for Spigot 1.8+</description>
@@ -225,5 +225,19 @@
             <name>Minecraft Repository</name>
             <url>https://libraries.minecraft.net/</url>
         </repository>
+        <repository>
+            <id>codemc-snapshots</id>
+            <name>CodeMC Repository</name>
+            <url>https://repo.codemc.io/repository/maven-snapshots/</url>
+        </repository>
 	</repositories>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.jetbrains</groupId>
+            <artifactId>annotations-java5</artifactId>
+            <version>23.0.0</version>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
 </project>

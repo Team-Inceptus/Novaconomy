@@ -2,16 +2,16 @@ package us.teaminceptus.novaconomy.vault;
 
 import net.milkbowl.vault.economy.AbstractEconomy;
 import net.milkbowl.vault.economy.EconomyResponse;
-import us.teaminceptus.novaconomy.api.NovaPlayer;
 import us.teaminceptus.novaconomy.api.bank.Bank;
 import us.teaminceptus.novaconomy.api.economy.Economy;
+import us.teaminceptus.novaconomy.api.player.NovaPlayer;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 import static us.teaminceptus.novaconomy.Novaconomy.getPlayer;
 
-class VaultEconomy extends AbstractEconomy implements net.milkbowl.vault.economy.Economy {
+class VaultEconomy extends AbstractEconomy {
 
     public static final EconomyResponse NO_BANKS = new EconomyResponse(0, 0, EconomyResponse.ResponseType.NOT_IMPLEMENTED, "Vault Banks are not apart of Novaconomy");
     private final Economy econ;

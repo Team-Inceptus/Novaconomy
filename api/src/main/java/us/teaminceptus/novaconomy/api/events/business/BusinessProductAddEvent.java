@@ -16,11 +16,10 @@ public class BusinessProductAddEvent extends BusinessEvent implements Cancellabl
     /**
      * Constructs a BusinessProductAddEvent.
      * @param pr Product used
-     * @throws IllegalArgumentException if Product is null
+     * @throws NullPointerException if Product is null
      */
-    public BusinessProductAddEvent(@NotNull BusinessProduct pr) throws IllegalArgumentException {
+    public BusinessProductAddEvent(@NotNull BusinessProduct pr) throws NullPointerException {
         super(pr.getBusiness());
-        if (pr == null) throw new IllegalArgumentException("Product cannot be null");
         this.product = pr;
         this.isCancelled = false;
     }

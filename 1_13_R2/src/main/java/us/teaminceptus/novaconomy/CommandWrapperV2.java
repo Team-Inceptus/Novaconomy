@@ -8,6 +8,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import revxrsal.commands.annotation.*;
 import revxrsal.commands.autocomplete.SuggestionProvider;
+import revxrsal.commands.bukkit.BukkitCommandActor;
 import revxrsal.commands.bukkit.BukkitCommandHandler;
 import revxrsal.commands.bukkit.annotation.CommandPermission;
 import revxrsal.commands.exception.CommandErrorException;
@@ -20,75 +21,84 @@ import us.teaminceptus.novaconomy.api.economy.Economy;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public final class CommandWrapperV2 implements CommandWrapper {
 
     private static BukkitCommandHandler handler;
 
     public CommandWrapperV2(Plugin plugin) {
-        if (handler == null) {
-            handler = BukkitCommandHandler.create(plugin);
+        if (handler != null) return;
 
-            handler.registerValueResolver(Economy.class, ctx -> {
-                Economy econ = Economy.getEconomy(ctx.popForParameter());
-                if (econ == null) throw new CommandErrorException(getMessage("error.argument.economy"));
-                return econ;
-            });
+        handler = BukkitCommandHandler.create(plugin);
 
-            handler.getAutoCompleter().registerParameterSuggestions(Economy.class, SuggestionProvider.of(() -> toStringList(Economy::getName, Economy.getEconomies())));
+        handler.registerValueResolver(Economy.class, ctx -> {
+            Economy econ = Economy.getEconomy(ctx.popForParameter());
+            if (econ == null) throw new CommandErrorException(getMessage("error.argument.economy"));
+            return econ;
+        });
 
-            handler.registerValueResolver(Material.class, ctx -> Material.matchMaterial(ctx.popForParameter()));
-            handler.getAutoCompleter().registerParameterSuggestions(Material.class, SuggestionProvider.of(() -> toStringList(m -> m.name().toLowerCase(), Material.values())));
+        handler.getAutoCompleter().registerParameterSuggestions(Economy.class, SuggestionProvider.map(Economy::getEconomies, Economy::getName));
 
-            handler.registerValueResolver(Business.class, ctx -> {
-                Business b = Business.getByName(ctx.popForParameter());
-                if (b == null) throw new CommandErrorException(getMessage("error.argument.business"));
-                return b;
-            });
-            handler.getAutoCompleter().registerParameterSuggestions(Business.class, SuggestionProvider.of(() -> toStringList(Business::getName, Business.getBusinesses())));
+        handler.registerValueResolver(Material.class, ctx -> {
+            Material m = Material.matchMaterial(ctx.popForParameter());
+            if (m == null) throw new CommandErrorException(getMessage("error.argument.icon"));
+            if (!m.isItem()) throw new CommandErrorException(getMessage("error.argument.icon"));
+            if (m == Material.AIR) throw new CommandErrorException(getMessage("error.argument.icon"));
+            return m;
+        });
+        handler.getAutoCompleter().registerParameterSuggestions(Material.class, SuggestionProvider.map(() -> Arrays.stream(Material.values()).filter(Material::isItem).filter(m -> m != Material.AIR).collect(Collectors.toList()), m -> m.name().toLowerCase()));
 
-            handler.getAutoCompleter().registerParameterSuggestions(boolean.class, SuggestionProvider.of("true", "false"));
+        handler.registerValueResolver(Business.class, ctx -> {
+            Business b = Business.getByName(ctx.popForParameter());
+            if (b == null) throw new CommandErrorException(getMessage("error.argument.business"));
+            return b;
+        });
+        handler.getAutoCompleter().registerParameterSuggestions(Business.class, SuggestionProvider.map(Business::getBusinesses, Business::getName));
 
-            handler.registerValueResolver(OfflinePlayer.class, ctx -> {
-                OfflinePlayer p = Wrapper.getPlayer(ctx.popForParameter());
-                if (p == null) throw new CommandErrorException(getMessage("error.argument.player"));
-                return p;
-            });
+        handler.getAutoCompleter().registerParameterSuggestions(boolean.class, SuggestionProvider.of("true", "false"));
 
-            handler.getAutoCompleter().registerParameterSuggestions(OfflinePlayer.class, SuggestionProvider.of(() -> toStringList(OfflinePlayer::getName, Bukkit.getOfflinePlayers())));
+        handler.registerValueResolver(OfflinePlayer.class, ctx -> {
+            String value = ctx.popForParameter();
+            if (value.equalsIgnoreCase("me")) return ((BukkitCommandActor) ctx.actor()).requirePlayer();
+            OfflinePlayer p = Wrapper.getPlayer(value);
+            if (p == null) throw new CommandErrorException(getMessage("error.argument.player"));
+            return p;
+        });
 
-            handler.getAutoCompleter().registerSuggestion("event", SuggestionProvider.of(() -> toStringList(NovaConfig.CustomTaxEvent::getIdentifier, NovaConfig.getConfiguration().getAllCustomEvents())));
-            handler.getAutoCompleter().registerSuggestion("settings", SuggestionProvider.of(Arrays.asList("business", "personal")));
+        handler.getAutoCompleter().registerParameterSuggestions(OfflinePlayer.class, SuggestionProvider.map(() -> Arrays.asList(Bukkit.getOfflinePlayers()), OfflinePlayer::getName));
 
-            handler.register(this);
-            new EconomyCommands(this);
-            new BusinessCommands(this);
-            new BankCommands(this);
-            new BountyCommands(this);
+        handler.getAutoCompleter().registerSuggestion("event", SuggestionProvider.map(NovaConfig.getConfiguration()::getAllCustomEvents, NovaConfig.CustomTaxEvent::getIdentifier));
+        handler.getAutoCompleter().registerSuggestion("settings", SuggestionProvider.of(Arrays.asList("business", "personal")));
+        handler.getAutoCompleter().registerSuggestion("blacklist", (args, sender, cmd) -> Business.getBusinesses().stream().filter(b -> {
+            OfflinePlayer p = ((BukkitCommandActor) sender).requirePlayer();
+            return !b.isOwner(p) && !Business.getByOwner(p).isBlacklisted(b);
+        }).map(Business::getName).collect(Collectors.toList()));
+        handler.getAutoCompleter().registerSuggestion("blacklisted", (args, sender, cmd) -> Business.getByOwner(Wrapper.getPlayer(sender.getName())).getBlacklist().stream().map(Business::getName).collect(Collectors.toList()));
 
-            handler.registerBrigadier();
-            handler.setLocale(Language.getCurrentLanguage().getLocale());
-            plugin.getLogger().info("Loaded Command Version v2 (1.13.2+)");
-        }
+        handler.register(this);
+        new EconomyCommands(this);
+        new BusinessCommands(this);
+        new BankCommands(this);
+        new BountyCommands(this);
+
+        handler.registerBrigadier();
+        handler.setLocale(Language.getCurrentLanguage().getLocale());
+        plugin.getLogger().info("Loaded Command Version v2 (1.13.2+)");
     }
 
     private static String getMessage(String key) {
         return CommandWrapper.getMessage(key);
     }
 
-    private static <T> List<String> toStringList(Function<T, String> func, Collection<T> elements) {
+    @SafeVarargs
+    private static <T> List<String> toStringList(Function<T, String[]> func, T... elements) {
         List<String> list = new ArrayList<>();
-        for (T element : elements) list.add(func.apply(element));
+        for (T element : elements) list.addAll(Arrays.asList(func.apply(element)));
 
         return list;
-    }
-
-    @SafeVarargs
-    private static <T> List<String> toStringList(Function<T, String> func, T... elements) {
-        return toStringList(func, Arrays.asList(elements));
     }
 
     // Lamp Impl
@@ -181,7 +191,14 @@ public final class CommandWrapperV2 implements CommandWrapper {
     @CommandPermission("novaconomy.user.rate")
     public void rate(Player p, Business business, @Default("") String comment) { CommandWrapper.super.rate(p, business, comment); }
 
-    @Command({"business", "nbusiness"})
+    @Override
+    @Command({"statistics", "stats", "pstats", "pstatistics", "playerstats", "playerstatistics", "nstats", "nstatistics"})
+    @Usage("/statistics")
+    @Description("View your Novaconomy Statistics")
+    @CommandPermission("novaconomy.user.stats")
+    public void playerStatistics(Player p, @Default("me") OfflinePlayer target) { CommandWrapper.super.playerStatistics(p, target); }
+
+    @Command({"business", "nbusiness", "nb", "b"})
     @Description("Manage your Novaconomy Business")
     @Usage("/business <create|info|delete|addproduct|stock|query|...> <args...>")
     private static final class BusinessCommands {
@@ -194,6 +211,9 @@ public final class CommandWrapperV2 implements CommandWrapper {
             BukkitCommandHandler handler = CommandWrapperV2.handler;
             handler.register(this);
         }
+
+        @Default
+        public void businessInfoDefault(Player p) { businessInfo(p); }
 
         @Subcommand({"info", "information"})
         public void businessInfo(Player p) { wrapper.businessInfo(p); }
@@ -224,11 +244,20 @@ public final class CommandWrapperV2 implements CommandWrapper {
         @CommandPermission("novaconomy.user.business.home")
         public void setHome(Player p) { wrapper.businessHome(p, true); }
 
+        @Subcommand({"setname", "name"})
+        public void setName(Player p, String name) { wrapper.setBusinessName(p, name); }
+
+        @Subcommand({"seticon", "icon"})
+        public void setIcon(Player p, Material icon) { wrapper.setBusinessIcon(p, icon); }
+
         @Subcommand("delete")
-        public void deleteBusiness(Player p, @Default String confirm) { wrapper.deleteBusiness(p, confirm.equalsIgnoreCase("confirm")); }
+        public void deleteBusiness(Player p, @Default("") String confirm) { wrapper.deleteBusiness(p, confirm.equalsIgnoreCase("confirm")); }
+
+        @Subcommand("recover")
+        public void businessRecover(Player p) { wrapper.businessRecover(p); }
 
         @Subcommand({"statistics", "stats"})
-        public void statistics(Player p) { wrapper.statistics(p, Business.getByOwner(p));}
+        public void businessStatistics(Player p) { wrapper.businessStatistics(p, Business.getByOwner(p));}
 
         @Subcommand({"settings", "setting"})
         public void settings(Player p) { wrapper.settings(p, "business"); }
@@ -237,13 +266,74 @@ public final class CommandWrapperV2 implements CommandWrapper {
         public void businessRating(Player p, OfflinePlayer target) { wrapper.businessRating(p, target); }
 
         @Subcommand("discover")
-        public void discoverBusiness(Player p) { wrapper.discoverBusinesses(p); }
+        public void discoverBusiness(Player p, @Default("") String keywords) { wrapper.discoverBusinesses(p, keywords.split("[ ,]")); }
 
         @Subcommand("remove")
-        public void removeBusiness(CommandSender sender, Business b, @Default String confirm) { wrapper.removeBusiness(sender, b, confirm.equalsIgnoreCase("confirm"));}
+        @CommandPermission("novaconomy.admin.delete_business")
+        public void removeBusiness(CommandSender sender, Business b, @Default("") String confirm) { wrapper.removeBusiness(sender, b, confirm.equalsIgnoreCase("confirm"));}
 
         @Subcommand({"editprice", "price"})
         public void editPrice(Player p, @Range(min = 0.01) double newPrice, @Optional Economy economy) { wrapper.editPrice(p, newPrice, economy); }
+
+        @Subcommand({"keyword", "keywords"})
+        @Default
+        @CommandPermission("novaconomy.user.business.keywords")
+        public void keywords(Player p) {
+            wrapper.listKeywords(p);
+        }
+
+        @Subcommand({"keyword list", "keywords list", "keyword l", "keywords l"})
+        @CommandPermission("novaconomy.user.business.keywords")
+        public void keywordsList(Player p) { wrapper.listKeywords(p); }
+
+        @Subcommand({"keywords add", "keyword add"})
+        @CommandPermission("novaconomy.user.business.keywords")
+        public void addKeywords(Player p, String keywords) {
+            wrapper.addKeywords(p, keywords.split("[ ,]"));
+        }
+
+        @Subcommand({"keywords remove", "keyword remove", "keywords delete", "keyword delete"})
+        @CommandPermission("novaconomy.user.business.keywords")
+        public void removeKeywords(Player p, String keywords) {
+            wrapper.removeKeywords(p, keywords.split("[ ,]"));
+        }
+
+        @Subcommand({"advertising", "ads", "advertise"})
+        @Default
+        public void businessAdvertising(Player p) {
+            wrapper.businessAdvertising(p);
+        }
+
+        @Subcommand({"advertising addbalance", "ads addbalance", "advertise addbalance",
+                "advertising addbal", "ads addbal", "advertise addbal",
+                "advertising add", "ads add", "advertise add"})
+        public void addAdvertising(Player p) {
+            wrapper.businessAdvertisingChange(p, true);
+        }
+
+        @Subcommand({"advertising removebalance", "ads removebalance", "advertise removebalance",
+                "advertising removebal", "ads removebal", "advertise removebal",
+                "advertising remove", "ads remove", "advertise remove"})
+        public void removeAdvertising(Player p) {
+            wrapper.businessAdvertisingChange(p, false);
+        }
+
+        @Subcommand({"blacklist", "blist", "bl", "blackl",
+        "blacklist list", "blist list", "bl list", "blackl list",
+        "blacklist l", "blist l", "bl l", "blackl l"})
+        @Default
+        public void listBlacklist(Player p) { wrapper.listBlacklist(p); }
+
+        @Subcommand({"blacklist add", "blist add", "bl add", "blackl add"})
+        @AutoComplete("@blacklist *")
+        public void blacklistBusiness(Player p, Business business) { wrapper.addBlacklist(p, business); }
+
+        @Subcommand({"blacklist remove", "blist remove", "bl remove", "blackl remove",
+        "blacklist delete", "blist delete", "bl delete", "blackl delete"})
+        @AutoComplete("@blacklisted *")
+        public void unblacklistBusiness(Player p, Business business) { wrapper.removeBlacklist(p, business); }
+
+
     }
 
     @Command({"nbank", "bank", "globalbank", "gbank"})
@@ -293,8 +383,8 @@ public final class CommandWrapperV2 implements CommandWrapper {
         @Subcommand({"create", "make"})
         @AutoComplete("* @symbol *")
         @CommandPermission("novaconomy.economy.create")
-        public void createEconomy(CommandSender sender, String name, String symbol, Material icon, @Default("1") @Range(min = 0.01, max = Integer.MAX_VALUE) double scale, @Named("natural-increase") @Default("true") boolean naturalIncrease) {
-            wrapper.createEconomy(sender, name, symbol.contains("\"") || symbol.contains("'") ? symbol.charAt(1) : symbol.charAt(0), icon, scale, naturalIncrease);
+        public void createEconomy(CommandSender sender, String name, String symbol, Material icon, @Default("1") @Range(min = 0.01, max = Integer.MAX_VALUE) double scale, @Named("natural-increase") @Default("true") boolean naturalIncrease, @Named("clickable-reward") @Default("true") boolean clickableReward) {
+            wrapper.createEconomy(sender, name, symbol.contains("\"") || symbol.contains("'") ? symbol.charAt(1) : symbol.charAt(0), icon, scale, naturalIncrease, clickableReward);
         }
 
         @Subcommand({"remove", "delete", "removeeconomy", "deleteeconomy"})
@@ -328,15 +418,37 @@ public final class CommandWrapperV2 implements CommandWrapper {
             wrapper.removeBalance(sender, economy, target, amount);
         }
 
+        @Subcommand({"setmodeldata", "setcustommodeldata", "modeldata", "custommodeldata"})
+        @CommandPermission("novaconomy.economy.create")
+        public void setCustomModelData(CommandSender sender, Economy economy, int modelData) {
+            wrapper.setEconomyModel(sender, economy, modelData);
+        }
+
+        @Subcommand({"seticon", "icon"})
+        @CommandPermission("novaconomy.economy.create")
+        public void setIcon(CommandSender sender, Economy economy, Material icon) { wrapper.setEconomyIcon(sender, economy, icon); }
+
+        @Subcommand({"setconversionscale", "conversionscale", "setscale", "scale"})
+        @CommandPermission("novaconomy.economy.create")
+        public void setConversionScale(CommandSender sender, Economy economy, @Range(min = 0.01) double scale) { wrapper.setEconomyScale(sender, economy, scale); }
+
+        @Subcommand({"setnaturalincrease", "naturalincrease", "setnatural", "natural"})
+        @CommandPermission("novaconomy.economy.create")
+        public void setNaturalIncrease(CommandSender sender, Economy economy, @Default("true") boolean naturalIncrease) { wrapper.setEconomyNatural(sender, economy, naturalIncrease); }
+
         @Subcommand({"check", "createcheck"})
         @CommandPermission("novaconomy.economy.check")
-        public void createCheck(Player p, Economy economy, @Named("amount") @Range(min = 1) double amount) { wrapper.createCheck(p, economy, amount, false); }
+        public void createCheck(Player p, Economy economy, @Range(min = 1) double amount) { wrapper.createCheck(p, economy, amount, false); }
 
         @Subcommand("info")
         @CommandPermission("novaconomy.economy.info")
         public void info(CommandSender sender, Economy economy) {
             wrapper.economyInfo(sender, economy);
         }
+
+        @Subcommand({"setname", "name"})
+        @CommandPermission("novaconomy.economy.create")
+        public void setName(CommandSender sender, Economy economy, String name) { wrapper.setEconomyName(sender, economy, name); }
     }
 
     @Command({"bounty", "novabounty", "nbounty"})

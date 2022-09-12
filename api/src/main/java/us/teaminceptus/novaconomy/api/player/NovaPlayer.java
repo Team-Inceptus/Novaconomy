@@ -1,17 +1,17 @@
-package us.teaminceptus.novaconomy.api;
+package us.teaminceptus.novaconomy.api.player;
 
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.AtomicDouble;
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.bank.Bank;
-import us.teaminceptus.novaconomy.api.bounty.Bounty;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.business.Rating;
 import us.teaminceptus.novaconomy.api.economy.Economy;
@@ -39,10 +39,12 @@ public final class NovaPlayer {
     private final File pFile;
     private final FileConfiguration pConfig;
 
+    final PlayerStatistics stats;
+
     /**
-     * Creates a new Player.
-     * @param p Player to use
-     * @throws IllegalArgumentException if p is null
+     * Creates a new NovaPlayer.
+     * @param p OfflinePlayer to use
+     * @throws IllegalArgumentException if player is null
      */
     public NovaPlayer(@NotNull OfflinePlayer p) throws IllegalArgumentException {
         if (p == null) throw new IllegalArgumentException("Player is null");
@@ -55,12 +57,20 @@ public final class NovaPlayer {
         if (!pFile.exists()) try {
             pFile.createNewFile();
         } catch (IOException e) {
-            NovaConfig.getLogger().severe(e.getMessage());
+            NovaConfig.print(e);
         }
 
-        pConfig = YamlConfiguration.loadConfiguration(pFile);
+        this.pConfig = YamlConfiguration.loadConfiguration(pFile);
 
-        reloadValues();
+        PlayerStatistics stats;
+        try {
+            stats = pConfig.contains("stats") ? (PlayerStatistics) pConfig.get("stats") : new PlayerStatistics(p);
+        } catch (ClassCastException e) {
+            NovaConfig.print(e);
+            stats = new PlayerStatistics(p);
+        }
+
+        this.stats = stats;
     }
 
     /**
@@ -115,7 +125,7 @@ public final class NovaPlayer {
      */
     public double getBalance(@NotNull Economy econ) throws IllegalArgumentException {
         if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
-        return pConfig.getConfigurationSection("economies").getConfigurationSection(econ.getName().toLowerCase()).getDouble("balance");
+        return pConfig.getConfigurationSection("economies").getConfigurationSection(econ.getName().toLowerCase()).getDouble("balance", 0);
     }
 
     /**
@@ -129,16 +139,35 @@ public final class NovaPlayer {
         if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
 
         pConfig.set("economies." + econ.getName().toLowerCase() + ".balance", newBal);
+
+        if (newBal > stats.highestBalance) {
+            stats.highestBalance = newBal;
+            stats.highestBalanceEconomy = econ;
+        }
         save();
     }
-    
-    private void save() {
+
+    /**
+     * <p>Saves this player's information to the file.</p>
+     * <p>Information will be automatically saved with wrapper methods, so this method does not need to be called again.</p>
+     */
+    public void save() {
+        pConfig.set("stats", this.stats);
+
         try {
             pConfig.save(pFile);
         } catch (IOException e) {
-            NovaConfig.getLogger().info("Error saving player file");
-            NovaConfig.getLogger().severe(e.getMessage());
+            NovaConfig.print(e);
         }
+    }
+
+    /**
+     * Fetches the statistics of this Player.
+     * @return PlayerStatistics of this player
+     */
+    @NotNull
+    public PlayerStatistics getStatistics() {
+        return this.stats;
     }
 
     /**
@@ -150,6 +179,7 @@ public final class NovaPlayer {
     public void add(@NotNull Economy econ, double add) throws IllegalArgumentException {
         if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
 
+        stats.moneyAdded += add;
         setBalance(econ, getBalance(econ) + add);
     }
 
@@ -162,6 +192,7 @@ public final class NovaPlayer {
     public void remove(@NotNull Economy econ, double remove) throws IllegalArgumentException {
         if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
 
+        stats.totalMoneySpent += remove;
         setBalance(econ, getBalance(econ) - remove);
     }
 
@@ -200,7 +231,7 @@ public final class NovaPlayer {
      */
     @NotNull
     public PlayerWithdrawEvent getLastBankWithdraw() {
-        return new PlayerWithdrawEvent(getOnlinePlayer(), pConfig.getDouble(LBW + ".amount"), Economy.getEconomy(pConfig.getString(LBW + ".economy")), pConfig.getLong(LBW + ".timestamp"));
+        return new PlayerWithdrawEvent(getOnlinePlayer(), pConfig.getDouble(LBW + ".amount", 0), Economy.getEconomy(pConfig.getString(LBW + ".economy", "")), pConfig.getLong(LBW + ".timestamp", 0));
     }
 
     /**
@@ -209,7 +240,7 @@ public final class NovaPlayer {
      */
     @NotNull
     public PlayerDepositEvent getLastBankDeposit() {
-        return new PlayerDepositEvent(getOnlinePlayer(), pConfig.getDouble(LBD + ".amount"), Economy.getEconomy(pConfig.getString(LBD + ".economy")), pConfig.getLong(LBD + ".timestamp"));
+        return new PlayerDepositEvent(getOnlinePlayer(), pConfig.getDouble(LBD + ".amount", 0), Economy.getEconomy(pConfig.getString(LBD + ".economy", "")), pConfig.getLong(LBD + ".timestamp", 0));
     }
 
     /**
@@ -232,6 +263,8 @@ public final class NovaPlayer {
         pConfig.set(LBW + ".amount", amount);
         pConfig.set(LBW + ".economy", econ.getName());
         pConfig.set(LBW + ".timestamp", System.currentTimeMillis());
+
+        stats.totalWithdrawn += amount;
         save();
 
         PlayerWithdrawEvent event = new PlayerWithdrawEvent(getOnlinePlayer(), amount, econ, System.currentTimeMillis());
@@ -269,6 +302,11 @@ public final class NovaPlayer {
     @NotNull
     public Map<Economy, Double> getAllDonatedAmounts() {
         Map<Economy, Double> amounts = new HashMap<>();
+        if (!pConfig.isConfigurationSection("donated")) {
+            pConfig.createSection("donated");
+            return amounts;
+        }
+
         pConfig.getConfigurationSection("donated").getValues(false).forEach((k, v) -> amounts.put(Economy.getEconomy(k), v instanceof Double ? (double) v : 0));
         return amounts;
     }
@@ -333,6 +371,11 @@ public final class NovaPlayer {
     @NotNull
     public Map<OfflinePlayer, Bounty> getOwnedBounties() {
         Map<OfflinePlayer, Bounty> bounties = new HashMap<>();
+        if (!pConfig.isConfigurationSection("bounties")) {
+            pConfig.createSection("bounties");
+            return bounties;
+        }
+
         pConfig.getConfigurationSection("bounties").getValues(false).forEach((k, v) -> bounties.put(Bukkit.getOfflinePlayer(UUID.fromString(k)), (Bounty) v));
         return bounties;
     }
@@ -494,6 +537,25 @@ public final class NovaPlayer {
     }
 
     /**
+     * Fetches the Rating for this Business.
+     * @param b Business to fetch the rating for
+     * @return Rating for this Business, or null if not found / business is null
+     */
+    @Nullable
+    public Rating getRating(@Nullable Business b) {
+        if (b == null) return null;
+
+        UUID id = b.getUniqueId();
+        if (!pConfig.isLong("ratings." + id + ".last_rating")) return null;
+
+        long time = pConfig.getLong("ratings." + id + ".last_rating", 0);
+        int level = pConfig.getInt("ratings." + id + ".rating", 0);
+        String comment = pConfig.getString("ratings." + id + ".comment", "");
+
+        return new Rating(p, id, level, time, comment);
+    }
+
+    /**
      * Fetches a Date representation of when this Player last rated
      * @param b Business to search
      * @return Date of when this Player last rated, or current time if not found / Business is null
@@ -519,7 +581,7 @@ public final class NovaPlayer {
      * Fetches the comment on the rating for this Business.
      * @param b Business to fetch the comment for
      * @return Comment on the rating, may be empty
-     * @throws IllegalArgumentException if bussiness is null
+     * @throws IllegalArgumentException if business is null
      */
     @NotNull
     public String getRatingComment(@NotNull Business b) throws IllegalArgumentException {
@@ -537,63 +599,69 @@ public final class NovaPlayer {
         return getRatingLevel(b) != 0;
     }
 
-    private void reloadValues() {
-        OfflinePlayer p = this.p;
+    /**
+     * Fetches the amount of shares this player owns for this Material.
+     * @param m Material to check
+     * @deprecated Draft API
+     * @return Amount of shares player owns, or 0 if not found
+     */
+    @Deprecated
+    public long getShareAmount(@NotNull Material m) {
+//        if (m == null) return 0;
+//        return pConfig.getLong("market.shares." + m.name().toLowerCase(), 0);
+        return 0;
+    }
 
-        // General Info
-        if (!pConfig.isString("name")) pConfig.set("name", p.getName());
-        if (!pConfig.isBoolean("op")) pConfig.set("op", p.isOp());
+    /**
+     * Sets the amount of shares this player owns for this Material.
+     * @param m Material to set
+     * @param amount Amount of shares to set
+     * @deprecated Draft API
+     * @throws IllegalArgumentException if share amount is negative
+     */
+    @Deprecated
+    public void setShareAmount(@NotNull Material m, long amount) throws IllegalArgumentException {
+//        if (m == null) return;
+//        if (amount < 0) throw new IllegalArgumentException("Share amount cannot be negative");
+//
+//        if (amount > 0) pConfig.set("market.shares." + m.name().toLowerCase(), amount);
+//        else pConfig.set("market.shares." + m.name().toLowerCase(), null);
+//        save();
+    }
 
-        if (!pConfig.isConfigurationSection(LBW)) pConfig.createSection(LBW);
-        if (!pConfig.isLong(LBW + ".timestamp")) pConfig.set(LBW + ".timestamp", 0);
-        if (!pConfig.isDouble(LBW + ".amount")) pConfig.set(LBW + ".amount", 0);
-        if (!pConfig.isString(LBW + ".economy")) pConfig.set(LBW + ".economy", "");
+    /**
+     * Removes ownership of all shares for this Material.
+     * @param m Material to remove
+     * @deprecated Draft API
+     */
+    @Deprecated
+    public void removeAllShares(@NotNull Material m) {
+        setShareAmount(m, 0);
+    }
 
-        if (!pConfig.isConfigurationSection(LBD)) pConfig.createSection(LBD);
-        if (!pConfig.isLong(LBD + ".timestamp")) pConfig.set(LBD + ".timestamp", 0);
-        if (!pConfig.isDouble(LBD + ".amount")) pConfig.set(LBD + ".amount", 0);
-        if (!pConfig.isString(LBD + ".economy")) pConfig.set(LBD + ".economy", "");
+    /**
+     * Adds shares for this Material.
+     * @param m Material to add shares for
+     * @param amount Amount of shares to add
+     * @deprecated Draft API
+     */
+    @Deprecated
+    public void addShares(@NotNull Material m, long amount) {
+//        if (m == null) return;
+//
+//        stats.totalSharesPurchased += amount;
+//        setShareAmount(m, getShareAmount(m) + amount);
+    }
 
-        // Economies
-        if (!pConfig.isConfigurationSection("economies")) pConfig.createSection("economies");
-        ConfigurationSection economies = pConfig.getConfigurationSection("economies");
-
-        if (Economy.getEconomies().size() > 0)
-            for (Economy e : Economy.getEconomies()) {
-                String path = e.getName().toLowerCase();
-                if (!economies.isConfigurationSection(path)) economies.createSection(path);
-                ConfigurationSection econ = economies.getConfigurationSection(path);
-
-                if (!econ.isDouble("balance")) econ.set("balance", 0D);
-            }
-
-        // Donated & Bounties
-        if (!pConfig.isConfigurationSection("donated")) pConfig.createSection("donated");
-        if (!pConfig.isConfigurationSection("bounties")) pConfig.createSection("bounties");
-
-        // Settings
-        if (!pConfig.isConfigurationSection("settings")) pConfig.createSection("settings");
-        ConfigurationSection settings = pConfig.getConfigurationSection("settings");
-
-        for (Settings.Personal sett : Settings.Personal.values()) {
-            String key = sett.name().toLowerCase();
-            if (!settings.isBoolean(key)) settings.set(key, sett.getDefaultValue());
-        }
-
-        // Ratings
-        if (!pConfig.isConfigurationSection("ratings")) pConfig.createSection("ratings");
-        for (Business b : Business.getBusinesses()) {
-            if (b.isOwner(this.p)) continue;
-
-            if (!pConfig.isConfigurationSection("ratings." + b.getUniqueId()))
-                pConfig.createSection("ratings." + b.getUniqueId());
-
-            ConfigurationSection rating = pConfig.getConfigurationSection("ratings." + b.getUniqueId());
-            if (!rating.isInt("rating")) rating.set("rating", 0);
-            if (!rating.isInt("last_rating") && !rating.isLong("last_rating")) rating.set("last_rating", 0L);
-            if (!rating.isSet("comment")) rating.set("comment", "");
-        }
-
-        save();
+    /**
+     * Remove shares for this Material.
+     * @param m Material to remove shares for
+     * @param amount Amount of shares to remove
+     * @deprecated Draft API
+     */
+    @Deprecated
+    public void removeShares(@NotNull Material m, long amount) {
+//        if (m == null) return;
+//        addShares(m, -amount);
     }
 }

@@ -21,6 +21,7 @@ Notifications: true
 # - fi (Finnish / Suomi)
 # - nb (Norwegian Bokmål / Norsk Bokmål)
 # - sv (Swedish / Svenska)
+# - ko (Korean / 한국어)
 Language: en
 
 # Natural Causes to gain or lose money
@@ -217,3 +218,16 @@ Bounties:
 
   # Whether Bounties are enabled
   Enabled: true
+
+# Business Section
+Business:
+
+  # Business Advertising
+  Advertising:
+
+    # Whether businesses can advertise
+    Enabled: true
+
+    # How much host businesses will be rewarded for having a click on their advertisement
+    # The Economy is randomly selected, and this value is multiplied by its conversion scale
+    ClickReward: 5

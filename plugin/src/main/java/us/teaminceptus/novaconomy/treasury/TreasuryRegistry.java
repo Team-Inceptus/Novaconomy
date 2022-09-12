@@ -17,8 +17,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.Novaconomy;
 import us.teaminceptus.novaconomy.api.NovaConfig;
-import us.teaminceptus.novaconomy.api.NovaPlayer;
 import us.teaminceptus.novaconomy.api.economy.Economy;
+import us.teaminceptus.novaconomy.api.player.NovaPlayer;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -31,10 +31,10 @@ import static us.teaminceptus.novaconomy.Novaconomy.getPlayer;
 public final class TreasuryRegistry implements EconomyProvider {
 
     static final String TREASURY_ACCOUNTS = "TreasuryAccounts";
-    private final Novaconomy plugin;
+    // private final Novaconomy plugin;
 
     public TreasuryRegistry(Novaconomy plugin) {
-        this.plugin = plugin;
+        // this.plugin = plugin;
 
         ConfigurationSerialization.registerClass(TreasuryAccount.class);
         TreasuryAccount.global = NovaConfig.getGlobalStorage();

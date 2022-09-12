@@ -12,29 +12,27 @@ import us.teaminceptus.novaconomy.api.util.Price;
 import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.logging.Logger;
 
 /**
  * Represents the Global Bank in Novaconomy that holds tax money in the server.
  */
 public final class Bank {
 
-    private static final Logger LGR = NovaConfig.getLogger();
-    private static final FileConfiguration global;
-    private static final File globalF;
-    private static final ConfigurationSection bankSection;
+    private static final FileConfiguration GLOBAL;
+    private static final File GLOBAL_FILE;
+    private static final ConfigurationSection BANK_SECTION;
 
     private Bank() { throw new UnsupportedOperationException("Do not instantiate!"); }
 
     static {
-        globalF = new File(NovaConfig.getDataFolder(), "global.yml");
-        if (!globalF.exists()) NovaConfig.getPlugin().saveResource("global.yml", false);
-        global = YamlConfiguration.loadConfiguration(globalF);
+        GLOBAL_FILE = new File(NovaConfig.getDataFolder(), "global.yml");
+        if (!GLOBAL_FILE.exists()) NovaConfig.getPlugin().saveResource("global.yml", false);
+        GLOBAL = YamlConfiguration.loadConfiguration(GLOBAL_FILE);
 
-        if (!global.isConfigurationSection("Bank")) global.createSection("Bank");
-        bankSection = global.getConfigurationSection("Bank");
+        if (!GLOBAL.isConfigurationSection("Bank")) GLOBAL.createSection("Bank");
+        BANK_SECTION = GLOBAL.getConfigurationSection("Bank");
 
-        for (Economy econ : Economy.getEconomies()) if (!bankSection.isSet(econ.getName())) bankSection.set(econ.getName(), 0);
+        for (Economy econ : Economy.getEconomies()) if (!BANK_SECTION.isSet(econ.getName())) BANK_SECTION.set(econ.getName(), 0);
     }
 
     /**
@@ -44,14 +42,13 @@ public final class Bank {
     @NotNull
     public static Map<Economy, Double> getBalances() {
         Map<Economy, Double> bal = new HashMap<>();
-        bankSection.getValues(false).forEach((k, v) -> bal.put(Economy.getEconomy(k), Double.parseDouble(v.toString())));
+        BANK_SECTION.getValues(false).forEach((k, v) -> bal.put(Economy.getEconomy(k), Double.parseDouble(v.toString())));
         return bal;
     }
 
     private static void save() {
-        try { global.save(globalF); } catch (Exception e) {
-            LGR.severe(e.getMessage());
-            for (StackTraceElement s : e.getStackTrace()) LGR.severe(s.toString());
+        try { GLOBAL.save(GLOBAL_FILE); } catch (Exception e) {
+            NovaConfig.print(e);
         }
     }
 
@@ -63,7 +60,7 @@ public final class Bank {
      */
     public static void setBalance(@NotNull Economy econ, double amount) throws IllegalArgumentException {
         Preconditions.checkNotNull(econ, "Economy cannot be null");
-        bankSection.set(econ.getName(), amount);
+        BANK_SECTION.set(econ.getName(), amount);
         save();
     }
 

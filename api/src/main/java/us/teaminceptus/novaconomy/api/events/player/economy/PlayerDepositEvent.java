@@ -1,6 +1,7 @@
 package us.teaminceptus.novaconomy.api.events.player.economy;
 
 import org.bukkit.entity.Player;
+import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 
 /**
@@ -19,7 +20,7 @@ public class PlayerDepositEvent extends PlayerEconomyEvent {
      * @param econ      Economy involved
      * @param timestamp Timestamp of the deposit
      */
-    public PlayerDepositEvent(Player who, double amount, Economy econ, long timestamp) {
+    public PlayerDepositEvent(Player who, double amount, @Nullable Economy econ, long timestamp) {
         super(who, amount, econ);
 
         this.amount = amount;

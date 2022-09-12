@@ -56,7 +56,13 @@ public enum Language {
     /**
      * Represents Finnish / Suomi
      */
-    FINNISH("_fi");
+    FINNISH("_fi"),
+    /**
+     * Represents Korean / 한국어
+     */
+    KOREAN("_ko"),
+
+    ;
 
     private final String id;
 
@@ -73,6 +79,7 @@ public enum Language {
             case "ja": l = Locale.JAPANESE; break;
             case "zh": l = Locale.CHINESE; break;
             case "it": l = Locale.ITALIAN; break;
+            case "ko": l = Locale.KOREAN; break;
             default: l = new Locale(identifier.replace("_", ""));
         }
 
@@ -111,7 +118,7 @@ public enum Language {
             str.close();
             return ChatColor.translateAlternateColorCodes('&', p.getProperty(key, "Unknown Value"));
         } catch (IOException e) {
-            NovaConfig.getLogger().severe(e.getMessage());
+            NovaConfig.print(e);
             return "Unknown Value";
         }
     }

@@ -14,11 +14,6 @@ import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.material.Crops;
 import us.teaminceptus.novaconomy.abstraction.Wrapper;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 public final class Wrapper1_9_R2 implements Wrapper {
 
     @Override
@@ -30,6 +25,13 @@ public final class Wrapper1_9_R2 implements Wrapper {
     @Override
     public void sendActionbar(Player p, BaseComponent component) {
         sendActionbar(p, component.toLegacyText());
+    }
+
+    @Override
+    @SuppressWarnings("deprecation")
+    public boolean isItem(Material m) {
+        if (m == Material.AIR) return false;
+        return Item.getById(m.getId()) != null;
     }
 
     @Override
@@ -68,36 +70,6 @@ public final class Wrapper1_9_R2 implements Wrapper {
         meta.setOwner(p.getName());
         item.setItemMeta(meta);
         return item;
-    }
-
-    private Object getData(NBTBase b) {
-        switch (b.getTypeId()) {
-            case 1: return ((NBTTagByte) b).f();
-            case 2: return ((NBTTagShort) b).e();
-            case 3: return ((NBTTagInt) b).d();
-            case 4: return ((NBTTagLong) b).c();
-            case 5: return ((NBTTagFloat) b).h();
-            case 6: return ((NBTTagDouble) b).g();
-            case 7: return ((NBTTagByteArray) b).c();
-            case 8: return ((NBTTagString) b).a_();
-            case 9: {
-                List<Object> l = new ArrayList<>();
-
-                NBTTagList list = (NBTTagList) b;
-                for (int i = 0; i < list.size(); i++) l.add(getData(list.h(i)));
-                return l;
-            }
-            case 10: {
-                NBTTagCompound c = (NBTTagCompound) b;
-                Map<String, Object> map = new HashMap<>();
-
-                c.c().forEach(s -> map.put(s, getData(c.get(s))));
-                return map;
-            }
-            case 11: return ((NBTTagIntArray) b).c();
-
-            default: return null;
-        }
     }
 
     @Override
@@ -183,6 +155,7 @@ public final class Wrapper1_9_R2 implements Wrapper {
         switch (e.getHand()) {
             case OFF_HAND: e.getPlayer().getEquipment().setItemInOffHand(null);
             case HAND: e.getPlayer().getEquipment().setItemInMainHand(null);
+            default: break;
         }
     }
 }

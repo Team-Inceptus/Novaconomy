@@ -34,7 +34,7 @@ public class PlayerChangeBalanceEvent extends PlayerEconomyEvent implements Canc
     }
 
     /**
-     * Whether or not this increase was caused by a natural event (i.e. fishing increase)
+     * Whether this increase was caused by a natural event (i.e. fishing increase)
      * @return true if natural, else false
      */
     public boolean isNatural() {

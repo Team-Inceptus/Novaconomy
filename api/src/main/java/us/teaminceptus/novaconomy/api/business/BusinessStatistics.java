@@ -1,11 +1,14 @@
 package us.teaminceptus.novaconomy.api.business;
 
+import com.google.common.base.Preconditions;
+import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.api.economy.Economy;
+import us.teaminceptus.novaconomy.api.util.BusinessProduct;
 import us.teaminceptus.novaconomy.api.util.Price;
 import us.teaminceptus.novaconomy.api.util.Product;
 
@@ -23,31 +26,74 @@ public final class BusinessStatistics implements ConfigurationSerializable {
      * Represents a Transaction for a Business
      */
     public static final class Transaction implements ConfigurationSerializable {
-        private final OfflinePlayer buyer;
-        private final Product product;
-        private final long timestamp;
+        private UUID buyer;
+        private Product product;
+        private long timestamp;
+        private UUID business;
 
         /**
-         * Constructs a Transaction.
-         * @param buyer Player who bought the Product
-         * @param product Product that was bought
-         * @param timestamp Time that the Transaction was made
+         * Constructs a Transaction with no buyer or product.
          */
-        public Transaction(@Nullable OfflinePlayer buyer, @Nullable Product product, long timestamp) {
-            this.buyer = buyer;
-            this.product = product;
-            this.timestamp = timestamp;
+        public Transaction() {
+            this(null, null);
+        }
+
+        /**
+         * Constructs a Transaction with a timestamp equaling {@link System#currentTimeMillis()}.
+         * @param buyer Buyer of the Product
+         * @param product Product bought
+         * @param business Business that the transaction took place in
+         */
+        public Transaction(@Nullable OfflinePlayer buyer, @Nullable Business business, @Nullable Product product) {
+            this(buyer, business, product, System.currentTimeMillis());
+        }
+
+        /**
+         * Constructs a Transaction with a timestamp equaling {@link System#currentTimeMillis()}.
+         * @param buyer Buyer of the Product
+         * @param product Business Product bought
+         */
+        public Transaction(@Nullable OfflinePlayer buyer, @Nullable BusinessProduct product) {
+            this(buyer, product == null ? null : product.getBusiness(), product == null ? null : new Product(product), System.currentTimeMillis());
         }
 
         /**
          * Constructs a Transaction.
          * @param buyer Player who bought the Product
+         * @param business Business that the transaction took place in
+         * @param product Product that was bought
+         * @param timestamp Time that the Transaction was made
+         * @throws IllegalArgumentException if timestamp is negative
+         */
+        public Transaction(@Nullable OfflinePlayer buyer, @Nullable Business business, @Nullable Product product, long timestamp) throws IllegalArgumentException {
+            if (timestamp < 0) throw new IllegalArgumentException("Timestamp cannot be negative");
+            this.buyer = buyer == null ? null : buyer.getUniqueId();
+            this.product = product;
+            this.timestamp = timestamp;
+            this.business = business == null ? null : business.getUniqueId();
+        }
+
+        /**
+         * Constructs a Transaction.
+         * @param buyer Player who bought the Product
+         * @param product Business Product that was bought
+         * @param timestamp Time that the Transaction was made
+         * @throws IllegalArgumentException if timestamp is negative
+         */
+        public Transaction(@Nullable OfflinePlayer buyer, @Nullable BusinessProduct product, long timestamp) throws IllegalArgumentException {
+            this(buyer, product == null ? null : product.getBusiness(), product == null ? null : new Product(product), timestamp);
+        }
+
+        /**
+         * Constructs a Transaction.
+         * @param buyer Player who bought the Product
+         * @param business Business that the transaction took place in
          * @param product Product that was bought
          * @param timestamp Date Object of the time that the Transaction was made
          * @throws NullPointerException if Date is null
          */
-        public Transaction(@Nullable OfflinePlayer buyer, @Nullable Product product, @NotNull Date timestamp) throws NullPointerException{
-            this(buyer, product, timestamp.getTime());
+        public Transaction(@Nullable OfflinePlayer buyer, @Nullable Business business, @Nullable Product product, @NotNull Date timestamp) throws NullPointerException {
+            this(buyer, business, product, timestamp.getTime());
         }
 
         /**
@@ -56,7 +102,7 @@ public final class BusinessStatistics implements ConfigurationSerializable {
          */
         @Nullable
         public OfflinePlayer getBuyer() {
-            return buyer;
+            return Bukkit.getOfflinePlayer(buyer);
         }
 
         /**
@@ -77,14 +123,68 @@ public final class BusinessStatistics implements ConfigurationSerializable {
             return new Date(timestamp);
         }
 
+        /**
+         * Sets the buyer of this transaction.
+         * @param buyer Buyer to set
+         */
+        public void setBuyer(@Nullable OfflinePlayer buyer) {
+            this.buyer = buyer == null ? null : buyer.getUniqueId();
+        }
+
+        /**
+         * Sets the product of this transaction.
+         * @param product Product to set
+         */
+        public void setProduct(@Nullable Product product) {
+            this.product = product;
+        }
+
+        /**
+         * Sets the timestamp of this transaction.
+         * @param timestamp Timestamp to set
+         * @throws IllegalArgumentException if timestamp is negative
+         */
+        public void setTimestamp(long timestamp) throws IllegalArgumentException {
+            if (timestamp < 0) throw new IllegalArgumentException("Timestamp cannot be negative");
+            this.timestamp = timestamp;
+        }
+
+        /**
+         * Sets the timestamp of this transaction.
+         * @param timestamp Date Object of the timestamp to set
+         * @throws NullPointerException if Date is null
+         */
+        public void setTimestamp(@NotNull Date timestamp) throws NullPointerException {
+            Preconditions.checkNotNull(timestamp, "Timestamp cannot be null");
+            setTimestamp(timestamp.getTime());
+        }
+
+        /**
+         * Returns the Business that the transaction took place in.
+         * @return Business that the transaction took place in.
+         */
+        @Nullable
+        public Business getBusiness() {
+            return Business.getById(business);
+        }
+
+        /**
+         * Sets the business of this transaction.
+         * @param business Business to set
+         */
+        public void setBusiness(@NotNull Business business) {
+            this.business = business.getUniqueId();
+        }
+
         @Override
         public Map<String, Object> serialize() {
             return new HashMap<String, Object>() {{
-                put("buyer", buyer);
+                put("buyer", buyer.toString());
                 put("item", product == null ? null : product.getItem());
                 put("economy", product == null ? null : product.getEconomy().getUniqueId().toString());
                 put("amount", product == null ? null : product.getAmount());
                 put("timestamp", timestamp);
+                put("business", business == null ? null : business.toString());
             }};
         }
 
@@ -100,9 +200,14 @@ public final class BusinessStatistics implements ConfigurationSerializable {
 
             long num = serial.get("timestamp") instanceof Integer ? (int) serial.get("timestamp") : (long) serial.get("timestamp");
 
+            Object buyerO = serial.get("buyer");
+            OfflinePlayer buyer = buyerO instanceof OfflinePlayer ? (OfflinePlayer) buyerO : Bukkit.getOfflinePlayer(UUID.fromString((String) buyerO));
+
+            Object businessO = serial.get("business");
+            UUID business = businessO == null ? null : UUID.fromString(businessO.toString());
+
             try {
-                return new Transaction(
-                        (OfflinePlayer) serial.get("buyer"),
+                Transaction t = new Transaction(buyer, null,
                         new Product(
                                 (ItemStack) serial.get("item"),
                                 new Price(
@@ -111,6 +216,8 @@ public final class BusinessStatistics implements ConfigurationSerializable {
                                 )
                         ), num
                 );
+                t.business = business;
+                return t;
             } catch (NullPointerException | ClassCastException e) {
                 throw new IllegalArgumentException(e);
             }
@@ -124,6 +231,8 @@ public final class BusinessStatistics implements ConfigurationSerializable {
     private int totalSales = 0;
 
     int totalResources = 0;
+
+    private int views = 0;
 
     private final Map<Product, Integer> productSales = new HashMap<>();
 
@@ -178,6 +287,37 @@ public final class BusinessStatistics implements ConfigurationSerializable {
     }
 
     /**
+     * Fetches the total amount of times this Business was viewed.
+     * @return Total Views
+     */
+    public int getViews() {
+        return views;
+    }
+
+    /**
+     * Sets the total amount of views for this Business.
+     * @param views Total Views
+     */
+    public void setViews(int views) {
+        this.views = views;
+    }
+
+    /**
+     * Adds to the total amount of views for this Business.
+     * @param views Views to add
+     */
+    public void addView(int views) {
+        this.views += views;
+    }
+
+    /**
+     * Adds one view to the total amount of views for this Business.
+     */
+    public void addView() {
+        addView(1);
+    }
+
+    /**
      * Fetches a Map of Products to how much was bought of it.
      * @return Product Sales
      */
@@ -211,6 +351,7 @@ public final class BusinessStatistics implements ConfigurationSerializable {
                 put("total_resources", totalResources);
                 put("last_transaction", lastTransaction);
                 put("product_sales", productSales);
+                put("views", views);
             }});
         }};
     }
@@ -235,7 +376,8 @@ public final class BusinessStatistics implements ConfigurationSerializable {
             s.totalResources = (int) data.get("total_resources");
             s.totalSales = (int) data.get("total_sales");
             s.lastTransaction = (Transaction) data.get("last_transaction");
-            s.productSales.putAll((Map<Product, Integer>) data.get("product_sales"));
+            s.productSales.putAll((Map<Product, Integer>) data.getOrDefault("product_sales", new HashMap<>()));
+            s.views = (int) data.getOrDefault("views", 0);
         } catch (ClassCastException e) {
             throw new IllegalArgumentException(e);
         } catch (NullPointerException ignored) {}

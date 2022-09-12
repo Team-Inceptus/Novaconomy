@@ -1,5 +1,5 @@
 name: ${project.name}
-version: 1.5.1
+version: 1.6.0
 description: ${project.description}
 author: Team Inceptus
 website: ${project.url}
@@ -42,7 +42,7 @@ permissions:
     description: Access to all Economy actions
     default: op
   novaconomy.economy.create:
-    description: Access to creating Economies
+    description: Access to creating and editing Economies
     default: op
     children:
       novaconomy.economy: true
@@ -121,6 +121,11 @@ permissions:
     default: true
     children:
       novaconomy.user: true
+  novaconomy.user.stats:
+    description: Access to view self and others statistics
+    default: true
+    children:
+      novaconomy.user: true
 
   # User Bounty
   novaconomy.user.bounty:
@@ -167,6 +172,11 @@ permissions:
       novaconomy.user.business: true
   novaconomy.user.business.home:
     description: Access to teleport and set home
+    default: true
+    children:
+      novaconomy.user.business: true
+  novaconomy.user.business.keywords:
+    description: Access to modifying and viewing Business Keywords
     default: true
     children:
       novaconomy.user.business: true

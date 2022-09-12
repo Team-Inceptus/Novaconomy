@@ -4,7 +4,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.ServicePriority;
-import us.teaminceptus.novaconomy.Novaconomy;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 
@@ -15,17 +14,6 @@ import java.util.stream.Collectors;
  * Main Vault Registry class for injecting
  */
 public class VaultRegistry {
-
-    private final Novaconomy plugin;
-
-    /**
-     * Constructs the VaultRegistry.
-     * @param plugin Plugin to use
-     */
-    public VaultRegistry(Novaconomy plugin) {
-        this.plugin = plugin;
-        reloadVault();
-    }
 
     public static void reloadVault() {
         Plugin plugin = NovaConfig.getPlugin();

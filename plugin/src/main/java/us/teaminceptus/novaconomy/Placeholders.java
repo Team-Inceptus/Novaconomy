@@ -4,9 +4,9 @@ import com.google.common.util.concurrent.AtomicDouble;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import org.bukkit.OfflinePlayer;
 import org.jetbrains.annotations.NotNull;
-import us.teaminceptus.novaconomy.api.NovaPlayer;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.economy.Economy;
+import us.teaminceptus.novaconomy.api.player.NovaPlayer;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -83,6 +83,10 @@ class Placeholders extends PlaceholderExpansion {
             if (Business.exists(p)) return String.valueOf(Business.getByOwner(p).getStatistics().getLastTransaction().getProduct().getAmount());
             return "";
         });
+        put("business_advertising_balance", p -> {
+            if (Business.exists(p)) return String.valueOf(Business.getByOwner(p).getAdvertisingBalance());
+            return "";
+        });
     }};
 
     private static final Map<String, BiFunction<OfflinePlayer, String, String>> OFFLINE_ARG_PH = new HashMap<String, BiFunction<OfflinePlayer, String, String>>() {{
@@ -108,7 +112,7 @@ class Placeholders extends PlaceholderExpansion {
 
     @Override
     public @NotNull String getVersion() {
-        return "1.0.2";
+        return "1.0.3";
     }
 
     // Impl

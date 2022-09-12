@@ -5,17 +5,54 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 
+import java.io.Externalizable;
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 
 /**
  * Utility Class for creating a Price with an Economy
  */
-public final class Price implements ConfigurationSerializable, Comparable<Price> {
+public final class Price implements ConfigurationSerializable, Comparable<Price>, Externalizable {
 
     private Economy econ;
     private double amount;
+
+    // Serialization
+
+    @Override
+    public void writeExternal(ObjectOutput out) throws IOException {
+        out.writeDouble(amount);
+        out.writeObject(econ == null ? "" : econ.getUniqueId().toString());
+    }
+
+    @Override
+    public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+        this.amount = in.readDouble();
+        String s = (String) in.readObject();
+        this.econ = s.isEmpty() ? null : Economy.getEconomy(UUID.fromString(s));
+    }
+
+    // Other
+
+    /**
+     * Constructs a Price with an amount of 1.
+     */
+    public Price() {
+        this(1);
+    }
+
+    /**
+     * Constructs a Price with a null economy.
+     * @param amount Amount of money
+     */
+    public Price(double amount) {
+        this(null, amount);
+    }
 
     /**
      * Constructs a Price.
@@ -156,17 +193,14 @@ public final class Price implements ConfigurationSerializable, Comparable<Price>
 
     @Override
     public String toString() {
-        return "Price{" +
-                "econ=" + econ.getUniqueId() +
-                ", amount=" + amount +
-                '}';
+        return String.format("%,.2f", amount) + econ.getSymbol();
     }
 
     @Override
     public Map<String, Object> serialize() {
         return new HashMap<String, Object>() {{
             put("amount", amount);
-            put("economy", econ.getName().toLowerCase());
+            if (econ != null) put("economy", econ.getName().toLowerCase());
         }};
     }
 
@@ -180,8 +214,10 @@ public final class Price implements ConfigurationSerializable, Comparable<Price>
     public static Price deserialize(@Nullable Map<String, Object> serial) throws IllegalArgumentException {
         if (serial == null) return null;
 
+        Economy econ = serial.containsKey("economy") ? Economy.getEconomy((String) serial.get("economy")) : null;
+
         try {
-            return new Price(Economy.getEconomy((String) serial.get("economy")), (double) serial.get("amount"));
+            return new Price(econ, (double) serial.get("amount"));
         } catch (ClassCastException | NullPointerException e) {
             throw new IllegalArgumentException(e);
         }

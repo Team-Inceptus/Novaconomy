@@ -155,6 +155,7 @@ public final class Wrapper1_13_R2 implements Wrapper {
         switch (e.getHand()) {
             case OFF_HAND: e.getPlayer().getEquipment().setItemInOffHand(null);
             case HAND: e.getPlayer().getEquipment().setItemInMainHand(null);
+            default: break;
         }
     }
 }
