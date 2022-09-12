@@ -153,19 +153,21 @@ public final class Settings {
          * Whether the Business allows advertising from other businesses.
          */
         @SettingDescription("settings.business.advertising")
-        EXTERNAL_ADVERTISEMENT("constants.settings.name.advertisement")
+        EXTERNAL_ADVERTISEMENT("constants.settings.name.advertisement", NovaConfig.getConfiguration()::isAdvertisingEnabled)
         ;
 
-        private final boolean defaultValue;
+        private final BooleanSupplier defaultValue;
         private final String dKey;
 
-        Business(String dKey, boolean defaultV) { this.dKey = dKey; this.defaultValue = defaultV; }
+        Business(String dKey, boolean defaultV) { this(dKey, () -> defaultV); }
 
         Business(String dKey) { this(dKey, true); }
 
+        Business(String dKey, BooleanSupplier defaultV) { this.dKey = dKey; this.defaultValue = defaultV; }
+
         @Override
         public Boolean getDefaultValue() {
-            return defaultValue;
+            return defaultValue.getAsBoolean();
         }
 
         @NotNull
