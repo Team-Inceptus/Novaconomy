@@ -594,9 +594,11 @@ public final class Business implements ConfigurationSerializable {
      * Adds a Business to this Business's blacklist.
      * @param business Business to add
      * @return this Business, for chaining
+     * @throws IllegalArgumentException if business is this business
      */
     @NotNull
-    public Business blacklist(@NotNull Business business) {
+    public Business blacklist(@NotNull Business business) throws IllegalArgumentException {
+        if (business.getUniqueId().equals(this.getUniqueId())) throw new IllegalArgumentException("Cannot blacklist self");
         if (this.blacklist.contains(business)) return this;
         if (business.blacklist.contains(this)) return this;
 
@@ -611,6 +613,7 @@ public final class Business implements ConfigurationSerializable {
      * @return true if blacklisted, else false
      */
     public boolean isBlacklisted(@NotNull Business business) {
+        if (business.getUniqueId().equals(this.getUniqueId())) return false;
         return this.blacklist.contains(business) || business.blacklist.contains(this);
     }
 
@@ -621,6 +624,8 @@ public final class Business implements ConfigurationSerializable {
      */
     @NotNull
     public Business unblacklist(@NotNull Business business) {
+        if (business.getUniqueId().equals(this.getUniqueId())) return this;
+
         if (this.blacklist.contains(business)) {
             this.blacklist.remove(business);
             saveBusiness();
@@ -1263,18 +1268,24 @@ public final class Business implements ConfigurationSerializable {
                 ChatColor.AQUA + keywords.toString().replaceAll("[\\[\\]]", ""),
                 pRating ? ChatColor.YELLOW + rB.toString() : "")
         );
+
+        hMeta.addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1, true);
+        hMeta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
         icon.setItemMeta(hMeta);
 
         return icon;
     }
 
     /**
-     * Fetches a random business based on its advertising balance.
+     * <p>Fetches a random business based on its advertising balance.</p>
+     * <p>Will return null if {@link NovaConfig#isAdvertisingEnabled()} is false.</p>
      * @return Random Business
      */
     @Nullable
     public static Business randomAdvertisingBusiness() {
-        List<Business> businesses = getBusinesses();
+        if (!NovaConfig.getConfiguration().isAdvertisingEnabled()) return null;
+
+        List<Business> businesses = getBusinesses().stream().filter(b -> b.getAdvertisingBalance() > NovaConfig.getConfiguration().getBusinessAdvertisingReward()).collect(Collectors.toList());
         if (businesses.isEmpty()) return null;
 
         Map<Business, Double> minRange = new HashMap<>();
