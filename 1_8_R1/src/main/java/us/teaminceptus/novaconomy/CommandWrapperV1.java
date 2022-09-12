@@ -234,7 +234,7 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                             double scale = Double.parseDouble(args[4]);
                             boolean naturalIncrease = true;
 
-                            if (!(args.length < 6)) {
+                            if (args.length >= 6) {
                                 if (!(args[5].equalsIgnoreCase("true")) && !(args[5].equalsIgnoreCase("false"))) {
                                     sender.sendMessage(getMessage("error.argument.bool"));
                                     return false;
@@ -243,7 +243,18 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                                 naturalIncrease = Boolean.parseBoolean(args[5]);
                             }
 
-                            createEconomy(sender, name, symbol, icon, scale, naturalIncrease);
+                            boolean clickableReward = true;
+
+                            if (args.length >= 7) {
+                                if (!(args[6].equalsIgnoreCase("true")) && !(args[6].equalsIgnoreCase("false"))) {
+                                    sender.sendMessage(getMessage("error.argument.bool"));
+                                    return false;
+                                }
+
+                                clickableReward = Boolean.parseBoolean(args[6]);
+                            }
+
+                            createEconomy(sender, name, symbol, icon, scale, naturalIncrease, clickableReward);
                         } catch (IllegalArgumentException e) {
                             sender.sendMessage(getMessage("error.argument"));
                             return false;
@@ -718,7 +729,10 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                             return false;
                         }
 
-                        discoverBusinesses(p);
+                        StringBuilder keywords = new StringBuilder();
+
+                        if (args.length >= 2) for (int i = 1; i < args.length; i++) keywords.append(args[i]).append(" ");
+                        discoverBusinesses(p, keywords.toString().split("[, ]"));
                         break;
                     }
                     case "settings": case "setting": {
@@ -1371,6 +1385,30 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                             }
 
                         }
+                        return suggestions;
+                    case 4:
+                        switch (args[0].toLowerCase()) {
+                            case "blacklist":
+                            case "blackl":
+                            case "bl":
+                            case "blist": {
+                                switch (args[1].toLowerCase()) {
+                                    case "add": {
+                                        suggestions.addAll(Business.getBusinesses().stream().filter(b -> {
+                                            OfflinePlayer p = Wrapper.getPlayer(sender.getName());
+                                            return !b.isOwner(p) && !Business.getByOwner(p).isBlacklisted(b);
+                                        }).map(Business::getName).collect(Collectors.toList()));
+                                        break;
+                                    }
+                                    case "remove":
+                                    case "delete": {
+                                        suggestions.addAll(Business.getByOwner(Wrapper.getPlayer(sender.getName())).getBlacklist().stream().map(Business::getName).collect(Collectors.toList()));
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
                         return suggestions;
                 }
                 return suggestions;

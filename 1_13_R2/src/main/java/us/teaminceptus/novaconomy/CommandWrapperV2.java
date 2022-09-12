@@ -21,11 +21,9 @@ import us.teaminceptus.novaconomy.api.economy.Economy;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public final class CommandWrapperV2 implements CommandWrapper {
 
@@ -42,7 +40,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
             return econ;
         });
 
-        handler.getAutoCompleter().registerParameterSuggestions(Economy.class, SuggestionProvider.of(() -> toStringList(Economy::getName, Economy.getEconomies())));
+        handler.getAutoCompleter().registerParameterSuggestions(Economy.class, SuggestionProvider.map(Economy::getEconomies, Economy::getName));
 
         handler.registerValueResolver(Material.class, ctx -> {
             Material m = Material.matchMaterial(ctx.popForParameter());
@@ -51,14 +49,14 @@ public final class CommandWrapperV2 implements CommandWrapper {
             if (m == Material.AIR) throw new CommandErrorException(getMessage("error.argument.icon"));
             return m;
         });
-        handler.getAutoCompleter().registerParameterSuggestions(Material.class, SuggestionProvider.of(() -> toStringList(m -> m.name().toLowerCase(), Arrays.stream(Material.values()).filter(Material::isItem).filter(m -> m != Material.AIR))));
+        handler.getAutoCompleter().registerParameterSuggestions(Material.class, SuggestionProvider.map(() -> Arrays.stream(Material.values()).filter(Material::isItem).filter(m -> m != Material.AIR).collect(Collectors.toList()), m -> m.name().toLowerCase()));
 
         handler.registerValueResolver(Business.class, ctx -> {
             Business b = Business.getByName(ctx.popForParameter());
             if (b == null) throw new CommandErrorException(getMessage("error.argument.business"));
             return b;
         });
-        handler.getAutoCompleter().registerParameterSuggestions(Business.class, SuggestionProvider.of(() -> toStringList(Business::getName, Business.getBusinesses())));
+        handler.getAutoCompleter().registerParameterSuggestions(Business.class, SuggestionProvider.map(Business::getBusinesses, Business::getName));
 
         handler.getAutoCompleter().registerParameterSuggestions(boolean.class, SuggestionProvider.of("true", "false"));
 
@@ -70,10 +68,15 @@ public final class CommandWrapperV2 implements CommandWrapper {
             return p;
         });
 
-        handler.getAutoCompleter().registerParameterSuggestions(OfflinePlayer.class, SuggestionProvider.of(() -> toStringList(OfflinePlayer::getName, Arrays.asList(Bukkit.getOfflinePlayers()))));
+        handler.getAutoCompleter().registerParameterSuggestions(OfflinePlayer.class, SuggestionProvider.map(() -> Arrays.asList(Bukkit.getOfflinePlayers()), OfflinePlayer::getName));
 
-        handler.getAutoCompleter().registerSuggestion("event", SuggestionProvider.of(() -> toStringList(NovaConfig.CustomTaxEvent::getIdentifier, NovaConfig.getConfiguration().getAllCustomEvents())));
+        handler.getAutoCompleter().registerSuggestion("event", SuggestionProvider.map(NovaConfig.getConfiguration()::getAllCustomEvents, NovaConfig.CustomTaxEvent::getIdentifier));
         handler.getAutoCompleter().registerSuggestion("settings", SuggestionProvider.of(Arrays.asList("business", "personal")));
+        handler.getAutoCompleter().registerSuggestion("blacklist", (args, sender, cmd) -> Business.getBusinesses().stream().filter(b -> {
+            OfflinePlayer p = ((BukkitCommandActor) sender).requirePlayer();
+            return !b.isOwner(p) && !Business.getByOwner(p).isBlacklisted(b);
+        }).map(Business::getName).collect(Collectors.toList()));
+        handler.getAutoCompleter().registerSuggestion("blacklisted", (args, sender, cmd) -> Business.getByOwner(Wrapper.getPlayer(sender.getName())).getBlacklist().stream().map(Business::getName).collect(Collectors.toList()));
 
         handler.register(this);
         new EconomyCommands(this);
@@ -88,17 +91,6 @@ public final class CommandWrapperV2 implements CommandWrapper {
 
     private static String getMessage(String key) {
         return CommandWrapper.getMessage(key);
-    }
-
-    private static <T> List<String> toStringList(Function<T, String> func, Collection<T> elements) {
-        List<String> list = new ArrayList<>();
-        for (T element : elements) list.add(func.apply(element));
-
-        return list;
-    }
-
-    private static <T> List<String> toStringList(Function<T, String> func, Stream<T> stream) {
-        return toStringList(func, stream.collect(Collectors.toList()));
     }
 
     @SafeVarargs
@@ -274,7 +266,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
         public void businessRating(Player p, OfflinePlayer target) { wrapper.businessRating(p, target); }
 
         @Subcommand("discover")
-        public void discoverBusiness(Player p) { wrapper.discoverBusinesses(p); }
+        public void discoverBusiness(Player p, @Default("") String keywords) { wrapper.discoverBusinesses(p, keywords.split("[ ,]")); }
 
         @Subcommand("remove")
         @CommandPermission("novaconomy.admin.delete_business")
@@ -333,10 +325,12 @@ public final class CommandWrapperV2 implements CommandWrapper {
         public void listBlacklist(Player p) { wrapper.listBlacklist(p); }
 
         @Subcommand({"blacklist add", "blist add", "bl add", "blackl add"})
+        @AutoComplete("@blacklist *")
         public void blacklistBusiness(Player p, Business business) { wrapper.addBlacklist(p, business); }
 
         @Subcommand({"blacklist remove", "blist remove", "bl remove", "blackl remove",
         "blacklist delete", "blist delete", "bl delete", "blackl delete"})
+        @AutoComplete("@blacklisted *")
         public void unblacklistBusiness(Player p, Business business) { wrapper.removeBlacklist(p, business); }
 
 
@@ -389,8 +383,8 @@ public final class CommandWrapperV2 implements CommandWrapper {
         @Subcommand({"create", "make"})
         @AutoComplete("* @symbol *")
         @CommandPermission("novaconomy.economy.create")
-        public void createEconomy(CommandSender sender, String name, String symbol, Material icon, @Default("1") @Range(min = 0.01, max = Integer.MAX_VALUE) double scale, @Named("natural-increase") @Default("true") boolean naturalIncrease) {
-            wrapper.createEconomy(sender, name, symbol.contains("\"") || symbol.contains("'") ? symbol.charAt(1) : symbol.charAt(0), icon, scale, naturalIncrease);
+        public void createEconomy(CommandSender sender, String name, String symbol, Material icon, @Default("1") @Range(min = 0.01, max = Integer.MAX_VALUE) double scale, @Named("natural-increase") @Default("true") boolean naturalIncrease, @Named("clickable-reward") @Default("true") boolean clickableReward) {
+            wrapper.createEconomy(sender, name, symbol.contains("\"") || symbol.contains("'") ? symbol.charAt(1) : symbol.charAt(0), icon, scale, naturalIncrease, clickableReward);
         }
 
         @Subcommand({"remove", "delete", "removeeconomy", "deleteeconomy"})
