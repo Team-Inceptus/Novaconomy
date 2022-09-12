@@ -709,7 +709,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				ItemStack item = e.getCurrentItem();
 				String name = ChatColor.stripColor(item.getItemMeta().getDisplayName()).toLowerCase();
 				Business b = Business.getByName(name);
-				p.openInventory(w.generateBusinessData(b, p));
+				p.openInventory(w.generateBusinessData(b, p, true));
 
 				if (!b.isOwner(p)) {
 					b.getStatistics().addView();
@@ -836,7 +836,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				Business b = Business.getById(UUID.fromString(w.getNBTString(item, BUSINESS_TAG)));
 
 				p.sendMessage(Novaconomy.get("cancel.business.purchase"));
-				p.openInventory(w.generateBusinessData(b, p));
+				p.openInventory(w.generateBusinessData(b, p, true));
 				XSound.BLOCK_NOTE_BLOCK_PLING.play(p, 3F, 0F);
 
 				if (!b.isOwner(p)) {
@@ -1254,21 +1254,6 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				getCommandWrapper().businessStatistics(p, b);
 			});
 
-			put("back:business", e -> {
-				if (!(e.getWhoClicked() instanceof Player)) return;
-				Player p = (Player) e.getWhoClicked();
-				ItemStack item = e.getCurrentItem();
-				Business b = Business.getById(UUID.fromString(w.getNBTString(item, BUSINESS_TAG)));
-
-				p.openInventory(w.generateBusinessData(b, p));
-				XSound.BLOCK_ENDER_CHEST_OPEN.play(p, 3F, 0.5F);
-
-				if (!b.isOwner(p)) {
-					b.getStatistics().addView();
-					b.saveBusiness();
-				}
-			});
-
 			put("business:rating", e -> {
 				if (!(e.getWhoClicked() instanceof Player)) return;
 				Player p = (Player) e.getWhoClicked();
@@ -1331,10 +1316,12 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				ItemStack item = e.getCurrentItem();
 				Business b = Business.getById(UUID.fromString(w.getNBTString(item, BUSINESS_TAG)));
 
-				p.openInventory(w.generateBusinessData(b, p));
+				boolean notOwner = !b.isOwner(p);
+
+				p.openInventory(w.generateBusinessData(b, p, notOwner));
 				XSound.BLOCK_ENDER_CHEST_OPEN.play(p, 3F, 0.5F);
 
-				if (!b.isOwner(p)) {
+				if (notOwner) {
 					b.getStatistics().addView();
 					b.saveBusiness();
 				}
@@ -1417,6 +1404,38 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 			});
 			put("yes:deposit_advertising", e -> BUSINESS_ADVERTISING_BICONSUMER.accept(e, true));
 			put("yes:withdraw_advertising", e -> BUSINESS_ADVERTISING_BICONSUMER.accept(e, false));
+			put("business:click:advertising", e -> {
+				if (!(e.getWhoClicked() instanceof Player)) return;
+				get("business:click").accept(e);
+				Player p = (Player) e.getWhoClicked();
+				ItemStack item = e.getCurrentItem();
+
+				Business to = Business.getById(UUID.fromString(w.getNBTString(item, BUSINESS_TAG)));
+				Business from = Business.getById(UUID.fromString(w.getNBTString(item, "from_business")));
+
+				double add = NovaConfig.getConfiguration().getBusinessAdvertisingReward();
+				if (to.getAdvertisingBalance() < add) return;
+
+				Set<Economy> economies = Economy.getClickableRewardEconomies();
+				Economy randomEcon = economies.stream().skip(r.nextInt(economies.size())).findFirst().orElse(null);
+
+				to.removeAdvertisingBalance(add, randomEcon);
+				from.addAdvertisingBalance(add, randomEcon);
+			});
+			put("business:click:advertising_external", e -> {
+				if (!(e.getWhoClicked() instanceof Player)) return;
+				get("business:click").accept(e);
+				Player p = (Player) e.getWhoClicked();
+				ItemStack item = e.getCurrentItem();
+
+				Business to = Business.getById(UUID.fromString(w.getNBTString(item, BUSINESS_TAG)));
+				double remove = NovaConfig.getConfiguration().getBusinessAdvertisingReward();
+
+				Set<Economy> economies = Economy.getClickableRewardEconomies();
+				Economy randomEcon = economies.stream().skip(r.nextInt(economies.size())).findFirst().orElse(null);
+
+				to.removeAdvertisingBalance(remove, randomEcon);
+			});
 		}
 	};
 
