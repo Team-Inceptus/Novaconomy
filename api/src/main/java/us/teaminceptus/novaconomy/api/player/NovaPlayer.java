@@ -602,32 +602,39 @@ public final class NovaPlayer {
     /**
      * Fetches the amount of shares this player owns for this Material.
      * @param m Material to check
+     * @deprecated Draft API
      * @return Amount of shares player owns, or 0 if not found
      */
+    @Deprecated
     public long getShareAmount(@NotNull Material m) {
-        if (m == null) return 0;
-        return pConfig.getLong("market.shares." + m.name().toLowerCase(), 0);
+//        if (m == null) return 0;
+//        return pConfig.getLong("market.shares." + m.name().toLowerCase(), 0);
+        return 0;
     }
 
     /**
      * Sets the amount of shares this player owns for this Material.
      * @param m Material to set
      * @param amount Amount of shares to set
+     * @deprecated Draft API
      * @throws IllegalArgumentException if share amount is negative
      */
+    @Deprecated
     public void setShareAmount(@NotNull Material m, long amount) throws IllegalArgumentException {
-        if (m == null) return;
-        if (amount < 0) throw new IllegalArgumentException("Share amount cannot be negative");
-
-        if (amount > 0) pConfig.set("market.shares." + m.name().toLowerCase(), amount);
-        else pConfig.set("market.shares." + m.name().toLowerCase(), null);
-        save();
+//        if (m == null) return;
+//        if (amount < 0) throw new IllegalArgumentException("Share amount cannot be negative");
+//
+//        if (amount > 0) pConfig.set("market.shares." + m.name().toLowerCase(), amount);
+//        else pConfig.set("market.shares." + m.name().toLowerCase(), null);
+//        save();
     }
 
     /**
      * Removes ownership of all shares for this Material.
      * @param m Material to remove
+     * @deprecated Draft API
      */
+    @Deprecated
     public void removeAllShares(@NotNull Material m) {
         setShareAmount(m, 0);
     }
@@ -636,21 +643,25 @@ public final class NovaPlayer {
      * Adds shares for this Material.
      * @param m Material to add shares for
      * @param amount Amount of shares to add
+     * @deprecated Draft API
      */
+    @Deprecated
     public void addShares(@NotNull Material m, long amount) {
-        if (m == null) return;
-
-        stats.totalSharesPurchased += amount;
-        setShareAmount(m, getShareAmount(m) + amount);
+//        if (m == null) return;
+//
+//        stats.totalSharesPurchased += amount;
+//        setShareAmount(m, getShareAmount(m) + amount);
     }
 
     /**
      * Remove shares for this Material.
      * @param m Material to remove shares for
      * @param amount Amount of shares to remove
+     * @deprecated Draft API
      */
+    @Deprecated
     public void removeShares(@NotNull Material m, long amount) {
-        if (m == null) return;
-        addShares(m, -amount);
+//        if (m == null) return;
+//        addShares(m, -amount);
     }
 }
