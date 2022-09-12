@@ -31,6 +31,7 @@ import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -148,7 +149,7 @@ public interface Wrapper {
         return item;
     }
 
-    default Inventory generateBusinessData(Business b, Player viewer) {
+    default Inventory generateBusinessData(Business b, Player viewer, boolean advertising) {
         Inventory inv = genGUI(54, ChatColor.GOLD + b.getName(), new Wrapper.CancelHolder());
 
         if (!b.getRatings().isEmpty()) inv.setItem(44, CommandWrapper.loading());
@@ -255,12 +256,12 @@ public interface Wrapper {
         inv.setItem(14, stats);
 
         if (b.isOwner(viewer)) {
-            ItemStack advertising = new ItemStack(Material.BUCKET);
-            ItemMeta adMeta = advertising.getItemMeta();
+            ItemStack adInfo = new ItemStack(Material.BUCKET);
+            ItemMeta adMeta = adInfo.getItemMeta();
             adMeta.setDisplayName(ChatColor.AQUA + get("constants.business.advertising"));
-            advertising.setItemMeta(adMeta);
-            advertising = setID(advertising, "business:advertising");
-            inv.setItem(26, advertising);
+            adInfo.setItemMeta(adMeta);
+            adInfo = setID(adInfo, "business:advertising");
+            inv.setItem(26, adInfo);
         }
 
         Material kMaterial;
@@ -292,8 +293,21 @@ public interface Wrapper {
             inv.setItem(44, rating);
         } else inv.setItem(44, null);
 
+        if (r.nextBoolean() && advertising && b.getSetting(Settings.Business.EXTERNAL_ADVERTISEMENT) && NovaConfig.getConfiguration().isAdvertisingEnabled()) {
+            Business rand = Business.randomAdvertisingBusiness();
+            if (rand != null && !b.isBlacklisted(rand)) {
+                ItemStack rIcon = rand.getPublicIcon();
+                rIcon = setID(rIcon, "business:click:advertising");
+                rIcon = setNBT(rIcon, "business", rand.getUniqueId().toString());
+                rIcon = setNBT(rIcon, "from_business", b.getUniqueId().toString());
+                inv.setItem(27, rIcon);
+            }
+        }
+
         return inv;
     }
+
+    SecureRandom r = new SecureRandom();
 
     default Inventory genGUI(int size, String name) {
         return genGUI(size, name, null);
