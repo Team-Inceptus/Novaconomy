@@ -1819,6 +1819,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				.setChangelogLink("https://github.com/Team-Inceptus/Novaconomy/releases/")
 				.setUserAgent("Java 8 Novaconomy User Agent")
 				.setColoredConsoleOutput(true)
+				.setDonationLink("https://www.patreon.com/teaminceptus")
 				.setNotifyRequesters(true)
 				.checkEveryXHours(1)
 				.checkNow();
