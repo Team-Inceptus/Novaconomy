@@ -150,30 +150,38 @@ Published as a JitPack repository
 
 -----
 ## 📷 Screenshots
-![Screenshot1](https://media.discordapp.net/attachments/894254760075603980/1006817734664925295/2022-08-10_01.52.53.png)
+![Screenshot1](https://cdn.discordapp.com/attachments/894254760075603980/1018685509641449532/2022-09-11_19.45.01.png)
 
-![Screenshot2](https://media.discordapp.net/attachments/894254760075603980/1006817734337757224/2022-08-10_01.53.07.png)
+![Screenshot2](https://media.discordapp.net/attachments/894254760075603980/1018685509410754600/2022-09-11_19.45.27.png)
 
-![Screenshot3](https://media.discordapp.net/attachments/894254760075603980/1006817733972856902/2022-08-10_01.53.21.png)
+![Screenshot3](https://media.discordapp.net/attachments/894254760075603980/1018685509054255194/2022-09-11_19.45.46.png)
 
-![Screenshot4](https://media.discordapp.net/attachments/894254760075603980/1006817734983684096/2022-08-10_01.51.46.png)
+![Screenshot4](https://media.discordapp.net/attachments/894254760075603980/1018685508781609011/2022-09-11_19.51.54.png)
 
-![Screenshot5](https://cdn.discordapp.com/attachments/894254760075603980/998836906706083872/2022-07-19_01.19.59.png)
+![Screenshot5](https://media.discordapp.net/attachments/894254760075603980/1006817734664925295/2022-08-10_01.52.53.png)
 
-![Screenshot6](https://cdn.discordapp.com/attachments/894254760075603980/998836907876302938/2022-07-19_01.19.18.png)
+![Screenshot6](https://media.discordapp.net/attachments/894254760075603980/1006817734337757224/2022-08-10_01.53.07.png)
 
-![Screenshot7](https://cdn.discordapp.com/attachments/894254760075603980/987617972937957376/2022-06-18_02.20.03.png)
+![Screenshot7](https://media.discordapp.net/attachments/894254760075603980/1006817733972856902/2022-08-10_01.53.21.png)
 
-![Screenshot8](https://cdn.discordapp.com/attachments/894254760075603980/987617972480798740/2022-06-18_02.20.12.png)
+![Screenshot8](https://media.discordapp.net/attachments/894254760075603980/1006817734983684096/2022-08-10_01.51.46.png)
 
-![Screenshot9](https://cdn.discordapp.com/attachments/860730694551863328/949806777539653712/2022-03-05_17.12.13.png)
+![Screenshot9](https://cdn.discordapp.com/attachments/894254760075603980/998836906706083872/2022-07-19_01.19.59.png)
 
-![Screenshot10](https://cdn.discordapp.com/attachments/860730694551863328/949806777917116476/2022-03-05_17.11.33.png)
+![Screenshot10](https://cdn.discordapp.com/attachments/894254760075603980/998836907876302938/2022-07-19_01.19.18.png)
 
-![Screenshot11](https://cdn.discordapp.com/attachments/860730694551863328/949806778793721866/2022-03-05_17.09.03.png)
+![Screenshot11](https://cdn.discordapp.com/attachments/894254760075603980/987617972937957376/2022-06-18_02.20.03.png)
 
-![Screenshot12](https://cdn.discordapp.com/attachments/860730694551863328/949806779343200326/2022-03-05_17.08.31.png)
+![Screenshot12](https://cdn.discordapp.com/attachments/894254760075603980/987617972480798740/2022-06-18_02.20.12.png)
 
-![Screenshot13](https://cdn.discordapp.com/attachments/860730694551863328/949806779775205396/2022-03-05_17.08.18.png)
+![Screenshot13](https://cdn.discordapp.com/attachments/860730694551863328/949806777539653712/2022-03-05_17.12.13.png)
+
+![Screenshot14](https://cdn.discordapp.com/attachments/860730694551863328/949806777917116476/2022-03-05_17.11.33.png)
+
+![Screenshot15](https://cdn.discordapp.com/attachments/860730694551863328/949806778793721866/2022-03-05_17.09.03.png)
+
+![Screenshot16](https://cdn.discordapp.com/attachments/860730694551863328/949806779343200326/2022-03-05_17.08.31.png)
+
+![Screenshot17](https://cdn.discordapp.com/attachments/860730694551863328/949806779775205396/2022-03-05_17.08.18.png)
 
 -----
