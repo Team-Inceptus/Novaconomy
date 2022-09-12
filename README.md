@@ -88,7 +88,7 @@ unlimited stock and set the prices to whatever you want!
 - [x] Bounties
 - [x] Custom Tax Events
 - [x] Player/Business Settings
-- [ ] Business Advertising
+- [x] Business Advertising
 - [ ] Business Investing
 - [ ] Novaconomy Stock Market
 
