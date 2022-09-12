@@ -7,6 +7,34 @@ With the freedom to have your own symbols, icons, conversion rates, and even int
 
 <h2 style="text-decoration: underline;">📓Changelog</h2>
 
+### 📊 1.6.0 Update: Supreme Stonks
+- New Features:
+  - **Heavy Optimization**
+    - Economies and Businesses are now stored in individual files/folders to speed up loading times
+      - The plugin contains an automatic migration script that will migrate existing economies/plugins into the new format, and API that uses it is now deprecated.
+      - This script is planned to be removed by Early 2023.
+    - Players no longer contain a proper configuration check for values and instead use defaults
+  - Created Business Advertising
+    - Business Advertising Balance deposit, can use any economy and is more/less valuable based on the economies' conversion rates
+    - Businesses can now advertise other businesses, toggleable in settings
+    - Economies now have a "clickable" tag that means it can be used to remove in the advertising balance, and as payment to other businesses for advertising your business
+    - "Automatic Deposit" Business Setting to automatically deposit 15% of product sales into Advertising  
+  - Created Business Keywords
+    - Businesses can specify up to 10 topics that relate to the business
+    - You can search using these keywords in Business Discover
+  - Created Player Statistics
+    - Includes Transaction History from last 10 purchases 
+- Bug Fixes:
+  - #17 
+  - #18
+  - #19
+- Other Improvements:
+  - Rename Economy & Change Natural Increase, Icon, Custom Model Data ID, or Conversion Scale Commands
+  - Rename Business & Change Business Icon Commands
+  - Setting Descriptions
+  - Korean Translation
+ 
+**Stock Markets are currently planned for 1.6.2, and will be released in the next few weeks.**
 ### 👔 1.5.0 Update: Outstanding Organizations
 - New Features:
   - Business Rating System, allowing others to rate your business.
