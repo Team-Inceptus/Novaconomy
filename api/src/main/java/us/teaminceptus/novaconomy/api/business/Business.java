@@ -910,7 +910,9 @@ public final class Business implements ConfigurationSerializable {
             matOs.close();
         }
 
-        return new Business(id, name, icon, owner, product, resources, stats, settings1, creationDate, keywords, advertisingBalance, blacklist, false);
+        Business b = new Business(id, name, icon, owner, product, resources, stats, settings1, creationDate, keywords, advertisingBalance, blacklist, false);
+        b.setHome(home, false);
+        return b;
     }
 
     /**
