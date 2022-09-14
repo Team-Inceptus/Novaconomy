@@ -61,6 +61,10 @@ public enum Language {
      * Represents Korean / 한국어
      */
     KOREAN("_ko"),
+    /**
+     * Represents Indonesian / Indonesia
+     */
+    INDONESIAN("_id"),
 
     ;
 
