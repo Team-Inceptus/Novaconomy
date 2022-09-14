@@ -61,6 +61,10 @@ public enum Language {
      * Represents Korean / 한국어
      */
     KOREAN("_ko"),
+    /**
+     * Represents Indonesian / Indonesia
+     */
+    INDONESIAN("_id"),
 
     ;
 
@@ -80,6 +84,7 @@ public enum Language {
             case "zh": l = Locale.CHINESE; break;
             case "it": l = Locale.ITALIAN; break;
             case "ko": l = Locale.KOREAN; break;
+            case "id": l = Locale.INDONESIAN; break;
             default: l = new Locale(identifier.replace("_", ""));
         }
 
