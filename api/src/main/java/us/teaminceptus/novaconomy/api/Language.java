@@ -84,7 +84,6 @@ public enum Language {
             case "zh": l = Locale.CHINESE; break;
             case "it": l = Locale.ITALIAN; break;
             case "ko": l = Locale.KOREAN; break;
-            case "id": l = Locale.INDONESIAN; break;
             default: l = new Locale(identifier.replace("_", ""));
         }
 
