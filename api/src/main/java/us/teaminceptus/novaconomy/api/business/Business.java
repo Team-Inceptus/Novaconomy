@@ -831,6 +831,8 @@ public final class Business implements ConfigurationSerializable {
         ObjectInputStream pOs = new ObjectInputStream(new BufferedInputStream(pFs));
 
         List<Map<String, Object>> prods = (List<Map<String, Object>>) pOs.readObject();
+        pOs.close();
+
         List<Product> product = new ArrayList<>();
 
         for (Map<String, Object> m : prods) {

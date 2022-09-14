@@ -1407,7 +1407,6 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 			put("business:click:advertising", e -> {
 				if (!(e.getWhoClicked() instanceof Player)) return;
 				get("business:click").accept(e);
-				Player p = (Player) e.getWhoClicked();
 				ItemStack item = e.getCurrentItem();
 
 				Business to = Business.getById(UUID.fromString(w.getNBTString(item, BUSINESS_TAG)));
@@ -1425,7 +1424,6 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 			put("business:click:advertising_external", e -> {
 				if (!(e.getWhoClicked() instanceof Player)) return;
 				get("business:click").accept(e);
-				Player p = (Player) e.getWhoClicked();
 				ItemStack item = e.getCurrentItem();
 
 				Business to = Business.getById(UUID.fromString(w.getNBTString(item, BUSINESS_TAG)));

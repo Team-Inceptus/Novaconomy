@@ -1,12 +1,24 @@
 package us.teaminceptus.novaconomy;
 
+import java.util.Arrays;
+import java.util.stream.Collectors;
+
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
-import revxrsal.commands.annotation.*;
+
+import revxrsal.commands.annotation.AutoComplete;
+import revxrsal.commands.annotation.Command;
+import revxrsal.commands.annotation.Default;
+import revxrsal.commands.annotation.Description;
+import revxrsal.commands.annotation.Named;
+import revxrsal.commands.annotation.Optional;
+import revxrsal.commands.annotation.Range;
+import revxrsal.commands.annotation.Subcommand;
+import revxrsal.commands.annotation.Usage;
 import revxrsal.commands.autocomplete.SuggestionProvider;
 import revxrsal.commands.bukkit.BukkitCommandActor;
 import revxrsal.commands.bukkit.BukkitCommandHandler;
@@ -18,12 +30,6 @@ import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.economy.Economy;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 public final class CommandWrapperV2 implements CommandWrapper {
 
@@ -91,14 +97,6 @@ public final class CommandWrapperV2 implements CommandWrapper {
 
     private static String getMessage(String key) {
         return CommandWrapper.getMessage(key);
-    }
-
-    @SafeVarargs
-    private static <T> List<String> toStringList(Function<T, String[]> func, T... elements) {
-        List<String> list = new ArrayList<>();
-        for (T element : elements) list.addAll(Arrays.asList(func.apply(element)));
-
-        return list;
     }
 
     // Lamp Impl

@@ -662,7 +662,6 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
 
             for (Economy econ : Economy.getEconomies()) if (econ.getSymbol() == this.symbol) throw new UnsupportedOperationException("Symbol is taken");
 
-            FileConfiguration config = YamlConfiguration.loadConfiguration(file);
             Economy econ = new Economy(id, this.name, this.icon, this.symbol, this.increaseNaturally, this.conversionScale, this.clickableReward);
             econ.customModelData = customModelData;
 
