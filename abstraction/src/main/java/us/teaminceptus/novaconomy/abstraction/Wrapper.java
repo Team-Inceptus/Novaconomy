@@ -19,6 +19,7 @@ import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.economy.Economy;
+import us.teaminceptus.novaconomy.api.events.business.BusinessAdvertiseEvent;
 import us.teaminceptus.novaconomy.api.settings.Settings;
 import us.teaminceptus.novaconomy.api.util.BusinessProduct;
 import us.teaminceptus.novaconomy.api.util.Product;
@@ -296,11 +297,16 @@ public interface Wrapper {
         if (r.nextBoolean() && advertising && b.getSetting(Settings.Business.EXTERNAL_ADVERTISEMENT) && NovaConfig.getConfiguration().isAdvertisingEnabled()) {
             Business rand = Business.randomAdvertisingBusiness();
             if (rand != null && !b.isBlacklisted(rand)) {
+                BusinessAdvertiseEvent event = new BusinessAdvertiseEvent(rand);
+                Bukkit.getPluginManager().callEvent(event);
+
+                if (!event.isCancelled()) {
                 ItemStack rIcon = rand.getPublicIcon();
-                rIcon = setID(rIcon, "business:click:advertising");
-                rIcon = setNBT(rIcon, "business", rand.getUniqueId().toString());
-                rIcon = setNBT(rIcon, "from_business", b.getUniqueId().toString());
-                inv.setItem(27, rIcon);
+                    rIcon = setID(rIcon, "business:click:advertising");
+                    rIcon = setNBT(rIcon, "business", rand.getUniqueId().toString());
+                    rIcon = setNBT(rIcon, "from_business", b.getUniqueId().toString());
+                    inv.setItem(27, rIcon);
+                }
             }
         }
 

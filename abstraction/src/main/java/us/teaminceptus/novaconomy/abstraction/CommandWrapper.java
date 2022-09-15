@@ -28,6 +28,7 @@ import us.teaminceptus.novaconomy.api.business.BusinessStatistics;
 import us.teaminceptus.novaconomy.api.business.Rating;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.events.CommandTaxEvent;
+import us.teaminceptus.novaconomy.api.events.business.BusinessAdvertiseEvent;
 import us.teaminceptus.novaconomy.api.events.player.economy.PlayerPayEvent;
 import us.teaminceptus.novaconomy.api.player.Bounty;
 import us.teaminceptus.novaconomy.api.player.NovaPlayer;
@@ -458,10 +459,15 @@ public interface CommandWrapper {
         if (r.nextBoolean() && NovaConfig.getConfiguration().isAdvertisingEnabled()) {
             Business rand = Business.randomAdvertisingBusiness();
             if (rand != null) {
-                ItemStack rIcon = rand.getPublicIcon();
-                rIcon = w.setID(rIcon, "business:click:advertising_external");
-                rIcon = w.setNBT(rIcon, BUSINESS_TAG, rand.getUniqueId().toString());
-                inv.setItem(18, rIcon);
+                BusinessAdvertiseEvent event = new BusinessAdvertiseEvent(rand);
+                Bukkit.getPluginManager().callEvent(event);
+
+                if (!event.isCancelled()) {
+                    ItemStack rIcon = rand.getPublicIcon();
+                    rIcon = w.setID(rIcon, "business:click:advertising_external");
+                    rIcon = w.setNBT(rIcon, BUSINESS_TAG, rand.getUniqueId().toString());
+                    inv.setItem(18, rIcon);
+                }
             }
         }
 
@@ -2227,10 +2233,14 @@ public interface CommandWrapper {
             });
 
             if (ad && randB != null) {
-                ItemStack rIcon = randB.getPublicIcon();
-                rIcon = w.setID(rIcon, "business:click:advertising_external");
-                rIcon = w.setNBT(rIcon, BUSINESS_TAG, randB.getUniqueId().toString());
-                inv.setItem(18, rIcon);
+                BusinessAdvertiseEvent event = new BusinessAdvertiseEvent(randB);
+                Bukkit.getPluginManager().callEvent(event);
+                if (!event.isCancelled()) {                
+                    ItemStack rIcon = randB.getPublicIcon();
+                    rIcon = w.setID(rIcon, "business:click:advertising_external");
+                    rIcon = w.setNBT(rIcon, BUSINESS_TAG, randB.getUniqueId().toString());
+                    inv.setItem(18, rIcon);
+                }
             }
 
             invs.add(inv);
@@ -2301,10 +2311,15 @@ public interface CommandWrapper {
             });
 
             if (ad && randB != null) {
-                ItemStack rIcon = randB.getPublicIcon();
-                rIcon = w.setID(rIcon, "business:click:advertising_external");
-                rIcon = w.setNBT(rIcon, BUSINESS_TAG, randB.getUniqueId().toString());
-                inv.setItem(27, rIcon);
+                BusinessAdvertiseEvent event = new BusinessAdvertiseEvent(randB);
+                Bukkit.getPluginManager().callEvent(event);
+                
+                if (!event.isCancelled()) {
+                    ItemStack rIcon = randB.getPublicIcon();
+                    rIcon = w.setID(rIcon, "business:click:advertising_external");
+                    rIcon = w.setNBT(rIcon, BUSINESS_TAG, randB.getUniqueId().toString());
+                    inv.setItem(27, rIcon);
+                }
             }
 
             invs.add(inv);
