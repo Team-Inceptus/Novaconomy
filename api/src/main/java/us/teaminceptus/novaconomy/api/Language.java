@@ -117,7 +117,7 @@ public enum Language {
         if (key == null) return null;
 
         Properties p = new Properties();
-        try (InputStream str = NovaConfig.getPlugin().getClass().getResourceAsStream("/novaconomy" + id + ".properties")) {
+        try (InputStream str = NovaConfig.getPlugin().getClass().getResourceAsStream("/lang/novaconomy" + id + ".properties")) {
             p.load(str);
             str.close();
             return ChatColor.translateAlternateColorCodes('&', p.getProperty(key, "Unknown Value"));
