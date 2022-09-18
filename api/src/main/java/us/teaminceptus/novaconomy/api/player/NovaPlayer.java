@@ -126,19 +126,20 @@ public final class NovaPlayer {
     public double getBalance(@NotNull Economy econ) throws IllegalArgumentException {
         if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
         boolean zero = false;
+        String econName = econ.getName().toLowerCase();
 
         if (!pConfig.isConfigurationSection("economies")) {
             pConfig.createSection("economies");
             zero = true;
         }
-        if (!pConfig.isConfigurationSection("economies." + econ.getName())) {
-            pConfig.getConfigurationSection("economies").createSection(econ.getName());
+        if (!pConfig.isConfigurationSection("economies." + econName)) {
+            pConfig.getConfigurationSection("economies").createSection(econName);
             zero = true;
         }
 
         if (zero) return 0;
 
-        return pConfig.getConfigurationSection("economies").getConfigurationSection(econ.getName().toLowerCase()).getDouble("balance", 0);
+        return pConfig.getConfigurationSection("economies").getConfigurationSection(econName).getDouble("balance", 0);
     }
 
     /**
