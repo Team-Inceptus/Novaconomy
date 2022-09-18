@@ -81,6 +81,11 @@ public final class Settings {
          */
         @SettingDescription("settings.personal.balance")
         PUBLIC_BALANCE("constants.settings.name.public_balance"),
+        /**
+         * Whether the player is rating businesses anonymously.
+         */
+        @SettingDescription("settings.personal.rating")
+        ANONYMOUS_RATING("constants.settings.name.anonymous_rate", false),
 
         ;
 
@@ -138,6 +143,7 @@ public final class Settings {
         /**
          * Whether the consumers of the Business can see the rating.
          */
+        @SettingDescription("settings.business.rating")
         PUBLIC_RATING("constants.settings.name.public_rating"),
         /**
          * Whether this business is discoverable.

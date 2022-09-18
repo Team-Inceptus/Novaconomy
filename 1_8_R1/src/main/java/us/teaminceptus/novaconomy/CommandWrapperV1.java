@@ -945,6 +945,16 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                         }
                         break;
                     }
+                    case "allratings":
+                    case "allrating":
+                    case "allr":
+                    case "ar": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
+                        allBusinessRatings(p);
+                        break;
+                    }
                     default: {
                         sender.sendMessage(getMessage("error.argument"));
                         return false;
@@ -1269,7 +1279,7 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                                 "check", "createcheck", "create", "delete", "addbal", "setbalance",
                                 "removebal", "addbalance", "removebalance", "setbal", "setmodeldata", "setcustommodeldata", "modeldata", "custommodeldata",
                                 "seticon", "icon", "setconversionscale", "conversionscale", "setscale", "scale", "setnaturalincrease", "naturalincrease",
-                                "setnatural", "natural", "setname", "name"));
+                                "setnatural", "natural", "setname", "name", "setclickablereward", "clickablereward", "setclickable", "clickable"));
                         return suggestions;
                     }
                     case 2: {
@@ -1295,12 +1305,15 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                             case "setnaturalincrease":
                             case "naturalincrease":
                             case "setnatural":
-                            case "natural": {
+                            case "natural":
+                            case "setclickablereward":
+                            case "clickablereward":
+                            case "setclickable":
+                            case "clickable": {
                                 suggestions.addAll(Arrays.asList("true", "false"));
                                 return suggestions;
                             }
                         }
-
 
                         return suggestions;
                     }
@@ -1338,7 +1351,8 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                     case 1:
                         suggestions.addAll(Arrays.asList("info", "information", "query", "create", "addproduct", "addp", "removeproduct", "removep",
                                 "addresource", "stock", "addr", "addstock", "rating", "setting", "settings", "price", "editprice", "stats", "statistics", "discover",
-                                "setname", "name", "seticon", "icon", "recover", "keyword", "keywords", "blacklist", "blackl", "bl", "blist", "ads", "advertise", "advertising"));
+                                "setname", "name", "seticon", "icon", "recover", "keyword", "keywords", "blacklist", "blackl", "bl", "blist", "ads", "advertise", "advertising",
+                                "allratings", "allrating", "allr", "ar"));
                         return suggestions;
 
                     case 2:

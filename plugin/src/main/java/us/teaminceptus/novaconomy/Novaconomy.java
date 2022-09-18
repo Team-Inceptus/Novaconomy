@@ -833,7 +833,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				if (!(e.getWhoClicked() instanceof Player)) return;
 				Player p = (Player) e.getWhoClicked();
 				ItemStack item = e.getCurrentItem();
-				Business b = Business.getById(UUID.fromString(w.getNBTString(item, BUSINESS_TAG)));
+				Business b = getBusiness(item);
 
 				p.sendMessage(Novaconomy.get("cancel.business.purchase"));
 				p.openInventory(w.generateBusinessData(b, p, true));
@@ -1142,7 +1142,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 			put("prev:balance", e -> {
 				if (!(e.getWhoClicked() instanceof Player)) return;
 				Player p = (Player) e.getWhoClicked();
-				CHANGE_PAGE_TRICONSUMER.accept(e, 1, CommandWrapper.getBalancesGUI(p));
+				CHANGE_PAGE_TRICONSUMER.accept(e, -1, CommandWrapper.getBalancesGUI(p));
 			});
 
 			put(SETTING_TAG, e -> {
@@ -1211,7 +1211,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				Player p = (Player) e.getWhoClicked();
 				ItemStack item = e.getCurrentItem();
 				boolean anonymous = w.getNBTBoolean(item, "anonymous");
-				Business b = Business.getById(UUID.fromString(w.getNBTString(item, BUSINESS_TAG)));
+				Business b = getBusiness(item);
 
 				if (anonymous) {
 					p.sendMessage(Novaconomy.get("plugin.prefix") + ChatColor.RED + Novaconomy.get("constants.business.anonymous_home"));
@@ -1243,7 +1243,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				if (!(e.getWhoClicked() instanceof Player)) return;
 				Player p = (Player) e.getWhoClicked();
 				ItemStack item = e.getCurrentItem();
-				Business b = Business.getById(UUID.fromString(w.getNBTString(item, BUSINESS_TAG)));
+				Business b = getBusiness(item);
 				boolean anonymous = w.getNBTBoolean(item, "anonymous");
 
 				if (anonymous) {
@@ -1264,7 +1264,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				int newRating = (int) (rating + 1 > 4 ? 0 : rating + 1);
 
 				ItemStack nItem = item.clone();
-				nItem.setType(RATING_MATS[newRating]);
+				nItem.setType(CommandWrapper.RATING_MATS[newRating]);
 				ItemMeta meta = nItem.getItemMeta();
 				meta.setDisplayName(ChatColor.YELLOW + "" + (newRating + 1) + "⭐");
 				nItem.setItemMeta(meta);
@@ -1314,7 +1314,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				if (!(e.getWhoClicked() instanceof Player)) return;
 				Player p = (Player) e.getWhoClicked();
 				ItemStack item = e.getCurrentItem();
-				Business b = Business.getById(UUID.fromString(w.getNBTString(item, BUSINESS_TAG)));
+				Business b = getBusiness(item);
 
 				boolean notOwner = !b.isOwner(p);
 
@@ -1363,7 +1363,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				Inventory inv = e.getView().getTopInventory();
 				ItemStack item = e.getCurrentItem();
 
-				Business b = Business.getById(UUID.fromString(w.getNBTString(item, BUSINESS_TAG)));
+				Business b = getBusiness(item);
 				boolean add = w.getNBTBoolean(item, "add");
 				double amount = w.getNBTDouble(item, AMOUNT_TAG);
 				amount = add ? amount : -amount;
@@ -1409,7 +1409,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				get("business:click").accept(e);
 				ItemStack item = e.getCurrentItem();
 
-				Business to = Business.getById(UUID.fromString(w.getNBTString(item, BUSINESS_TAG)));
+				Business to = getBusiness(item);
 				Business from = Business.getById(UUID.fromString(w.getNBTString(item, "from_business")));
 
 				double add = NovaConfig.getConfiguration().getBusinessAdvertisingReward();
@@ -1426,7 +1426,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				get("business:click").accept(e);
 				ItemStack item = e.getCurrentItem();
 
-				Business to = Business.getById(UUID.fromString(w.getNBTString(item, BUSINESS_TAG)));
+				Business to = getBusiness(item);
 				double remove = NovaConfig.getConfiguration().getBusinessAdvertisingReward();
 
 				Set<Economy> economies = Economy.getClickableRewardEconomies();
@@ -1434,16 +1434,52 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
 				to.removeAdvertisingBalance(remove, randomEcon);
 			});
+			put("business:pick_rating", e -> {
+				if (!(e.getWhoClicked() instanceof Player)) return;
+				Player p = (Player) e.getWhoClicked();
+				ItemStack item = e.getCurrentItem();
+
+				OfflinePlayer owner = Bukkit.getOfflinePlayer(UUID.fromString(w.getNBTString(item, "owner")));
+				boolean anon = w.getNBTBoolean(item, "anonymous");
+
+				if (anon) return;
+
+				getCommandWrapper().businessRating(p, owner);
+			});
+			put("business:all_ratings", e -> {
+				if (!(e.getWhoClicked() instanceof Player)) return;
+				Player p = (Player) e.getWhoClicked();
+				ItemStack item = e.getCurrentItem();
+
+				Business b = getBusiness(item);
+
+				p.openInventory(CommandWrapper.getRatingsGUI(p, b).get(0));
+			});
+			put("next:ratings", e -> {
+				if (!(e.getWhoClicked() instanceof Player)) return;
+				Player p = (Player) e.getWhoClicked();
+				ItemStack item = e.getCurrentItem();
+
+				Business b = getBusiness(item);
+
+				CHANGE_PAGE_TRICONSUMER.accept(e, 1, CommandWrapper.getRatingsGUI(p, b));
+			});
+			put("prev:ratings", e -> {
+				if (!(e.getWhoClicked() instanceof Player)) return;
+				Player p = (Player) e.getWhoClicked();
+				ItemStack item = e.getCurrentItem();
+
+				Business b = getBusiness(item);
+
+				CHANGE_PAGE_TRICONSUMER.accept(e, -1, CommandWrapper.getRatingsGUI(p, b));
+			});
 		}
 	};
 
-	private static final Material[] RATING_MATS = new Material[] {
-			Material.DIRT,
-			Material.COAL,
-			Material.IRON_INGOT,
-			Material.GOLD_INGOT,
-			Material.DIAMOND
-	};
+	@Nullable
+	private static Business getBusiness(ItemStack item) {
+		return Business.getById(UUID.fromString(w.getNBTString(item, BUSINESS_TAG)));
+	}
 
 	@FunctionalInterface
 	private interface TriConsumer<T, U, L> {
@@ -1468,7 +1504,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		ItemStack item = e.getCurrentItem();
 		Inventory inv = e.getView().getTopInventory();
 
-		Business b = Business.getById(UUID.fromString(w.getNBTString(item, BUSINESS_TAG)));
+		Business b = getBusiness(item);
 		double amount = w.getNBTDouble(item, AMOUNT_TAG);
 
 		ItemStack econWheel = inv.getItem(31);

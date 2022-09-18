@@ -555,7 +555,7 @@ public final class Business implements ConfigurationSerializable {
 
         ratings = ratings.stream().filter(Objects::nonNull).collect(Collectors.toList());
 
-        return ratings;
+        return ImmutableList.copyOf(ratings);
     }
 
     /**
