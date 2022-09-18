@@ -1,24 +1,12 @@
 package us.teaminceptus.novaconomy;
 
-import java.util.Arrays;
-import java.util.stream.Collectors;
-
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
-
-import revxrsal.commands.annotation.AutoComplete;
-import revxrsal.commands.annotation.Command;
-import revxrsal.commands.annotation.Default;
-import revxrsal.commands.annotation.Description;
-import revxrsal.commands.annotation.Named;
-import revxrsal.commands.annotation.Optional;
-import revxrsal.commands.annotation.Range;
-import revxrsal.commands.annotation.Subcommand;
-import revxrsal.commands.annotation.Usage;
+import revxrsal.commands.annotation.*;
 import revxrsal.commands.autocomplete.SuggestionProvider;
 import revxrsal.commands.bukkit.BukkitCommandActor;
 import revxrsal.commands.bukkit.BukkitCommandHandler;
@@ -30,6 +18,9 @@ import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.economy.Economy;
+
+import java.util.Arrays;
+import java.util.stream.Collectors;
 
 public final class CommandWrapperV2 implements CommandWrapper {
 
@@ -331,7 +322,8 @@ public final class CommandWrapperV2 implements CommandWrapper {
         @AutoComplete("@blacklisted *")
         public void unblacklistBusiness(Player p, Business business) { wrapper.removeBlacklist(p, business); }
 
-
+        @Subcommand({"allratings", "allrating", "allr", "ar"})
+        public void allBusinessRatings(Player p) { wrapper.allBusinessRatings(p); }
     }
 
     @Command({"nbank", "bank", "globalbank", "gbank"})
@@ -447,6 +439,10 @@ public final class CommandWrapperV2 implements CommandWrapper {
         @Subcommand({"setname", "name"})
         @CommandPermission("novaconomy.economy.create")
         public void setName(CommandSender sender, Economy economy, String name) { wrapper.setEconomyName(sender, economy, name); }
+
+        @Subcommand({"setclickablereward", "clickablereward", "setclickable", "clickable"})
+        @CommandPermission("novaconomy.economy.create")
+        public void setClickableReward(CommandSender sender, Economy economy, @Default("true") boolean clickableReward) { wrapper.setEconomyRewardable(sender, economy, clickableReward); }
     }
 
     @Command({"bounty", "novabounty", "nbounty"})
