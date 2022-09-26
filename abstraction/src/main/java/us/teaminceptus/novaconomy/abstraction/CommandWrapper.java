@@ -82,7 +82,7 @@ public interface CommandWrapper {
        put("convert", "novaconomy.user.convert");
        put("exchange", "novaconomy.user.convert");
        put("pay", "novaconomy.user.pay");
-       put("novaconomyreload", "novaconomy.admin.reloadconfig");
+       put("novaconomyreload", "novaconomy.admin.config");
        put(BUSINESS_TAG, "novaconomy.user.business");
        put("createcheck", "novaconomy.user.check");
        put("balanceleaderboard", "novaconomy.user.leaderboard");
@@ -173,7 +173,7 @@ public interface CommandWrapper {
     }
 
     default void reloadConfig(CommandSender sender) {
-        if (!sender.hasPermission("novaconomy.admin.reloadconfig")) {
+        if (!sender.hasPermission("novaconomy.admin.config")) {
             sender.sendMessage(getMessage("error.permission"));
             return;
         }
@@ -2064,6 +2064,94 @@ public interface CommandWrapper {
 
         econ.setHasClickableReward(rewardable);
         sender.sendMessage(String.format(getMessage("success.economy." + (rewardable ? "enable" : "disable") + "_reward"), econ.getName()));
+    }
+
+    // Configuration Management Commands
+
+    default void configNaturalCauses(CommandSender sender, String option, String value) {
+        if (!sender.hasPermission("novaconomy.admin.config")) {
+            sender.sendMessage(getMessage("error.permission"));
+            return;
+        }
+
+
+        File configFile = NovaConfig.getConfigFile();
+        FileConfiguration config = NovaConfig.loadConfig();
+
+        switch (option.toLowerCase()) {
+            case "enchant_bonus": {
+                if (!value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false")) {
+                    sender.sendMessage(getMessage("error.argument.bool"));
+                    return;
+                }
+
+                boolean b = Boolean.parseBoolean(value);
+                config.set("NaturalCauses.EnchantBonus", b);
+                sender.sendMessage(String.format(getMessage("success.config.set"), "EnchantBonus", b));
+                break;
+            }
+            case "max_increase": {
+                try {
+                    int i = Integer.parseInt(value);
+                    if (i < -1) {
+                        sender.sendMessage(getMessage("error.argument.amount"));
+                        return;
+                    }
+
+                    config.set("NaturalCauses.MaxIncrease", i);
+                    sender.sendMessage(String.format(getMessage("success.config.set"), "MaxIncrease", i));
+                } catch (NumberFormatException e) {
+                    sender.sendMessage(getMessage("error.argument.amount"));
+                    return;
+                }
+                break;
+            }
+            case "kill_increase": {
+                if (!value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false")) {
+                    sender.sendMessage(getMessage("error.argument.bool"));
+                    return;
+                }
+
+                boolean b = Boolean.parseBoolean(value);
+                config.set("NaturalCauses.KillIncrease", b);
+                sender.sendMessage(String.format(getMessage("success.config.set"), "KillIncrease", b));
+                break;
+            }
+            case "kill_increase_chance": {
+                try {
+                    int i = Integer.parseInt(value);
+                    if (i < 0 || i > 100) {
+                        sender.sendMessage(getMessage("error.argument.amount"));
+                        return;
+                    }
+
+                    config.set("NaturalCauses.KillIncreaseChance", i);
+                    sender.sendMessage(String.format(getMessage("success.config.set"), "KillIncreaseChance", i));
+                } catch (NumberFormatException e) {
+                    sender.sendMessage(getMessage("error.argument.amount"));
+                    return;
+                }
+                break;
+            }
+            case "kill_increase_indirect": {
+                if (!value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false")) {
+                    sender.sendMessage(getMessage("error.argument.bool"));
+                    return;
+                }
+
+                boolean b = Boolean.parseBoolean(value);
+                config.set("NaturalCauses.KillIncreaseIndirect", b);
+                sender.sendMessage(String.format(getMessage("success.config.set"), "KillIncreaseIndirect", b));
+                break;
+            }
+            // TODO Finish Natural Causes
+        }
+
+        try {
+            config.save(configFile);
+        } catch (IOException e) {
+            NovaConfig.print(e);
+        }
     }
 
     // Util Classes & Other Static Methods
