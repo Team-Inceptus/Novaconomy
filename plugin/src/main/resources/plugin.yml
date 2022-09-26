@@ -19,8 +19,8 @@ permissions:
     description: Access to all Admin Actions
     default: op
 
-  novaconomy.admin.reloadconfig:
-    description: Reload Novaconomy configuration
+  novaconomy.admin.config:
+    description: Reload and Modify Novaconomy configuration
     defualt: op
     children:
       novaconomy.admin: true

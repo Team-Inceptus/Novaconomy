@@ -135,7 +135,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
     @Command({"novaconomyreload", "novareload", "nreload", "econreload"})
     @Usage("/novareload")
     @Description("Reload Novaconomy Configuration")
-    @CommandPermission("novaconomy.admin.reloadconfig")
+    @CommandPermission("novaconomy.admin.config")
     public void reloadConfig(CommandSender sender) { CommandWrapper.super.reloadConfig(sender); }
 
     @Command({"createcheck", "check", "ncheck", "nc", "novacheck"})
