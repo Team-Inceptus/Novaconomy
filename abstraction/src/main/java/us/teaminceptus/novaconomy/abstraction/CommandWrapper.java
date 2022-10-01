@@ -2074,7 +2074,6 @@ public interface CommandWrapper {
             return;
         }
 
-
         File configFile = NovaConfig.getConfigFile();
         FileConfiguration config = NovaConfig.loadConfig();
 
@@ -2152,6 +2151,23 @@ public interface CommandWrapper {
         } catch (IOException e) {
             NovaConfig.print(e);
         }
+    }
+
+    default void setDefaultEconomy(CommandSender sender, Economy econ) {
+        if (!sender.hasPermission("novaconomy.admin.config")) {
+            sender.sendMessage(getMessage("error.permission"));
+            return;
+        }
+
+        File funcFile = NovaConfig.getFunctionalityFile();
+        FileConfiguration func = NovaConfig.loadFunctionalityFile();
+
+        func.set("VaultEconomy", econ == null ? -1 : econ.getName());
+        try { func.save(funcFile); } catch (IOException e) { NovaConfig.print(e); }
+        NovaConfig.getConfiguration().reloadHooks();
+
+        if (econ != null) sender.sendMessage(String.format(getMessage("success.config.set"), "VaultEconomy", econ.getName()));
+        else sender.sendMessage(getMessage("success.config.reset_default_economy"));
     }
 
     // Util Classes & Other Static Methods
