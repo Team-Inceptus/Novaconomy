@@ -285,7 +285,7 @@ public interface Wrapper {
             double avg = b.getAverageRating();
             int avgI = (int) Math.round(avg - 1);
 
-            ItemStack rating = new ItemStack(pRating ? CommandWrapper.RATING_MATS[avgI] : Material.BARRIER);
+            ItemStack rating = new ItemStack(pRating ? CommandWrapper.getRatingMats()[avgI] : Material.BARRIER);
             ItemMeta rMeta = rating.getItemMeta();
             rMeta.setDisplayName(pRating ? ChatColor.YELLOW + String.format("%,.1f", avg) + "⭐" : ChatColor.RED + get("constants.business.anonymous_rating"));
             if (b.isOwner(viewer) && !b.getSetting(Settings.Business.PUBLIC_RATING))
@@ -345,7 +345,11 @@ public interface Wrapper {
     static Wrapper getWrapper() {
         try {
             return (Wrapper) Class.forName("us.teaminceptus.novaconomy.Wrapper" + getServerVersion()).getConstructor().newInstance();
-        } catch (Exception e) { throw new IllegalStateException("Wrapper not Found: " + getServerVersion()); }
+        } catch (IndexOutOfBoundsException e) { // using test configuration
+            return new TestWrapper();
+        } catch (Exception e) {
+            throw new IllegalStateException("Wrapper not Found: " + getServerVersion());
+        }
     }
 
     static String get(String key) {
