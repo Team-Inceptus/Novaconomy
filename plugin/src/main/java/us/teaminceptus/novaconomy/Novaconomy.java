@@ -36,7 +36,9 @@ import org.bukkit.inventory.*;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.permissions.PermissionAttachmentInfo;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.plugin.java.JavaPluginLoader;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -99,6 +101,19 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 	 */
 	public Novaconomy() { /* Constructor should only be called by Bukkit Plugin Class Loader */}
 
+	/**
+	 * Unit testing constructor.
+	 * @param loader JavaPluginLoader
+	 * @param desc PluginDescriptionFile
+	 * @param dataFolder Plugin Data Folder
+	 * @param file Plugin File
+	 * @deprecated Should only be used by unit tests
+	 */
+	@Deprecated
+	public Novaconomy(JavaPluginLoader loader, PluginDescriptionFile desc, File dataFolder, File file) {
+		super(loader, desc, dataFolder, file);
+	}
+
 	private static final SecureRandom r = new SecureRandom();
 	private static final Wrapper w = getWrapper();
 	private static File playerDir;
@@ -129,81 +144,6 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		return Wrapper.getPlayer(name);
 	}
 
-	private static class ModifierReader {
-
-		private static boolean isIgnored(Player p, String s) {
-			AtomicBoolean state = new AtomicBoolean();
-
-			FileConfiguration config = NovaConfig.getPlugin().getConfig();
-			List<String> ignore = config.getStringList("NaturalCauses.Ignore");
-
-			state.set(ignore.stream().anyMatch(s::equalsIgnoreCase));
-			state.compareAndSet(false, ignore.stream().anyMatch(p.getName()::equals));
-
-			Set<PermissionAttachmentInfo> infos = p.getEffectivePermissions();
-			infos.forEach(perm -> state.compareAndSet(false, ignore.stream().anyMatch(perm.getPermission()::equals)));
-
-			if (hasVault()) state.compareAndSet(false, VaultChat.isInGroup(ignore, p));
-
-			return state.get();
-		}
-
-		private static Map<String, Map<String, Set<Map<Economy, Double>>>> getAllModifiers() throws IllegalArgumentException {
-			Map<String, Map<String, Set<Map<Economy, Double>>>> mods = new HashMap<>();
-			FileConfiguration config = NovaConfig.getPlugin().getConfig();
-
-			if (config.isConfigurationSection("NaturalCauses.Modifiers")) {
-				ConfigurationSection modifiers = config.getConfigurationSection("NaturalCauses.Modifiers");
-
-				modifiers.getKeys(false).forEach(s -> {
-					ConfigurationSection modifier = modifiers.getConfigurationSection(s);
-					Map<String, Set<Map<Economy, Double>>> map = new HashMap<>();
-
-					modifier.getValues(false).forEach((k, v) -> {
-						Set<Map<Economy, Double>> value = new HashSet<>();
-						String amount = v.toString();
-
-						if (amount.contains("[") && amount.contains("]")) {
-							amount = amount.replaceAll("[\\[\\]]", "").replace(" ", "");
-							String[] amounts = amount.split(",");
-							for (String am : amounts) {
-								if (readString(am) == null) throw new IllegalArgumentException("No valid amount found for \"" + k + ": " + amount + "\"");
-								value.add(readString(am));
-							}
-						} else {
-							if (readString(amount) == null) throw new IllegalArgumentException("No valid amount found for \"" + k + ": " + amount + "\"");
-							value.add(readString(amount));
-						}
-
-						map.put(k.toUpperCase(), value);
-					});
-
-					mods.put(s, map);
-				});
-			}
-
-			return mods;
-		}
-
-		private static Map<String, Set<Map<Economy, Double>>> getModifier(String mod) {
-			return getAllModifiers().get(mod);
-		}
-
-		private static Map<Economy, Double> readString(String s) {
-			char s1 = s.charAt(0);
-			char s2 = s.charAt(s.length() - 1);
-
-			if (!Economy.exists(s1) && !Economy.exists(s2)) return null;
-
-			String remove = Economy.exists(s1) ? s1 + "" : s2 + "";
-			Economy econ = Economy.exists(s1) ? Economy.getEconomy(s1) : Economy.getEconomy(s2);
-			double amountD = Double.parseDouble(s.replaceAll("[" + remove + "]", ""));
-			return Collections.singletonMap(econ, amountD);
-		}
-
-	}
-
-
 	/**
 	 * Fetches a Message from the current language file, formatted with the plugin's prefix in the front.
 	 * @param key Message Key
@@ -212,7 +152,22 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 	 */
 	public static String getMessage(String key) { return prefix + get(key); }
 
-	private static final Set<Material> ores = new HashSet<>(Arrays.stream(Material.values()).filter(m -> m.name().endsWith("ORE") || m.name().equalsIgnoreCase("ANCIENT_DEBRIS")).collect(Collectors.toSet()));
+	public static boolean isIgnored(Player p, String s) {
+		AtomicBoolean state = new AtomicBoolean();
+
+		FileConfiguration config = NovaConfig.getPlugin().getConfig();
+		List<String> ignore = config.getStringList("NaturalCauses.Ignore");
+
+		state.set(ignore.stream().anyMatch(s::equalsIgnoreCase));
+		state.compareAndSet(false, ignore.stream().anyMatch(p.getName()::equals));
+
+		Set<PermissionAttachmentInfo> infos = p.getEffectivePermissions();
+		infos.forEach(perm -> state.compareAndSet(false, ignore.stream().anyMatch(perm.getPermission()::equals)));
+
+		if (Novaconomy.hasVault()) state.compareAndSet(false, VaultChat.isInGroup(ignore, p));
+
+		return state.get();
+	}
 
 	private class Events implements Listener {
 		
@@ -302,8 +257,8 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 					if (ModifierReader.getModifier("Killing") == null) return;
 
 					Map<String, Set<Map<Economy, Double>>> entry = ModifierReader.getModifier("Killing");
-					if (ModifierReader.isIgnored(p, id)) return;
-					if (!entry.containsKey(id) && ModifierReader.isIgnored(p, category)) return;
+					if (isIgnored(p, id)) return;
+					if (!entry.containsKey(id) && isIgnored(p, category)) return;
 
 					double fIAmount = iAmount;
 					String fCategory = category;
@@ -340,7 +295,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
 			String id = b.getType().name();
 
-			double add = e.getExpToDrop() == 0 && ores.contains(b.getType()) ? r.nextInt(3) : e.getExpToDrop();
+			double add = r.nextInt(3) + e.getExpToDrop();
 			if (p.getEquipment().getItemInHand() != null && plugin.hasEnchantBonus()) {
 				ItemStack hand = p.getEquipment().getItemInHand();
 				if (hand.hasItemMeta() && hand.getItemMeta().hasEnchant(Enchantment.LOOT_BONUS_BLOCKS))
@@ -367,7 +322,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
 					if (!tag.isAssignableFrom(f.getType())) continue;
 
-					if (ModifierReader.isIgnored(p, name)) {
+					if (isIgnored(p, name)) {
 						tagIgnore = true;
 						break;
 					}
@@ -392,7 +347,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				for (StackTraceElement s : err.getStackTrace()) plugin.getLogger().severe(s.toString());
 			}
 
-			if (ModifierReader.isIgnored(p, id)) return;
+			if (isIgnored(p, id)) return;
 			if (!entry.containsKey(id) && tagIgnore) return;
 
 			int chance = mod.equalsIgnoreCase("Farming") ? getFarmingChance() : getMiningChance();
@@ -420,7 +375,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
 			Player p = e.getPlayer();
 			String name = e.getCaught() instanceof Item ? ((Item) e.getCaught()).getItemStack().getType().name() : e.getCaught().getType().name();
-			if (ModifierReader.isIgnored(p, name)) return;
+			if (isIgnored(p, name)) return;
 
 			double iAmount = e.getExpToDrop();
 
@@ -568,7 +523,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 			List<String> lost = new ArrayList<>();
 			lost.add(get("constants.lost"));
 			String id = p.getLastDamageCause().getCause().name();
-			if (ModifierReader.isIgnored(p, id)) return;
+			if (isIgnored(p, id)) return;
 
 			double divider = getDeathDivider();
 
@@ -1264,7 +1219,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				int newRating = (int) (rating + 1 > 4 ? 0 : rating + 1);
 
 				ItemStack nItem = item.clone();
-				nItem.setType(CommandWrapper.RATING_MATS[newRating]);
+				nItem.setType(CommandWrapper.getRatingMats()[newRating]);
 				ItemMeta meta = nItem.getItemMeta();
 				meta.setDisplayName(ChatColor.YELLOW + "" + (newRating + 1) + "⭐");
 				nItem.setItemMeta(meta);
@@ -1596,6 +1551,9 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
 	private static CommandWrapper getCommandWrapper() {
 		try {
+			if (w.getCommandVersion() == 0)
+				return (CommandWrapper) Class.forName(CommandWrapper.class.getPackage().getName() + ".TestCommandWrapper").getConstructor(Plugin.class).newInstance(NovaConfig.getPlugin());
+
 			final int wrapperVersion;
 
 			String dec;
@@ -1622,15 +1580,11 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 	}
 
 	private static String getServerVersion() {
-		return  Bukkit.getServer().getClass().getPackage().getName().split("\\.")[3].substring(1);
+		return Bukkit.getServer().getClass().getPackage().getName().split("\\.")[3].substring(1);
 	}
 
 	private static Wrapper getWrapper() {
-		try {
-			return (Wrapper) Class.forName(Novaconomy.class.getPackage().getName() + ".Wrapper" + getServerVersion()).getConstructor().newInstance();
-		} catch (Exception e) {
-			throw new IllegalStateException("Wrapper not Found: " + getServerVersion());
-		}
+		return Wrapper.getWrapper();
 	}
 
 	private static void runInterest() {
@@ -1837,6 +1791,11 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		TAXES_RUNNABLE.runTaskTimer(this, getTaxesTicks(), getTaxesTicks());
 
 		getLogger().info("Loaded Core Functionality...");
+
+		if (w.getCommandVersion() == 0) {
+			getLogger().info("Finished Loading Test Plugin!");
+			return;
+		}
 
 		// Placeholders
 		loadPlaceholders();
