@@ -74,12 +74,18 @@ public final class CommandWrapperV2 implements CommandWrapper {
             return !b.isOwner(p) && !Business.getByOwner(p).isBlacklisted(b);
         }).map(Business::getName).collect(Collectors.toList()));
         handler.getAutoCompleter().registerSuggestion("blacklisted", (args, sender, cmd) -> Business.getByOwner(Wrapper.getPlayer(sender.getName())).getBlacklist().stream().map(Business::getName).collect(Collectors.toList()));
+        handler.getAutoCompleter().registerSuggestion("natural_causes", SuggestionProvider.of(Arrays.asList(
+                "enchant_bonus", "max_increase", "kill_increase", "kill_increase_chance", "kill_increase_indirect", "fishing_increase",
+                "fishing_increase_chance", "mining_increase", "mining_increase_chance", "farming_increase", "farming_increase_chance",
+                "death_decrease", "death_divider"
+        )));
 
         handler.register(this);
         new EconomyCommands(this);
         new BusinessCommands(this);
         new BankCommands(this);
         new BountyCommands(this);
+        new NovaConfigCommands(this);
 
         handler.registerBrigadier();
         handler.setLocale(Language.getCurrentLanguage().getLocale());
@@ -374,7 +380,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
         @AutoComplete("* @symbol *")
         @CommandPermission("novaconomy.economy.create")
         public void createEconomy(CommandSender sender, String name, String symbol, Material icon, @Default("1") @Range(min = 0.01, max = Integer.MAX_VALUE) double scale, @Named("natural-increase") @Default("true") boolean naturalIncrease, @Named("clickable-reward") @Default("true") boolean clickableReward) {
-            wrapper.createEconomy(sender, name, symbol.contains("\"") || symbol.contains("'") ? symbol.charAt(1) : symbol.charAt(0), icon, scale, naturalIncrease, clickableReward);
+            wrapper.createEconomy(sender, name, symbol.startsWith("\"") || symbol.startsWith("'") ? symbol.charAt(1) : symbol.charAt(0), icon, scale, naturalIncrease, clickableReward);
         }
 
         @Subcommand({"remove", "delete", "removeeconomy", "deleteeconomy"})
@@ -475,5 +481,43 @@ public final class CommandWrapperV2 implements CommandWrapper {
         @CommandPermission("novaconomy.user.bounty.list")
         public void listSelfBounties(Player p) { wrapper.listBounties(p, false); }
 
+    }
+
+    @Command({"novaconfig", "novaconomyconfig", "nconfig", "nconf"})
+    @Description("View or edit the Novaconomy Configuration")
+    @Usage("/novaconfig <naturalcauses|reload|rl|...> <args...>")
+    @CommandPermission("novaconomy.admin.config")
+    private static final class NovaConfigCommands {
+
+        private final CommandWrapperV2 wrapper;
+
+        NovaConfigCommands(CommandWrapperV2 wrapper) {
+            this.wrapper = wrapper;
+
+            BukkitCommandHandler handler = CommandWrapperV2.handler;
+            handler.register(this);
+        }
+
+        @Subcommand({"reload", "rl"})
+        public void reload(CommandSender sender) {
+            wrapper.reloadConfig(sender);
+        }
+
+        @Subcommand({"defaultecon", "setdefaulteconomy", "setdefaultecon", "defaulteconomy"})
+        public void setDefaultEconomy(CommandSender sender, Economy econ) {
+            wrapper.setDefaultEconomy(sender, econ);
+        }
+
+        @Subcommand({"naturalcauses view", "ncauses view", "naturalc view", "nc view"})
+        @AutoComplete("@natural_causes *")
+        public void viewNaturalCauses(CommandSender sender, String key) {
+            wrapper.configNaturalCauses(sender, key, null);
+        }
+
+        @Subcommand({"naturalcauses set", "ncauses set", "naturalc set", "nc set"})
+        @AutoComplete("@natural_causes *")
+        public void setNaturalCauses(CommandSender sender, String key, String value) {
+            wrapper.configNaturalCauses(sender, key, value);
+        }
     }
 }

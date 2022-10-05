@@ -74,6 +74,7 @@ public interface CommandWrapper {
         put("settings", Arrays.asList("novasettings", "nsettings"));
         put("rate", Arrays.asList("nrate", "novarate", "ratebusiness"));
         put("statistics", Arrays.asList("stats", "pstats", "pstatistics", "playerstats", "playerstatistics", "nstats", "nstatistics"));
+        put("novaconfig", Arrays.asList("novaconomyconfig", "nconfig", "nconf"));
     }};
 
     Map<String, String> COMMAND_PERMISSION = new HashMap<String, String>() {{
@@ -91,6 +92,7 @@ public interface CommandWrapper {
        put("settings", "novaconomy.user.settings");
        put("rate", "novaconomy.user.rate");
        put("statistics", "novaconomy.user.stats");
+       put("novaconfig", "novaconomy.admin.config");
     }};
 
     Map<String, String> COMMAND_DESCRIPTION = new HashMap<String, String>() {{
@@ -110,6 +112,7 @@ public interface CommandWrapper {
        put("settings", "Manage your Novaconomy Settings");
        put("rate", "Rate a Novaconomy Business");
        put("statistics", "View your Novaconomy Statistics");
+       put("novaconfig", "View or edit the Novaconomy Configuration");
     }};
 
     Map<String, String> COMMAND_USAGE = new HashMap<String, String>() {{
@@ -129,6 +132,7 @@ public interface CommandWrapper {
        put("settings", "/settings [<business|personal>]");
        put("rate", "/rate <business> [<comment>]");
        put("statistics", "/statistics");
+       put("novaconfig", "/novaconfig <naturalcauses|reload|rl|...> <args...>");
     }};
 
     static Plugin getPlugin() {
@@ -1317,13 +1321,15 @@ public interface CommandWrapper {
         p.openInventory(stats);
     }
 
-    Material[] RATING_MATS = new Material[] {
-            Material.DIRT,
-            Material.COAL,
-            Material.IRON_INGOT,
-            Material.GOLD_INGOT,
-            Material.DIAMOND
-    };
+    static Material[] getRatingMats() {
+        return new Material[] {
+                Material.DIRT,
+                Material.COAL,
+                Material.IRON_INGOT,
+                Material.GOLD_INGOT,
+                Material.DIAMOND
+        };
+    }
 
     default void rate(Player p, Business b, String comment) {
         if (!p.hasPermission("novaconomy.user.rate")) {
@@ -1352,7 +1358,7 @@ public interface CommandWrapper {
 
         Inventory rate = w.genGUI(36, String.format(get("constants.rating"), b.getName()), new Wrapper.CancelHolder());
 
-        ItemStack ratingWheel = new ItemStack(RATING_MATS[2]);
+        ItemStack ratingWheel = new ItemStack(getRatingMats()[2]);
         ItemMeta rMeta = ratingWheel.getItemMeta();
         rMeta.setDisplayName(ChatColor.YELLOW + "3⭐");
         ratingWheel.setItemMeta(rMeta);
@@ -1415,7 +1421,7 @@ public interface CommandWrapper {
         head.setItemMeta(hMeta);
         pr.setItem(12, head);
 
-        ItemStack pRating = new ItemStack(RATING_MATS[rating.getRatingLevel() - 1]);
+        ItemStack pRating = new ItemStack(getRatingMats()[rating.getRatingLevel() - 1]);
         ItemMeta rMeta = pRating.getItemMeta();
         rMeta.setDisplayName(ChatColor.YELLOW + "" + rating.getRatingLevel() + "⭐");
         rMeta.setLore(Collections.singletonList(ChatColor.YELLOW + "\"" + (rating.getComment().isEmpty() ? get("constants.no_comment") : rating.getComment()) + "\""));
@@ -2079,6 +2085,11 @@ public interface CommandWrapper {
 
         switch (option.toLowerCase()) {
             case "enchant_bonus": {
+                if (value == null) {
+                    sender.sendMessage(String.format(getMessage("success.config.print_value"), "EnchantBonus", config.get("NaturalCauses.EnchantBonus")));
+                    return;
+                }
+
                 if (!value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false")) {
                     sender.sendMessage(getMessage("error.argument.bool"));
                     return;
@@ -2090,6 +2101,11 @@ public interface CommandWrapper {
                 break;
             }
             case "max_increase": {
+                if (value == null) {
+                    sender.sendMessage(String.format(getMessage("success.config.print_value"), "MaxIncrease", config.get("NaturalCauses.MaxIncrease")));
+                    return;
+                }
+
                 try {
                     int i = Integer.parseInt(value);
                     if (i < -1) {
@@ -2106,6 +2122,11 @@ public interface CommandWrapper {
                 break;
             }
             case "kill_increase": {
+                if (value == null) {
+                    sender.sendMessage(String.format(getMessage("success.config.print_value"), "KillIncrease", config.get("NaturalCauses.KillIncrease")));
+                    return;
+                }
+
                 if (!value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false")) {
                     sender.sendMessage(getMessage("error.argument.bool"));
                     return;
@@ -2117,6 +2138,11 @@ public interface CommandWrapper {
                 break;
             }
             case "kill_increase_chance": {
+                if (value == null) {
+                    sender.sendMessage(String.format(getMessage("success.config.print_value"), "KillIncreaseChance", config.get("NaturalCauses.KillIncreaseChance")));
+                    return;
+                }
+
                 try {
                     int i = Integer.parseInt(value);
                     if (i < 0 || i > 100) {
@@ -2133,6 +2159,11 @@ public interface CommandWrapper {
                 break;
             }
             case "kill_increase_indirect": {
+                if (value == null) {
+                    sender.sendMessage(String.format(getMessage("success.config.print_value"), "KillIncreaseIndirect", config.get("NaturalCauses.KillIncreaseIndirect")));
+                    return;
+                }
+
                 if (!value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false")) {
                     sender.sendMessage(getMessage("error.argument.bool"));
                     return;
@@ -2143,13 +2174,199 @@ public interface CommandWrapper {
                 sender.sendMessage(String.format(getMessage("success.config.set"), "KillIncreaseIndirect", b));
                 break;
             }
-            // TODO Finish Natural Causes
+            case "fishing_increase": {
+                if (value == null) {
+                    sender.sendMessage(String.format(getMessage("success.config.print_value"), "FishingIncrease", config.get("NaturalCauses.FishingIncrease")));
+                    return;
+                }
+
+                if (!value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false")) {
+                    sender.sendMessage(getMessage("error.argument.bool"));
+                    return;
+                }
+
+                boolean b = Boolean.parseBoolean(value);
+                config.set("NaturalCauses.FishingIncrease", b);
+                sender.sendMessage(String.format(getMessage("success.config.set"), "FishingIncrease", b));
+                break;
+            }
+            case "fishing_increase_chance": {
+                if (value == null) {
+                    sender.sendMessage(String.format(getMessage("success.config.print_value"), "FishingIncreaseChance", config.get("NaturalCauses.FishingIncreaseChance")));
+                    return;
+                }
+
+                try {
+                    int i = Integer.parseInt(value);
+                    if (i < 0 || i > 100) {
+                        sender.sendMessage(getMessage("error.argument.amount"));
+                        return;
+                    }
+
+                    config.set("NaturalCauses.FishingIncreaseChance", i);
+                    sender.sendMessage(String.format(getMessage("success.config.set"), "FishingIncreaseChance", i));
+                } catch (NumberFormatException e) {
+                    sender.sendMessage(getMessage("error.argument.amount"));
+                    return;
+                }
+                break;
+            }
+            case "farming_increase": {
+                if (value == null) {
+                    sender.sendMessage(String.format(getMessage("success.config.print_value"), "FarmingIncrease", config.get("NaturalCauses.FarmingIncrease")));
+                    return;
+                }
+
+                if (!value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false")) {
+                    sender.sendMessage(getMessage("error.argument.bool"));
+                    return;
+                }
+
+                boolean b = Boolean.parseBoolean(value);
+                config.set("NaturalCauses.FarmingIncrease", b);
+                sender.sendMessage(String.format(getMessage("success.config.set"), "FarmingIncrease", b));
+                break;
+            }
+            case "farming_increase_chance": {
+                if (value == null) {
+                    sender.sendMessage(String.format(getMessage("success.config.print_value"), "FarmingIncreaseChance", config.get("NaturalCauses.FarmingIncreaseChance")));
+                    return;
+                }
+
+                try {
+                    int i = Integer.parseInt(value);
+                    if (i < 0 || i > 100) {
+                        sender.sendMessage(getMessage("error.argument.amount"));
+                        return;
+                    }
+
+                    config.set("NaturalCauses.FarmingIncreaseChance", i);
+                    sender.sendMessage(String.format(getMessage("success.config.set"), "FarmingIncreaseChance", i));
+                } catch (NumberFormatException e) {
+                    sender.sendMessage(getMessage("error.argument.amount"));
+                    return;
+                }
+                break;
+            }
+            case "mining_increase": {
+                if (value == null) {
+                    sender.sendMessage(String.format(getMessage("success.config.print_value"), "MiningIncrease", config.get("NaturalCauses.MiningIncrease")));
+                    return;
+                }
+
+                if (!value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false")) {
+                    sender.sendMessage(getMessage("error.argument.bool"));
+                    return;
+                }
+
+                boolean b = Boolean.parseBoolean(value);
+                config.set("NaturalCauses.MiningIncrease", b);
+                sender.sendMessage(String.format(getMessage("success.config.set"), "MiningIncrease", b));
+                break;
+            }
+            case "mining_increase_chance": {
+                if (value == null) {
+                    sender.sendMessage(String.format(getMessage("success.config.print_value"), "MiningIncreaseChance", config.get("NaturalCauses.MiningIncreaseChance")));
+                    return;
+                }
+
+                try {
+                    int i = Integer.parseInt(value);
+                    if (i < 0 || i > 100) {
+                        sender.sendMessage(getMessage("error.argument.amount"));
+                        return;
+                    }
+
+                    config.set("NaturalCauses.MiningIncreaseChance", i);
+                    sender.sendMessage(String.format(getMessage("success.config.set"), "MiningIncreaseChance", i));
+                } catch (NumberFormatException e) {
+                    sender.sendMessage(getMessage("error.argument.amount"));
+                    return;
+                }
+                break;
+            }
+            case "death_decrease": {
+                if (value == null) {
+                    sender.sendMessage(String.format(getMessage("success.config.print_value"), "DeathDecrease", config.get("NaturalCauses.DeathDecrease")));
+                    return;
+                }
+
+                if (!value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false")) {
+                    sender.sendMessage(getMessage("error.argument.bool"));
+                    return;
+                }
+
+                boolean b = Boolean.parseBoolean(value);
+                config.set("NaturalCauses.DeathDecrease", b);
+                sender.sendMessage(String.format(getMessage("success.config.set"), "DeathDecrease", b));
+                break;
+            }
+            case "death_divider": {
+                if (value == null) {
+                    sender.sendMessage(String.format(getMessage("success.config.print_value"), "DeathDivider", config.get("NaturalCauses.DeathDivider")));
+                    return;
+                }
+
+                try {
+                    int i = Integer.parseInt(value);
+                    if (i < 1) {
+                        sender.sendMessage(getMessage("error.argument.amount"));
+                        return;
+                    }
+
+                    config.set("NaturalCauses.DeathDivider", i);
+                    sender.sendMessage(String.format(getMessage("success.config.set"), "DeathDivider", i));
+                } catch (NumberFormatException e) {
+                    sender.sendMessage(getMessage("error.argument.amount"));
+                    return;
+                }
+                break;
+            }
+            default: {
+                sender.sendMessage(getMessage("error.argument.config"));
+                return;
+            }
         }
 
         try {
             config.save(configFile);
         } catch (IOException e) {
             NovaConfig.print(e);
+        }
+    }
+
+    default void addModifier(CommandSender sender, String type, String key, List<String> values) {
+        if (!sender.hasPermission("novaconomy.admin.config")) {
+            sender.sendMessage(getMessage("error.permission"));
+            return;
+        }
+
+        File configFile = NovaConfig.getConfigFile();
+        FileConfiguration config = NovaConfig.loadConfig();
+
+        switch (type.toLowerCase()) {
+            case "mining": {
+                if (Material.matchMaterial(key) == null) {
+                    sender.sendMessage(getMessage("error.argument.block"));
+                    return;
+                }
+
+                Material m = Material.matchMaterial(key);
+
+                if (!m.isBlock()) {
+                    sender.sendMessage(getMessage("error.argument.block"));
+                    return;
+                }
+
+                if (values.isEmpty()) {
+                    sender.sendMessage(getMessage("error.argument.amount"));
+                    return;
+                }
+
+
+
+                break;
+            }
         }
     }
 
@@ -2260,16 +2477,8 @@ public interface CommandWrapper {
         return String.format(get("constants.time.ago.years_ago"), String.format("%,.0f", years));
     }
 
-    static String getServerVersion() {
-        return Bukkit.getServer().getClass().getPackage().getName().split("\\.")[3].substring(1);
-    }
-
     static Wrapper getWrapper() {
-        try {
-            return (Wrapper) Class.forName("us.teaminceptus.novaconomy.Wrapper" + getServerVersion()).getConstructor().newInstance();
-        } catch (Exception e) {
-            throw new IllegalStateException("Wrapper not Found: " + getServerVersion());
-        }
+        return Wrapper.getWrapper();
     }
 
     static ItemStack createPlayerHead(OfflinePlayer p) {

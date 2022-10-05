@@ -1241,6 +1241,60 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                 playerStatistics(p, target);
                 break;
             }
+            case "novaconfig": {
+                if (args.length < 1) {
+                    sender.sendMessage(getMessage("error.argument"));
+                    return false;
+                }
+
+                switch (args[0].toLowerCase()) {
+                    case "reload":
+                    case "rl": {
+                        reloadConfig(sender);
+                        break;
+                    }
+                    case "naturalcauses":
+                    case "nc":
+                    case "naturalc":
+                    case "ncauses": {
+                        if (args.length < 2) {
+                            sender.sendMessage(getMessage("error.argument.config"));
+                            return false;
+                        }
+
+                        if (args.length < 3) {
+                            sender.sendMessage(getMessage("error.argument"));
+                            return false;
+                        }
+
+                        String value = args[2].equalsIgnoreCase("set") ? args[2] : null;
+
+                        configNaturalCauses(sender, args[1].toLowerCase(), value);
+                        break;
+                    }
+                    case "setdefaultecon":
+                    case "setdefaulteconomy":
+                    case "defaultecon":
+                    case "defaulteconomy": {
+                        if (args.length < 2) {
+                            sender.sendMessage(getMessage("error.argument.economy"));
+                            return false;
+                        }
+
+                        Economy econ = Economy.getEconomy(args[1]);
+
+                        if (econ == null) {
+                            sender.sendMessage(getMessage("error.economy.inexistent"));
+                            return false;
+                        }
+
+                        setDefaultEconomy(sender, econ);
+                        break;
+                    }
+                }
+
+                break;
+            }
             default: {
                 sender.sendMessage(getMessage("error.argument"));
                 return false;
@@ -1458,6 +1512,29 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
             }
             case "rate": {
                 if (args.length == 1) suggestions.addAll(Business.getBusinesses().stream().map(Business::getName).collect(Collectors.toSet()));
+                return suggestions;
+            }
+            case "novaconfig": {
+                switch (args.length) {
+                    case 1: {
+                        suggestions.addAll(Arrays.asList("reload", "naturalcauses", "rl", "nc", "ncauses", "naturalc"));
+                        break;
+                    }
+                    case 2: {
+                        switch (args[0].toLowerCase()) {
+                            case "naturalcauses":
+                            case "nc":
+                            case "ncauses":
+                            case "naturalc": {
+                                suggestions.addAll(Arrays.asList("enchant_bonus", "max_increase", "kill_increase", "kill_increase_chance", "kill_increase_indirect", "fishing_increase",
+                                        "fishing_increase_chance", "mining_increase", "mining_increase_chance", "farming_increase", "farming_increase_chance",
+                                        "death_decrease", "death_divider"));
+                                break;
+                            }
+                        }                    }
+                }
+
+
                 return suggestions;
             }
         }
