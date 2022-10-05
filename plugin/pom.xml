@@ -79,6 +79,14 @@
     </build>
 
     <dependencies>
+        <!-- Test Dependencies -->
+        <dependency>
+            <groupId>com.github.seeseemelk</groupId>
+            <artifactId>MockBukkit-v1.13</artifactId>
+            <version>0.2.0</version>
+            <scope>test</scope>
+        </dependency>
+
         <!-- Compile Dependencies -->
 
         <dependency>
