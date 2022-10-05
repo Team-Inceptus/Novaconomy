@@ -1830,6 +1830,10 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 			return count.get();
 		}));
 
+		// PlugMan Warnings
+		if (Bukkit.getPluginManager().getPlugin("PlugMan") != null || Bukkit.getPluginManager().getPlugin("PlugManX") != null)
+			getLogger().warning("PlugMan has been detected! Novaconomy is not compatible with PlugMan; PLEASE USE A RELOAD OR RESTART INSTEAD OF PlugMan.");
+
 		getLogger().info("Loaded Dependencies...");
 		saveConfig();
 		getLogger().info("Successfully loaded Novaconomy");
