@@ -98,6 +98,7 @@ NaturalCauses:
     Fishing: {} # Remove this when adding
       # cod: [E30, 50$]
 
+    # Farming Modifiers look at whatever you mined, similar to the Mining Modifiers.
     Farming: {} # Remove this when adding
       # wheat: [F10, 20$]
 
