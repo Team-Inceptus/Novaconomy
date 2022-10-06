@@ -1,17 +1,15 @@
 package us.teaminceptus.novaconomy;
 
 import be.seeseemelk.mockbukkit.MockBukkit;
-import be.seeseemelk.mockbukkit.ServerMock;
 import org.junit.jupiter.api.*;
 
 public class TestNovaconomy {
 
     private static Novaconomy plugin;
-    private static ServerMock server;
 
     @BeforeAll
     public static void setUp() {
-        server = MockBukkit.mock();
+        MockBukkit.mock();
         plugin = MockBukkit.load(Novaconomy.class);
     }
 
