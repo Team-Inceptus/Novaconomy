@@ -158,4 +158,9 @@ public final class Wrapper1_9_R2 implements Wrapper {
             default: break;
         }
     }
+
+    @Override
+    public boolean isCrop(Material m) {
+        return Crops.class.isAssignableFrom(m.getData());
+    }
 }

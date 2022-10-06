@@ -35,6 +35,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 public interface Wrapper {
 
@@ -98,6 +99,12 @@ public interface Wrapper {
     default boolean isProduct(ItemStack item) { return hasID(item) && (getID(item).equalsIgnoreCase("product") || getNBTBoolean(item, "is_product")); }
 
     default String getID(ItemStack item) { return getNBTString(item, "id"); }
+
+    boolean isCrop(Material m);
+
+    default List<Material> getCrops() {
+        return Arrays.stream(Material.values()).filter(this::isCrop).collect(Collectors.toList());
+    }
 
     static Plugin getPlugin() {
         return Bukkit.getPluginManager().getPlugin("Novaconomy");

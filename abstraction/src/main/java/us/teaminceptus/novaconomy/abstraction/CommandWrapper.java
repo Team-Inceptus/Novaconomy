@@ -10,7 +10,10 @@ import org.bukkit.command.PluginCommand;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemFlag;
@@ -20,6 +23,8 @@ import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.ChatPaginator;
+
+import us.teaminceptus.novaconomy.ModifierReader;
 import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.bank.Bank;
@@ -2344,6 +2349,33 @@ public interface CommandWrapper {
         File configFile = NovaConfig.getConfigFile();
         FileConfiguration config = NovaConfig.loadConfig();
 
+        List<Map<Economy, Double>> mods = new ArrayList<>();
+        Iterator<String> it = values.iterator();
+        while (it.hasNext()) {
+            String v = it.next();
+            if (v == null) {
+                it.remove();
+                continue;
+            }
+
+            v = v.replaceAll("[\\s]", "");
+
+            Map<Economy, Double> mod = ModifierReader.readString(v);
+            if (mod == null) {
+                sender.sendMessage(getMessage("error.argument.modifier")); // TODO Create Modifier Message
+                return;
+            }
+
+            mods.add(mod);
+        }
+
+        if (mods.isEmpty()) {
+            sender.sendMessage(getMessage("error.argument.amount"));
+            return;
+        }
+
+        Object value = mods.size() == 1 ? ModifierReader.toModString(mods.get(0)) : ModifierReader.toModList(mods);
+
         switch (type.toLowerCase()) {
             case "mining": {
                 if (Material.matchMaterial(key) == null) {
@@ -2352,21 +2384,88 @@ public interface CommandWrapper {
                 }
 
                 Material m = Material.matchMaterial(key);
-
                 if (!m.isBlock()) {
                     sender.sendMessage(getMessage("error.argument.block"));
                     return;
                 }
 
-                if (values.isEmpty()) {
-                    sender.sendMessage(getMessage("error.argument.amount"));
+                config.set("Mining." + m.name().toLowerCase(), value);
+                break;
+            }
+            case "killing": {
+                try {
+                    EntityType t = EntityType.valueOf(key.replace("minecraft:", "").toUpperCase());
+                    
+                    if (LivingEntity.class.isAssignableFrom(t.getEntityClass())) {
+                        sender.sendMessage(getMessage("error.argument.entity"));
+                        return;
+                    }
+                    
+                    config.set("Killing." + t.name().toLowerCase(), value);
+                } catch (IllegalArgumentException e) {
+                    sender.sendMessage(getMessage("error.argument.entity")); // TODO Create Entity Message
+                    return;
+                }
+            }
+            case "fishing": {
+                final Enum<?> choice;
+
+                EntityType etype = null;
+                try {
+                    etype = EntityType.valueOf(key.replace("minecraft:", "").toUpperCase());
+                } catch (IllegalArgumentException ignored) {}
+
+
+                if (Material.matchMaterial(key) == null && etype == null) {
+                    sender.sendMessage(getMessage("error.argument.item_entity")); // TODO Create Item & Entity Message
+                    return;
+                }
+                
+                Material m = null;
+                if (etype == null) {
+                    m = Material.matchMaterial(key);
+                    if (!w.isItem(m)) {
+                        sender.sendMessage(getMessage("error.argument.item")); // TODO Create Item Message
+                        return;
+                    }
+                }
+
+                choice = etype == null ? m : etype;
+
+                config.set("Fishing." + choice.name().toLowerCase(), value);
+                break;
+            }
+            case "farming": {
+                if (Material.matchMaterial(key) == null) {
+                    sender.sendMessage(getMessage("error.argument.crop")); // TODO Create Crop Message
+                    return;
+                }
+                
+                Material m = Material.matchMaterial(key);
+                if (!w.isCrop(m)) {
+                    sender.sendMessage(getMessage("error.argument.crop"));
                     return;
                 }
 
-
-
+                config.set("Farming." + m.name().toLowerCase(), value);
                 break;
             }
+            case "death": {
+                try {
+                    EntityDamageEvent.DamageCause c = EntityDamageEvent.DamageCause.valueOf(key.replace("minecraft:", "").toUpperCase());
+                    config.set("Death." + c.name().toLowerCase(), value);
+                } catch (IllegalArgumentException e) {
+                    sender.sendMessage(getMessage("error.argument.cause")); // TODO Create DamageCause Message
+                    return;
+                }
+                break;
+            }
+        }
+
+        try {
+            config.save(configFile);
+        } catch (IOException e) {
+            NovaConfig.print(e);
         }
     }
 

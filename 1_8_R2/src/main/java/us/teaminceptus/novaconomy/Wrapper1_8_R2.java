@@ -156,4 +156,9 @@ public final class Wrapper1_8_R2 implements Wrapper {
     public void removeItem(PlayerInteractEvent e) {
         e.getPlayer().setItemInHand(null);
     }
+
+    @Override
+    public boolean isCrop(Material m) {
+        return Crops.class.isAssignableFrom(m.getData());
+    }
 }

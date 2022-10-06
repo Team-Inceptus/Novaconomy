@@ -4,6 +4,8 @@ import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.Ageable;
+import org.bukkit.block.data.BlockData;
+import org.bukkit.block.data.type.Fire;
 import org.bukkit.craftbukkit.v1_16_R2.inventory.CraftItemStack;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -154,5 +156,11 @@ public final class Wrapper1_16_R2 implements Wrapper {
     @Override
     public void removeItem(PlayerInteractEvent e) {
         e.getPlayer().getEquipment().setItem(e.getHand(), null);
+    }
+
+    @Override
+    public boolean isCrop(Material m) {
+        BlockData d = m.createBlockData();
+        return d instanceof Ageable && !(d instanceof Fire);
     }
 }

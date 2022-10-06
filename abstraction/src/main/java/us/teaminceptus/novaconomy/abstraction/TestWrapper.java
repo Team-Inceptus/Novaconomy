@@ -8,7 +8,9 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 final class TestWrapper implements Wrapper {
@@ -100,5 +102,15 @@ final class TestWrapper implements Wrapper {
 
     @Override
     public void removeItem(PlayerInteractEvent p) {}
+
+    @Override
+    public boolean isCrop(Material m) {
+        return false;
+    }
+
+    @Override
+    public List<Material> getCrops() {
+        return new ArrayList<>();
+    }
 
 }

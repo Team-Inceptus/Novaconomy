@@ -1,19 +1,22 @@
 package us.teaminceptus.novaconomy;
 
-import net.md_5.bungee.api.ChatMessageType;
-import net.md_5.bungee.api.chat.BaseComponent;
-import net.md_5.bungee.api.chat.TextComponent;
-import net.minecraft.server.v1_16_R3.ItemStack;
-import net.minecraft.server.v1_16_R3.NBTTagCompound;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.Ageable;
+import org.bukkit.block.data.BlockData;
+import org.bukkit.block.data.type.Fire;
 import org.bukkit.craftbukkit.v1_16_R3.inventory.CraftItemStack;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
+
+import net.md_5.bungee.api.ChatMessageType;
+import net.md_5.bungee.api.chat.BaseComponent;
+import net.md_5.bungee.api.chat.TextComponent;
+import net.minecraft.server.v1_16_R3.ItemStack;
+import net.minecraft.server.v1_16_R3.NBTTagCompound;
 import us.teaminceptus.novaconomy.abstraction.Wrapper;
 
 public final class Wrapper1_16_R3 implements Wrapper {
@@ -155,4 +158,9 @@ public final class Wrapper1_16_R3 implements Wrapper {
         e.getPlayer().getEquipment().setItem(e.getHand(), null);
     }
 
+    @Override
+    public boolean isCrop(Material m) {
+        BlockData d = m.createBlockData();
+        return d instanceof Ageable && !(d instanceof Fire);
+    }
 }

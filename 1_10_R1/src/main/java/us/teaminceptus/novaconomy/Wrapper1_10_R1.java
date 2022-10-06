@@ -161,4 +161,9 @@ public final class Wrapper1_10_R1 implements Wrapper {
         }
     }
 
+    @Override
+    public boolean isCrop(Material m) {
+        return Crops.class.isAssignableFrom(m.getData());
+    }
+
 }
