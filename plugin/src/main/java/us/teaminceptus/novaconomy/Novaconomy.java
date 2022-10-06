@@ -1579,10 +1579,6 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		}
 	}
 
-	private static String getServerVersion() {
-		return Bukkit.getServer().getClass().getPackage().getName().split("\\.")[3].substring(1);
-	}
-
 	private static Wrapper getWrapper() {
 		return Wrapper.getWrapper();
 	}

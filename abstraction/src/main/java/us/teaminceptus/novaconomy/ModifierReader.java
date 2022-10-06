@@ -6,6 +6,8 @@ import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 
 import java.util.*;
+import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 public class ModifierReader {
 
@@ -53,15 +55,36 @@ public class ModifierReader {
     }
 
     public static Map<Economy, Double> readString(String s) {
-        char s1 = s.charAt(0);
-        char s2 = s.charAt(s.length() - 1);
+        try {
+            char s1 = s.charAt(0);
+            char s2 = s.charAt(s.length() - 1);
 
-        if (!Economy.exists(s1) && !Economy.exists(s2)) return null;
+            if (!Economy.exists(s1) && !Economy.exists(s2)) return null;
 
-        String remove = Economy.exists(s1) ? s1 + "" : s2 + "";
-        Economy econ = Economy.exists(s1) ? Economy.getEconomy(s1) : Economy.getEconomy(s2);
-        double amountD = Double.parseDouble(s.replaceAll("[" + remove + "]", ""));
-        return Collections.singletonMap(econ, amountD);
+            String remove = Economy.exists(s1) ? s1 + "" : s2 + "";
+            Economy econ = Economy.exists(s1) ? Economy.getEconomy(s1) : Economy.getEconomy(s2);
+            double amountD = Double.parseDouble(s.replaceAll("[" + remove + "]", ""));
+            return Collections.singletonMap(econ, amountD);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    public static String toModString(Map<Economy, Double> map) {
+        if (map == null) return null;
+        if (map.isEmpty()) return null;
+
+        Entry<Economy, Double> entry = map.entrySet().stream().findFirst().orElse(null);
+        if (entry == null) return null;
+        return entry.getValue() + "" + entry.getKey().getSymbol();
+    }
+
+    public static List<String> toModList(List<Map<Economy, Double>> list) {
+        if (list == null) return null;
+        if (list.isEmpty()) return null;
+        return list.stream()
+            .filter(Objects::nonNull)
+            .map(ModifierReader::toModString).collect(Collectors.toList());
     }
 
 }
