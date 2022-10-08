@@ -4,7 +4,11 @@ import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.plugin.Plugin;
 import revxrsal.commands.annotation.*;
 import revxrsal.commands.autocomplete.SuggestionProvider;
@@ -19,12 +23,24 @@ import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
+import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public final class CommandWrapperV2 implements CommandWrapper {
 
     private static BukkitCommandHandler handler;
+    private static final Function<String, Set<String>> modkeys = (s) -> {
+        FileConfiguration config = NovaConfig.getConfig();
+        return config.getConfigurationSection(s)
+                .getKeys(false)
+                .stream()
+                .map(String::toLowerCase)
+                .collect(Collectors.toSet());
+    };
 
     public CommandWrapperV2(Plugin plugin) {
         if (handler != null) return;
@@ -32,53 +48,105 @@ public final class CommandWrapperV2 implements CommandWrapper {
         handler = BukkitCommandHandler.create(plugin);
 
         handler.registerValueResolver(Economy.class, ctx -> {
-            Economy econ = Economy.getEconomy(ctx.popForParameter());
-            if (econ == null) throw new CommandErrorException(getMessage("error.argument.economy"));
-            return econ;
-        });
+                    Economy econ = Economy.getEconomy(ctx.popForParameter());
+                    if (econ == null) throw new CommandErrorException(getMessage("error.argument.economy"));
+                    return econ;
+            }).registerValueResolver(Business.class, ctx -> {
+                Business b = Business.getByName(ctx.popForParameter());
+                if (b == null) throw new CommandErrorException(getMessage("error.argument.business"));
+                return b;
+            }).registerValueResolver(Material.class, ctx -> {
+                Material m = Material.matchMaterial(ctx.popForParameter());
+                if (m == null) throw new CommandErrorException(getMessage("error.argument.icon"));
+                if (!m.isItem()) throw new CommandErrorException(getMessage("error.argument.icon"));
+                if (m == Material.AIR) throw new CommandErrorException(getMessage("error.argument.icon"));
+                return m;
+            }).registerValueResolver(OfflinePlayer.class, ctx -> {
+                String value = ctx.popForParameter();
+                if (value.equalsIgnoreCase("me")) return ((BukkitCommandActor) ctx.actor()).requirePlayer();
+                OfflinePlayer p = Wrapper.getPlayer(value);
+                if (p == null) throw new CommandErrorException(getMessage("error.argument.player"));
+                return p;
+            });
 
-        handler.getAutoCompleter().registerParameterSuggestions(Economy.class, SuggestionProvider.map(Economy::getEconomies, Economy::getName));
+        handler.getAutoCompleter()
+                .registerParameterSuggestions(Economy.class, SuggestionProvider.map(Economy::getEconomies, Economy::getName))
+                .registerParameterSuggestions(Material.class, SuggestionProvider.map(() -> Arrays.stream(Material.values())
+                        .filter(Material::isItem)
+                        .filter(m -> m != Material.AIR)
+                        .collect(Collectors.toList()), m -> m.name().toLowerCase())
+                )
+                .registerParameterSuggestions(Business.class, SuggestionProvider.map(Business::getBusinesses, Business::getName))
+                .registerParameterSuggestions(boolean.class, SuggestionProvider.of("true", "false"))
+                .registerParameterSuggestions(OfflinePlayer.class, SuggestionProvider.map(() -> Arrays.asList(Bukkit.getOfflinePlayers()), OfflinePlayer::getName))
 
-        handler.registerValueResolver(Material.class, ctx -> {
-            Material m = Material.matchMaterial(ctx.popForParameter());
-            if (m == null) throw new CommandErrorException(getMessage("error.argument.icon"));
-            if (!m.isItem()) throw new CommandErrorException(getMessage("error.argument.icon"));
-            if (m == Material.AIR) throw new CommandErrorException(getMessage("error.argument.icon"));
-            return m;
-        });
-        handler.getAutoCompleter().registerParameterSuggestions(Material.class, SuggestionProvider.map(() -> Arrays.stream(Material.values()).filter(Material::isItem).filter(m -> m != Material.AIR).collect(Collectors.toList()), m -> m.name().toLowerCase()));
+                // Suggestions
 
-        handler.registerValueResolver(Business.class, ctx -> {
-            Business b = Business.getByName(ctx.popForParameter());
-            if (b == null) throw new CommandErrorException(getMessage("error.argument.business"));
-            return b;
-        });
-        handler.getAutoCompleter().registerParameterSuggestions(Business.class, SuggestionProvider.map(Business::getBusinesses, Business::getName));
+                .registerSuggestion("event", SuggestionProvider.map(NovaConfig.getConfiguration()::getAllCustomEvents, NovaConfig.CustomTaxEvent::getIdentifier))
+                .registerSuggestion("settings", SuggestionProvider.of(Arrays.asList("business", "personal")))
 
-        handler.getAutoCompleter().registerParameterSuggestions(boolean.class, SuggestionProvider.of("true", "false"));
+                .registerSuggestion("blacklist", (args, sender, cmd) -> Business.getBusinesses().stream().filter(b -> {
+                    OfflinePlayer p = ((BukkitCommandActor) sender).requirePlayer();
+                    return !b.isOwner(p) && !Business.getByOwner(p).isBlacklisted(b);
+                }).map(Business::getName).collect(Collectors.toList()))
 
-        handler.registerValueResolver(OfflinePlayer.class, ctx -> {
-            String value = ctx.popForParameter();
-            if (value.equalsIgnoreCase("me")) return ((BukkitCommandActor) ctx.actor()).requirePlayer();
-            OfflinePlayer p = Wrapper.getPlayer(value);
-            if (p == null) throw new CommandErrorException(getMessage("error.argument.player"));
-            return p;
-        });
-
-        handler.getAutoCompleter().registerParameterSuggestions(OfflinePlayer.class, SuggestionProvider.map(() -> Arrays.asList(Bukkit.getOfflinePlayers()), OfflinePlayer::getName));
-
-        handler.getAutoCompleter().registerSuggestion("event", SuggestionProvider.map(NovaConfig.getConfiguration()::getAllCustomEvents, NovaConfig.CustomTaxEvent::getIdentifier));
-        handler.getAutoCompleter().registerSuggestion("settings", SuggestionProvider.of(Arrays.asList("business", "personal")));
-        handler.getAutoCompleter().registerSuggestion("blacklist", (args, sender, cmd) -> Business.getBusinesses().stream().filter(b -> {
-            OfflinePlayer p = ((BukkitCommandActor) sender).requirePlayer();
-            return !b.isOwner(p) && !Business.getByOwner(p).isBlacklisted(b);
-        }).map(Business::getName).collect(Collectors.toList()));
-        handler.getAutoCompleter().registerSuggestion("blacklisted", (args, sender, cmd) -> Business.getByOwner(Wrapper.getPlayer(sender.getName())).getBlacklist().stream().map(Business::getName).collect(Collectors.toList()));
-        handler.getAutoCompleter().registerSuggestion("natural_causes", SuggestionProvider.of(Arrays.asList(
+                .registerSuggestion("blacklisted", (args, sender, cmd) -> Business.getByOwner(Wrapper.getPlayer(sender.getName())).getBlacklist().stream().map(Business::getName).collect(Collectors.toList()))
+                .registerSuggestion("natural_causes",
                 "enchant_bonus", "max_increase", "kill_increase", "kill_increase_chance", "kill_increase_indirect", "fishing_increase",
                 "fishing_increase_chance", "mining_increase", "mining_increase_chance", "farming_increase", "farming_increase_chance",
-                "death_decrease", "death_divider"
-        )));
+                "death_decrease", "death_divider")
+
+                .registerSuggestion("modifiers", "killing", "mining", "farming", "fishing", "death")
+                .registerSuggestion("modifier_keys", (args, sender, cmd) -> {
+                    String type = args.get(4);
+
+                    switch (type.toLowerCase()) {
+                        case "mining": return Arrays.stream(Material.values())
+                                .filter(Material::isBlock)
+                                .filter(m -> m != Material.AIR)
+                                .map(m -> m.name().toLowerCase())
+                                .collect(Collectors.toList());
+                        case "farming": return Arrays.stream(Material.values())
+                                .filter(w::isCrop)
+                                .map(m -> m.name().toLowerCase())
+                                .collect(Collectors.toList());
+                        case "fishing": {
+                            List<String> values = new ArrayList<>();
+                            values.addAll(Arrays.stream(Material.values())
+                                    .filter(Material::isItem)
+                                    .map(m -> m.name().toLowerCase())
+                                    .collect(Collectors.toList()));
+                            values.addAll(Arrays.stream(EntityType.values())
+                                    .filter(EntityType::isAlive)
+                                    .filter(e -> LivingEntity.class.isAssignableFrom(e.getEntityClass()))
+                                    .map(e -> e.name().toLowerCase())
+                                    .collect(Collectors.toList()));
+
+                            return values;
+                        }
+                        case "killing": return Arrays.stream(EntityType.values())
+                                .filter(EntityType::isAlive)
+                                .filter(e -> LivingEntity.class.isAssignableFrom(e.getEntityClass()))
+                                .map(e -> e.name().toLowerCase())
+                                .collect(Collectors.toList());
+                        case "death": return Arrays.stream(EntityDamageEvent.DamageCause.values())
+                                .map(d -> d.name().toLowerCase())
+                                .collect(Collectors.toList());
+                        default: return new ArrayList<>();
+                    }
+                })
+                .registerSuggestion("modifier_keys_existing", (args, sender, cmd) -> {
+                    String type = args.get(4);
+
+                    switch (type.toLowerCase()) {
+                        case "mining": return modkeys.apply("NaturalCauses.Modifiers.Mining");
+                        case "farming": return modkeys.apply("NaturalCauses.Modifiers.Farming");
+                        case "fishing": return modkeys.apply("NaturalCauses.Modifiers.Fishing");
+                        case "killing": return modkeys.apply("NaturalCauses.Modifiers.Killing");
+                        case "death": return modkeys.apply("NaturalCauses.Modifiers.Death");
+                        default: return new ArrayList<>();
+                    }
+                });
 
         handler.register(this);
         new EconomyCommands(this);
@@ -518,6 +586,33 @@ public final class CommandWrapperV2 implements CommandWrapper {
         @AutoComplete("@natural_causes *")
         public void setNaturalCauses(CommandSender sender, String key, String value) {
             wrapper.configNaturalCauses(sender, key, value);
+        }
+
+        @Subcommand({"naturalcauses modifier add", "naturalcauses mod add", "naturalcauses mod create", "naturalcauses modifier create",
+        "ncauses modifier add", "ncauses mod add", "ncauses mod create", "ncauses modifier create",
+        "naturalc modifier add", "naturalc mod add", "naturalc mod create", "naturalc modifier create",
+        "nc modifier add", "nc mod add", "nc mod create", "nc modifier create"})
+        @AutoComplete("@modifiers @modifier_keys")
+        public void addCausesModifier(CommandSender sender, String type, String key, String values) {
+            wrapper.addCausesModifier(sender, type, key, values.replace(" ", ",").split(","));
+        }
+
+        @Subcommand({"naturalcauses modifier remove", "naturalcauses mod remove", "naturalcauses modifier delete", "naturalcauses mod delete",
+        "ncauses modifier remove", "ncauses mod remove", "ncauses modifier delete", "ncauses mod delete",
+        "naturalc modifier remove", "naturalc mod remove", "naturalc modifier delete", "naturalc mod delete",
+        "nc modifier remove", "nc mod remove", "nc modifier delete", "nc mod delete"})
+        @AutoComplete("@modifiers @modifier_keys_existing")
+        public void removeCausesModifier(CommandSender sender, String type, String key) {
+            wrapper.removeCausesModifier(sender, type, key);
+        }
+
+        @Subcommand({"naturalcauses modifier view", "naturalcauses mod view",
+        "ncauses modifier view", "ncauses mod view",
+        "naturalc modifier view", "naturalc mod view",
+        "nc modifier view", "nc mod view"})
+        @AutoComplete("@modifiers @modifier_keys_existing")
+        public void viewCausesModifier(CommandSender sender, String type, String key) {
+            wrapper.viewCausesModifier(sender, type, key);
         }
     }
 }

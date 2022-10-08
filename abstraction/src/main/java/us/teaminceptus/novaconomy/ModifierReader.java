@@ -2,6 +2,7 @@ package us.teaminceptus.novaconomy;
 
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.event.entity.EntityDamageEvent;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 
@@ -19,6 +20,7 @@ public class ModifierReader {
             ConfigurationSection modifiers = config.getConfigurationSection("NaturalCauses.Modifiers");
 
             modifiers.getKeys(false).forEach(s -> {
+                if (s.equalsIgnoreCase("Death")) return;
                 ConfigurationSection modifier = modifiers.getConfigurationSection(s);
                 Map<String, Set<Map<Economy, Double>>> map = new HashMap<>();
 
@@ -54,6 +56,42 @@ public class ModifierReader {
         return getAllModifiers().get(mod);
     }
 
+    public static Map<EntityDamageEvent.DamageCause, Double> getDeathModifiers() {
+        Map<EntityDamageEvent.DamageCause, Double> mods = new HashMap<>();
+
+        FileConfiguration config = NovaConfig.getConfig();
+
+        if (config.isConfigurationSection("NaturalCauses.Modifiers.Death")) {
+            ConfigurationSection modifiers = config.getConfigurationSection("NaturalCauses.Modifiers.Death");
+
+            modifiers.getValues(false).forEach((k, v) -> {
+                EntityDamageEvent.DamageCause cause = null;
+                try {
+                    cause = EntityDamageEvent.DamageCause.valueOf(k.toUpperCase());
+                } catch (IllegalArgumentException e) {
+                    NovaConfig.getPlugin().getLogger().severe("Invalid Damage Cause in Death Modifiers: " + k);
+                    return;
+                }
+
+                double d = 0;
+                try {
+                    d = Double.parseDouble(v.toString());
+                    if (d == 0) {
+                        NovaConfig.getPlugin().getLogger().severe("Invalid Death Modifier (cannot be 0): " + k + ": " + v);
+                        return;
+                    }
+                } catch (NumberFormatException e) {
+                    NovaConfig.getPlugin().getLogger().severe("Invalid Death Modifier in Death Modifiers: " + k + ": " + v);
+                    return;
+                }
+
+                mods.put(cause, d);
+            });
+        }
+
+        return mods;
+    }
+
     public static Map<Economy, Double> readString(String s) {
         try {
             char s1 = s.charAt(0);
@@ -76,7 +114,7 @@ public class ModifierReader {
 
         Entry<Economy, Double> entry = map.entrySet().stream().findFirst().orElse(null);
         if (entry == null) return null;
-        return entry.getValue() + "" + entry.getKey().getSymbol();
+        return String.format("%,.0f", entry.getValue()) + entry.getKey().getSymbol();
     }
 
     public static List<String> toModList(List<Map<Economy, Double>> list) {

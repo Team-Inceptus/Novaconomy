@@ -1,12 +1,14 @@
 package us.teaminceptus.novaconomy.abstraction;
 
 import com.cryptomorin.xseries.XSound;
+import com.google.common.collect.ImmutableList;
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.properties.Property;
 import org.apache.commons.lang.WordUtils;
 import org.bukkit.*;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.enchantments.Enchantment;
@@ -23,7 +25,6 @@ import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.ChatPaginator;
-
 import us.teaminceptus.novaconomy.ModifierReader;
 import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.NovaConfig;
@@ -54,6 +55,7 @@ import java.util.stream.Collectors;
 
 import static us.teaminceptus.novaconomy.abstraction.Wrapper.r;
 
+@SuppressWarnings("unchecked")
 public interface CommandWrapper {
 
     default void loadCommands() {}
@@ -188,14 +190,19 @@ public interface CommandWrapper {
         }
 
         sender.sendMessage(get("command.reload.reloading"));
+        reloadFiles();
+        sender.sendMessage(get("command.reload.success"));
+    }
+
+    static void reloadFiles() {
         Plugin plugin = getPlugin();
+
         plugin.reloadConfig();
         NovaConfig.loadConfig();
         NovaConfig.reloadRunnables();
         NovaConfig.loadFunctionalityFile();
         YamlConfiguration.loadConfiguration(new File(plugin.getDataFolder(), "businesses.yml"));
         YamlConfiguration.loadConfiguration(new File(plugin.getDataFolder(), "global.yml"));
-        sender.sendMessage(get("command.reload.success"));
     }
 
     default void convert(Player p, Economy from, Economy to, double amount) {
@@ -2338,9 +2345,10 @@ public interface CommandWrapper {
         } catch (IOException e) {
             NovaConfig.print(e);
         }
+        reloadFiles();
     }
 
-    default void addModifier(CommandSender sender, String type, String key, List<String> values) {
+    default void addCausesModifier(CommandSender sender, String type, String key, String... values) {
         if (!sender.hasPermission("novaconomy.admin.config")) {
             sender.sendMessage(getMessage("error.permission"));
             return;
@@ -2348,33 +2356,54 @@ public interface CommandWrapper {
 
         File configFile = NovaConfig.getConfigFile();
         FileConfiguration config = NovaConfig.loadConfig();
+        ConfigurationSection modConfig = config.getConfigurationSection("NaturalCauses.Modifiers");
 
-        List<Map<Economy, Double>> mods = new ArrayList<>();
-        Iterator<String> it = values.iterator();
+        List<Map<Economy, Double>> mods = null;
+        double divider = -1;
+
+        if (type.equalsIgnoreCase("death")) divider = 0; else mods = new ArrayList<>();
+
+        Iterator<String> it = ImmutableList.copyOf(values).iterator();
         while (it.hasNext()) {
             String v = it.next();
-            if (v == null) {
+            if (v == null || v.isEmpty()) {
                 it.remove();
                 continue;
             }
 
-            v = v.replaceAll("[\\s]", "");
-
-            Map<Economy, Double> mod = ModifierReader.readString(v);
-            if (mod == null) {
-                sender.sendMessage(getMessage("error.argument.modifier")); // TODO Create Modifier Message
+            v = v.replace(" ", "");
+            if (type.equalsIgnoreCase("death")) try {
+                divider = Double.parseDouble(v);
+                if (divider <= 0) {
+                    sender.sendMessage(getMessage("error.argument.amount"));
+                    return;
+                }
+                break;
+            } catch (NumberFormatException e) {
+                sender.sendMessage(getMessage("error.argument.amount"));
                 return;
             }
+            else {
+                Map<Economy, Double> mod = ModifierReader.readString(v);
+                if (mod == null) {
+                    sender.sendMessage(getMessage("error.argument.modifier"));
+                    return;
+                }
 
-            mods.add(mod);
+                mods.add(mod);
+            }
         }
 
-        if (mods.isEmpty()) {
+        if ((divider == -1 && mods.isEmpty()) || (mods == null && divider == -1)) {
             sender.sendMessage(getMessage("error.argument.amount"));
             return;
         }
 
-        Object value = mods.size() == 1 ? ModifierReader.toModString(mods.get(0)) : ModifierReader.toModList(mods);
+        Object value = divider == -1 ?
+                mods.size() == 1 ? ModifierReader.toModString(mods.get(0)) : ModifierReader.toModList(mods) :
+                divider;
+
+        String entityName = key.toLowerCase().replace("minecraft:", "").toUpperCase();
 
         switch (type.toLowerCase()) {
             case "mining": {
@@ -2389,35 +2418,58 @@ public interface CommandWrapper {
                     return;
                 }
 
-                config.set("Mining." + m.name().toLowerCase(), value);
+                String modKey = "Mining." + m.name().toLowerCase();
+
+                List<String> newValue = new ArrayList<>();
+                if (modConfig.isList(modKey)) newValue.addAll(modConfig.getStringList(modKey));
+                else newValue.add(modConfig.getString(modKey));
+
+                if (value instanceof String) newValue.add((String) value);
+                else newValue.addAll((List<String>) value);
+
+                modConfig.set(modKey, newValue);
                 break;
             }
             case "killing": {
                 try {
-                    EntityType t = EntityType.valueOf(key.replace("minecraft:", "").toUpperCase());
+                    EntityType t = EntityType.valueOf(entityName);
                     
-                    if (LivingEntity.class.isAssignableFrom(t.getEntityClass())) {
+                    if (!LivingEntity.class.isAssignableFrom(t.getEntityClass()) || t == EntityType.PLAYER) {
                         sender.sendMessage(getMessage("error.argument.entity"));
                         return;
                     }
-                    
-                    config.set("Killing." + t.name().toLowerCase(), value);
+
+                    String modKey = "Killing." + t.name().toLowerCase();
+
+                    List<String> newValue = new ArrayList<>();
+                    if (modConfig.isList(modKey)) newValue.addAll(modConfig.getStringList(modKey));
+                    else newValue.add(modConfig.getString(modKey));
+
+                    if (value instanceof String) newValue.add((String) value);
+                    else newValue.addAll((List<String>) value);
+
+                    modConfig.set(modKey, newValue);
                 } catch (IllegalArgumentException e) {
-                    sender.sendMessage(getMessage("error.argument.entity")); // TODO Create Entity Message
+                    sender.sendMessage(getMessage("error.argument.entity"));
                     return;
                 }
+                break;
             }
             case "fishing": {
                 final Enum<?> choice;
 
                 EntityType etype = null;
                 try {
-                    etype = EntityType.valueOf(key.replace("minecraft:", "").toUpperCase());
+                    etype = EntityType.valueOf(entityName);
+
+                    if (!LivingEntity.class.isAssignableFrom(etype.getEntityClass()) || etype == EntityType.PLAYER || !etype.isAlive()) {
+                        sender.sendMessage(getMessage("error.argument.entity"));
+                        return;
+                    }
                 } catch (IllegalArgumentException ignored) {}
 
-
                 if (Material.matchMaterial(key) == null && etype == null) {
-                    sender.sendMessage(getMessage("error.argument.item_entity")); // TODO Create Item & Entity Message
+                    sender.sendMessage(getMessage("error.argument.item_entity"));
                     return;
                 }
                 
@@ -2425,19 +2477,28 @@ public interface CommandWrapper {
                 if (etype == null) {
                     m = Material.matchMaterial(key);
                     if (!w.isItem(m)) {
-                        sender.sendMessage(getMessage("error.argument.item")); // TODO Create Item Message
+                        sender.sendMessage(getMessage("error.argument.item"));
                         return;
                     }
                 }
 
                 choice = etype == null ? m : etype;
 
-                config.set("Fishing." + choice.name().toLowerCase(), value);
+                String modKey = "Fishing." + choice.name().toLowerCase();
+
+                List<String> newValue = new ArrayList<>();
+                if (modConfig.isList(modKey)) newValue.addAll(modConfig.getStringList(modKey));
+                else newValue.add(modConfig.getString(modKey));
+
+                if (value instanceof String) newValue.add((String) value);
+                else newValue.addAll((List<String>) value);
+
+                modConfig.set(modKey, newValue);
                 break;
             }
             case "farming": {
                 if (Material.matchMaterial(key) == null) {
-                    sender.sendMessage(getMessage("error.argument.crop")); // TODO Create Crop Message
+                    sender.sendMessage(getMessage("error.argument.crop"));
                     return;
                 }
                 
@@ -2447,15 +2508,24 @@ public interface CommandWrapper {
                     return;
                 }
 
-                config.set("Farming." + m.name().toLowerCase(), value);
+                String modKey = "Farming." + m.name().toLowerCase();
+
+                List<String> newValue = new ArrayList<>();
+                if (modConfig.isList(modKey)) newValue.addAll(modConfig.getStringList(modKey));
+                else newValue.add(modConfig.getString(modKey));
+
+                if (value instanceof String) newValue.add((String) value);
+                else newValue.addAll((List<String>) value);
+
+                modConfig.set(modKey, newValue);
                 break;
             }
             case "death": {
                 try {
                     EntityDamageEvent.DamageCause c = EntityDamageEvent.DamageCause.valueOf(key.replace("minecraft:", "").toUpperCase());
-                    config.set("Death." + c.name().toLowerCase(), value);
+                    modConfig.set("Death." + c.name().toLowerCase(), value);
                 } catch (IllegalArgumentException e) {
-                    sender.sendMessage(getMessage("error.argument.cause")); // TODO Create DamageCause Message
+                    sender.sendMessage(getMessage("error.argument.cause"));
                     return;
                 }
                 break;
@@ -2466,6 +2536,274 @@ public interface CommandWrapper {
             config.save(configFile);
         } catch (IOException e) {
             NovaConfig.print(e);
+        }
+        reloadFiles();
+
+        sender.sendMessage(String.format(getMessage("success.config.add_modifier"), type, key));
+    }
+
+    default void removeCausesModifier(CommandSender sender, String type, String key) {
+        if (!sender.hasPermission("novaconomy.admin.config")) {
+            sender.sendMessage(getMessage("error.permission"));
+            return;
+        }
+
+        File configFile = NovaConfig.getConfigFile();
+        FileConfiguration config = NovaConfig.loadConfig();
+        ConfigurationSection modConfig = config.getConfigurationSection("NaturalCauses.Modifiers");
+
+        switch (type.toLowerCase()) {
+            case "mining": {
+                if (Material.matchMaterial(key) == null) {
+                    sender.sendMessage(getMessage("error.argument.block"));
+                    return;
+                }
+
+                Material m = Material.matchMaterial(key);
+                if (!m.isBlock() || m == Material.AIR) {
+                    sender.sendMessage(getMessage("error.argument.block"));
+                    return;
+                }
+
+                if (!modConfig.isSet("Mining." + m.name().toLowerCase())) {
+                    sender.sendMessage(getMessage("error.config.modifier_inexistent"));
+                    return;
+                }
+
+                modConfig.set("Mining." + m.name().toLowerCase(), null);
+                break;
+            }
+            case "killing": {
+                try {
+                    EntityType t = EntityType.valueOf(key.replace("minecraft:", "").toUpperCase());
+
+                    if (!LivingEntity.class.isAssignableFrom(t.getEntityClass()) || t == EntityType.PLAYER) {
+                        sender.sendMessage(getMessage("error.argument.entity"));
+                        return;
+                    }
+
+                    if (!modConfig.isSet("Killing." + t.name().toLowerCase())) {
+                        sender.sendMessage(getMessage("error.config.modifier_inexistent"));
+                        return;
+                    }
+
+                    modConfig.set("Killing." + t.name().toLowerCase(), null);
+                } catch (IllegalArgumentException e) {
+                    sender.sendMessage(getMessage("error.argument.entity"));
+                    return;
+                }
+                break;
+            }
+            case "fishing": {
+                final Enum<?> choice;
+
+                EntityType etype = null;
+                try {
+                    etype = EntityType.valueOf(key.replace("minecraft:", "").toUpperCase());
+
+                    if (!LivingEntity.class.isAssignableFrom(etype.getEntityClass()) || etype == EntityType.PLAYER || !etype.isAlive()) {
+                        sender.sendMessage(getMessage("error.argument.entity"));
+                        return;
+                    }
+                } catch (IllegalArgumentException ignored) {}
+
+                if (Material.matchMaterial(key) == null && etype == null) {
+                    sender.sendMessage(getMessage("error.argument.item_entity"));
+                    return;
+                }
+
+                Material m = null;
+                if (etype == null) {
+                    m = Material.matchMaterial(key);
+                    if (!w.isItem(m)) {
+                        sender.sendMessage(getMessage("error.argument.item"));
+                        return;
+                    }
+                }
+
+                choice = etype == null ? m : etype;
+
+                if (!modConfig.isSet("Fishing." + choice.name().toLowerCase())) {
+                    sender.sendMessage(getMessage("error.config.modifier_inexistent"));
+                    return;
+                }
+
+                modConfig.set("Fishing." + choice.name().toLowerCase(), null);
+                break;
+            }
+            case "farming": {
+                if (Material.matchMaterial(key) == null) {
+                    sender.sendMessage(getMessage("error.argument.crop"));
+                    return;
+                }
+
+                Material m = Material.matchMaterial(key);
+                if (!w.isCrop(m)) {
+                    sender.sendMessage(getMessage("error.argument.crop"));
+                    return;
+                }
+
+                if (!modConfig.isSet("Farming." + m.name().toLowerCase())) {
+                    sender.sendMessage(getMessage("error.config.modifier_inexistent"));
+                    return;
+                }
+
+                modConfig.set("Farming." + m.name().toLowerCase(), null);
+                break;
+            }
+            case "death": {
+                try {
+                    EntityDamageEvent.DamageCause c = EntityDamageEvent.DamageCause.valueOf(key.replace("minecraft:", "").toUpperCase());
+
+                    if (!modConfig.isSet("Death." + c.name().toLowerCase())) {
+                        sender.sendMessage(getMessage("error.config.modifier_inexistent"));
+                        return;
+                    }
+
+                    modConfig.set("Death." + c.name().toLowerCase(), null);
+                } catch (IllegalArgumentException e) {
+                    sender.sendMessage(getMessage("error.argument.cause"));
+                    return;
+                }
+                break;
+            }
+        }
+
+        try {
+            config.save(configFile);
+        } catch (IOException e) {
+            NovaConfig.print(e);
+        }
+        reloadFiles();
+
+        sender.sendMessage(String.format(getMessage("success.config.remove_modifier"), type + "." + key));
+    }
+
+    default void viewCausesModifier(CommandSender sender, String type, String key) {
+        if (!sender.hasPermission("novaconomy.admin.config")) {
+            sender.sendMessage(getMessage("error.permission"));
+            return;
+        }
+
+        File configFile = NovaConfig.getConfigFile();
+        FileConfiguration config = NovaConfig.loadConfig();
+        ConfigurationSection modConfig = config.getConfigurationSection("NaturalCauses.Modifiers");
+
+        switch (type.toLowerCase()) {
+            case "mining": {
+                if (Material.matchMaterial(key) == null) {
+                    sender.sendMessage(getMessage("error.argument.block"));
+                    return;
+                }
+
+                Material m = Material.matchMaterial(key);
+                if (!m.isBlock() || m == Material.AIR) {
+                    sender.sendMessage(getMessage("error.argument.block"));
+                    return;
+                }
+
+                if (!modConfig.isSet("Mining." + m.name().toLowerCase())) {
+                    sender.sendMessage(getMessage("error.config.modifier_inexistent"));
+                    return;
+                }
+
+                sender.sendMessage(String.format(getMessage("success.config.view_modifier"), type + "." + key, modConfig.get("Mining." + m.name().toLowerCase())));
+                break;
+            }
+            case "killing": {
+                try {
+                    EntityType t = EntityType.valueOf(key.replace("minecraft:", "").toUpperCase());
+
+                    if (!LivingEntity.class.isAssignableFrom(t.getEntityClass()) || t == EntityType.PLAYER) {
+                        sender.sendMessage(getMessage("error.argument.entity"));
+                        return;
+                    }
+
+                    if (!modConfig.isSet("Killing." + t.name().toLowerCase())) {
+                        sender.sendMessage(getMessage("error.config.modifier_inexistent"));
+                        return;
+                    }
+
+                    sender.sendMessage(String.format(getMessage("success.config.view_modifier"), type + "." + key, modConfig.get("Killing." + t.name().toLowerCase())));
+                } catch (IllegalArgumentException e) {
+                    sender.sendMessage(getMessage("error.argument.entity"));
+                    return;
+                }
+                break;
+            }
+            case "fishing": {
+                final Enum<?> choice;
+
+                EntityType etype = null;
+                try {
+                    etype = EntityType.valueOf(key.replace("minecraft:", "").toUpperCase());
+
+                    if (!LivingEntity.class.isAssignableFrom(etype.getEntityClass()) || etype == EntityType.PLAYER || !etype.isAlive()) {
+                        sender.sendMessage(getMessage("error.argument.entity"));
+                        return;
+                    }
+                } catch (IllegalArgumentException ignored) {}
+
+                if (Material.matchMaterial(key) == null && etype == null) {
+                    sender.sendMessage(getMessage("error.argument.item_entity"));
+                    return;
+                }
+
+                Material m = null;
+                if (etype == null) {
+                    m = Material.matchMaterial(key);
+                    if (!w.isItem(m)) {
+                        sender.sendMessage(getMessage("error.argument.item"));
+                        return;
+                    }
+                }
+
+                choice = etype == null ? m : etype;
+
+                if (!modConfig.isSet("Fishing." + choice.name().toLowerCase())) {
+                    sender.sendMessage(getMessage("error.config.modifier_inexistent"));
+                    return;
+                }
+
+                sender.sendMessage(String.format(getMessage("success.config.view_modifier"), type + "." + key, modConfig.get("Fishing." + choice.name().toLowerCase())));
+                break;
+            }
+            case "farming": {
+                if (Material.matchMaterial(key) == null) {
+                    sender.sendMessage(getMessage("error.argument.crop"));
+                    return;
+                }
+
+                Material m = Material.matchMaterial(key);
+                if (!w.isCrop(m)) {
+                    sender.sendMessage(getMessage("error.argument.crop"));
+                    return;
+                }
+
+                if (!modConfig.isSet("Farming." + m.name().toLowerCase())) {
+                    sender.sendMessage(getMessage("error.config.modifier_inexistent"));
+                    return;
+                }
+
+                sender.sendMessage(String.format(getMessage("success.config.view_modifier"), type + "." + key, modConfig.get("Farming." + m.name().toLowerCase())));
+                break;
+            }
+            case "death": {
+                try {
+                    EntityDamageEvent.DamageCause c = EntityDamageEvent.DamageCause.valueOf(key.replace("minecraft:", "").toUpperCase());
+
+                    if (!modConfig.isSet("Death." + c.name().toLowerCase())) {
+                        sender.sendMessage(getMessage("error.config.modifier_inexistent"));
+                        return;
+                    }
+
+                    sender.sendMessage(String.format(getMessage("success.config.view_modifier"), type + "." + key, modConfig.get("Death." + c.name().toLowerCase())));
+                } catch (IllegalArgumentException e) {
+                    sender.sendMessage(getMessage("error.argument.cause"));
+                    return;
+                }
+                break;
+            }
         }
     }
 
