@@ -25,6 +25,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
@@ -342,9 +343,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				}
 			} catch (ClassNotFoundException | NoSuchMethodException | ClassCastException ignored) {}
 			catch (Exception err) {
-				plugin.getLogger().severe(err.getClass().getSimpleName());
-				plugin.getLogger().severe(err.getMessage());
-				for (StackTraceElement s : err.getStackTrace()) plugin.getLogger().severe(s.toString());
+				NovaConfig.print(err);
 			}
 
 			if (isIgnored(p, id)) return;
@@ -436,17 +435,22 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		}
 
 		private void sendUpdateActionbar(Player p, List<String> added) {
-			if (new NovaPlayer(p).hasNotifications()) {
-				List<String> msgs = new ArrayList<>(added);
+			new BukkitRunnable() {
+				@Override
+				public void run() {
+					if (new NovaPlayer(p).hasNotifications()) {
+						List<String> msgs = new ArrayList<>(added);
 
-				if (added.size() > 4) {
-					msgs = added.subList(0, 4);
-					msgs.add(ChatColor.WHITE + "...");
+						if (added.size() > 4) {
+							msgs = added.subList(0, 4);
+							msgs.add(ChatColor.WHITE + "...");
+						}
+
+						XSound.BLOCK_NOTE_BLOCK_PLING.play(p, 3F, 2F);
+						w.sendActionbar(p, String.join(ChatColor.YELLOW + ", " + ChatColor.RESET, msgs.toArray(new String[0])));
+					}
 				}
-
-				XSound.BLOCK_NOTE_BLOCK_PLING.play(p, 3F, 2F);
-				w.sendActionbar(p, String.join(ChatColor.YELLOW + ", " + ChatColor.RESET, msgs.toArray(new String[0])));
-			}
+			}.runTaskAsynchronously(plugin);
 		}
 
 		private ItemStack getItem(EntityEquipment i, EquipmentSlot s) {
@@ -539,16 +543,22 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 						divider *= Math.max(Math.min(item.getEnchantmentLevel(Enchantment.PROTECTION_ENVIRONMENTAL) / 2, 4), 1);
 				}
 
-
-			if (ModifierReader.getModifier("Death") != null && ModifierReader.getModifier("Death").containsKey(id)) {
-				Set<Map<Economy, Double>> value = ModifierReader.getModifier("Death").get(id);
-				for (Map<Economy, Double> map : value)
-					for (Economy econ : map.keySet()) {
-						double amount = map.get(econ);
-						if (amount <= 0) continue;
-						lost.add(callRemoveBalanceEvent(p, econ, amount));
+			if (!ModifierReader.getDeathModifiers().isEmpty()) {
+				Map<EntityDamageEvent.DamageCause, Double> modifiers = ModifierReader.getDeathModifiers();
+				for (Map.Entry<EntityDamageEvent.DamageCause, Double> entry : modifiers.entrySet()) {
+					EntityDamageEvent.DamageCause cause = p.getLastDamageCause().getCause();
+					if (cause == entry.getKey()){
+						divider = entry.getValue();
+						break;
 					}
-			} else for (Economy econ : Economy.getEconomies()) lost.add(callRemoveBalanceEvent(p, econ, np.getBalance(econ) / Math.max(divider, getDeathDivider())));
+				}
+			}
+
+			for (Economy econ : Economy.getEconomies()) {
+				double ogAmount = np.getBalance(econ) / divider;
+				double amount = Double.isNaN(ogAmount) ? 0 : ogAmount;
+				lost.add(callRemoveBalanceEvent(p, econ, amount));
+			}
 			
 			if (np.hasNotifications()) p.sendMessage(String.join("\n", lost.toArray(new String[0])));
 		}
@@ -1753,13 +1763,6 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
 		funcConfig = NovaConfig.loadFunctionalityFile();
 		playerDir = new File(getDataFolder(), "players");
-		File economyFile = new File(getDataFolder(), "economies.yml");
-		try {
-			if (!(economyFile.exists())) economyFile.createNewFile();
-			if (!(playerDir.exists())) playerDir.mkdir();
-		} catch (IOException e) {
-			NovaConfig.print(e);
-		}
 
 		NovaConfig.loadConfig();
 		config = this.getConfig();
@@ -1780,7 +1783,11 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
 		getLogger().info("Loaded Files...");
 
-		getCommandWrapper();
+		if (getCommandWrapper() == null) {
+			getLogger().severe(String.format("Command Wrapper not found for version \"%s\" Disabling...", Bukkit.getBukkitVersion()));
+			Bukkit.getPluginManager().disablePlugin(this);
+			return;
+		}
 		new Events(this);
 
 		INTEREST_RUNNABLE.runTaskTimer(this, getInterestTicks(), getInterestTicks());
@@ -1817,7 +1824,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		Metrics metrics = new Metrics(this, PLUGIN_ID);
 
 		metrics.addCustomChart(new SimplePie("used_language", () -> Language.getById(this.getLanguage()).name()));
-		metrics.addCustomChart(new SimplePie("command_version", () -> getWrapper().getCommandVersion() + ""));
+		metrics.addCustomChart(new SimplePie("command_version", () -> w.getCommandVersion() + ""));
 		metrics.addCustomChart(new SingleLineChart("economy_count", () -> Economy.getEconomies().size()));
 		metrics.addCustomChart(new SingleLineChart("business_count", () -> Business.getBusinesses().size()));
 		metrics.addCustomChart(new SingleLineChart("bounty_count", () -> {
@@ -2014,7 +2021,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
 	@Override
 	public double getMaxIncrease() {
-		return config.getDouble("NaturalCauses.MaxIncrease", 1000) <= 0 ? Double.MAX_VALUE : config.getDouble("NaturalCauses.MaxIncrease", 1000);
+		return config.getDouble("NaturalCauses.MaxIncrease", -1) <= 0 ? Double.MAX_VALUE : config.getDouble("NaturalCauses.MaxIncrease", Double.MAX_VALUE);
 	}
 
 	@Override
