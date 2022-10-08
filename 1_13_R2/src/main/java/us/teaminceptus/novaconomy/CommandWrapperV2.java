@@ -26,21 +26,11 @@ import us.teaminceptus.novaconomy.api.economy.Economy;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Set;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public final class CommandWrapperV2 implements CommandWrapper {
 
     private static BukkitCommandHandler handler;
-    private static final Function<String, Set<String>> modkeys = s -> {
-        FileConfiguration config = NovaConfig.getConfig();
-        return config.getConfigurationSection(s)
-                .getKeys(false)
-                .stream()
-                .map(String::toLowerCase)
-                .collect(Collectors.toSet());
-    };
 
     public CommandWrapperV2(Plugin plugin) {
         if (handler != null) return;
@@ -137,13 +127,34 @@ public final class CommandWrapperV2 implements CommandWrapper {
                 })
                 .registerSuggestion("modifier_keys_existing", (args, sender, cmd) -> {
                     String type = args.get(4);
+                    FileConfiguration config = NovaConfig.getConfig();
 
                     switch (type.toLowerCase()) {
-                        case "mining": return modkeys.apply("NaturalCauses.Modifiers.Mining");
-                        case "farming": return modkeys.apply("NaturalCauses.Modifiers.Farming");
-                        case "fishing": return modkeys.apply("NaturalCauses.Modifiers.Fishing");
-                        case "killing": return modkeys.apply("NaturalCauses.Modifiers.Killing");
-                        case "death": return modkeys.apply("NaturalCauses.Modifiers.Death");
+                        case "mining": return config.getConfigurationSection("NaturalCauses.Modifiers.Mining")
+                                .getKeys(false)
+                                .stream()
+                                .map(String::toLowerCase)
+                                .collect(Collectors.toSet());
+                        case "farming": return config.getConfigurationSection("NaturalCauses.Modifiers.Farming")
+                                .getKeys(false)
+                                .stream()
+                                .map(String::toLowerCase)
+                                .collect(Collectors.toSet());
+                        case "fishing": return config.getConfigurationSection("NaturalCauses.Modifiers.Fishing")
+                                .getKeys(false)
+                                .stream()
+                                .map(String::toLowerCase)
+                                .collect(Collectors.toSet());
+                        case "killing": return config.getConfigurationSection("NaturalCauses.Modifiers.Killing")
+                                .getKeys(false)
+                                .stream()
+                                .map(String::toLowerCase)
+                                .collect(Collectors.toSet());
+                        case "death": return config.getConfigurationSection("NaturalCauses.Modifiers.Death")
+                                .getKeys(false)
+                                .stream()
+                                .map(String::toLowerCase)
+                                .collect(Collectors.toSet());
                         default: return new ArrayList<>();
                     }
                 });
