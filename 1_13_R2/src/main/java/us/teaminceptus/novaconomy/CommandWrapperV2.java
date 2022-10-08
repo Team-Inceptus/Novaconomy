@@ -33,7 +33,7 @@ import java.util.stream.Collectors;
 public final class CommandWrapperV2 implements CommandWrapper {
 
     private static BukkitCommandHandler handler;
-    private static final Function<String, Set<String>> modkeys = (s) -> {
+    private static final Function<String, Set<String>> modkeys = s -> {
         FileConfiguration config = NovaConfig.getConfig();
         return config.getConfigurationSection(s)
                 .getKeys(false)
