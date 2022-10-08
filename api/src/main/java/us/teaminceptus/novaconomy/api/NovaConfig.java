@@ -107,7 +107,11 @@ public interface NovaConfig  {
      * Fetches the folder that all Economies are stored in.
      * @return Economies Folder
      */
-    static File getEconomiesFolder() { return new File(getDataFolder(), "economies"); }
+    static File getEconomiesFolder() {
+        File dir = new File(getDataFolder(), "economies");
+        if (!dir.exists()) dir.mkdir();
+        return dir;
+    }
 
     /**
      * Reloads the Interest and Taxes Runnables with new values from the configuration.

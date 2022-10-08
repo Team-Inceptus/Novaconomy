@@ -380,10 +380,15 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
      * Fetch a set of all economies registered on the Plugin
      * @return Set of Registered Economies
      */
+    @NotNull
     public static Set<Economy> getEconomies() {
         Set<Economy> economies = new HashSet<>();
 
-        for (File f : NovaConfig.getEconomiesFolder().listFiles()) {
+        List<File> files = NovaConfig.getEconomiesFolder().listFiles() == null ? new ArrayList<>() : Arrays.asList(NovaConfig.getEconomiesFolder().listFiles());
+        if (files.isEmpty()) return economies;
+        
+        for (File f : files) {
+            if (f == null) continue;
             UUID id = UUID.fromString(f.getName().replace(".yml", ""));
             economies.add(getEconomy(id));
         }
