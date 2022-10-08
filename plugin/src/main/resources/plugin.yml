@@ -107,7 +107,7 @@ permissions:
     children:
       novaconomy.user: true
   novaconomy.user.leaderboard:
-    description: Access to view the balance leaderboard
+    description: Access to view leaderboards
     default: true
     children:
       novaconomy.user: true
