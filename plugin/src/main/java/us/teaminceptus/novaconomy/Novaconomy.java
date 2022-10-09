@@ -1,6 +1,5 @@
 package us.teaminceptus.novaconomy;
 
-import com.cryptomorin.xseries.XSound;
 import com.google.common.util.concurrent.AtomicDouble;
 import com.jeff_media.updatechecker.UpdateCheckSource;
 import com.jeff_media.updatechecker.UpdateChecker;
@@ -70,11 +69,13 @@ import us.teaminceptus.novaconomy.api.util.BusinessProduct;
 import us.teaminceptus.novaconomy.api.util.Price;
 import us.teaminceptus.novaconomy.api.util.Product;
 import us.teaminceptus.novaconomy.treasury.TreasuryRegistry;
+import us.teaminceptus.novaconomy.util.NovaSound;
 import us.teaminceptus.novaconomy.vault.VaultRegistry;
 
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.security.SecureRandom;
 import java.util.*;
@@ -84,6 +85,8 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
+import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.BL_CATEGORIES;
 
 /**
  * Class representing this Plugin
@@ -201,7 +204,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 					if (item.getAmount() > 1) item.setAmount(item.getAmount() - 1);
 					else w.removeItem(e);
 
-					XSound.ENTITY_ARROW_HIT_PLAYER.play(p, 3F, 2F);
+					NovaSound.ENTITY_ARROW_HIT_PLAYER.play(p, 3F, 2F);
 				}
 			}.runTask(plugin);
 		}
@@ -435,22 +438,17 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		}
 
 		private void sendUpdateActionbar(Player p, List<String> added) {
-			new BukkitRunnable() {
-				@Override
-				public void run() {
-					if (new NovaPlayer(p).hasNotifications()) {
-						List<String> msgs = new ArrayList<>(added);
+			if (new NovaPlayer(p).hasNotifications()) {
+				List<String> msgs = new ArrayList<>(added);
 
-						if (added.size() > 4) {
-							msgs = added.subList(0, 4);
-							msgs.add(ChatColor.WHITE + "...");
-						}
-
-						XSound.BLOCK_NOTE_BLOCK_PLING.play(p, 3F, 2F);
-						w.sendActionbar(p, String.join(ChatColor.YELLOW + ", " + ChatColor.RESET, msgs.toArray(new String[0])));
-					}
+				if (added.size() > 4) {
+					msgs = added.subList(0, 4);
+					msgs.add(ChatColor.WHITE + "...");
 				}
-			}.runTaskAsynchronously(plugin);
+
+				NovaSound.BLOCK_NOTE_BLOCK_PLING.play(p, 3F, 2F);
+				w.sendActionbar(p, String.join(ChatColor.YELLOW + ", " + ChatColor.RESET, msgs.toArray(new String[0])));
+			}
 		}
 
 		private ItemStack getItem(EntityEquipment i, EquipmentSlot s) {
@@ -749,7 +747,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				inv.setItem(22, amountPane);
 
 				p.openInventory(inv);
-				XSound.BLOCK_CHEST_OPEN.play(p, 3F, 0F);
+				NovaSound.BLOCK_CHEST_OPEN.play(p, 3F, 0F);
 			});
 
 			put("product:amount", e -> {
@@ -759,8 +757,8 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				ItemStack item = e.getCurrentItem();
 				Inventory inv = e.getView().getTopInventory();
 				boolean add = w.getNBTBoolean(item, "add");
-				int prev = (int) w.getNBTDouble(inv.getItem(22), AMOUNT_TAG);
-				int amount = (int) w.getNBTDouble(item, AMOUNT_TAG);
+				int prev = w.getNBTInt(inv.getItem(22), AMOUNT_TAG);
+				int amount = w.getNBTInt(item, AMOUNT_TAG);
 				int newA = add ? Math.min(prev + amount, 64) : Math.max(prev - amount, 1);
 
 				ItemStack newAmount = inv.getItem(22).clone();
@@ -770,7 +768,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				newAmount.setItemMeta(nMeta);
 				newAmount = w.setNBT(newAmount, AMOUNT_TAG, newA);
 				inv.setItem(22, newAmount);
-				XSound.ENTITY_ARROW_HIT_PLAYER.play(e.getWhoClicked(), 3F, add ? 2F : 0F);
+				NovaSound.ENTITY_ARROW_HIT_PLAYER.play(e.getWhoClicked(), 3F, add ? 2F : 0F);
 
 				BusinessProduct pr = (BusinessProduct) w.getNBTProduct(inv.getItem(21), PRODUCT_TAG);
 
@@ -802,7 +800,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
 				p.sendMessage(Novaconomy.get("cancel.business.purchase"));
 				p.openInventory(w.generateBusinessData(b, p, true));
-				XSound.BLOCK_NOTE_BLOCK_PLING.play(p, 3F, 0F);
+				NovaSound.BLOCK_NOTE_BLOCK_PLING.play(p, 3F, 0F);
 
 				if (!b.isOwner(p)) {
 					b.getStatistics().addView();
@@ -831,7 +829,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				item.setItemMeta(meta);
 
 				e.getView().setItem(slot, item);
-				XSound.BLOCK_NOTE_BLOCK_PLING.play(e.getWhoClicked());
+				NovaSound.BLOCK_NOTE_BLOCK_PLING.play(e.getWhoClicked());
 			});
 
 			put("economy:wheel:add_product", e -> {
@@ -934,7 +932,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
 				p.sendMessage(String.format(Novaconomy.get("success.business.purchase"), material, bP.getBusiness().getName()));
 				p.closeInventory();
-				XSound.ENTITY_ARROW_HIT_PLAYER.play(p);
+				NovaSound.ENTITY_ARROW_HIT_PLAYER.play(p);
 
 				NovaPlayer owner = new NovaPlayer(bP.getBusiness().getOwner());
 				if (b.getSetting(Settings.Business.AUTOMATIC_DEPOSIT)) {
@@ -946,7 +944,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 					String name = p.getDisplayName() == null ? p.getName() : p.getDisplayName();
 					Player bOwner = owner.getOnlinePlayer();
 					bOwner.sendMessage(String.format(Novaconomy.get("notification.business.purchase"), name, material));
-					XSound.ENTITY_ARROW_HIT_PLAYER.play(bOwner, 3F, 2F);
+					NovaSound.ENTITY_ARROW_HIT_PLAYER.play(bOwner, 3F, 2F);
 				}
 
 				PlayerPurchaseProductEvent event = new PlayerPurchaseProductEvent(p, bP, t, size);
@@ -1061,7 +1059,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				if (np.getBalance(takeEcon) < take) {
 					p.closeInventory();
 					p.sendMessage(String.format(getMessage("error.economy.invalid_amount"), Novaconomy.get("constants.convert")));
-					XSound.BLOCK_NOTE_BLOCK_PLING.play(e.getWhoClicked(), 3F, 0F);
+					NovaSound.BLOCK_NOTE_BLOCK_PLING.play(e.getWhoClicked(), 3F, 0F);
 					return;
 				}
 
@@ -1086,14 +1084,14 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				Bukkit.getPluginManager().callEvent(event2);
 				if (!event2.isCancelled()) np.add(giveEcon, give);
 
-				XSound.ENTITY_ARROW_HIT_PLAYER.play(p, 3F, 2F);
+				NovaSound.ENTITY_ARROW_HIT_PLAYER.play(p, 3F, 2F);
 				p.closeInventory();
 				p.sendMessage(String.format(getMessage("success.economy.convert"), String.format("%,.2f", take) + takeEcon.getSymbol(), String.format("%,.2f", give) + "" + giveEcon.getSymbol()));
 			});
 
 			put("no:close_effect", e -> {
 				e.getWhoClicked().closeInventory();
-				XSound.BLOCK_NOTE_BLOCK_PLING.play(e.getWhoClicked(), 3F, 0F);
+				NovaSound.BLOCK_NOTE_BLOCK_PLING.play(e.getWhoClicked(), 3F, 0F);
 			});
 
 			put("next:bank_balance", e -> CHANGE_PAGE_TRICONSUMER.accept(e, 1, CommandWrapper.getBankBalanceGUI()));
@@ -1146,7 +1144,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				e.getView().setItem(e.getRawSlot(), nItem);
 				p.updateInventory();
 
-				if (value) XSound.BLOCK_NOTE_BLOCK_PLING.play(p, 3F, 0F); else XSound.ENTITY_ARROW_HIT_PLAYER.play(p, 3F, 2F);
+				if (value) NovaSound.BLOCK_NOTE_BLOCK_PLING.play(p, 3F, 0F); else NovaSound.ENTITY_ARROW_HIT_PLAYER.play(p, 3F, 2F);
 
 				if (section.equalsIgnoreCase(BUSINESS_TAG)) {
 					Business b = Business.getByOwner(p);
@@ -1195,7 +1193,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
 				p.sendMessage(ChatColor.DARK_AQUA + Novaconomy.get("constants.teleporting"));
 				p.teleport(b.getHome());
-				XSound.ENTITY_ENDERMAN_TELEPORT.play(p, 3F, 1F);
+				NovaSound.ENTITY_ENDERMAN_TELEPORT.play(p, 3F, 1F);
 			});
 
 			put("business:settings", e -> {
@@ -1225,8 +1223,8 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				Inventory inv = e.getView().getTopInventory();
 
 				ItemStack item = e.getCurrentItem();
-				double rating = w.getNBTDouble(item, "rating");
-				int newRating = (int) (rating + 1 > 4 ? 0 : rating + 1);
+				int rating = w.getNBTInt(item, "rating");
+				int newRating = rating + 1 > 4 ? 0 : rating + 1;
 
 				ItemStack nItem = item.clone();
 				nItem.setType(CommandWrapper.getRatingMats()[newRating]);
@@ -1248,7 +1246,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				nConfirm = w.setNBT(nConfirm, BUSINESS_TAG, business);
 				inv.setItem(21, nConfirm);
 
-				(newRating > 1 ? XSound.ENTITY_ARROW_HIT_PLAYER : XSound.BLOCK_NOTE_BLOCK_PLING).play(p, 3F, 0.4F * (newRating + 1));
+				(newRating > 1 ? NovaSound.ENTITY_ARROW_HIT_PLAYER : NovaSound.BLOCK_NOTE_BLOCK_PLING).play(p, 3F, 0.4F * (newRating + 1));
 			});
 
 			put("yes:business_rate", e -> {
@@ -1257,7 +1255,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				NovaPlayer np = new NovaPlayer(p);
 				ItemStack item = e.getCurrentItem();
 
-				int rating = (int) w.getNBTDouble(item, "rating") + 1;
+				int rating = w.getNBTInt(item, "rating") + 1;
 				UUID businessId = UUID.fromString(w.getNBTString(item, BUSINESS_TAG));
 				String comment = w.getNBTString(item, "comment");
 
@@ -1271,7 +1269,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 					np.setRating(event.getRating());
 					p.closeInventory();
 					p.sendMessage(String.format(getMessage("success.business.rate"), b.getName(), rating));
-					XSound.ENTITY_ARROW_HIT_PLAYER.play(p, 3F, 2F);
+					NovaSound.ENTITY_ARROW_HIT_PLAYER.play(p, 3F, 2F);
 				}
 			});
 
@@ -1284,7 +1282,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				boolean notOwner = !b.isOwner(p);
 
 				p.openInventory(w.generateBusinessData(b, p, notOwner));
-				XSound.BLOCK_ENDER_CHEST_OPEN.play(p, 3F, 0.5F);
+				NovaSound.BLOCK_ENDER_CHEST_OPEN.play(p, 3F, 0.5F);
 
 				if (notOwner) {
 					b.getStatistics().addView();
@@ -1349,7 +1347,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				total.setItemMeta(tMeta);
 				inv.setItem(40, total);
 
-				(add ? XSound.ENTITY_ARROW_HIT_PLAYER : XSound.BLOCK_NOTE_BLOCK_PLING).play(p, 3F, add ? 2F : 0F);
+				(add ? NovaSound.ENTITY_ARROW_HIT_PLAYER : NovaSound.BLOCK_NOTE_BLOCK_PLING).play(p, 3F, add ? 2F : 0F);
 			});
 			put("economy:wheel:change_advertising", e -> {
 				get("economy:wheel").accept(e);
@@ -1438,6 +1436,16 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
 				CHANGE_PAGE_TRICONSUMER.accept(e, -1, CommandWrapper.getRatingsGUI(p, b));
 			});
+			put("business:leaderboard_category", e -> {
+				if (!(e.getWhoClicked() instanceof Player)) return;
+				Player p = (Player) e.getWhoClicked();
+				ItemStack item = e.getCurrentItem();
+
+				String category = w.getNBTString(item, "category");
+				String nextCategory = BL_CATEGORIES.get(BL_CATEGORIES.indexOf(category) == BL_CATEGORIES.size() - 1 ? 0 : BL_CATEGORIES.indexOf(category) + 1);
+
+				getCommandWrapper().businessLeaderboard(p, nextCategory);
+			});
 		}
 	};
 
@@ -1454,11 +1462,11 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 	private static final TriConsumer<InventoryClickEvent, Integer, List<Inventory>> CHANGE_PAGE_TRICONSUMER = (e, i, l) -> {
 		HumanEntity p = e.getWhoClicked();
 		ItemStack item = e.getCurrentItem();
-		int nextPage = (int) w.getNBTDouble(item, "page") + i;
+		int nextPage = w.getNBTInt(item, "page") + i;
 		Inventory nextInv = nextPage >= l.size() ? l.get(0) : l.get(nextPage);
 
 		p.openInventory(nextInv);
-		XSound.ITEM_BOOK_PAGE_TURN.play(p, 3F, 2F);
+		NovaSound.ITEM_BOOK_PAGE_TURN.play(p, 3F, 2F);
 	};
 
 	private static final BiConsumer<InventoryClickEvent, Boolean> BUSINESS_ADVERTISING_BICONSUMER = (e, add) -> {
@@ -1493,7 +1501,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		}
 
 		p.closeInventory();
-		XSound.ENTITY_ARROW_HIT_PLAYER.play(p, 3F, 2F);
+		NovaSound.ENTITY_ARROW_HIT_PLAYER.play(p, 3F, 2F);
 	};
 
 	private static final BiConsumer<InventoryClickEvent, Integer> EXCHANGE_BICONSUMER = (e, i) -> {
@@ -1525,7 +1533,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
 			inv.setItem(14, first);
 			inv.setItem(12, second);
-			XSound.BLOCK_NOTE_BLOCK_PLING.play(p, 3F, 2F);
+			NovaSound.BLOCK_NOTE_BLOCK_PLING.play(p, 3F, 2F);
 			return;
 		}
 
@@ -1556,7 +1564,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 			inv.setItem(14, other);
 		}
 
-		XSound.BLOCK_NOTE_BLOCK_PLING.play(p, 3F, 2F);
+		NovaSound.BLOCK_NOTE_BLOCK_PLING.play(p, 3F, 2F);
 	};
 
 	private static CommandWrapper getCommandWrapper() {
@@ -1579,10 +1587,15 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 			try {
 				if (dec.equalsIgnoreCase("auto")) tempV = w.getCommandVersion();
 				else tempV = Integer.parseInt(dec);
-			} catch (IllegalArgumentException e) { tempV = w.getCommandVersion(); }
+			} catch (IllegalArgumentException e) {
+				tempV = w.getCommandVersion();
+			}
 
 			wrapperVersion = tempV;
 			return (CommandWrapper) Class.forName(Novaconomy.class.getPackage().getName() + ".CommandWrapperV" + wrapperVersion).getConstructor(Plugin.class).newInstance(NovaConfig.getPlugin());
+		} catch (InvocationTargetException e) {
+			NovaConfig.print(e.getTargetException());
+			return null;
 		} catch (Exception e) {
 			NovaConfig.print(e);
 			return null;
@@ -1833,13 +1846,14 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 			return count.get();
 		}));
 
-		// PlugMan Warnings
-		if (Bukkit.getPluginManager().getPlugin("PlugMan") != null || Bukkit.getPluginManager().getPlugin("PlugManX") != null)
-			getLogger().warning("PlugMan has been detected! Novaconomy is not compatible with PlugMan; PLEASE USE A RELOAD OR RESTART INSTEAD OF PlugMan.");
-
 		getLogger().info("Loaded Dependencies...");
 		saveConfig();
 		getLogger().info("Successfully loaded Novaconomy");
+	}
+
+	@Override
+	public void onDisable() {
+		SERIALIZABLE.forEach(ConfigurationSerialization::unregisterClass);
 	}
 
 	private void loadLegacyBusinesses() {
