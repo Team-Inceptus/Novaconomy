@@ -1,5 +1,10 @@
 package us.teaminceptus.novaconomy;
 
+import net.md_5.bungee.api.ChatMessageType;
+import net.md_5.bungee.api.chat.BaseComponent;
+import net.md_5.bungee.api.chat.TextComponent;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.item.ItemStack;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.block.Block;
@@ -11,12 +16,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
-
-import net.md_5.bungee.api.ChatMessageType;
-import net.md_5.bungee.api.chat.BaseComponent;
-import net.md_5.bungee.api.chat.TextComponent;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.world.item.ItemStack;
 import us.teaminceptus.novaconomy.abstraction.Wrapper;
 
 public final class Wrapper1_18_R2 implements Wrapper {
@@ -148,6 +147,27 @@ public final class Wrapper1_18_R2 implements Wrapper {
 
         tag.remove("id");
         tag.remove("Count");
+        nmsitem.setTag(tag);
+        return CraftItemStack.asBukkitCopy(nmsitem);
+    }
+
+    @Override
+    public int getNBTInt(org.bukkit.inventory.ItemStack item, String key) {
+        ItemStack nmsitem = CraftItemStack.asNMSCopy(item);
+        CompoundTag tag = nmsitem.getOrCreateTag();
+        CompoundTag novaconomy = tag.getCompound(ROOT);
+
+        return novaconomy.getInt(key);
+    }
+
+    @Override
+    public org.bukkit.inventory.ItemStack setNBT(org.bukkit.inventory.ItemStack item, String key, int value) {
+        ItemStack nmsitem = CraftItemStack.asNMSCopy(item);
+        CompoundTag tag = nmsitem.getOrCreateTag();
+        CompoundTag novaconomy = tag.getCompound(ROOT);
+
+        novaconomy.putInt(key, value);
+        tag.put(ROOT, novaconomy);
         nmsitem.setTag(tag);
         return CraftItemStack.asBukkitCopy(nmsitem);
     }

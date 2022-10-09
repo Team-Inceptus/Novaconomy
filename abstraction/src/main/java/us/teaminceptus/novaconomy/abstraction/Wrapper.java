@@ -88,6 +88,10 @@ public interface Wrapper {
 
     boolean getNBTBoolean(ItemStack item, String key);
 
+    ItemStack setNBT(ItemStack item, String key, int value);
+
+    int getNBTInt(ItemStack item, String key);
+
     ItemStack normalize(ItemStack item);
 
     boolean isAgeable(Block b);

@@ -91,6 +91,19 @@ final class TestWrapper implements Wrapper {
     }
 
     @Override
+    public ItemStack setNBT(ItemStack item, String key, int value) {
+        Map<String, Object> map = nbtMap.getOrDefault(item, new HashMap<>());
+        map.put(key, value);
+        nbtMap.put(item, map);
+        return item;
+    }
+
+    @Override
+    public int getNBTInt(ItemStack item, String key) {
+        return (int) nbtMap.get(item).get(key);
+    }
+
+    @Override
     public ItemStack normalize(ItemStack item) {
         return item;
     }
