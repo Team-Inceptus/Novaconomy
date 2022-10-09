@@ -1,7 +1,7 @@
 package us.teaminceptus.novaconomy.abstraction;
 
-import com.cryptomorin.xseries.XSound;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.properties.Property;
 import org.apache.commons.lang.WordUtils;
@@ -43,6 +43,7 @@ import us.teaminceptus.novaconomy.api.settings.SettingDescription;
 import us.teaminceptus.novaconomy.api.settings.Settings;
 import us.teaminceptus.novaconomy.api.util.Price;
 import us.teaminceptus.novaconomy.api.util.Product;
+import us.teaminceptus.novaconomy.util.NovaSound;
 
 import java.io.File;
 import java.io.IOException;
@@ -82,6 +83,7 @@ public interface CommandWrapper {
         put("rate", Arrays.asList("nrate", "novarate", "ratebusiness"));
         put("statistics", Arrays.asList("stats", "pstats", "pstatistics", "playerstats", "playerstatistics", "nstats", "nstatistics"));
         put("novaconfig", Arrays.asList("novaconomyconfig", "nconfig", "nconf"));
+        put("businessleaderboard", Arrays.asList("bleaderboard", "bboard", "businessl", "bl", "businessboard"));
     }};
 
     Map<String, String> COMMAND_PERMISSION = new HashMap<String, String>() {{
@@ -100,6 +102,7 @@ public interface CommandWrapper {
        put("rate", "novaconomy.user.rate");
        put("statistics", "novaconomy.user.stats");
        put("novaconfig", "novaconomy.admin.config");
+       put("businessleaderboard", "novaconomy.user.leaderboard");
     }};
 
     Map<String, String> COMMAND_DESCRIPTION = new HashMap<String, String>() {{
@@ -120,6 +123,7 @@ public interface CommandWrapper {
        put("rate", "Rate a Novaconomy Business");
        put("statistics", "View your Novaconomy Statistics");
        put("novaconfig", "View or edit the Novaconomy Configuration");
+       put("businessleaderboard", "View the top 10 businesses in various categories");
     }};
 
     Map<String, String> COMMAND_USAGE = new HashMap<String, String>() {{
@@ -140,6 +144,7 @@ public interface CommandWrapper {
        put("rate", "/rate <business> [<comment>]");
        put("statistics", "/statistics");
        put("novaconfig", "/novaconfig <naturalcauses|reload|rl|...> <args...>");
+       put("businessleaderboard", "/businessleaderboard");
     }};
 
     static Plugin getPlugin() {
@@ -180,7 +185,7 @@ public interface CommandWrapper {
 
         p.sendMessage(ChatColor.GREEN + get("constants.loading"));
         p.openInventory(getBalancesGUI(p).get(0));
-        XSound.ENTITY_ARROW_HIT_PLAYER.play(p, 3F, 2F);
+        NovaSound.ENTITY_ARROW_HIT_PLAYER.play(p, 3F, 2F);
     }
 
     default void reloadConfig(CommandSender sender) {
@@ -490,7 +495,7 @@ public interface CommandWrapper {
         }
 
         p.openInventory(inv);
-        XSound.BLOCK_NOTE_BLOCK_PLING.play(p, 3F, 1F);
+        NovaSound.BLOCK_NOTE_BLOCK_PLING.play(p, 3F, 1F);
     }
 
     default void createCheck(Player p, Economy econ, double amount, boolean take) {
@@ -592,7 +597,7 @@ public interface CommandWrapper {
             return;
         }
         p.openInventory(w.generateBusinessData(b, p, false));
-        XSound.BLOCK_ENDER_CHEST_OPEN.play(p, 3F, 0.5F);
+        NovaSound.BLOCK_ENDER_CHEST_OPEN.play(p, 3F, 0.5F);
     }
 
     default void businessQuery(Player p, Business b) {
@@ -603,7 +608,7 @@ public interface CommandWrapper {
         boolean notOwner = !b.isOwner(p);
 
         p.openInventory(w.generateBusinessData(b, p, notOwner));
-        XSound.BLOCK_ENDER_CHEST_OPEN.play(p, 3F, 0.5F);
+        NovaSound.BLOCK_ENDER_CHEST_OPEN.play(p, 3F, 0.5F);
 
         if (notOwner) {
             b.getStatistics().addView();
@@ -778,7 +783,7 @@ public interface CommandWrapper {
         p.sendMessage(ChatColor.BLUE + get("constants.loading"));
 
         p.openInventory(getBankBalanceGUI().get(0));
-        XSound.ENTITY_ARROW_HIT_PLAYER.play(p, 3F, 2F);
+        NovaSound.ENTITY_ARROW_HIT_PLAYER.play(p, 3F, 2F);
     }
 
     default void bankDeposit(Player p, double amount, Economy econ) {
@@ -826,7 +831,7 @@ public interface CommandWrapper {
 
             p.sendMessage(ChatColor.DARK_AQUA + get("constants.teleporting"));
             p.teleport(b.getHome());
-            XSound.ENTITY_ENDERMAN_TELEPORT.play(p, 3F, 1F);
+            NovaSound.  ENTITY_ENDERMAN_TELEPORT.play(p, 3F, 1F);
         }
     }
 
@@ -1004,7 +1009,7 @@ public interface CommandWrapper {
         }
 
         p.openInventory(inv);
-        XSound.BLOCK_NOTE_BLOCK_PLING.play(p, 3F, 1F);
+        NovaSound.BLOCK_NOTE_BLOCK_PLING.play(p, 3F, 1F);
     }
 
     default void callEvent(CommandSender sender, String event, boolean self) {
@@ -1166,7 +1171,7 @@ public interface CommandWrapper {
         }
 
         p.openInventory(settings);
-        XSound.BLOCK_ANVIL_USE.play(p, 3F, 1.5F);
+        NovaSound.BLOCK_ANVIL_USE.play(p, 3F, 1.5F);
     }
 
     default void businessStatistics(Player p, Business b) {
@@ -1470,6 +1475,11 @@ public interface CommandWrapper {
         new BukkitRunnable() {
             @Override
             public void run() {
+                if (!Business.exists()) {
+                    p.sendMessage(getMessage("error.business.none"));
+                    return;
+                }
+
                 List<Business> businesses = new ArrayList<>();
                 for (Business b : Business.getBusinesses()) {
                     if (b.isOwner(p)) continue;
@@ -1510,7 +1520,7 @@ public interface CommandWrapper {
                     } else discover.setItem(index, w.getGUIBackground());
                 }
 
-                XSound.ENTITY_ARROW_HIT_PLAYER.play(p, 3F, 2F);
+                NovaSound.ENTITY_ARROW_HIT_PLAYER.play(p, 3F, 2F);
             }
         }.runTaskAsynchronously(NovaConfig.getPlugin());
         p.openInventory(discover);
@@ -1716,7 +1726,7 @@ public interface CommandWrapper {
         inv.setItem(22, history);
 
         op.openInventory(inv);
-        XSound.BLOCK_ANVIL_USE.play(p, 3F, 1.5F);
+        NovaSound.BLOCK_ANVIL_USE.play(p, 3F, 1.5F);
     }
 
     default void businessRecover(Player p) {
@@ -1726,7 +1736,7 @@ public interface CommandWrapper {
         }
 
         Business b = Business.getByOwner(p);
-        if (b.getLeftoverStock().size() == 0) {
+        if (b.getLeftoverStock().isEmpty()) {
             p.sendMessage(getMessage("error.business.no_leftover_stock"));
             return;
         }
@@ -1925,7 +1935,7 @@ public interface CommandWrapper {
         Economy first = economies.stream().findFirst().get();
         Business b = Business.getByOwner(p);
 
-        int[] amounts = {
+        double[] amounts = {
                 1, 10, 50, 100, 500, 1000, 5000, 10000, 100000
         };
 
@@ -1933,12 +1943,12 @@ public interface CommandWrapper {
 
         for (int j = 0; j < 2; j++)
             for (int i = 0; i < amounts.length; i++) {
-                int am = amounts[i];
+                double am = amounts[i];
                 boolean add = j == 0;
 
                 ItemStack change = new ItemStack(add ? limePane() : redPane());
                 ItemMeta cMeta = change.getItemMeta();
-                cMeta.setDisplayName((add ? ChatColor.GREEN + "+" : ChatColor.RED + "-") + String.format("%,.0f", (double)am));
+                cMeta.setDisplayName((add ? ChatColor.GREEN + "+" : ChatColor.RED + "-") + String.format("%,.0f", am));
                 change.setItemMeta(cMeta);
                 change = w.setID(change, "business:change_advertising");
                 change = w.setNBT(change, AMOUNT_TAG, am);
@@ -1958,7 +1968,7 @@ public interface CommandWrapper {
         confirm.setItemMeta(cMeta);
         confirm = w.setID(confirm, "yes:" + (deposit ? "deposit" : "withdraw") + "_advertising");
         confirm = w.setNBT(confirm, BUSINESS_TAG, b.getUniqueId().toString());
-        confirm = w.setNBT(confirm, AMOUNT_TAG, 0);
+        confirm = w.setNBT(confirm, AMOUNT_TAG, 0D);
         inv.setItem(39, confirm);
 
         ItemStack total = new ItemStack(Material.GOLD_INGOT);
@@ -1975,7 +1985,7 @@ public interface CommandWrapper {
         inv.setItem(41, cancel);
 
         p.openInventory(inv);
-        XSound.ENTITY_ARROW_HIT_PLAYER.play(p, 3F, 2F);
+        NovaSound.ENTITY_ARROW_HIT_PLAYER.play(p, 3F, 2F);
     }
 
     default void setEconomyName(CommandSender sender, Economy econ, String name) {
@@ -2822,6 +2832,110 @@ public interface CommandWrapper {
 
         if (econ != null) sender.sendMessage(String.format(getMessage("success.config.set"), "VaultEconomy", econ.getName()));
         else sender.sendMessage(getMessage("success.config.reset_default_economy"));
+    }
+
+    List<String> BL_CATEGORIES = Arrays.asList(
+            "ratings",
+            "resources",
+            "revenue"
+    );
+
+    Map<String, Comparator<Business>> BL_COMPARATORS = ImmutableMap.<String, Comparator<Business>>builder()
+            .put("ratings", Collections.reverseOrder(Comparator.comparingDouble(Business::getAverageRating))
+                    .thenComparing(Collections.reverseOrder(Comparator.comparingInt(b -> b.getRatings().size())))
+                    .thenComparing(Business::getName))
+            .put("resources", Collections.reverseOrder(Comparator.comparingInt(Business::getTotalResources))
+                    .thenComparing(Business::getName))
+            .put("revenue", Collections.reverseOrder(Comparator.comparingDouble(Business::getTotalRevenue)
+                    .thenComparing(Business::getName)))
+
+            .build();
+
+    Map<String, Function<Business, List<String>>> BL_DESC = ImmutableMap.<String, Function<Business, List<String>>>builder()
+            .put("ratings", b -> Arrays.asList(
+                        ChatColor.GOLD + String.format("%,.1f", b.getAverageRating()) + "⭐",
+                        ChatColor.GREEN + String.format("%,d", b.getRatings().size()) + " " + get("constants.business.ratings")
+                    ))
+            .put("resources", b -> Arrays.asList(
+                        ChatColor.GOLD + String.format("%,d", b.getTotalResources())
+                    ))
+            .put("revenue", b -> Arrays.asList(
+                        ChatColor.DARK_GREEN + String.format("%,.2f", b.getTotalRevenue())
+                    ))
+            .build();
+
+    Map<String, Material> BL_ICONS = ImmutableMap.<String, Material>builder()
+            .put("ratings", Material.DIAMOND)
+            .put("resources", Material.CHEST)
+            .put("revenue", Material.GOLD_INGOT)
+            .build();
+
+    default void businessLeaderboard(Player p, String category) {
+        if (!p.hasPermission("novaconomy.user.leaderboard")) {
+            p.sendMessage(getMessage("error.permission"));
+            return;
+        }
+
+        if (!Business.exists()) {
+            p.sendMessage(getMessage("error.business.none"));
+            return;
+        }
+
+        Inventory inv = w.genGUI(54, get("constants.business.leaderboard"));
+
+        for (int i = 30; i < 33; i++) inv.setItem(i, loading());
+        for (int i = 37; i < 44; i++) inv.setItem(i, loading());
+
+        p.openInventory(inv);
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                ItemStack cItem = new ItemStack(BL_ICONS.get(category));
+                ItemMeta cMeta = cItem.getItemMeta();
+                cMeta.setDisplayName(ChatColor.GOLD + get("constants.business.leaderboard." + category));
+                cMeta.addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1, true);
+                cMeta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+                cItem.setItemMeta(cMeta);
+                cItem = w.setID(cItem, "business:leaderboard_category");
+                cItem = w.setNBT(cItem, "category", category);
+                inv.setItem(13, cItem);
+
+                List<Business> sorted = Business.getBusinesses()
+                        .stream()
+                        .sorted(BL_COMPARATORS.get(category))
+                        .collect(Collectors.toList());
+
+                if (category.equalsIgnoreCase("ratings"))
+                    sorted = sorted.stream()
+                            .filter(b -> b.getRatings().size() > 0)
+                            .collect(Collectors.toList());
+
+                Map<Integer, ItemStack> items = new HashMap<>();
+                for (int i = 0; i < 10; i++) {
+                    int index = 30 + i;
+                    if (i >= 3) index = 34 + i;
+
+                    if (i >= sorted.size()) {
+                        items.put(index, null);
+                        continue;
+                    }
+
+                    Business b = sorted.get(i);
+
+                    ItemStack icon = b.getPublicIcon();
+                    ItemMeta iMeta = icon.getItemMeta();
+                    iMeta.setLore(BL_DESC.get(category).apply(b));
+                    icon.setItemMeta(iMeta);
+                    icon = w.setID(icon, "business:click");
+                    icon = w.setNBT(icon, BUSINESS_TAG, b.getUniqueId().toString());
+                    items.put(index, icon);
+                }
+
+                items.forEach(inv::setItem);
+
+                NovaSound.ENTITY_ARROW_HIT_PLAYER.play(p, 3F, 2F);
+            }
+        }.runTaskAsynchronously(NovaConfig.getPlugin());
     }
 
     // Util Classes & Other Static Methods

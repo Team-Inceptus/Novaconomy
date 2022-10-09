@@ -272,6 +272,12 @@ public final class CommandWrapperV2 implements CommandWrapper {
     @CommandPermission("novaconomy.user.stats")
     public void playerStatistics(Player p, @Default("me") OfflinePlayer target) { CommandWrapper.super.playerStatistics(p, target); }
 
+    @Command({"businessleaderboard", "bboard", "businessl", "businessboard"})
+    @Usage("/businessleaderboard")
+    @Description("View the top 10 businesses in various categories")
+    @CommandPermission("novaconomy.user.leaderboard")
+    public void businessLeaderboard(Player p) { CommandWrapper.super.businessLeaderboard(p, "ratings"); }
+
     @Command({"business", "nbusiness", "nb", "b"})
     @Description("Manage your Novaconomy Business")
     @Usage("/business <create|info|delete|addproduct|stock|query|...> <args...>")

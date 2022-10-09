@@ -1387,6 +1387,13 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
 
                 break;
             }
+            case "businessleaderboard": {
+                if (!(sender instanceof Player)) return false;
+                Player p = (Player) sender;
+
+                businessLeaderboard(p, "ratings");
+                break;
+            }
             default: {
                 sender.sendMessage(getMessage("error.argument"));
                 return false;
