@@ -39,11 +39,6 @@ import java.util.stream.Collectors;
  */
 public final class Business implements ConfigurationSerializable {
 
-    /**
-     * Represents the Business File Suffix
-     */
-    public static final String BUSINESS_FILE_SUFFIX = ".nbusiness";
-
     private static final SecureRandom r = new SecureRandom();
 
     private final UUID id;
@@ -188,6 +183,20 @@ public final class Business implements ConfigurationSerializable {
     public boolean isOwner(@Nullable OfflinePlayer p) {
         if (p == null) return false;
         return this.owner.getUniqueId().equals(p.getUniqueId());
+    }
+
+    /**
+     * Utility method to check if any Businesses currently exist.
+     * @return true if any Businesses exist, else false
+     */
+    public static boolean exists() {
+        File bFolder = NovaConfig.getBusinessesFolder();
+        if (!bFolder.exists()) {
+            bFolder.mkdir();
+            return false;
+        }
+
+        return bFolder.listFiles((dir, name) -> new File(dir, name).isDirectory()).length > 0;
     }
 
     /**
@@ -678,6 +687,23 @@ public final class Business implements ConfigurationSerializable {
         b.setHome(home, false);
 
         return b;
+    }
+
+    /**
+     * Fetches the total amount of money this Business has earned, accounting for conversion scales.
+     * @return Total Money Earned by this Business
+     */
+    public double getTotalRevenue() {
+        double revenue = 0;
+        for (Map.Entry<Product, Integer> entry : stats.getProductSales().entrySet()) {
+            Product p = entry.getKey();
+            double amount = p.getPrice().getAmount() * entry.getValue();
+            if (p.getEconomy() != null) amount *= p.getEconomy().getConversionScale();
+
+            revenue += amount;
+        }
+
+        return revenue;
     }
 
     /**
@@ -1242,7 +1268,7 @@ public final class Business implements ConfigurationSerializable {
     }
 
     /**
-     * Creates an integer representatino of the place this Businesses is in, according to its Advertising Balance.
+     * Creates an integer representation of the place this Businesses is in, according to its Advertising Balance.
      * @return Place in Advertising Balance
      */
     public int getAdvertisingBalancePlace() {
@@ -1250,6 +1276,14 @@ public final class Business implements ConfigurationSerializable {
         for (Business b : getBusinesses()) if (b.getAdvertisingBalance() > getAdvertisingBalance()) place++;
 
         return place;
+    }
+
+    /**
+     * Utility method for fetching {@link BusinessStatistics#getTotalResources()}.
+     * @return Total Resources ever collected by this Business
+     */
+    public int getTotalResources() {
+        return getStatistics().getTotalResources();
     }
 
     /**

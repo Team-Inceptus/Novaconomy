@@ -35,6 +35,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 public interface Wrapper {
 
@@ -87,6 +88,10 @@ public interface Wrapper {
 
     boolean getNBTBoolean(ItemStack item, String key);
 
+    ItemStack setNBT(ItemStack item, String key, int value);
+
+    int getNBTInt(ItemStack item, String key);
+
     ItemStack normalize(ItemStack item);
 
     boolean isAgeable(Block b);
@@ -98,6 +103,12 @@ public interface Wrapper {
     default boolean isProduct(ItemStack item) { return hasID(item) && (getID(item).equalsIgnoreCase("product") || getNBTBoolean(item, "is_product")); }
 
     default String getID(ItemStack item) { return getNBTString(item, "id"); }
+
+    boolean isCrop(Material m);
+
+    default List<Material> getCrops() {
+        return Arrays.stream(Material.values()).filter(this::isCrop).collect(Collectors.toList());
+    }
 
     static Plugin getPlugin() {
         return Bukkit.getPluginManager().getPlugin("Novaconomy");
@@ -285,7 +296,7 @@ public interface Wrapper {
             double avg = b.getAverageRating();
             int avgI = (int) Math.round(avg - 1);
 
-            ItemStack rating = new ItemStack(pRating ? CommandWrapper.RATING_MATS[avgI] : Material.BARRIER);
+            ItemStack rating = new ItemStack(pRating ? CommandWrapper.getRatingMats()[avgI] : Material.BARRIER);
             ItemMeta rMeta = rating.getItemMeta();
             rMeta.setDisplayName(pRating ? ChatColor.YELLOW + String.format("%,.1f", avg) + "⭐" : ChatColor.RED + get("constants.business.anonymous_rating"));
             if (b.isOwner(viewer) && !b.getSetting(Settings.Business.PUBLIC_RATING))
@@ -345,7 +356,11 @@ public interface Wrapper {
     static Wrapper getWrapper() {
         try {
             return (Wrapper) Class.forName("us.teaminceptus.novaconomy.Wrapper" + getServerVersion()).getConstructor().newInstance();
-        } catch (Exception e) { throw new IllegalStateException("Wrapper not Found: " + getServerVersion()); }
+        } catch (IndexOutOfBoundsException e) { // using test configuration
+            return new TestWrapper();
+        } catch (Exception e) {
+            throw new IllegalStateException("Wrapper not Found: " + getServerVersion());
+        }
     }
 
     static String get(String key) {

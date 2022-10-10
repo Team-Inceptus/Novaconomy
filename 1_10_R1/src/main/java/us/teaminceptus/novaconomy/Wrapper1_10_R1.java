@@ -148,6 +148,27 @@ public final class Wrapper1_10_R1 implements Wrapper {
     }
 
     @Override
+    public int getNBTInt(org.bukkit.inventory.ItemStack item, String key) {
+        ItemStack nmsitem = CraftItemStack.asNMSCopy(item);
+        NBTTagCompound tag = nmsitem.hasTag() ? nmsitem.getTag() : new NBTTagCompound();
+        NBTTagCompound novaconomy = tag.getCompound(ROOT);
+
+        return novaconomy.getInt(key);
+    }
+
+    @Override
+    public org.bukkit.inventory.ItemStack setNBT(org.bukkit.inventory.ItemStack item, String key, int value) {
+        ItemStack nmsitem = CraftItemStack.asNMSCopy(item);
+        NBTTagCompound tag = nmsitem.hasTag() ? nmsitem.getTag() : new NBTTagCompound();
+        NBTTagCompound novaconomy = tag.getCompound(ROOT);
+
+        novaconomy.setInt(key, value);
+        tag.set(ROOT, novaconomy);
+        nmsitem.setTag(tag);
+        return CraftItemStack.asBukkitCopy(nmsitem);
+    }
+
+    @Override
     public boolean isAgeable(Block b) {
         return b.getState().getData() instanceof Crops;
     }
@@ -159,6 +180,11 @@ public final class Wrapper1_10_R1 implements Wrapper {
             case HAND: e.getPlayer().getEquipment().setItemInMainHand(null);
             default: break;
         }
+    }
+
+    @Override
+    public boolean isCrop(Material m) {
+        return Crops.class.isAssignableFrom(m.getData());
     }
 
 }

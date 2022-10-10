@@ -1,16 +1,21 @@
 package us.teaminceptus.novaconomy.abstraction;
 
-import com.cryptomorin.xseries.XSound;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.properties.Property;
 import org.apache.commons.lang.WordUtils;
 import org.bukkit.*;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemFlag;
@@ -20,6 +25,7 @@ import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.ChatPaginator;
+import us.teaminceptus.novaconomy.ModifierReader;
 import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.bank.Bank;
@@ -29,7 +35,6 @@ import us.teaminceptus.novaconomy.api.business.Rating;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.events.CommandTaxEvent;
 import us.teaminceptus.novaconomy.api.events.business.BusinessAdvertiseEvent;
-import us.teaminceptus.novaconomy.api.events.player.economy.PlayerPayEvent;
 import us.teaminceptus.novaconomy.api.player.Bounty;
 import us.teaminceptus.novaconomy.api.player.NovaPlayer;
 import us.teaminceptus.novaconomy.api.player.PlayerStatistics;
@@ -37,6 +42,7 @@ import us.teaminceptus.novaconomy.api.settings.SettingDescription;
 import us.teaminceptus.novaconomy.api.settings.Settings;
 import us.teaminceptus.novaconomy.api.util.Price;
 import us.teaminceptus.novaconomy.api.util.Product;
+import us.teaminceptus.novaconomy.util.NovaSound;
 
 import java.io.File;
 import java.io.IOException;
@@ -49,6 +55,7 @@ import java.util.stream.Collectors;
 
 import static us.teaminceptus.novaconomy.abstraction.Wrapper.r;
 
+@SuppressWarnings("unchecked")
 public interface CommandWrapper {
 
     default void loadCommands() {}
@@ -57,9 +64,11 @@ public interface CommandWrapper {
 
     String BUSINESS_TAG = "business";
     String AMOUNT_TAG = "amount";
+    String ECON_TAG = "economy";
+    
     Map<String, List<String>> COMMANDS = new HashMap<String, List<String>>() {{
         put("ehelp", Arrays.asList("nhelp", "novahelp", "econhelp", "economyhelp"));
-        put("economy", Arrays.asList("econ", "novaecon", "novaconomy", "necon"));
+        put(ECON_TAG, Arrays.asList("econ", "novaecon", "novaconomy", "necon"));
         put("balance", Arrays.asList("bal", "novabal", "nbal"));
         put("convert", Arrays.asList("conv"));
         put("exchange", Arrays.asList("convertgui", "convgui", "exch"));
@@ -74,15 +83,17 @@ public interface CommandWrapper {
         put("settings", Arrays.asList("novasettings", "nsettings"));
         put("rate", Arrays.asList("nrate", "novarate", "ratebusiness"));
         put("statistics", Arrays.asList("stats", "pstats", "pstatistics", "playerstats", "playerstatistics", "nstats", "nstatistics"));
+        put("novaconfig", Arrays.asList("novaconomyconfig", "nconfig", "nconf"));
+        put("businessleaderboard", Arrays.asList("bleaderboard", "bboard", "businessl", "bl", "businessboard"));
     }};
 
     Map<String, String> COMMAND_PERMISSION = new HashMap<String, String>() {{
-       put("economy", "novaconomy.economy");
+       put(ECON_TAG, "novaconomy.economy");
        put("balance", "novaconomy.user.balance");
        put("convert", "novaconomy.user.convert");
        put("exchange", "novaconomy.user.convert");
        put("pay", "novaconomy.user.pay");
-       put("novaconomyreload", "novaconomy.admin.reloadconfig");
+       put("novaconomyreload", "novaconomy.admin.config");
        put(BUSINESS_TAG, "novaconomy.user.business");
        put("createcheck", "novaconomy.user.check");
        put("balanceleaderboard", "novaconomy.user.leaderboard");
@@ -91,11 +102,13 @@ public interface CommandWrapper {
        put("settings", "novaconomy.user.settings");
        put("rate", "novaconomy.user.rate");
        put("statistics", "novaconomy.user.stats");
+       put("novaconfig", "novaconomy.admin.config");
+       put("businessleaderboard", "novaconomy.user.leaderboard");
     }};
 
     Map<String, String> COMMAND_DESCRIPTION = new HashMap<String, String>() {{
        put("ehelp", "Economy help");
-       put("economy", "Manage economies or their balances");
+       put(ECON_TAG, "Manage economies or their balances");
        put("balance", "Access your balances from all economies");
        put("convert", "Convert one balance in an economy to another balance");
        put("exchange", "Convert one balance in an economy to another balance (with a GUI)");
@@ -110,11 +123,13 @@ public interface CommandWrapper {
        put("settings", "Manage your Novaconomy Settings");
        put("rate", "Rate a Novaconomy Business");
        put("statistics", "View your Novaconomy Statistics");
+       put("novaconfig", "View or edit the Novaconomy Configuration");
+       put("businessleaderboard", "View the top 10 businesses in various categories");
     }};
 
     Map<String, String> COMMAND_USAGE = new HashMap<String, String>() {{
        put("ehelp", "/ehelp");
-       put("economy", "/economy <create|delete|addbal|removebal|info> <args...>");
+       put(ECON_TAG, "/economy <create|delete|addbal|removebal|info> <args...>");
        put("balance", "/balance");
        put("convert", "/convert <econ-from> <econ-to> <amount>");
        put("exchange", "/exchange <amount>");
@@ -129,6 +144,8 @@ public interface CommandWrapper {
        put("settings", "/settings [<business|personal>]");
        put("rate", "/rate <business> [<comment>]");
        put("statistics", "/statistics");
+       put("novaconfig", "/novaconfig <naturalcauses|reload|rl|...> <args...>");
+       put("businessleaderboard", "/businessleaderboard");
     }};
 
     static Plugin getPlugin() {
@@ -169,24 +186,29 @@ public interface CommandWrapper {
 
         p.sendMessage(ChatColor.GREEN + get("constants.loading"));
         p.openInventory(getBalancesGUI(p).get(0));
-        XSound.ENTITY_ARROW_HIT_PLAYER.play(p, 3F, 2F);
+        NovaSound.ENTITY_ARROW_HIT_PLAYER.play(p, 3F, 2F);
     }
 
     default void reloadConfig(CommandSender sender) {
-        if (!sender.hasPermission("novaconomy.admin.reloadconfig")) {
+        if (!sender.hasPermission("novaconomy.admin.config")) {
             sender.sendMessage(getMessage("error.permission"));
             return;
         }
 
         sender.sendMessage(get("command.reload.reloading"));
+        reloadFiles();
+        sender.sendMessage(get("command.reload.success"));
+    }
+
+    static void reloadFiles() {
         Plugin plugin = getPlugin();
+
         plugin.reloadConfig();
         NovaConfig.loadConfig();
         NovaConfig.reloadRunnables();
         NovaConfig.loadFunctionalityFile();
         YamlConfiguration.loadConfiguration(new File(plugin.getDataFolder(), "businesses.yml"));
         YamlConfiguration.loadConfiguration(new File(plugin.getDataFolder(), "global.yml"));
-        sender.sendMessage(get("command.reload.success"));
     }
 
     default void convert(Player p, Economy from, Economy to, double amount) {
@@ -257,7 +279,7 @@ public interface CommandWrapper {
         e1Meta.setLore(Collections.singletonList(ChatColor.YELLOW + "" + amount + "" + economy1.getSymbol()));
         econ1.setItemMeta(e1Meta);
         econ1 = w.setID(econ1, "exchange:1");
-        econ1 = w.setNBT(econ1, "economy", economy1.getUniqueId().toString());
+        econ1 = w.setNBT(econ1, ECON_TAG, economy1.getUniqueId().toString());
         econ1 = w.setNBT(econ1, AMOUNT_TAG, amount);
         inv.setItem(12, econ1);
 
@@ -273,7 +295,7 @@ public interface CommandWrapper {
         e2Meta.setLore(Collections.singletonList(ChatColor.YELLOW + "" + economy1.convertAmount(economy2, amount) + "" + economy2.getSymbol()));
         econ2.setItemMeta(e2Meta);
         econ2 = w.setID(econ2, "exchange:2");
-        econ2 = w.setNBT(econ2, "economy", economy2.getUniqueId().toString());
+        econ2 = w.setNBT(econ2, ECON_TAG, economy2.getUniqueId().toString());
         econ2 = w.setNBT(econ2, AMOUNT_TAG, Math.floor(economy1.convertAmount(economy2, amount) * 100) / 100);
         inv.setItem(14, econ2);
 
@@ -438,7 +460,7 @@ public interface CommandWrapper {
         } else tMeta.setDisplayName(ChatColor.AQUA + get("constants.all_economies"));
         type.setItemMeta(tMeta);
         type = w.setID(type, "economy:wheel:leaderboard");
-        type = w.setNBT(type, "economy", economy ? econ.getName() : "all");
+        type = w.setNBT(type, ECON_TAG, economy ? econ.getName() : "all");
 
         inv.setItem(13, type);
 
@@ -474,7 +496,7 @@ public interface CommandWrapper {
         }
 
         p.openInventory(inv);
-        XSound.BLOCK_NOTE_BLOCK_PLING.play(p, 3F, 1F);
+        NovaSound.BLOCK_NOTE_BLOCK_PLING.play(p, 3F, 1F);
     }
 
     default void createCheck(Player p, Economy econ, double amount, boolean take) {
@@ -513,7 +535,7 @@ public interface CommandWrapper {
         sender.sendMessage(String.format(getMessage("success.economy.delete"), name));
     }
 
-    default void pay(Player p, Player target, Economy econ, double amount) {
+    default void pay(Player p, Player target, Economy economy, double amount) {
         if (!p.hasPermission("novaconomy.user.pay")) {
             p.sendMessage(getMessage("error.permission"));
             return;
@@ -524,25 +546,88 @@ public interface CommandWrapper {
             return;
         }
 
-        NovaPlayer np = new NovaPlayer(p);
-        NovaPlayer nt = new NovaPlayer(target);
+        Economy econ = economy == null ? Economy.getEconomies()
+                .stream()
+                .sorted(Comparator.comparing(Economy::getName))
+                .findFirst().orElse(null)
+                : economy;
 
-        if (np.getBalance(econ) < amount) {
-            p.sendMessage(getMessage("error.economy.invalid_amount_pay"));
+        if (econ == null) {
+            p.sendMessage(getMessage("error.economy.none"));
             return;
         }
 
-        PlayerPayEvent e = new PlayerPayEvent(p, target, econ, amount, nt.getBalance(econ), nt.getBalance(econ) + amount);
+        double[] amounts = { 0.5, 1, 10, 100, 1000, 10000, 100000 };
 
-        Bukkit.getPluginManager().callEvent(e);
+        NovaPlayer np = new NovaPlayer(p);
 
-        if (!e.isCancelled()) {
-            np.remove(econ, amount);
-            nt.add(econ, amount);
+        Inventory inv = w.genGUI(54, get("constants.pay_player"), new Wrapper.CancelHolder());
 
-            w.sendActionbar(p, String.format(getMessage("success.economy.receive_actionbar"), Math.floor(e.getAmount() * 100) / 100, e.getPayer().getName()));
-            target.sendMessage(String.format(getMessage("success.economy.receive"), econ.getSymbol() + Math.floor(e.getAmount() * 100) / 100 + "", e.getPayer().getName() + ""));
-        }
+        ItemStack head1 = createPlayerHead(p);
+        ItemMeta hm1 = head1.getItemMeta();
+        hm1.setDisplayName(ChatColor.AQUA + (p.getDisplayName() == null ? p.getName() : p.getDisplayName()));
+        hm1.setLore(Collections.singletonList(ChatColor.GOLD + String.format("%,.2f", np.getBalance(econ)) + econ.getSymbol()));
+        head1.setItemMeta(hm1);
+        inv.setItem(10, head1);
+
+        ItemStack arrow = new ItemStack(Material.PAPER);
+        ItemMeta am = arrow.getItemMeta();
+        am.setDisplayName(ChatColor.YELLOW + "->");
+        arrow.setItemMeta(am);
+        inv.setItem(12, arrow);
+        inv.setItem(14, arrow);
+
+        ItemStack econWheel = econ.getIcon().clone();
+        econWheel = w.setID(econWheel, "economy:wheel:pay");
+        econWheel = w.setNBT(econWheel, ECON_TAG, econ.getName().toLowerCase());
+        inv.setItem(13, econWheel);
+
+        ItemStack head2 = createPlayerHead(target);
+        ItemMeta hm2 = head2.getItemMeta();
+        hm2.setDisplayName(ChatColor.AQUA + (target.getDisplayName() == null ? target.getName() : target.getDisplayName()));
+        head2.setItemMeta(hm2);
+        inv.setItem(16, head2);
+
+        for (int i = 0; i < 2; i++)
+            for (int j = 0; j < 7; j++) {
+                boolean add = i == 0;
+                ItemStack amChange = add ? limePane() : redPane();
+                ItemMeta acm = amChange.getItemMeta();
+                acm.setDisplayName((add ? ChatColor.GREEN + "+" : ChatColor.RED + "-") + String.format("%,.2f", amounts[j]));
+                amChange.setItemMeta(acm);
+
+                amChange = w.setID(amChange, "pay:amount");
+                amChange = w.setNBT(amChange, "add", add);
+                amChange = w.setNBT(amChange, AMOUNT_TAG, amounts[j]);
+
+                inv.setItem(19 + (i * 9) + j, amChange);
+            }
+
+        ItemStack currentAmount = econ.getIcon().clone();
+        ItemMeta cam = currentAmount.getItemMeta();
+        cam.setDisplayName(ChatColor.GOLD + String.format("%,.2f", amount) + econ.getSymbol());
+        currentAmount.setItemMeta(cam);
+        currentAmount = w.setNBT(currentAmount, AMOUNT_TAG, amount);
+        currentAmount = w.setNBT(currentAmount, ECON_TAG, econ.getUniqueId().toString());
+        inv.setItem(40, currentAmount);
+
+        ItemStack confirm = new ItemStack(limeWool());
+        ItemMeta cMeta = confirm.getItemMeta();
+        cMeta.setDisplayName(ChatColor.GREEN + get("constants.confirm"));
+        confirm.setItemMeta(cMeta);
+        confirm = w.setID(confirm, "pay:confirm");
+        confirm = w.setNBT(confirm, "target", target.getUniqueId().toString());
+        inv.setItem(48, confirm);
+
+        ItemStack cancel = new ItemStack(redWool());
+        ItemMeta caMeta = cancel.getItemMeta();
+        caMeta.setDisplayName(ChatColor.RED + get("constants.cancel"));
+        cancel.setItemMeta(caMeta);
+        cancel = w.setID(cancel, "no:close_effect");
+        inv.setItem(50, cancel);
+
+        p.openInventory(inv);
+        NovaSound.ENTITY_ARROW_HIT_PLAYER.play(p, 3F, 2F);
     }
 
     default void deleteBusiness(Player p, boolean confirm) {
@@ -576,7 +661,7 @@ public interface CommandWrapper {
             return;
         }
         p.openInventory(w.generateBusinessData(b, p, false));
-        XSound.BLOCK_ENDER_CHEST_OPEN.play(p, 3F, 0.5F);
+        NovaSound.BLOCK_ENDER_CHEST_OPEN.play(p, 3F, 0.5F);
     }
 
     default void businessQuery(Player p, Business b) {
@@ -587,7 +672,7 @@ public interface CommandWrapper {
         boolean notOwner = !b.isOwner(p);
 
         p.openInventory(w.generateBusinessData(b, p, notOwner));
-        XSound.BLOCK_ENDER_CHEST_OPEN.play(p, 3F, 0.5F);
+        NovaSound.BLOCK_ENDER_CHEST_OPEN.play(p, 3F, 0.5F);
 
         if (notOwner) {
             b.getStatistics().addView();
@@ -643,7 +728,7 @@ public interface CommandWrapper {
 
         ItemStack economyWheel = new ItemStack(econ.getIconType());
         modelData(economyWheel, econ.getCustomModelData());
-        economyWheel = w.setNBT(economyWheel, "economy", econ.getName().toLowerCase());
+        economyWheel = w.setNBT(economyWheel, ECON_TAG, econ.getName().toLowerCase());
         economyWheel = w.setID(economyWheel, "economy:wheel:add_product");
 
         ItemMeta eMeta = economyWheel.getItemMeta();
@@ -664,7 +749,7 @@ public interface CommandWrapper {
         confirm = w.setID(confirm, "business:add_product");
         confirm = w.setNBT(confirm, "item", product);
         confirm = w.setNBT(confirm, "price", price);
-        confirm = w.setNBT(confirm, "economy", econ.getName().toLowerCase());
+        confirm = w.setNBT(confirm, ECON_TAG, econ.getName().toLowerCase());
         inv.setItem(23, confirm);
 
         p.openInventory(inv);
@@ -762,7 +847,7 @@ public interface CommandWrapper {
         p.sendMessage(ChatColor.BLUE + get("constants.loading"));
 
         p.openInventory(getBankBalanceGUI().get(0));
-        XSound.ENTITY_ARROW_HIT_PLAYER.play(p, 3F, 2F);
+        NovaSound.ENTITY_ARROW_HIT_PLAYER.play(p, 3F, 2F);
     }
 
     default void bankDeposit(Player p, double amount, Economy econ) {
@@ -810,7 +895,7 @@ public interface CommandWrapper {
 
             p.sendMessage(ChatColor.DARK_AQUA + get("constants.teleporting"));
             p.teleport(b.getHome());
-            XSound.ENTITY_ENDERMAN_TELEPORT.play(p, 3F, 1F);
+            NovaSound.  ENTITY_ENDERMAN_TELEPORT.play(p, 3F, 1F);
         }
     }
 
@@ -988,7 +1073,7 @@ public interface CommandWrapper {
         }
 
         p.openInventory(inv);
-        XSound.BLOCK_NOTE_BLOCK_PLING.play(p, 3F, 1F);
+        NovaSound.BLOCK_NOTE_BLOCK_PLING.play(p, 3F, 1F);
     }
 
     default void callEvent(CommandSender sender, String event, boolean self) {
@@ -1150,7 +1235,7 @@ public interface CommandWrapper {
         }
 
         p.openInventory(settings);
-        XSound.BLOCK_ANVIL_USE.play(p, 3F, 1.5F);
+        NovaSound.BLOCK_ANVIL_USE.play(p, 3F, 1.5F);
     }
 
     default void businessStatistics(Player p, Business b) {
@@ -1317,13 +1402,15 @@ public interface CommandWrapper {
         p.openInventory(stats);
     }
 
-    Material[] RATING_MATS = new Material[] {
-            Material.DIRT,
-            Material.COAL,
-            Material.IRON_INGOT,
-            Material.GOLD_INGOT,
-            Material.DIAMOND
-    };
+    static Material[] getRatingMats() {
+        return new Material[] {
+                Material.DIRT,
+                Material.COAL,
+                Material.IRON_INGOT,
+                Material.GOLD_INGOT,
+                Material.DIAMOND
+        };
+    }
 
     default void rate(Player p, Business b, String comment) {
         if (!p.hasPermission("novaconomy.user.rate")) {
@@ -1352,7 +1439,7 @@ public interface CommandWrapper {
 
         Inventory rate = w.genGUI(36, String.format(get("constants.rating"), b.getName()), new Wrapper.CancelHolder());
 
-        ItemStack ratingWheel = new ItemStack(RATING_MATS[2]);
+        ItemStack ratingWheel = new ItemStack(getRatingMats()[2]);
         ItemMeta rMeta = ratingWheel.getItemMeta();
         rMeta.setDisplayName(ChatColor.YELLOW + "3⭐");
         ratingWheel.setItemMeta(rMeta);
@@ -1415,7 +1502,7 @@ public interface CommandWrapper {
         head.setItemMeta(hMeta);
         pr.setItem(12, head);
 
-        ItemStack pRating = new ItemStack(RATING_MATS[rating.getRatingLevel() - 1]);
+        ItemStack pRating = new ItemStack(getRatingMats()[rating.getRatingLevel() - 1]);
         ItemMeta rMeta = pRating.getItemMeta();
         rMeta.setDisplayName(ChatColor.YELLOW + "" + rating.getRatingLevel() + "⭐");
         rMeta.setLore(Collections.singletonList(ChatColor.YELLOW + "\"" + (rating.getComment().isEmpty() ? get("constants.no_comment") : rating.getComment()) + "\""));
@@ -1452,6 +1539,11 @@ public interface CommandWrapper {
         new BukkitRunnable() {
             @Override
             public void run() {
+                if (!Business.exists()) {
+                    p.sendMessage(getMessage("error.business.none"));
+                    return;
+                }
+
                 List<Business> businesses = new ArrayList<>();
                 for (Business b : Business.getBusinesses()) {
                     if (b.isOwner(p)) continue;
@@ -1492,7 +1584,7 @@ public interface CommandWrapper {
                     } else discover.setItem(index, w.getGUIBackground());
                 }
 
-                XSound.ENTITY_ARROW_HIT_PLAYER.play(p, 3F, 2F);
+                NovaSound.ENTITY_ARROW_HIT_PLAYER.play(p, 3F, 2F);
             }
         }.runTaskAsynchronously(NovaConfig.getPlugin());
         p.openInventory(discover);
@@ -1522,7 +1614,7 @@ public interface CommandWrapper {
         items.replaceAll(item -> w.setNBT(item, "price", newPrice));
         items.replaceAll(item -> {
             Economy economy = econ == null ? w.getNBTProduct(item, "product").getEconomy() : econ;
-            return w.setNBT(item, "economy", economy.getUniqueId().toString());
+            return w.setNBT(item, ECON_TAG, economy.getUniqueId().toString());
         });
         items.forEach(select::addItem);
 
@@ -1698,7 +1790,7 @@ public interface CommandWrapper {
         inv.setItem(22, history);
 
         op.openInventory(inv);
-        XSound.BLOCK_ANVIL_USE.play(p, 3F, 1.5F);
+        NovaSound.BLOCK_ANVIL_USE.play(p, 3F, 1.5F);
     }
 
     default void businessRecover(Player p) {
@@ -1708,7 +1800,7 @@ public interface CommandWrapper {
         }
 
         Business b = Business.getByOwner(p);
-        if (b.getLeftoverStock().size() == 0) {
+        if (b.getLeftoverStock().isEmpty()) {
             p.sendMessage(getMessage("error.business.no_leftover_stock"));
             return;
         }
@@ -1907,7 +1999,7 @@ public interface CommandWrapper {
         Economy first = economies.stream().findFirst().get();
         Business b = Business.getByOwner(p);
 
-        int[] amounts = {
+        double[] amounts = {
                 1, 10, 50, 100, 500, 1000, 5000, 10000, 100000
         };
 
@@ -1915,12 +2007,12 @@ public interface CommandWrapper {
 
         for (int j = 0; j < 2; j++)
             for (int i = 0; i < amounts.length; i++) {
-                int am = amounts[i];
+                double am = amounts[i];
                 boolean add = j == 0;
 
                 ItemStack change = new ItemStack(add ? limePane() : redPane());
                 ItemMeta cMeta = change.getItemMeta();
-                cMeta.setDisplayName((add ? ChatColor.GREEN + "+" : ChatColor.RED + "-") + String.format("%,.0f", (double)am));
+                cMeta.setDisplayName((add ? ChatColor.GREEN + "+" : ChatColor.RED + "-") + String.format("%,.0f", am));
                 change.setItemMeta(cMeta);
                 change = w.setID(change, "business:change_advertising");
                 change = w.setNBT(change, AMOUNT_TAG, am);
@@ -1931,7 +2023,7 @@ public interface CommandWrapper {
 
         ItemStack econWheel = new ItemStack(first.getIcon());
         econWheel = w.setID(econWheel, "economy:wheel:change_advertising");
-        econWheel = w.setNBT(econWheel, "economy", first.getName().toLowerCase());
+        econWheel = w.setNBT(econWheel, ECON_TAG, first.getName().toLowerCase());
         inv.setItem(31, econWheel);
 
         ItemStack confirm = new ItemStack(limeWool());
@@ -1940,7 +2032,7 @@ public interface CommandWrapper {
         confirm.setItemMeta(cMeta);
         confirm = w.setID(confirm, "yes:" + (deposit ? "deposit" : "withdraw") + "_advertising");
         confirm = w.setNBT(confirm, BUSINESS_TAG, b.getUniqueId().toString());
-        confirm = w.setNBT(confirm, AMOUNT_TAG, 0);
+        confirm = w.setNBT(confirm, AMOUNT_TAG, 0D);
         inv.setItem(39, confirm);
 
         ItemStack total = new ItemStack(Material.GOLD_INGOT);
@@ -1957,7 +2049,7 @@ public interface CommandWrapper {
         inv.setItem(41, cancel);
 
         p.openInventory(inv);
-        XSound.ENTITY_ARROW_HIT_PLAYER.play(p, 3F, 2F);
+        NovaSound.ENTITY_ARROW_HIT_PLAYER.play(p, 3F, 2F);
     }
 
     default void setEconomyName(CommandSender sender, Economy econ, String name) {
@@ -2066,6 +2158,867 @@ public interface CommandWrapper {
         sender.sendMessage(String.format(getMessage("success.economy." + (rewardable ? "enable" : "disable") + "_reward"), econ.getName()));
     }
 
+    // Configuration Management Commands
+
+    default void configNaturalCauses(CommandSender sender, String option, String value) {
+        if (!sender.hasPermission("novaconomy.admin.config")) {
+            sender.sendMessage(getMessage("error.permission"));
+            return;
+        }
+
+        File configFile = NovaConfig.getConfigFile();
+        FileConfiguration config = NovaConfig.loadConfig();
+
+        switch (option.toLowerCase()) {
+            case "enchant_bonus": {
+                if (value == null) {
+                    sender.sendMessage(String.format(getMessage("success.config.print_value"), "EnchantBonus", config.get("NaturalCauses.EnchantBonus")));
+                    return;
+                }
+
+                if (!value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false")) {
+                    sender.sendMessage(getMessage("error.argument.bool"));
+                    return;
+                }
+
+                boolean b = Boolean.parseBoolean(value);
+                config.set("NaturalCauses.EnchantBonus", b);
+                sender.sendMessage(String.format(getMessage("success.config.set"), "EnchantBonus", b));
+                break;
+            }
+            case "max_increase": {
+                if (value == null) {
+                    sender.sendMessage(String.format(getMessage("success.config.print_value"), "MaxIncrease", config.get("NaturalCauses.MaxIncrease")));
+                    return;
+                }
+
+                try {
+                    int i = Integer.parseInt(value);
+                    if (i < -1) {
+                        sender.sendMessage(getMessage("error.argument.amount"));
+                        return;
+                    }
+
+                    config.set("NaturalCauses.MaxIncrease", i);
+                    sender.sendMessage(String.format(getMessage("success.config.set"), "MaxIncrease", i));
+                } catch (NumberFormatException e) {
+                    sender.sendMessage(getMessage("error.argument.amount"));
+                    return;
+                }
+                break;
+            }
+            case "kill_increase": {
+                if (value == null) {
+                    sender.sendMessage(String.format(getMessage("success.config.print_value"), "KillIncrease", config.get("NaturalCauses.KillIncrease")));
+                    return;
+                }
+
+                if (!value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false")) {
+                    sender.sendMessage(getMessage("error.argument.bool"));
+                    return;
+                }
+
+                boolean b = Boolean.parseBoolean(value);
+                config.set("NaturalCauses.KillIncrease", b);
+                sender.sendMessage(String.format(getMessage("success.config.set"), "KillIncrease", b));
+                break;
+            }
+            case "kill_increase_chance": {
+                if (value == null) {
+                    sender.sendMessage(String.format(getMessage("success.config.print_value"), "KillIncreaseChance", config.get("NaturalCauses.KillIncreaseChance")));
+                    return;
+                }
+
+                try {
+                    int i = Integer.parseInt(value);
+                    if (i < 0 || i > 100) {
+                        sender.sendMessage(getMessage("error.argument.amount"));
+                        return;
+                    }
+
+                    config.set("NaturalCauses.KillIncreaseChance", i);
+                    sender.sendMessage(String.format(getMessage("success.config.set"), "KillIncreaseChance", i));
+                } catch (NumberFormatException e) {
+                    sender.sendMessage(getMessage("error.argument.amount"));
+                    return;
+                }
+                break;
+            }
+            case "kill_increase_indirect": {
+                if (value == null) {
+                    sender.sendMessage(String.format(getMessage("success.config.print_value"), "KillIncreaseIndirect", config.get("NaturalCauses.KillIncreaseIndirect")));
+                    return;
+                }
+
+                if (!value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false")) {
+                    sender.sendMessage(getMessage("error.argument.bool"));
+                    return;
+                }
+
+                boolean b = Boolean.parseBoolean(value);
+                config.set("NaturalCauses.KillIncreaseIndirect", b);
+                sender.sendMessage(String.format(getMessage("success.config.set"), "KillIncreaseIndirect", b));
+                break;
+            }
+            case "fishing_increase": {
+                if (value == null) {
+                    sender.sendMessage(String.format(getMessage("success.config.print_value"), "FishingIncrease", config.get("NaturalCauses.FishingIncrease")));
+                    return;
+                }
+
+                if (!value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false")) {
+                    sender.sendMessage(getMessage("error.argument.bool"));
+                    return;
+                }
+
+                boolean b = Boolean.parseBoolean(value);
+                config.set("NaturalCauses.FishingIncrease", b);
+                sender.sendMessage(String.format(getMessage("success.config.set"), "FishingIncrease", b));
+                break;
+            }
+            case "fishing_increase_chance": {
+                if (value == null) {
+                    sender.sendMessage(String.format(getMessage("success.config.print_value"), "FishingIncreaseChance", config.get("NaturalCauses.FishingIncreaseChance")));
+                    return;
+                }
+
+                try {
+                    int i = Integer.parseInt(value);
+                    if (i < 0 || i > 100) {
+                        sender.sendMessage(getMessage("error.argument.amount"));
+                        return;
+                    }
+
+                    config.set("NaturalCauses.FishingIncreaseChance", i);
+                    sender.sendMessage(String.format(getMessage("success.config.set"), "FishingIncreaseChance", i));
+                } catch (NumberFormatException e) {
+                    sender.sendMessage(getMessage("error.argument.amount"));
+                    return;
+                }
+                break;
+            }
+            case "farming_increase": {
+                if (value == null) {
+                    sender.sendMessage(String.format(getMessage("success.config.print_value"), "FarmingIncrease", config.get("NaturalCauses.FarmingIncrease")));
+                    return;
+                }
+
+                if (!value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false")) {
+                    sender.sendMessage(getMessage("error.argument.bool"));
+                    return;
+                }
+
+                boolean b = Boolean.parseBoolean(value);
+                config.set("NaturalCauses.FarmingIncrease", b);
+                sender.sendMessage(String.format(getMessage("success.config.set"), "FarmingIncrease", b));
+                break;
+            }
+            case "farming_increase_chance": {
+                if (value == null) {
+                    sender.sendMessage(String.format(getMessage("success.config.print_value"), "FarmingIncreaseChance", config.get("NaturalCauses.FarmingIncreaseChance")));
+                    return;
+                }
+
+                try {
+                    int i = Integer.parseInt(value);
+                    if (i < 0 || i > 100) {
+                        sender.sendMessage(getMessage("error.argument.amount"));
+                        return;
+                    }
+
+                    config.set("NaturalCauses.FarmingIncreaseChance", i);
+                    sender.sendMessage(String.format(getMessage("success.config.set"), "FarmingIncreaseChance", i));
+                } catch (NumberFormatException e) {
+                    sender.sendMessage(getMessage("error.argument.amount"));
+                    return;
+                }
+                break;
+            }
+            case "mining_increase": {
+                if (value == null) {
+                    sender.sendMessage(String.format(getMessage("success.config.print_value"), "MiningIncrease", config.get("NaturalCauses.MiningIncrease")));
+                    return;
+                }
+
+                if (!value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false")) {
+                    sender.sendMessage(getMessage("error.argument.bool"));
+                    return;
+                }
+
+                boolean b = Boolean.parseBoolean(value);
+                config.set("NaturalCauses.MiningIncrease", b);
+                sender.sendMessage(String.format(getMessage("success.config.set"), "MiningIncrease", b));
+                break;
+            }
+            case "mining_increase_chance": {
+                if (value == null) {
+                    sender.sendMessage(String.format(getMessage("success.config.print_value"), "MiningIncreaseChance", config.get("NaturalCauses.MiningIncreaseChance")));
+                    return;
+                }
+
+                try {
+                    int i = Integer.parseInt(value);
+                    if (i < 0 || i > 100) {
+                        sender.sendMessage(getMessage("error.argument.amount"));
+                        return;
+                    }
+
+                    config.set("NaturalCauses.MiningIncreaseChance", i);
+                    sender.sendMessage(String.format(getMessage("success.config.set"), "MiningIncreaseChance", i));
+                } catch (NumberFormatException e) {
+                    sender.sendMessage(getMessage("error.argument.amount"));
+                    return;
+                }
+                break;
+            }
+            case "death_decrease": {
+                if (value == null) {
+                    sender.sendMessage(String.format(getMessage("success.config.print_value"), "DeathDecrease", config.get("NaturalCauses.DeathDecrease")));
+                    return;
+                }
+
+                if (!value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false")) {
+                    sender.sendMessage(getMessage("error.argument.bool"));
+                    return;
+                }
+
+                boolean b = Boolean.parseBoolean(value);
+                config.set("NaturalCauses.DeathDecrease", b);
+                sender.sendMessage(String.format(getMessage("success.config.set"), "DeathDecrease", b));
+                break;
+            }
+            case "death_divider": {
+                if (value == null) {
+                    sender.sendMessage(String.format(getMessage("success.config.print_value"), "DeathDivider", config.get("NaturalCauses.DeathDivider")));
+                    return;
+                }
+
+                try {
+                    int i = Integer.parseInt(value);
+                    if (i < 1) {
+                        sender.sendMessage(getMessage("error.argument.amount"));
+                        return;
+                    }
+
+                    config.set("NaturalCauses.DeathDivider", i);
+                    sender.sendMessage(String.format(getMessage("success.config.set"), "DeathDivider", i));
+                } catch (NumberFormatException e) {
+                    sender.sendMessage(getMessage("error.argument.amount"));
+                    return;
+                }
+                break;
+            }
+            default: {
+                sender.sendMessage(getMessage("error.argument.config"));
+                return;
+            }
+        }
+
+        try {
+            config.save(configFile);
+        } catch (IOException e) {
+            NovaConfig.print(e);
+        }
+        reloadFiles();
+    }
+
+    default void addCausesModifier(CommandSender sender, String type, String key, String... values) {
+        if (!sender.hasPermission("novaconomy.admin.config")) {
+            sender.sendMessage(getMessage("error.permission"));
+            return;
+        }
+
+        File configFile = NovaConfig.getConfigFile();
+        FileConfiguration config = NovaConfig.loadConfig();
+        ConfigurationSection modConfig = config.getConfigurationSection("NaturalCauses.Modifiers");
+
+        List<Map<Economy, Double>> mods = null;
+        double divider = -1;
+
+        if (type.equalsIgnoreCase("death")) divider = 0; else mods = new ArrayList<>();
+
+        Iterator<String> it = ImmutableList.copyOf(values).iterator();
+        while (it.hasNext()) {
+            String v = it.next();
+            if (v == null || v.isEmpty()) {
+                it.remove();
+                continue;
+            }
+
+            v = v.replace(" ", "");
+            if (type.equalsIgnoreCase("death")) try {
+                divider = Double.parseDouble(v);
+                if (divider <= 0) {
+                    sender.sendMessage(getMessage("error.argument.amount"));
+                    return;
+                }
+                break;
+            } catch (NumberFormatException e) {
+                sender.sendMessage(getMessage("error.argument.amount"));
+                return;
+            }
+            else {
+                Map<Economy, Double> mod = ModifierReader.readString(v);
+                if (mod == null) {
+                    sender.sendMessage(getMessage("error.argument.modifier"));
+                    return;
+                }
+
+                mods.add(mod);
+            }
+        }
+
+        if ((divider == -1 && mods.isEmpty()) || (mods == null && divider == -1)) {
+            sender.sendMessage(getMessage("error.argument.amount"));
+            return;
+        }
+
+        Object value = divider == -1 ?
+                mods.size() == 1 ? ModifierReader.toModString(mods.get(0)) : ModifierReader.toModList(mods) :
+                divider;
+
+        String entityName = key.toLowerCase().replace("minecraft:", "").toUpperCase();
+
+        switch (type.toLowerCase()) {
+            case "mining": {
+                if (Material.matchMaterial(key) == null) {
+                    sender.sendMessage(getMessage("error.argument.block"));
+                    return;
+                }
+
+                Material m = Material.matchMaterial(key);
+                if (!m.isBlock()) {
+                    sender.sendMessage(getMessage("error.argument.block"));
+                    return;
+                }
+
+                String modKey = "Mining." + m.name().toLowerCase();
+
+                List<String> newValue = new ArrayList<>();
+                if (modConfig.isList(modKey)) newValue.addAll(modConfig.getStringList(modKey));
+                else newValue.add(modConfig.getString(modKey));
+
+                if (value instanceof String) newValue.add((String) value);
+                else newValue.addAll((List<String>) value);
+
+                modConfig.set(modKey, newValue);
+                break;
+            }
+            case "killing": {
+                try {
+                    EntityType t = EntityType.valueOf(entityName);
+                    
+                    if (!LivingEntity.class.isAssignableFrom(t.getEntityClass()) || t == EntityType.PLAYER) {
+                        sender.sendMessage(getMessage("error.argument.entity"));
+                        return;
+                    }
+
+                    String modKey = "Killing." + t.name().toLowerCase();
+
+                    List<String> newValue = new ArrayList<>();
+                    if (modConfig.isList(modKey)) newValue.addAll(modConfig.getStringList(modKey));
+                    else newValue.add(modConfig.getString(modKey));
+
+                    if (value instanceof String) newValue.add((String) value);
+                    else newValue.addAll((List<String>) value);
+
+                    modConfig.set(modKey, newValue);
+                } catch (IllegalArgumentException e) {
+                    sender.sendMessage(getMessage("error.argument.entity"));
+                    return;
+                }
+                break;
+            }
+            case "fishing": {
+                final Enum<?> choice;
+
+                EntityType etype = null;
+                try {
+                    etype = EntityType.valueOf(entityName);
+
+                    if (!LivingEntity.class.isAssignableFrom(etype.getEntityClass()) || etype == EntityType.PLAYER || !etype.isAlive()) {
+                        sender.sendMessage(getMessage("error.argument.entity"));
+                        return;
+                    }
+                } catch (IllegalArgumentException ignored) {}
+
+                if (Material.matchMaterial(key) == null && etype == null) {
+                    sender.sendMessage(getMessage("error.argument.item_entity"));
+                    return;
+                }
+                
+                Material m = null;
+                if (etype == null) {
+                    m = Material.matchMaterial(key);
+                    if (!w.isItem(m)) {
+                        sender.sendMessage(getMessage("error.argument.item"));
+                        return;
+                    }
+                }
+
+                choice = etype == null ? m : etype;
+
+                String modKey = "Fishing." + choice.name().toLowerCase();
+
+                List<String> newValue = new ArrayList<>();
+                if (modConfig.isList(modKey)) newValue.addAll(modConfig.getStringList(modKey));
+                else newValue.add(modConfig.getString(modKey));
+
+                if (value instanceof String) newValue.add((String) value);
+                else newValue.addAll((List<String>) value);
+
+                modConfig.set(modKey, newValue);
+                break;
+            }
+            case "farming": {
+                if (Material.matchMaterial(key) == null) {
+                    sender.sendMessage(getMessage("error.argument.crop"));
+                    return;
+                }
+                
+                Material m = Material.matchMaterial(key);
+                if (!w.isCrop(m)) {
+                    sender.sendMessage(getMessage("error.argument.crop"));
+                    return;
+                }
+
+                String modKey = "Farming." + m.name().toLowerCase();
+
+                List<String> newValue = new ArrayList<>();
+                if (modConfig.isList(modKey)) newValue.addAll(modConfig.getStringList(modKey));
+                else newValue.add(modConfig.getString(modKey));
+
+                if (value instanceof String) newValue.add((String) value);
+                else newValue.addAll((List<String>) value);
+
+                modConfig.set(modKey, newValue);
+                break;
+            }
+            case "death": {
+                try {
+                    EntityDamageEvent.DamageCause c = EntityDamageEvent.DamageCause.valueOf(key.replace("minecraft:", "").toUpperCase());
+                    modConfig.set("Death." + c.name().toLowerCase(), value);
+                } catch (IllegalArgumentException e) {
+                    sender.sendMessage(getMessage("error.argument.cause"));
+                    return;
+                }
+                break;
+            }
+        }
+
+        try {
+            config.save(configFile);
+        } catch (IOException e) {
+            NovaConfig.print(e);
+        }
+        reloadFiles();
+
+        sender.sendMessage(String.format(getMessage("success.config.add_modifier"), type, key));
+    }
+
+    default void removeCausesModifier(CommandSender sender, String type, String key) {
+        if (!sender.hasPermission("novaconomy.admin.config")) {
+            sender.sendMessage(getMessage("error.permission"));
+            return;
+        }
+
+        File configFile = NovaConfig.getConfigFile();
+        FileConfiguration config = NovaConfig.loadConfig();
+        ConfigurationSection modConfig = config.getConfigurationSection("NaturalCauses.Modifiers");
+
+        switch (type.toLowerCase()) {
+            case "mining": {
+                if (Material.matchMaterial(key) == null) {
+                    sender.sendMessage(getMessage("error.argument.block"));
+                    return;
+                }
+
+                Material m = Material.matchMaterial(key);
+                if (!m.isBlock() || m == Material.AIR) {
+                    sender.sendMessage(getMessage("error.argument.block"));
+                    return;
+                }
+
+                if (!modConfig.isSet("Mining." + m.name().toLowerCase())) {
+                    sender.sendMessage(getMessage("error.config.modifier_inexistent"));
+                    return;
+                }
+
+                modConfig.set("Mining." + m.name().toLowerCase(), null);
+                break;
+            }
+            case "killing": {
+                try {
+                    EntityType t = EntityType.valueOf(key.replace("minecraft:", "").toUpperCase());
+
+                    if (!LivingEntity.class.isAssignableFrom(t.getEntityClass()) || t == EntityType.PLAYER) {
+                        sender.sendMessage(getMessage("error.argument.entity"));
+                        return;
+                    }
+
+                    if (!modConfig.isSet("Killing." + t.name().toLowerCase())) {
+                        sender.sendMessage(getMessage("error.config.modifier_inexistent"));
+                        return;
+                    }
+
+                    modConfig.set("Killing." + t.name().toLowerCase(), null);
+                } catch (IllegalArgumentException e) {
+                    sender.sendMessage(getMessage("error.argument.entity"));
+                    return;
+                }
+                break;
+            }
+            case "fishing": {
+                final Enum<?> choice;
+
+                EntityType etype = null;
+                try {
+                    etype = EntityType.valueOf(key.replace("minecraft:", "").toUpperCase());
+
+                    if (!LivingEntity.class.isAssignableFrom(etype.getEntityClass()) || etype == EntityType.PLAYER || !etype.isAlive()) {
+                        sender.sendMessage(getMessage("error.argument.entity"));
+                        return;
+                    }
+                } catch (IllegalArgumentException ignored) {}
+
+                if (Material.matchMaterial(key) == null && etype == null) {
+                    sender.sendMessage(getMessage("error.argument.item_entity"));
+                    return;
+                }
+
+                Material m = null;
+                if (etype == null) {
+                    m = Material.matchMaterial(key);
+                    if (!w.isItem(m)) {
+                        sender.sendMessage(getMessage("error.argument.item"));
+                        return;
+                    }
+                }
+
+                choice = etype == null ? m : etype;
+
+                if (!modConfig.isSet("Fishing." + choice.name().toLowerCase())) {
+                    sender.sendMessage(getMessage("error.config.modifier_inexistent"));
+                    return;
+                }
+
+                modConfig.set("Fishing." + choice.name().toLowerCase(), null);
+                break;
+            }
+            case "farming": {
+                if (Material.matchMaterial(key) == null) {
+                    sender.sendMessage(getMessage("error.argument.crop"));
+                    return;
+                }
+
+                Material m = Material.matchMaterial(key);
+                if (!w.isCrop(m)) {
+                    sender.sendMessage(getMessage("error.argument.crop"));
+                    return;
+                }
+
+                if (!modConfig.isSet("Farming." + m.name().toLowerCase())) {
+                    sender.sendMessage(getMessage("error.config.modifier_inexistent"));
+                    return;
+                }
+
+                modConfig.set("Farming." + m.name().toLowerCase(), null);
+                break;
+            }
+            case "death": {
+                try {
+                    EntityDamageEvent.DamageCause c = EntityDamageEvent.DamageCause.valueOf(key.replace("minecraft:", "").toUpperCase());
+
+                    if (!modConfig.isSet("Death." + c.name().toLowerCase())) {
+                        sender.sendMessage(getMessage("error.config.modifier_inexistent"));
+                        return;
+                    }
+
+                    modConfig.set("Death." + c.name().toLowerCase(), null);
+                } catch (IllegalArgumentException e) {
+                    sender.sendMessage(getMessage("error.argument.cause"));
+                    return;
+                }
+                break;
+            }
+        }
+
+        try {
+            config.save(configFile);
+        } catch (IOException e) {
+            NovaConfig.print(e);
+        }
+        reloadFiles();
+
+        sender.sendMessage(String.format(getMessage("success.config.remove_modifier"), type + "." + key));
+    }
+
+    default void viewCausesModifier(CommandSender sender, String type, String key) {
+        if (!sender.hasPermission("novaconomy.admin.config")) {
+            sender.sendMessage(getMessage("error.permission"));
+            return;
+        }
+
+        File configFile = NovaConfig.getConfigFile();
+        FileConfiguration config = NovaConfig.loadConfig();
+        ConfigurationSection modConfig = config.getConfigurationSection("NaturalCauses.Modifiers");
+
+        switch (type.toLowerCase()) {
+            case "mining": {
+                if (Material.matchMaterial(key) == null) {
+                    sender.sendMessage(getMessage("error.argument.block"));
+                    return;
+                }
+
+                Material m = Material.matchMaterial(key);
+                if (!m.isBlock() || m == Material.AIR) {
+                    sender.sendMessage(getMessage("error.argument.block"));
+                    return;
+                }
+
+                if (!modConfig.isSet("Mining." + m.name().toLowerCase())) {
+                    sender.sendMessage(getMessage("error.config.modifier_inexistent"));
+                    return;
+                }
+
+                sender.sendMessage(String.format(getMessage("success.config.view_modifier"), type + "." + key, modConfig.get("Mining." + m.name().toLowerCase())));
+                break;
+            }
+            case "killing": {
+                try {
+                    EntityType t = EntityType.valueOf(key.replace("minecraft:", "").toUpperCase());
+
+                    if (!LivingEntity.class.isAssignableFrom(t.getEntityClass()) || t == EntityType.PLAYER) {
+                        sender.sendMessage(getMessage("error.argument.entity"));
+                        return;
+                    }
+
+                    if (!modConfig.isSet("Killing." + t.name().toLowerCase())) {
+                        sender.sendMessage(getMessage("error.config.modifier_inexistent"));
+                        return;
+                    }
+
+                    sender.sendMessage(String.format(getMessage("success.config.view_modifier"), type + "." + key, modConfig.get("Killing." + t.name().toLowerCase())));
+                } catch (IllegalArgumentException e) {
+                    sender.sendMessage(getMessage("error.argument.entity"));
+                    return;
+                }
+                break;
+            }
+            case "fishing": {
+                final Enum<?> choice;
+
+                EntityType etype = null;
+                try {
+                    etype = EntityType.valueOf(key.replace("minecraft:", "").toUpperCase());
+
+                    if (!LivingEntity.class.isAssignableFrom(etype.getEntityClass()) || etype == EntityType.PLAYER || !etype.isAlive()) {
+                        sender.sendMessage(getMessage("error.argument.entity"));
+                        return;
+                    }
+                } catch (IllegalArgumentException ignored) {}
+
+                if (Material.matchMaterial(key) == null && etype == null) {
+                    sender.sendMessage(getMessage("error.argument.item_entity"));
+                    return;
+                }
+
+                Material m = null;
+                if (etype == null) {
+                    m = Material.matchMaterial(key);
+                    if (!w.isItem(m)) {
+                        sender.sendMessage(getMessage("error.argument.item"));
+                        return;
+                    }
+                }
+
+                choice = etype == null ? m : etype;
+
+                if (!modConfig.isSet("Fishing." + choice.name().toLowerCase())) {
+                    sender.sendMessage(getMessage("error.config.modifier_inexistent"));
+                    return;
+                }
+
+                sender.sendMessage(String.format(getMessage("success.config.view_modifier"), type + "." + key, modConfig.get("Fishing." + choice.name().toLowerCase())));
+                break;
+            }
+            case "farming": {
+                if (Material.matchMaterial(key) == null) {
+                    sender.sendMessage(getMessage("error.argument.crop"));
+                    return;
+                }
+
+                Material m = Material.matchMaterial(key);
+                if (!w.isCrop(m)) {
+                    sender.sendMessage(getMessage("error.argument.crop"));
+                    return;
+                }
+
+                if (!modConfig.isSet("Farming." + m.name().toLowerCase())) {
+                    sender.sendMessage(getMessage("error.config.modifier_inexistent"));
+                    return;
+                }
+
+                sender.sendMessage(String.format(getMessage("success.config.view_modifier"), type + "." + key, modConfig.get("Farming." + m.name().toLowerCase())));
+                break;
+            }
+            case "death": {
+                try {
+                    EntityDamageEvent.DamageCause c = EntityDamageEvent.DamageCause.valueOf(key.replace("minecraft:", "").toUpperCase());
+
+                    if (!modConfig.isSet("Death." + c.name().toLowerCase())) {
+                        sender.sendMessage(getMessage("error.config.modifier_inexistent"));
+                        return;
+                    }
+
+                    sender.sendMessage(String.format(getMessage("success.config.view_modifier"), type + "." + key, modConfig.get("Death." + c.name().toLowerCase())));
+                } catch (IllegalArgumentException e) {
+                    sender.sendMessage(getMessage("error.argument.cause"));
+                    return;
+                }
+                break;
+            }
+        }
+    }
+
+    default void setDefaultEconomy(CommandSender sender, Economy econ) {
+        if (!sender.hasPermission("novaconomy.admin.config")) {
+            sender.sendMessage(getMessage("error.permission"));
+            return;
+        }
+
+        File funcFile = NovaConfig.getFunctionalityFile();
+        FileConfiguration func = NovaConfig.loadFunctionalityFile();
+
+        func.set("VaultEconomy", econ == null ? -1 : econ.getName());
+        try { func.save(funcFile); } catch (IOException e) { NovaConfig.print(e); }
+        NovaConfig.getConfiguration().reloadHooks();
+        reloadFiles();
+
+        if (econ != null) sender.sendMessage(String.format(getMessage("success.config.set"), "VaultEconomy", econ.getName()));
+        else sender.sendMessage(getMessage("success.config.reset_default_economy"));
+    }
+
+    List<String> BL_CATEGORIES = Arrays.asList(
+            "ratings",
+            "resources",
+            "revenue"
+    );
+
+    Map<String, Comparator<Business>> BL_COMPARATORS = ImmutableMap.<String, Comparator<Business>>builder()
+            .put("ratings", Collections.reverseOrder(Comparator.comparingDouble(Business::getAverageRating))
+                    .thenComparing(Collections.reverseOrder(Comparator.comparingInt(b -> b.getRatings().size())))
+                    .thenComparing(Business::getName))
+            .put("resources", Collections.reverseOrder(Comparator.comparingInt(Business::getTotalResources))
+                    .thenComparing(Business::getName))
+            .put("revenue", Collections.reverseOrder(Comparator.comparingDouble(Business::getTotalRevenue)
+                    .thenComparing(Business::getName)))
+
+            .build();
+
+    Map<String, Function<Business, List<String>>> BL_DESC = ImmutableMap.<String, Function<Business, List<String>>>builder()
+            .put("ratings", b -> Arrays.asList(
+                        ChatColor.GOLD + String.format("%,.1f", b.getAverageRating()) + "⭐",
+                        ChatColor.GREEN + String.format("%,d", b.getRatings().size()) + " " + get("constants.business.ratings")
+                    ))
+            .put("resources", b -> Arrays.asList(
+                        ChatColor.GOLD + String.format("%,d", b.getTotalResources())
+                    ))
+            .put("revenue", b -> Arrays.asList(
+                        ChatColor.DARK_GREEN + String.format("%,.2f", b.getTotalRevenue())
+                    ))
+            .build();
+
+    Map<String, Material> BL_ICONS = ImmutableMap.<String, Material>builder()
+            .put("ratings", Material.DIAMOND)
+            .put("resources", Material.CHEST)
+            .put("revenue", Material.GOLD_INGOT)
+            .build();
+
+    default void businessLeaderboard(Player p, String category) {
+        if (!p.hasPermission("novaconomy.user.leaderboard")) {
+            p.sendMessage(getMessage("error.permission"));
+            return;
+        }
+
+        if (!Business.exists()) {
+            p.sendMessage(getMessage("error.business.none"));
+            return;
+        }
+
+        Inventory inv = w.genGUI(54, get("constants.business.leaderboard"));
+
+        for (int i = 30; i < 33; i++) inv.setItem(i, loading());
+        for (int i = 37; i < 44; i++) inv.setItem(i, loading());
+
+        p.openInventory(inv);
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                ItemStack cItem = new ItemStack(BL_ICONS.get(category));
+                ItemMeta cMeta = cItem.getItemMeta();
+                cMeta.setDisplayName(ChatColor.GOLD + get("constants.business.leaderboard." + category));
+                cMeta.addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1, true);
+                cMeta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+                cItem.setItemMeta(cMeta);
+                cItem = w.setID(cItem, "business:leaderboard_category");
+                cItem = w.setNBT(cItem, "category", category);
+                inv.setItem(13, cItem);
+
+                List<Business> sorted = Business.getBusinesses()
+                        .stream()
+                        .sorted(BL_COMPARATORS.get(category))
+                        .collect(Collectors.toList());
+
+                if (category.equalsIgnoreCase("ratings"))
+                    sorted = sorted.stream()
+                            .filter(b -> b.getRatings().size() > 0)
+                            .collect(Collectors.toList());
+
+                Map<Integer, ItemStack> items = new HashMap<>();
+                for (int i = 0; i < 10; i++) {
+                    int index = 30 + i;
+                    if (i >= 3) index = 34 + i;
+
+                    if (i >= sorted.size()) {
+                        items.put(index, null);
+                        continue;
+                    }
+
+                    Business b = sorted.get(i);
+
+                    ItemStack icon = b.getPublicIcon();
+                    ItemMeta iMeta = icon.getItemMeta();
+                    iMeta.setLore(BL_DESC.get(category).apply(b));
+                    icon.setItemMeta(iMeta);
+                    icon = w.setID(icon, "business:click");
+                    icon = w.setNBT(icon, BUSINESS_TAG, b.getUniqueId().toString());
+                    items.put(index, icon);
+                }
+
+                items.forEach(inv::setItem);
+
+                NovaSound.ENTITY_ARROW_HIT_PLAYER.play(p, 3F, 2F);
+            }
+        }.runTaskAsynchronously(NovaConfig.getPlugin());
+    }
+
+    default void basicConfig(CommandSender sender, String key, Object value) {
+        if (!sender.hasPermission("novaconomy.admin.config")) {
+            sender.sendMessage(getMessage("error.permission"));
+            return;
+        }
+
+        File configFile = NovaConfig.getConfigFile();
+        FileConfiguration config = YamlConfiguration.loadConfiguration(configFile);
+
+        config.set(key, value);
+        try { config.save(configFile); } catch (IOException e) { NovaConfig.print(e); }
+        reloadFiles();
+
+        sender.sendMessage(String.format(getMessage("success.config.set"), key, value));
+    }
+
     // Util Classes & Other Static Methods
 
     static ItemStack comingSoon() {
@@ -2156,16 +3109,8 @@ public interface CommandWrapper {
         return String.format(get("constants.time.ago.years_ago"), String.format("%,.0f", years));
     }
 
-    static String getServerVersion() {
-        return Bukkit.getServer().getClass().getPackage().getName().split("\\.")[3].substring(1);
-    }
-
     static Wrapper getWrapper() {
-        try {
-            return (Wrapper) Class.forName("us.teaminceptus.novaconomy.Wrapper" + getServerVersion()).getConstructor().newInstance();
-        } catch (Exception e) {
-            throw new IllegalStateException("Wrapper not Found: " + getServerVersion());
-        }
+        return Wrapper.getWrapper();
     }
 
     static ItemStack createPlayerHead(OfflinePlayer p) {

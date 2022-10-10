@@ -107,7 +107,11 @@ public interface NovaConfig  {
      * Fetches the folder that all Economies are stored in.
      * @return Economies Folder
      */
-    static File getEconomiesFolder() { return new File(getDataFolder(), "economies"); }
+    static File getEconomiesFolder() {
+        File dir = new File(getDataFolder(), "economies");
+        if (!dir.exists()) dir.mkdir();
+        return dir;
+    }
 
     /**
      * Reloads the Interest and Taxes Runnables with new values from the configuration.
@@ -156,6 +160,7 @@ public interface NovaConfig  {
      * Fetches the Functionality Configuration File.
      * @return Functionality File
      */
+    @NotNull
     static File getFunctionalityFile() {
         return new File(getDataFolder(), "functionality.yml");
     }
@@ -164,6 +169,7 @@ public interface NovaConfig  {
      * Loads the Functionality Configuration.
      * @return Loaded Functionality Configuration
      */
+    @NotNull
     static FileConfiguration loadFunctionalityFile() {
         if (!getFunctionalityFile().exists()) getPlugin().saveResource("functionality.yml", false);
 
@@ -183,12 +189,23 @@ public interface NovaConfig  {
      * Loads the global storage configuration.
      * @return Global Storage Configuration
      */
+    @NotNull
     static FileConfiguration getGlobalStorage() { return YamlConfiguration.loadConfiguration(new File(getDataFolder(), "global.yml")); }
+
+    /**
+     * Fetches the Configuration without checking its values.
+     * @return Unchecked FileConfiguration
+     */
+    @NotNull
+    static FileConfiguration getConfig() {
+        return YamlConfiguration.loadConfiguration(getConfigFile());
+    }
 
     /**
      * Loads the configuration's values.
      * @return Loaded FileConfiguration
      */
+    @NotNull
     static FileConfiguration loadConfig() {
         // Config Checks
         Plugin p = getPlugin();
@@ -276,7 +293,7 @@ public interface NovaConfig  {
         if (!config.isBoolean("Business.Advertising.Enabled")) config.set("Business.Advertising.Enabled", true);
         if (!config.isDouble("Business.Advertising.ClickReward") && !config.isInt("Business.Advertising.ClickReward")) config.set("Business.Advertising.ClickReward", 5D);
 
-        try { config.save(f); } catch (IOException e) { getPlugin().getLogger().severe(e.getMessage()); }
+        try { config.save(f); } catch (IOException e) { print(e); }
 
         return config;
     }

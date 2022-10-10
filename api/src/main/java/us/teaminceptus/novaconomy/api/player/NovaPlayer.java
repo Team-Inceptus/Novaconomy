@@ -3,7 +3,6 @@ package us.teaminceptus.novaconomy.api.player;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.AtomicDouble;
 import org.bukkit.Bukkit;
-import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -125,6 +124,7 @@ public final class NovaPlayer {
      */
     public double getBalance(@NotNull Economy econ) throws IllegalArgumentException {
         if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
+
         boolean zero = false;
         String econName = econ.getName().toLowerCase();
 
@@ -139,7 +139,7 @@ public final class NovaPlayer {
 
         if (zero) return 0;
 
-        return pConfig.getConfigurationSection("economies").getConfigurationSection(econName).getDouble("balance", 0);
+        return pConfig.getDouble("economies." + econName + ".balance", 0);
     }
 
     /**
@@ -611,71 +611,5 @@ public final class NovaPlayer {
     public boolean hasRating(@Nullable Business b) {
         if (b == null) return false;
         return getRatingLevel(b) != 0;
-    }
-
-    /**
-     * Fetches the amount of shares this player owns for this Material.
-     * @param m Material to check
-     * @deprecated Draft API
-     * @return Amount of shares player owns, or 0 if not found
-     */
-    @Deprecated
-    public long getShareAmount(@NotNull Material m) {
-//        if (m == null) return 0;
-//        return pConfig.getLong("market.shares." + m.name().toLowerCase(), 0);
-        return 0;
-    }
-
-    /**
-     * Sets the amount of shares this player owns for this Material.
-     * @param m Material to set
-     * @param amount Amount of shares to set
-     * @deprecated Draft API
-     * @throws IllegalArgumentException if share amount is negative
-     */
-    @Deprecated
-    public void setShareAmount(@NotNull Material m, long amount) throws IllegalArgumentException {
-//        if (m == null) return;
-//        if (amount < 0) throw new IllegalArgumentException("Share amount cannot be negative");
-//
-//        if (amount > 0) pConfig.set("market.shares." + m.name().toLowerCase(), amount);
-//        else pConfig.set("market.shares." + m.name().toLowerCase(), null);
-//        save();
-    }
-
-    /**
-     * Removes ownership of all shares for this Material.
-     * @param m Material to remove
-     * @deprecated Draft API
-     */
-    @Deprecated
-    public void removeAllShares(@NotNull Material m) {
-        setShareAmount(m, 0);
-    }
-
-    /**
-     * Adds shares for this Material.
-     * @param m Material to add shares for
-     * @param amount Amount of shares to add
-     * @deprecated Draft API
-     */
-    @Deprecated
-    public void addShares(@NotNull Material m, long amount) {
-//        if (m == null) return;
-//
-//        stats.totalSharesPurchased += amount;
-//        setShareAmount(m, getShareAmount(m) + amount);
-    }
-
-    /**
-     * Remove shares for this Material.
-     * @param m Material to remove shares for
-     * @param amount Amount of shares to remove
-     * @deprecated Draft API
-     */
-    @Deprecated
-    public void removeShares(@NotNull Material m, long amount) {
-//        if (m == null) return;
-//        addShares(m, -amount);
     }
 }

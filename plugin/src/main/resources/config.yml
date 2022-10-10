@@ -23,6 +23,7 @@ Notifications: true
 # - sv (Swedish / Svenska)
 # - ko (Korean / 한국어)
 # - id (Indonesian / Indonesia)
+# - ru (Russian / Русский)
 Language: en
 
 # Natural Causes to gain or lose money
@@ -98,6 +99,7 @@ NaturalCauses:
     Fishing: {} # Remove this when adding
       # cod: [E30, 50$]
 
+    # Farming Modifiers look at whatever you mined, similar to the Mining Modifiers.
     Farming: {} # Remove this when adding
       # wheat: [F10, 20$]
 

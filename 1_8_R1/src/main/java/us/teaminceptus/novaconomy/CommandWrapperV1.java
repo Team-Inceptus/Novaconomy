@@ -5,7 +5,11 @@ import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.Server;
 import org.bukkit.command.*;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.plugin.Plugin;
 import us.teaminceptus.novaconomy.abstraction.CommandWrapper;
 import us.teaminceptus.novaconomy.abstraction.Wrapper;
@@ -18,11 +22,20 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
 
     private final Plugin plugin;
+    private static final Function<String, List<String>> modkeys = (s) -> {
+        FileConfiguration config = NovaConfig.getConfig();
+        return config.getConfigurationSection(s)
+                .getKeys(false)
+                .stream()
+                .map(String::toLowerCase)
+                .collect(Collectors.toList());
+    };
 
     private static final Wrapper w = Wrapper.getWrapper();
 
@@ -157,44 +170,39 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                 Player p = (Player) sender;
                 if (!economyCount(p)) return false;
 
-                try {
-                    if (args.length < 1) {
-                        p.sendMessage(getMessage("error.argument.player"));
-                        return false;
-                    }
+                if (args.length < 1) {
+                    p.sendMessage(getMessage("error.argument.player"));
+                    return false;
+                }
 
-                    if (Bukkit.getPlayer(args[0]) == null) {
-                        p.sendMessage(getMessage("error.argument.player"));
-                        return false;
-                    }
+                if (Bukkit.getPlayer(args[0]) == null) {
+                    p.sendMessage(getMessage("error.argument.player"));
+                    return false;
+                }
 
-                    Player target = Bukkit.getPlayer(args[0]);
+                Player target = Bukkit.getPlayer(args[0]);
 
-                    if (args.length < 2) {
+                Economy econ = null;
+
+                if (args.length >= 2) {
+                    econ = Economy.getEconomy(args[1]);
+
+                    if (econ == null) {
                         p.sendMessage(getMessage("error.argument.economy"));
                         return false;
                     }
+                }
 
-                    if (!Economy.exists(args[1])) {
-                        p.sendMessage(getMessage("error.argument.economy"));
-                        return false;
-                    }
+                double amount = 0;
 
-                    Economy econ = Economy.getEconomy(args[1]);
-
-                    if (args.length < 3) {
-                        p.sendMessage(getMessage("error.argument.pay_amount"));
-                        return false;
-                    }
-
-                    double amount = Double.parseDouble(args[2]);
-
-                    pay(p, target, econ, amount);
+                if (args.length >= 3) try {
+                    amount = Double.parseDouble(args[2]);
                 } catch (NumberFormatException e) {
                     p.sendMessage(getMessage("error.argument.pay_amount"));
                     return false;
                 }
 
+                pay(p, target, econ, amount);
                 break;
             }
             case "economy": {
@@ -231,7 +239,16 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                             }
 
                             Material icon = Material.valueOf(args[3].replace("minecraft:", "").toUpperCase());
-                            double scale = Double.parseDouble(args[4]);
+
+                            double scale = 1;
+
+                            if (args.length >= 5) try {
+                                scale = Double.parseDouble(args[4]);
+                            } catch (NumberFormatException e) {
+                                sender.sendMessage(getMessage("error.argument.scale"));
+                                return false;
+                            }
+
                             boolean naturalIncrease = true;
 
                             if (args.length >= 6) {
@@ -1241,6 +1258,146 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                 playerStatistics(p, target);
                 break;
             }
+            case "novaconfig": {
+                if (args.length < 1) {
+                    sender.sendMessage(getMessage("error.argument"));
+                    return false;
+                }
+
+                switch (args[0].toLowerCase()) {
+                    case "reload":
+                    case "rl": {
+                        reloadConfig(sender);
+                        break;
+                    }
+                    case "naturalcauses":
+                    case "nc":
+                    case "naturalc":
+                    case "ncauses": {
+                        if (args.length < 2) {
+                            sender.sendMessage(getMessage("error.argument"));
+                            return false;
+                        }
+
+                        switch (args[1].toLowerCase()) {
+                            case "view": {
+                                if (args.length < 3) {
+                                    sender.sendMessage(getMessage("error.argument.config"));
+                                    return false;
+                                }
+
+                                configNaturalCauses(sender, args[2].toLowerCase(), null);
+                                break;
+                            }
+                            case "set": {
+                                if (args.length < 3) {
+                                    sender.sendMessage(getMessage("error.argument.config"));
+                                    return false;
+                                }
+
+                                if (args.length < 4) {
+                                    sender.sendMessage(getMessage("error.argument"));
+                                    return false;
+                                }
+
+                                configNaturalCauses(sender, args[2].toLowerCase(), args[3]);
+                                break;
+                            }
+                            case "modifier":
+                            case "mod": {
+                                if (args.length < 3) {
+                                    sender.sendMessage(getMessage("error.argument"));
+                                    return false;
+                                }
+
+                                switch (args[2].toLowerCase()) {
+                                    case "add": {
+                                        if (args.length < 4) {
+                                            sender.sendMessage(getMessage("error.argument.config"));
+                                            break;
+                                        }
+
+                                        if (args.length < 5) {
+                                            sender.sendMessage(getMessage("error.argument.config"));
+                                            break;
+                                        }
+
+                                        if (args.length < 6) {
+                                            sender.sendMessage(getMessage("error.argument"));
+                                            break;
+                                        }
+
+                                        StringBuilder values = new StringBuilder();
+                                        for (int i = 5; i < args.length; i++) values.append(args[i]).append(",");
+
+                                        addCausesModifier(sender, args[3].toLowerCase(), args[4], values.toString().replace(" ", ",").split(","));
+                                        break;
+                                    }
+                                    case "remove":
+                                    case "delete": {
+                                        if (args.length < 4) {
+                                            sender.sendMessage(getMessage("error.argument.config"));
+                                            break;
+                                        }
+
+                                        if (args.length < 5) {
+                                            sender.sendMessage(getMessage("error.argument.config"));
+                                            break;
+                                        }
+
+                                        removeCausesModifier(sender, args[3].toLowerCase(), args[4]);
+                                        break;
+                                    }
+                                    case "view": {
+                                        if (args.length < 4) {
+                                            sender.sendMessage(getMessage("error.argument.config"));
+                                            break;
+                                        }
+
+                                        if (args.length < 5) {
+                                            sender.sendMessage(getMessage("error.argument.config"));
+                                            break;
+                                        }
+
+                                        viewCausesModifier(sender, args[3].toLowerCase(), args[4]);
+                                        break;
+                                    }
+                                }
+                                break;
+                            }
+                        }
+                        break;
+                    }
+                    case "setdefaultecon":
+                    case "setdefaulteconomy":
+                    case "defaultecon":
+                    case "defaulteconomy": {
+                        if (args.length < 2) {
+                            sender.sendMessage(getMessage("error.argument.economy"));
+                            return false;
+                        }
+
+                        Economy econ = Economy.getEconomy(args[1]);
+
+                        if (econ == null) {
+                            sender.sendMessage(getMessage("error.economy.inexistent"));
+                            return false;
+                        }
+
+                        setDefaultEconomy(sender, econ);
+                        break;
+                    }
+                }
+
+                break;
+            }
+            case "businessleaderboard": {
+                if (!(sender instanceof Player)) return false;
+                Player p = (Player) sender;
+
+                businessLeaderboard(p, "ratings");
+                break;
+            }
             default: {
                 sender.sendMessage(getMessage("error.argument"));
                 return false;
@@ -1458,6 +1615,173 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
             }
             case "rate": {
                 if (args.length == 1) suggestions.addAll(Business.getBusinesses().stream().map(Business::getName).collect(Collectors.toSet()));
+                return suggestions;
+            }
+            case "novaconfig": {
+                switch (args.length) {
+                    case 1: {
+                        suggestions.addAll(Arrays.asList("reload", "naturalcauses", "rl", "nc", "ncauses", "naturalc",
+                                "business", "businesses", "bc", "bounty", "bounties"));
+                        break;
+                    }
+                    case 2: {
+                        switch (args[0].toLowerCase()) {
+                            case "naturalcauses":
+                            case "nc":
+                            case "ncauses":
+                            case "naturalc": {
+                                suggestions.addAll(Arrays.asList("add, view, modifier"));
+                                break;
+                            }
+                            case "business":
+                            case "businesses":
+                            case "bs": {
+                                suggestions.addAll(Arrays.asList("advertising", "ads"));
+                                break;
+                            }
+                            case "bounty":
+                            case "bounties": {
+                                suggestions.addAll(Arrays.asList("enable", "on", "disable", "off", "broadcast"));
+                                break;
+                            }
+                        }
+                    }
+                    case 3: {
+                        switch (args[0].toLowerCase()) {
+                            case "naturalcauses":
+                            case "nc":
+                            case "ncauses":
+                            case "naturalc": {
+                                switch (args[1].toLowerCase()) {
+                                    case "set":
+                                    case "view": {
+                                        suggestions.addAll(Arrays.asList("enchant_bonus", "max_increase", "kill_increase", "kill_increase_chance", "kill_increase_indirect", "fishing_increase",
+                                                "fishing_increase_chance", "mining_increase", "mining_increase_chance", "farming_increase", "farming_increase_chance",
+                                                "death_decrease", "death_divider"));
+                                        break;
+                                    }
+                                    case "modifier":
+                                    case "mod": {
+                                        suggestions.addAll(Arrays.asList("add", "remove", "delete"));
+                                        break;
+                                    }
+                                }
+
+                                break;
+                            }
+                            case "business":
+                            case "businesses":
+                            case "bs": {
+                                switch (args[1].toLowerCase()) {
+                                    case "advertising":
+                                    case "ads": {
+                                        suggestions.addAll(Arrays.asList("enable", "on", "disable", "off", "clickreward"));
+                                        break;
+                                    }
+                                }
+                            }
+                            case "bounty":
+                            case "bounties": {
+                                switch (args[1].toLowerCase()) {
+                                    case "broadcast": {
+                                        suggestions.addAll(Arrays.asList("true", "false"));
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        break;
+                    }
+                    case 4: {
+                        switch (args[0].toLowerCase()) {
+                            case "naturalcauses":
+                            case "nc":
+                            case "ncauses":
+                            case "naturalc": {
+                                switch (args[1].toLowerCase()) {
+                                    case "modifier":
+                                    case "mod": {
+                                        suggestions.addAll(Arrays.asList("killing", "mining", "farming", "fishing", "death"));
+                                        return suggestions;
+                                    }
+                                }
+                                break;
+                            }
+                        }
+                        break;
+                    }
+                    case 5: {
+                        switch (args[0].toLowerCase()) {
+                            case "naturalcauses":
+                            case "nc":
+                            case "ncauses":
+                            case "naturalc": {
+                                switch (args[1].toLowerCase()) {
+                                    case "modifier":
+                                    case "mod": {
+                                        switch (args[2].toLowerCase()) {
+                                            case "add":
+                                            case "create": {
+                                                FileConfiguration config = NovaConfig.getConfig();
+
+                                                switch (args[3].toLowerCase()) {
+                                                    case "mining": return Arrays.stream(Material.values())
+                                                            .filter(Material::isBlock)
+                                                            .filter(m -> m != Material.AIR)
+                                                            .map(m -> m.name().toLowerCase())
+                                                            .collect(Collectors.toList());
+                                                    case "farming": return Arrays.stream(Material.values())
+                                                            .filter(w::isCrop)
+                                                            .map(m -> m.name().toLowerCase())
+                                                            .collect(Collectors.toList());
+                                                    case "fishing": {
+                                                        List<String> values = new ArrayList<>();
+                                                        values.addAll(Arrays.stream(Material.values())
+                                                                .filter(w::isItem)
+                                                                .map(m -> m.name().toLowerCase())
+                                                                .collect(Collectors.toList()));
+                                                        values.addAll(Arrays.stream(EntityType.values())
+                                                                .filter(EntityType::isAlive)
+                                                                .filter(e -> LivingEntity.class.isAssignableFrom(e.getEntityClass()))
+                                                                .map(e -> e.name().toLowerCase())
+                                                                .collect(Collectors.toList()));
+
+                                                        return values;
+                                                    }
+                                                    case "killing": return Arrays.stream(EntityType.values())
+                                                            .filter(EntityType::isAlive)
+                                                            .filter(e -> LivingEntity.class.isAssignableFrom(e.getEntityClass()))
+                                                            .map(e -> e.name().toLowerCase())
+                                                            .collect(Collectors.toList());
+                                                    case "death": return Arrays.stream(EntityDamageEvent.DamageCause.values())
+                                                            .map(d -> d.name().toLowerCase())
+                                                            .collect(Collectors.toList());
+                                                    default: return new ArrayList<>();
+                                                }
+                                            }
+                                            case "view":
+                                            case "remove":
+                                            case "delete": {
+                                                switch (args[3].toLowerCase()) {
+                                                    case "mining": return modkeys.apply("NaturalCauses.Modifiers.Mining");
+                                                    case "farming": return modkeys.apply("NaturalCauses.Modifiers.Farming");
+                                                    case "fishing": return modkeys.apply("NaturalCauses.Modifiers.Fishing");
+                                                    case "killing": return modkeys.apply("NaturalCauses.Modifiers.Killing");
+                                                    case "death": return modkeys.apply("NaturalCauses.Modifiers.Death");
+                                                    default: return new ArrayList<>();
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                break;
+                            }
+                        }
+                        break;
+                    }
+                }
+
+
                 return suggestions;
             }
         }

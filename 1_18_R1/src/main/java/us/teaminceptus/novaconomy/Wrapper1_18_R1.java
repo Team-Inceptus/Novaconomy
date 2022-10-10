@@ -9,6 +9,8 @@ import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.Ageable;
+import org.bukkit.block.data.BlockData;
+import org.bukkit.block.data.type.Fire;
 import org.bukkit.craftbukkit.v1_18_R1.inventory.CraftItemStack;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -149,6 +151,27 @@ public final class Wrapper1_18_R1 implements Wrapper {
     }
 
     @Override
+    public int getNBTInt(org.bukkit.inventory.ItemStack item, String key) {
+        ItemStack nmsitem = CraftItemStack.asNMSCopy(item);
+        CompoundTag tag = nmsitem.getOrCreateTag();
+        CompoundTag novaconomy = tag.getCompound(ROOT);
+
+        return novaconomy.getInt(key);
+    }
+
+    @Override
+    public org.bukkit.inventory.ItemStack setNBT(org.bukkit.inventory.ItemStack item, String key, int value) {
+        ItemStack nmsitem = CraftItemStack.asNMSCopy(item);
+        CompoundTag tag = nmsitem.getOrCreateTag();
+        CompoundTag novaconomy = tag.getCompound(ROOT);
+
+        novaconomy.putInt(key, value);
+        tag.put(ROOT, novaconomy);
+        nmsitem.setTag(tag);
+        return CraftItemStack.asBukkitCopy(nmsitem);
+    }
+
+    @Override
     public boolean isAgeable(Block b) {
         return b.getBlockData() instanceof Ageable;
     }
@@ -156,5 +179,11 @@ public final class Wrapper1_18_R1 implements Wrapper {
     @Override
     public void removeItem(PlayerInteractEvent e) {
         e.getPlayer().getEquipment().setItem(e.getHand(), null);
+    }
+
+    @Override
+    public boolean isCrop(Material m) {
+        BlockData d = m.createBlockData();
+        return d instanceof Ageable && !(d instanceof Fire);
     }
 }

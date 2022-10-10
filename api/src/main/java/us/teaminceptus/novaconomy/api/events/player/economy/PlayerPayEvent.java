@@ -1,6 +1,7 @@
 package us.teaminceptus.novaconomy.api.events.player.economy;
 
 import org.bukkit.entity.Player;
+import org.jetbrains.annotations.NotNull;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 
 /**
@@ -25,9 +26,10 @@ public class PlayerPayEvent extends PlayerChangeBalanceEvent {
     }
 
     /**
-     * Get the person that is paying the target ({@link PlayerChangeBalanceEvent#getPlayer()})
+     * Get the person that is paying {@link PlayerChangeBalanceEvent#getPlayer()}.
      * @return Player that is paying
      */
+    @NotNull
     public Player getPayer() {
         return this.payer;
     }

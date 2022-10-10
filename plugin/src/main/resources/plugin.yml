@@ -1,11 +1,11 @@
 name: ${project.name}
-version: 1.6.1
+version: 1.6.2
 description: ${project.description}
 author: Team Inceptus
 website: ${project.url}
 api-version: 1.13
 main: us.teaminceptus.novaconomy.Novaconomy
-softdepend: [PlaceholderAPI, Vault, Treasury]
+softdepend: [PlaceholderAPI, Vault, Treasury, PlugMan, PlugManX]
 permissions:
   novaconomy.*:
     description: Access to all Novaconomy Actions
@@ -19,8 +19,8 @@ permissions:
     description: Access to all Admin Actions
     default: op
 
-  novaconomy.admin.reloadconfig:
-    description: Reload Novaconomy configuration
+  novaconomy.admin.config:
+    description: Reload and Modify Novaconomy configuration
     defualt: op
     children:
       novaconomy.admin: true
@@ -107,7 +107,7 @@ permissions:
     children:
       novaconomy.user: true
   novaconomy.user.leaderboard:
-    description: Access to view the balance leaderboard
+    description: Access to view leaderboards
     default: true
     children:
       novaconomy.user: true

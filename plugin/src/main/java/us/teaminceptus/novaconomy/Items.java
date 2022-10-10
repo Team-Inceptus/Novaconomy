@@ -1,6 +1,5 @@
 package us.teaminceptus.novaconomy;
 
-import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
@@ -130,16 +129,8 @@ final class Items {
 
     }
 
-    private static String getServerVersion() {
-        return  Bukkit.getServer().getClass().getPackage().getName().split("\\.")[3].substring(1);
-    }
-
     private static Wrapper getWrapper() {
-        try {
-            return (Wrapper) Class.forName(Novaconomy.class.getPackage().getName() + ".Wrapper" + getServerVersion()).getConstructor().newInstance();
-        } catch (Exception e) {
-            throw new IllegalStateException("Wrapper not Found: " + getServerVersion());
-        }
+        return Wrapper.getWrapper();
     }
 
 }

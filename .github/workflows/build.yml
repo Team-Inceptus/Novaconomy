@@ -23,7 +23,7 @@ jobs:
           java-version: '17'
           cache: 'maven'
       - name: Maven Setup
-        run: mvn clean install
+        run: mvn clean install -DskipTests
       - name: Maven Information
         run: mvn dependency:tree -Ddetail=true
 
@@ -76,7 +76,7 @@ jobs:
           cache: 'maven'
       - name: Build with Maven
         run: |
-          mvn clean install -pl "!1_17_R1,!1_18_R1,!1_18_R2,!1_19_R1"
+          mvn clean package -pl "api,abstraction,plugin,1_8_R1,1_8_R2,1_8_R3,1_9_R1,1_9_R2,1_10_R1,1_11_R1,1_12_R1,1_13_R1,1_13_R2,1_14_R1,1_15_R1,1_16_R1,1_16_R2,1_16_R3" -DskipTests -Dmaven.javadoc.skip=true
   build-16:
     runs-on: ubuntu-latest
     needs: setup
@@ -93,7 +93,7 @@ jobs:
           cache: 'maven'
       - name: Build with Maven
         run: |
-          mvn clean install -pl "!1_18_R1,!1_18_R2,!1_19_R1"
+          mvn clean package -pl "api,abstraction,plugin,1_8_R1,1_8_R2,1_8_R3,1_9_R1,1_9_R2,1_10_R1,1_11_R1,1_12_R1,1_13_R1,1_13_R2,1_14_R1,1_15_R1,1_16_R1,1_16_R2,1_16_R3,1_17_R1" -DskipTests -Dmaven.javadoc.skip=true
 
   build-17:
     runs-on: ubuntu-latest
@@ -115,7 +115,7 @@ jobs:
           cache: 'maven'
       - name: Build with Maven
         run: |
-          mvn clean install
+          mvn clean package -DskipTests -Dmaven.javadoc.skip=true
 
   deploy:
     runs-on: ubuntu-latest
@@ -132,7 +132,7 @@ jobs:
           cache: 'maven'
 
       - name: Build JavaDocs
-        run: mvn package -pl "api"
+        run: mvn package -pl "api" -DskipTests
 
       - name: Deploy JavaDoc
         run: bash javadoc.sh ${GITHUB_SHA::7}
