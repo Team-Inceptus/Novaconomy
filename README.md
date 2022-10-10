@@ -34,7 +34,7 @@ With the freedom to have your own symbols, icons, conversion rates, and even int
   - Setting Descriptions
   - Korean Translation
  
-**Stock Markets are currently planned for 1.6.2, and will be released in the next few weeks.**
+**Stock Markets are currently planned for _1.7.0_, and will be released in the next few weeks.**
 ### 👔 1.5.0 Update: Outstanding Organizations
 - New Features:
   - Business Rating System, allowing others to rate your business.
