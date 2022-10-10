@@ -23,6 +23,7 @@ Notifications: true
 # - sv (Swedish / Svenska)
 # - ko (Korean / 한국어)
 # - id (Indonesian / Indonesia)
+# - ru (Russian / Русский)
 Language: en
 
 # Natural Causes to gain or lose money

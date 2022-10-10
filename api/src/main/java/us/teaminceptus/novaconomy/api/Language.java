@@ -65,6 +65,10 @@ public enum Language {
      * Represents Indonesian / Indonesia
      */
     INDONESIAN("_id"),
+    /**
+     * Represents Russian / Русский
+     */
+    RUSSIAN("_ru"),
 
     ;
 
