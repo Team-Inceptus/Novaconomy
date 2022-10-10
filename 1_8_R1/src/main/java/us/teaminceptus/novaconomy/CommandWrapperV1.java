@@ -170,44 +170,39 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                 Player p = (Player) sender;
                 if (!economyCount(p)) return false;
 
-                try {
-                    if (args.length < 1) {
-                        p.sendMessage(getMessage("error.argument.player"));
-                        return false;
-                    }
+                if (args.length < 1) {
+                    p.sendMessage(getMessage("error.argument.player"));
+                    return false;
+                }
 
-                    if (Bukkit.getPlayer(args[0]) == null) {
-                        p.sendMessage(getMessage("error.argument.player"));
-                        return false;
-                    }
+                if (Bukkit.getPlayer(args[0]) == null) {
+                    p.sendMessage(getMessage("error.argument.player"));
+                    return false;
+                }
 
-                    Player target = Bukkit.getPlayer(args[0]);
+                Player target = Bukkit.getPlayer(args[0]);
 
-                    if (args.length < 2) {
+                Economy econ = null;
+
+                if (args.length >= 2) {
+                    econ = Economy.getEconomy(args[1]);
+
+                    if (econ == null) {
                         p.sendMessage(getMessage("error.argument.economy"));
                         return false;
                     }
+                }
 
-                    if (!Economy.exists(args[1])) {
-                        p.sendMessage(getMessage("error.argument.economy"));
-                        return false;
-                    }
+                double amount = 0;
 
-                    Economy econ = Economy.getEconomy(args[1]);
-
-                    if (args.length < 3) {
-                        p.sendMessage(getMessage("error.argument.pay_amount"));
-                        return false;
-                    }
-
-                    double amount = Double.parseDouble(args[2]);
-
-                    pay(p, target, econ, amount);
+                if (args.length >= 3) try {
+                    amount = Double.parseDouble(args[2]);
                 } catch (NumberFormatException e) {
                     p.sendMessage(getMessage("error.argument.pay_amount"));
                     return false;
                 }
 
+                pay(p, target, econ, amount);
                 break;
             }
             case "economy": {
@@ -244,7 +239,16 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                             }
 
                             Material icon = Material.valueOf(args[3].replace("minecraft:", "").toUpperCase());
-                            double scale = Double.parseDouble(args[4]);
+
+                            double scale = 1;
+
+                            if (args.length >= 5) try {
+                                scale = Double.parseDouble(args[4]);
+                            } catch (NumberFormatException e) {
+                                sender.sendMessage(getMessage("error.argument.scale"));
+                                return false;
+                            }
+
                             boolean naturalIncrease = true;
 
                             if (args.length >= 6) {
@@ -1616,7 +1620,8 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
             case "novaconfig": {
                 switch (args.length) {
                     case 1: {
-                        suggestions.addAll(Arrays.asList("reload", "naturalcauses", "rl", "nc", "ncauses", "naturalc"));
+                        suggestions.addAll(Arrays.asList("reload", "naturalcauses", "rl", "nc", "ncauses", "naturalc",
+                                "business", "businesses", "bc", "bounty", "bounties"));
                         break;
                     }
                     case 2: {
@@ -1626,6 +1631,17 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                             case "ncauses":
                             case "naturalc": {
                                 suggestions.addAll(Arrays.asList("add, view, modifier"));
+                                break;
+                            }
+                            case "business":
+                            case "businesses":
+                            case "bs": {
+                                suggestions.addAll(Arrays.asList("advertising", "ads"));
+                                break;
+                            }
+                            case "bounty":
+                            case "bounties": {
+                                suggestions.addAll(Arrays.asList("enable", "on", "disable", "off", "broadcast"));
                                 break;
                             }
                         }
@@ -1652,6 +1668,26 @@ public final class CommandWrapperV1 implements CommandWrapper, TabExecutor {
                                 }
 
                                 break;
+                            }
+                            case "business":
+                            case "businesses":
+                            case "bs": {
+                                switch (args[1].toLowerCase()) {
+                                    case "advertising":
+                                    case "ads": {
+                                        suggestions.addAll(Arrays.asList("enable", "on", "disable", "off", "clickreward"));
+                                        break;
+                                    }
+                                }
+                            }
+                            case "bounty":
+                            case "bounties": {
+                                switch (args[1].toLowerCase()) {
+                                    case "broadcast": {
+                                        suggestions.addAll(Arrays.asList("true", "false"));
+                                        break;
+                                    }
+                                }
                             }
                         }
                         break;

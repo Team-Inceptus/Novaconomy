@@ -207,7 +207,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
     @Command({"pay", "econpay", "novapay", "givemoney", "givebal"})
     @Description("Pay another user")
     @CommandPermission("novaconomy.user.pay")
-    public void pay(Player p, Player target, Economy economy, @Range(min = 0.01) double amount) { CommandWrapper.super.pay(p, target, economy, amount); }
+    public void pay(Player p, Player target, @Optional Economy economy, @Default("0") @Range(min = 0) double amount) { CommandWrapper.super.pay(p, target, economy, amount); }
 
     @Override
     @Command({"convert", "conv"})
@@ -593,6 +593,8 @@ public final class CommandWrapperV2 implements CommandWrapper {
             wrapper.setDefaultEconomy(sender, econ);
         }
 
+        // NaturalCauses Configuration
+
         @Subcommand({"naturalcauses view", "ncauses view", "naturalc view", "nc view"})
         @AutoComplete("@natural_causes *")
         public void viewNaturalCauses(CommandSender sender, String key) {
@@ -630,6 +632,47 @@ public final class CommandWrapperV2 implements CommandWrapper {
         @AutoComplete("@modifiers @modifier_keys_existing")
         public void viewCausesModifier(CommandSender sender, String type, String key) {
             wrapper.viewCausesModifier(sender, type, key);
+        }
+
+        // Business Configuration
+
+        @Subcommand({"business advertising enable", "businesses advertising enable", "bs advertising enable",
+        "business ads enable", "businesses ads enable", "bs ads enable",
+        "business advertising on", "businesses advertising on", "bs advertising on",
+        "business ads on", "businesses ads on", "bs ads on"})
+        public void enableBusinessAds(CommandSender sender) {
+            wrapper.basicConfig(sender, "Business.Advertising.Enabled", true);
+        }
+
+        @Subcommand({"business advertising disable", "businesses advertising disable", "bs advertising disable",
+        "business ads disable", "businesses ads disable", "bs ads disable",
+        "business advertising off", "businesses advertising off", "bs advertising off",
+        "business ads off", "businesses ads off", "bs ads off"})
+        public void disableBusinessAds(CommandSender sender) {
+            wrapper.basicConfig(sender, "Business.Advertising.Enabled", false);
+        }
+
+        @Subcommand({"business advertising clickreward", "businesses advertising clickreward", "bs advertising clickreward",
+        "business ads clickreward", "businesses ads clickreward", "bs ads clickreward"})
+        public void setBusinessAdsClickReward(CommandSender sender, @Range(min = 0) double reward) {
+            wrapper.basicConfig(sender, "Business.Advertising.ClickReward", reward);
+        }
+
+        // Bounties Configuration
+
+        @Subcommand({"bounties enable", "bounty enable", "bounties on", "bounty on"})
+        public void enableBounties(CommandSender sender) {
+            wrapper.basicConfig(sender, "Bounties.Enabled", true);
+        }
+
+        @Subcommand({"bounties disable", "bounty disable", "bounties off", "bounty off"})
+        public void disableBounties(CommandSender sender) {
+            wrapper.basicConfig(sender, "Bounties.Enabled", false);
+        }
+
+        @Subcommand({"bounties broadcast", "bounty broadcast"})
+        public void setBountyBroadcast(CommandSender sender, boolean broadcast) {
+            wrapper.basicConfig(sender, "Bounties.Broadcast", broadcast);
         }
     }
 }
