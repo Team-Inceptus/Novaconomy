@@ -60,6 +60,7 @@ import us.teaminceptus.novaconomy.api.events.player.PlayerMissTaxEvent;
 import us.teaminceptus.novaconomy.api.events.player.PlayerRateBusinessEvent;
 import us.teaminceptus.novaconomy.api.events.player.PlayerSettingChangeEvent;
 import us.teaminceptus.novaconomy.api.events.player.economy.PlayerChangeBalanceEvent;
+import us.teaminceptus.novaconomy.api.events.player.economy.PlayerPayEvent;
 import us.teaminceptus.novaconomy.api.events.player.economy.PlayerPurchaseProductEvent;
 import us.teaminceptus.novaconomy.api.player.Bounty;
 import us.teaminceptus.novaconomy.api.player.NovaPlayer;
@@ -94,10 +95,11 @@ import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.BL_CATEGORIE
  */
 public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
-	private static final String ECON_TAG = "economy";
-	private static final String AMOUNT_TAG = "amount";
+	private static final String ECON_TAG = CommandWrapper.ECON_TAG;
+	private static final String AMOUNT_TAG = CommandWrapper.AMOUNT_TAG;
 	private static final String PRICE_TAG = "price";
 	private static final String PRODUCT_TAG = "product";
+	private static final String BUSINESS_TAG = CommandWrapper.BUSINESS_TAG;
 
 	/**
 	 * Main Novaconomy Constructor
@@ -264,7 +266,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 					if (isIgnored(p, id)) return;
 					if (!entry.containsKey(id) && isIgnored(p, category)) return;
 
-					double fIAmount = iAmount;
+					final double fIAmount = iAmount;
 					String fCategory = category;
 
 					new BukkitRunnable() {
@@ -295,77 +297,88 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 			if (e.getBlock().getDrops().size() < 1) return;
 
 			Block b = e.getBlock();
-			Player p = e.getPlayer();
-
 			String id = b.getType().name();
 
-			double add = r.nextInt(3) + e.getExpToDrop();
-			if (p.getEquipment().getItemInHand() != null && plugin.hasEnchantBonus()) {
-				ItemStack hand = p.getEquipment().getItemInHand();
-				if (hand.hasItemMeta() && hand.getItemMeta().hasEnchant(Enchantment.LOOT_BONUS_BLOCKS))
-					add += hand.getItemMeta().getEnchantLevel(Enchantment.LOOT_BONUS_BLOCKS) * (r.nextInt(3) + 4);
-			}
+			Player p = e.getPlayer();
 
-			String mod = w.isAgeable(b) ? "Farming" : "Mining";
-			if (ModifierReader.getModifier(mod) == null) return;
-			Map<String, Set<Map<Economy, Double>>> entry = ModifierReader.getModifier(mod);
-
-			String tagName = null;
-			boolean tagIgnore = false;
-
-			try {
-				Class<?> keyed = Class.forName("org.bukkit.Keyed");
-				Class<?> tag = Class.forName("org.bukkit.Tag");
-
-				for (Field f : tag.getFields()) {
-					if (!keyed.isInstance(b.getType())) break;
-
-					String name = f.getName();
-					if (name.startsWith("ENTITY_TYPES")) continue;
-					if (name.startsWith("REGISTRY")) continue;
-
-					if (!tag.isAssignableFrom(f.getType())) continue;
-
-					if (isIgnored(p, name)) {
-						tagIgnore = true;
-						break;
+			new BukkitRunnable() {
+				@Override
+				public void run() {
+					double add = r.nextInt(3) + e.getExpToDrop();
+					if (p.getEquipment().getItemInHand() != null && plugin.hasEnchantBonus()) {
+						ItemStack hand = p.getEquipment().getItemInHand();
+						if (hand.hasItemMeta() && hand.getItemMeta().hasEnchant(Enchantment.LOOT_BONUS_BLOCKS))
+							add += hand.getItemMeta().getEnchantLevel(Enchantment.LOOT_BONUS_BLOCKS) * (r.nextInt(3) + 4);
 					}
 
-					if (!entry.containsKey(name)) continue;
+					String mod = w.isAgeable(b) ? "Farming" : "Mining";
+					if (ModifierReader.getModifier(mod) == null) return;
+					Map<String, Set<Map<Economy, Double>>> entry = ModifierReader.getModifier(mod);
 
-					Method isTagged = tag.getDeclaredMethod("isTagged", keyed);
-					isTagged.setAccessible(true);
+					String tagName = null;
+					boolean tagIgnore = false;
 
-					Object tagObj = f.get(null);
-					if (tagObj == null) continue;
+					try {
+						Class<?> keyed = Class.forName("org.bukkit.Keyed");
+						Class<?> tag = Class.forName("org.bukkit.Tag");
 
-					if ((boolean) isTagged.invoke(tagObj, b.getType())) if (entry.containsKey(name)) {
-						tagName = name;
-						break;
+						for (Field f : tag.getFields()) {
+							if (!keyed.isInstance(b.getType())) break;
+
+							String name = f.getName();
+							if (name.startsWith("ENTITY_TYPES")) continue;
+							if (name.startsWith("REGISTRY")) continue;
+
+							if (!tag.isAssignableFrom(f.getType())) continue;
+
+							if (isIgnored(p, name)) {
+								tagIgnore = true;
+								break;
+							}
+
+							if (!entry.containsKey(name)) continue;
+
+							Method isTagged = tag.getDeclaredMethod("isTagged", keyed);
+							isTagged.setAccessible(true);
+
+							Object tagObj = f.get(null);
+							if (tagObj == null) continue;
+
+							if ((boolean) isTagged.invoke(tagObj, b.getType())) if (entry.containsKey(name)) {
+								tagName = name;
+								break;
+							}
+						}
+					} catch (ClassNotFoundException | NoSuchMethodException | ClassCastException ignored) {
+					} catch (Exception err) {
+						NovaConfig.print(err);
 					}
+
+					if (isIgnored(p, id)) return;
+					if (!entry.containsKey(id) && tagIgnore) return;
+
+					int chance = mod.equalsIgnoreCase("Farming") ? getFarmingChance() : getMiningChance();
+
+					if (r.nextInt(100) < chance) if (entry.containsKey(id) || tagName != null) {
+						final String ftn = tagName;
+						new BukkitRunnable() {
+							@Override
+							public void run() {
+								Set<Map<Economy, Double>> value = entry.getOrDefault(id, entry.get(ftn));
+								List<String> msgs = new ArrayList<>();
+								for (Map<Economy, Double> map : value)
+									for (Economy econ : map.keySet()) {
+										double amount = map.get(econ);
+										if (amount <= 0) continue;
+										msgs.add(callAddBalanceEvent(p, econ, amount, false));
+									}
+
+								sendUpdateActionbar(p, msgs);
+							}
+						}.runTask(plugin);
+					} else update(p, add);
 				}
-			} catch (ClassNotFoundException | NoSuchMethodException | ClassCastException ignored) {}
-			catch (Exception err) {
-				NovaConfig.print(err);
-			}
-
-			if (isIgnored(p, id)) return;
-			if (!entry.containsKey(id) && tagIgnore) return;
-
-			int chance = mod.equalsIgnoreCase("Farming") ? getFarmingChance() : getMiningChance();
-
-			if (r.nextInt(100) < chance) if (entry.containsKey(id) || tagName != null) {
-				Set<Map<Economy, Double>> value = entry.getOrDefault(id, entry.get(tagName));
-				List<String> msgs = new ArrayList<>();
-				for (Map<Economy, Double> map : value)
-					for (Economy econ : map.keySet()) {
-						double amount = map.get(econ);
-						if (amount <= 0) continue;
-						msgs.add(callAddBalanceEvent(p, econ, amount, false));
-					}
-
-				sendUpdateActionbar(p, msgs);
-			} else update(p, add);
+			}.runTaskAsynchronously(plugin);
 		}
 		
 		@EventHandler
@@ -651,7 +664,6 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
 	private static final String SETTING_TAG = "setting";
 
-	private static final String BUSINESS_TAG = "business";
 	private static final Map<String, Consumer<InventoryClickEvent>> CLICK_ITEMS = new HashMap<String, Consumer<InventoryClickEvent>>() {{
 			put("economy_scroll", e -> {
 				ItemStack item = e.getCurrentItem();
@@ -1054,8 +1066,8 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				Inventory inv = e.getView().getTopInventory();
 
 				ItemStack takeItem = inv.getItem(12);
-				Economy takeEcon = Economy.getEconomy(UUID.fromString(w.getNBTString(takeItem, ECON_TAG)));
-				double take = w.getNBTDouble(takeItem, AMOUNT_TAG);
+				Economy takeEcon = getEconomy(takeItem);
+				double take = getAmount(takeItem);
 				if (np.getBalance(takeEcon) < take) {
 					p.closeInventory();
 					p.sendMessage(String.format(getMessage("error.economy.invalid_amount"), Novaconomy.get("constants.convert")));
@@ -1071,8 +1083,8 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				}
 
 				ItemStack giveItem = inv.getItem(14);
-				Economy giveEcon = Economy.getEconomy(UUID.fromString(w.getNBTString(giveItem, ECON_TAG)));
-				double give = w.getNBTDouble(inv.getItem(14), AMOUNT_TAG);
+				Economy giveEcon = getEconomy(giveItem);
+				double give = getAmount(inv.getItem(14));
 
 				double takeBal = np.getBalance(takeEcon);
 				PlayerChangeBalanceEvent event1 = new PlayerChangeBalanceEvent(p, takeEcon, take, takeBal, takeBal - take, false);
@@ -1296,7 +1308,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				ItemStack item = e.getCurrentItem();
 
 				double price = w.getNBTDouble(item, PRICE_TAG);
-				Economy econ = Economy.getEconomy(UUID.fromString(w.getNBTString(item, ECON_TAG)));
+				Economy econ = getEconomy(item);
 				BusinessProduct pr = (BusinessProduct) w.getNBTProduct(item, PRODUCT_TAG);
 				Business b = pr.getBusiness();
 
@@ -1328,14 +1340,14 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
 				Business b = getBusiness(item);
 				boolean add = w.getNBTBoolean(item, "add");
-				double amount = w.getNBTDouble(item, AMOUNT_TAG);
+				double amount = getAmount(item);
 				amount = add ? amount : -amount;
 
 				ItemStack econWheel = inv.getItem(31);
 				Economy econ = Economy.getEconomy(w.getNBTString(econWheel, ECON_TAG));
 
 				ItemStack confirm = inv.getItem(39);
-				double currentTotal = w.getNBTDouble(confirm, AMOUNT_TAG);
+				double currentTotal = getAmount(confirm);
 				double newAmount = Math.max(currentTotal + amount, 0);
 				confirm = w.setNBT(confirm, AMOUNT_TAG, newAmount);
 				confirm = w.setNBT(confirm, BUSINESS_TAG, b.getUniqueId().toString());
@@ -1357,7 +1369,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 				Economy econ = Economy.getEconomy(w.getNBTString(item, ECON_TAG));
 
 				ItemStack confirm = inv.getItem(39);
-				double currentTotal = w.getNBTDouble(confirm, AMOUNT_TAG);
+				double currentTotal = getAmount(confirm);
 
 				ItemStack total = inv.getItem(40).clone();
 				ItemMeta tMeta = total.getItemMeta();
@@ -1446,8 +1458,140 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
 				getCommandWrapper().businessLeaderboard(p, nextCategory);
 			});
+			put("economy:wheel:pay", e -> {
+				if (!(e.getWhoClicked() instanceof Player)) return;
+				get("economy:wheel").accept(e);
+
+				Player p = (Player) e.getWhoClicked();
+				NovaPlayer np = new NovaPlayer(p);
+				Inventory inv = e.getView().getTopInventory();
+				ItemStack item = e.getCurrentItem();
+
+				Economy econ = Economy.getEconomy(w.getNBTString(item, ECON_TAG));
+
+				ItemStack head1 = inv.getItem(10).clone();
+				ItemMeta h1Meta = head1.getItemMeta();
+				h1Meta.setLore(Collections.singletonList(ChatColor.GOLD + String.format("%,.2f", np.getBalance(econ)) + econ.getSymbol()));
+				head1.setItemMeta(h1Meta);
+				inv.setItem(10, head1);
+
+				ItemStack currentAmountO = inv.getItem(40);
+				double amount = getAmount(currentAmountO);
+
+				if (np.getBalance(econ) < amount) amount = np.getBalance(econ);
+
+				ItemStack currentAmount = currentAmountO.clone();
+				currentAmount.setType(econ.getIconType());
+
+				ItemMeta cMeta = currentAmount.getItemMeta();
+				cMeta.setDisplayName(ChatColor.GOLD + String.format("%,.2f", amount) + econ.getSymbol());
+				currentAmount.setItemMeta(cMeta);
+
+				currentAmount = w.setNBT(currentAmount, ECON_TAG, econ.getUniqueId().toString());
+				currentAmount = w.setNBT(currentAmount, AMOUNT_TAG, amount);
+
+				inv.setItem(40, currentAmount);
+				NovaSound.ENTITY_ARROW_HIT_PLAYER.play(p, 3F, 2F);
+			});
+			put("pay:amount", e -> {
+				if (!(e.getWhoClicked() instanceof Player)) return;
+				Inventory inv = e.getView().getTopInventory();
+				Player p = (Player) e.getWhoClicked();
+				NovaPlayer np = new NovaPlayer(p);
+
+				ItemStack item = e.getCurrentItem();
+
+				boolean add = w.getNBTBoolean(item, "add");
+				double amount = getAmount(item) * (add ? 1 : -1);
+
+				ItemStack currentAmountO = inv.getItem(40);
+				double cAmount = getAmount(currentAmountO);
+				Economy econ = getEconomy(currentAmountO);
+
+				double bal = np.getBalance(econ);
+
+				final double newAmount;
+				final NovaSound sound;
+
+				if (amount + cAmount > bal) {
+					newAmount = bal;
+					sound = NovaSound.BLOCK_NOTE_BLOCK_PLING;
+				} else if (amount + cAmount < 0) {
+					newAmount = 0;
+					sound = NovaSound.BLOCK_NOTE_BLOCK_PLING;
+				} else {
+					newAmount = amount + cAmount;
+					sound = NovaSound.ENTITY_ARROW_HIT_PLAYER;
+				}
+
+				ItemStack currentAmount = currentAmountO.clone();
+				ItemMeta cMeta = currentAmount.getItemMeta();
+				cMeta.setDisplayName(ChatColor.GOLD + String.format("%,.2f", newAmount) + econ.getSymbol());
+				currentAmount.setItemMeta(cMeta);
+				currentAmount = w.setNBT(currentAmount, AMOUNT_TAG, newAmount);
+				currentAmount = w.setNBT(currentAmount, ECON_TAG, econ.getUniqueId().toString());
+				inv.setItem(40, currentAmount);
+
+				sound.play(p, 3F, sound == NovaSound.BLOCK_NOTE_BLOCK_PLING ? 0F : (add ? 2F : 0F));
+			});
+			put("pay:confirm", e -> {
+				if (!(e.getWhoClicked() instanceof Player)) return;
+				Inventory inv = e.getView().getTopInventory();
+				final Player p = (Player) e.getWhoClicked();
+				final NovaPlayer np = new NovaPlayer(p);
+
+				ItemStack item = e.getCurrentItem();
+				final Player target = Bukkit.getPlayer(UUID.fromString(w.getNBTString(item, "target")));
+				final NovaPlayer nt = new NovaPlayer(target);
+
+				ItemStack currentAmountO = inv.getItem(40);
+				Economy econ = getEconomy(currentAmountO);
+				double amount = getAmount(currentAmountO);
+
+				if (amount <= 0) {
+					NovaSound.BLOCK_NOTE_BLOCK_PLING.play(p, 3F, 0F);
+					return;
+				}
+
+				if (np.getBalance(econ) < amount) {
+					p.sendMessage(getMessage("error.economy.invalid_amount_pay"));
+					NovaSound.BLOCK_NOTE_BLOCK_PLING.play(p, 3F, 0F);
+					return;
+				}
+
+				double bal = nt.getBalance(econ);
+
+				PlayerPayEvent event = new PlayerPayEvent(target, p, econ, amount, bal, bal + amount);
+				Bukkit.getPluginManager().callEvent(event);
+
+				if (event.isCancelled()) {
+					NovaSound.BLOCK_NOTE_BLOCK_PLING.play(p, 3F, 0F);
+					return;
+				}
+
+				np.remove(econ, amount);
+				p.closeInventory();
+				NovaSound.ENTITY_ARROW_HIT_PLAYER.play(p, 3F, 2F);
+
+				nt.add(econ, amount);
+
+				String amountS = String.format("%,.2f", amount) + econ.getSymbol();
+				String gameName = p.getDisplayName() == null ? p.getName() : p.getDisplayName();
+
+				target.sendMessage(String.format(getMessage("success.economy.receive"), amountS, gameName));
+				w.sendActionbar(target, String.format(Novaconomy.get("success.economy.receive_actionbar"), amountS, gameName));
+			});
 		}
 	};
+
+	private static double getAmount(ItemStack item) {
+		return w.getNBTDouble(item, AMOUNT_TAG);
+	}
+
+	@Nullable
+	private static Economy getEconomy(ItemStack item) {
+		return Economy.getEconomy(UUID.fromString(w.getNBTString(item, ECON_TAG)));
+	}
 
 	@Nullable
 	private static Business getBusiness(ItemStack item) {
@@ -1478,7 +1622,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		Inventory inv = e.getView().getTopInventory();
 
 		Business b = getBusiness(item);
-		double amount = w.getNBTDouble(item, AMOUNT_TAG);
+		double amount = getAmount(item);
 
 		ItemStack econWheel = inv.getItem(31);
 		Economy econ = Economy.getEconomy(w.getNBTString(econWheel, ECON_TAG));
@@ -1509,9 +1653,9 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		Player p = (Player) e.getWhoClicked();
 		ItemStack item = e.getCurrentItem();
 		Inventory inv = e.getView().getTopInventory();
-		Economy econ = Economy.getEconomy(UUID.fromString(w.getNBTString(item, ECON_TAG)));
+		Economy econ = getEconomy(item);
 		int oIndex = i == 14 ? 12 : 14;
-		Economy econ2 = Economy.getEconomy(UUID.fromString(w.getNBTString(inv.getItem(oIndex), ECON_TAG)));
+		Economy econ2 = getEconomy(inv.getItem(oIndex));
 
 		List<Economy> economies = Economy.getEconomies().stream()
 				.filter(economy -> !economy.equals(econ2))
@@ -1523,13 +1667,13 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 			ItemStack first = ec1.clone();
 			first = w.setID(first, "exchange:2");
 			first = w.setNBT(first, ECON_TAG, w.getNBTString(ec1, ECON_TAG));
-			first = w.setNBT(first, AMOUNT_TAG, w.getNBTDouble(ec1, AMOUNT_TAG));
+			first = w.setNBT(first, AMOUNT_TAG, getAmount(ec1));
 
 			ItemStack ec2 = inv.getItem(14);
 			ItemStack second = ec2.clone();
 			second = w.setID(second, "exchange:1");
 			second = w.setNBT(second, ECON_TAG, w.getNBTString(ec2, ECON_TAG));
-			second = w.setNBT(second, AMOUNT_TAG, w.getNBTDouble(ec2, AMOUNT_TAG));
+			second = w.setNBT(second, AMOUNT_TAG, getAmount(ec2));
 
 			inv.setItem(14, first);
 			inv.setItem(12, second);
@@ -1538,7 +1682,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		}
 
 		Economy next = economies.get(economies.indexOf(econ) + 1 >= economies.size() ? 0 : economies.indexOf(econ) + 1);
-		double amount = i == 12 ? w.getNBTDouble(item, AMOUNT_TAG) : Math.floor(econ2.convertAmount(next, w.getNBTDouble(inv.getItem(12), AMOUNT_TAG) * 100) / 100);
+		double amount = i == 12 ? getAmount(item) : Math.floor(econ2.convertAmount(next, getAmount(inv.getItem(12)) * 100) / 100);
 
 		ItemStack newItem = new ItemStack(next.getIcon());
 		ItemMeta meta = newItem.getItemMeta();
