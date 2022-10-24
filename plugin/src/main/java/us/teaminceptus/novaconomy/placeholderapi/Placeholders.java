@@ -1,9 +1,10 @@
-package us.teaminceptus.novaconomy;
+package us.teaminceptus.novaconomy.placeholderapi;
 
 import com.google.common.util.concurrent.AtomicDouble;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import org.bukkit.OfflinePlayer;
 import org.jetbrains.annotations.NotNull;
+import us.teaminceptus.novaconomy.Novaconomy;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.player.NovaPlayer;
@@ -12,28 +13,18 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 
-class Placeholders extends PlaceholderExpansion {
+/**
+ * Represents the Novaconomy PlaceholderAPI Expansion
+ */
+public class Placeholders extends PlaceholderExpansion {
 
     private final Novaconomy plugin;
 
-    Placeholders(Novaconomy plugin) {
+    public Placeholders(Novaconomy plugin) {
         this.plugin = plugin;
         register();
-    }
-
-    private static String parseArgument(String s) {
-        if (!s.contains("[")) return "";
-        if (!s.contains("]")) return "";
-        return s.replaceFirst("\\[", "").substring(0, s.lastIndexOf("]"));
-    }
-
-    private static String parseKey(String s) {
-        if (!s.contains("[")) return s;
-        if (!s.contains("]")) return s;
-        return s.split("\\[")[0];
     }
 
     private static final Map<String, Function<OfflinePlayer, String>> OFFLINE_PH = new HashMap<String, Function<OfflinePlayer, String>>() {{
@@ -89,17 +80,6 @@ class Placeholders extends PlaceholderExpansion {
         });
     }};
 
-    private static final Map<String, BiFunction<OfflinePlayer, String, String>> OFFLINE_ARG_PH = new HashMap<String, BiFunction<OfflinePlayer, String, String>>() {{
-        put("balance", (p, arg) -> {
-            if (Economy.exists(arg)) return String.valueOf(new NovaPlayer(p).getBalance(Economy.getEconomy(arg)));
-            return "0";
-        });
-        put("donated", (p, arg) -> {
-            if (Economy.exists(arg)) return String.valueOf(new NovaPlayer(p).getDonatedAmount(Economy.getEconomy(arg)));
-            return "0";
-        });
-    }};
-
     @Override
     public @NotNull String getIdentifier() {
         return plugin.getName().toLowerCase();
@@ -112,24 +92,19 @@ class Placeholders extends PlaceholderExpansion {
 
     @Override
     public @NotNull String getVersion() {
-        return "1.0.3";
+        return "1.7.0";
     }
 
     // Impl
 
     @Override
     public List<String> getPlaceholders() {
-        List<String> ph = new ArrayList<>();
-        ph.addAll(OFFLINE_PH.keySet());
-        ph.addAll(OFFLINE_ARG_PH.keySet());
-
-        return ph;
+        return new ArrayList<>(OFFLINE_PH.keySet());
     }
 
     @Override
     public String onRequest(OfflinePlayer p, String arg) {
         if (OFFLINE_PH.containsKey(arg)) return OFFLINE_PH.get(arg).apply(p);
-        if (OFFLINE_ARG_PH.containsKey(parseKey(arg))) return OFFLINE_ARG_PH.get(parseKey(arg)).apply(p, parseArgument(arg));
         return null;
     }
 }
