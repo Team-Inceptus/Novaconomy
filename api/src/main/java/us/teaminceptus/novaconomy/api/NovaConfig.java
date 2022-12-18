@@ -46,6 +46,14 @@ public interface NovaConfig  {
     static File getBusinessesFolder() { return new File(getDataFolder(), "businesses"); }
 
     /**
+     * Fetches the folder that all Corporations are stored in.
+     * @return Corporations Folder
+     * @since 1.7.0
+     */
+    @NotNull
+    static File getCorporationsFolder() { return new File(getDataFolder(), "corporations"); }
+
+    /**
      * Prints a Throwable in the Plugin's Namespace and Format.
      * @param t Throwable to print
      * @since 1.6.0
