@@ -11,7 +11,7 @@
     <name>Novaconomy-1.13.2</name>
 
     <properties>
-        <lamp.version>3.1.0</lamp.version>
+        <lamp.version>3.1.1</lamp.version>
     </properties>
 
     <build>
