@@ -7,11 +7,11 @@
         <version>1.6.2-SNAPSHOT</version>
     </parent>
 
-    <artifactId>novaconomy-1_19_R1</artifactId>
-    <name>Novaconomy-1.19.2</name>
+    <artifactId>novaconomy-1_19_R2</artifactId>
+    <name>Novaconomy-1.19.3</name>
 
     <properties>
-        <minecraft.version>1.19.2-R0.1-SNAPSHOT</minecraft.version>
+        <minecraft.version>1.19.3-R0.1-SNAPSHOT</minecraft.version>
     </properties>
 
     <build>
