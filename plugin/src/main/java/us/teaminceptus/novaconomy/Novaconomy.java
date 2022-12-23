@@ -171,7 +171,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		Set<PermissionAttachmentInfo> infos = p.getEffectivePermissions();
 		infos.forEach(perm -> state.compareAndSet(false, ignore.stream().anyMatch(perm.getPermission()::equals)));
 
-		if (Novaconomy.hasVault()) state.compareAndSet(false, VaultChat.isInGroup(ignore, p));
+		if (hasVault()) state.compareAndSet(false, VaultChat.isInGroup(ignore, p));
 
 		return state.get();
 	}
