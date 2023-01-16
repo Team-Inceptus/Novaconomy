@@ -58,7 +58,7 @@ public final class Bounty implements ConfigurationSerializable, Comparable<Bount
      */
     public boolean isOwner(@Nullable OfflinePlayer p) {
         if (p == null) return false;
-        return p.getUniqueId().equals(owner.getUniqueId());
+        return p.equals(owner);
     }
 
     /**
