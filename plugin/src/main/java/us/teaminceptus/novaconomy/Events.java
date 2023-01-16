@@ -173,11 +173,14 @@ class Events implements Listener {
     @EventHandler
     public void moneyIncrease(BlockBreakEvent e) {
         if (e.isCancelled()) return;
-        if (!plugin.hasMiningIncrease()) return;
         if (e.getBlock().getDrops().size() < 1) return;
 
         Block b = e.getBlock();
+        boolean ageable = w.isAgeable(b);
         String id = b.getType().name();
+
+        if (ageable && !plugin.hasFarmingIncrease()) return;
+        if (!ageable && !plugin.hasMiningIncrease()) return;
 
         Player p = e.getPlayer();
 
@@ -191,7 +194,8 @@ class Events implements Listener {
                         add += hand.getItemMeta().getEnchantLevel(Enchantment.LOOT_BONUS_BLOCKS) * (r.nextInt(3) + 4);
                 }
 
-                String mod = w.isAgeable(b) ? "Farming" : "Mining";
+                String mod = ageable ? "Farming" : "Mining";
+
                 if (ModifierReader.getModifier(mod) == null) return;
                 Map<String, Set<Map.Entry<Economy, Double>>> entry = ModifierReader.getModifier(mod);
 
