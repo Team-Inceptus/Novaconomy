@@ -2,6 +2,7 @@ package us.teaminceptus.novaconomy.api.business;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.AtomicDouble;
 import org.apache.commons.lang.Validate;
 import org.bukkit.*;
@@ -17,6 +18,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.NovaConfig;
+import us.teaminceptus.novaconomy.api.corporation.Corporation;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.events.business.BusinessCreateEvent;
 import us.teaminceptus.novaconomy.api.player.NovaPlayer;
@@ -71,7 +73,7 @@ public final class Business implements ConfigurationSerializable {
 
     private Business(UUID uid, String name, Material icon, OfflinePlayer owner, Collection<Product> products, Collection<ItemStack> resources,
                      BusinessStatistics stats, Map<Settings.Business, Boolean> settings, long creationDate, List<String> keywords,
-                     double advertisingBalance, List<Business> blacklist, boolean save) {
+                     double advertisingBalance, List<Business> blacklist) {
         this.id = uid;
         this.name = name;
         this.icon = icon;
@@ -92,8 +94,6 @@ public final class Business implements ConfigurationSerializable {
         this.keywords.addAll(keywords);
         this.advertisingBalance = advertisingBalance;
         this.blacklist = blacklist;
-
-        if (save) saveBusiness();
     }
 
     /**
@@ -182,7 +182,7 @@ public final class Business implements ConfigurationSerializable {
      */
     public boolean isOwner(@Nullable OfflinePlayer p) {
         if (p == null) return false;
-        return this.owner.getUniqueId().equals(p.getUniqueId());
+        return owner.equals(p);
     }
 
     /**
@@ -555,7 +555,7 @@ public final class Business implements ConfigurationSerializable {
         List<Rating> ratings = new ArrayList<>();
 
         for (OfflinePlayer p : Bukkit.getOfflinePlayers()) {
-            if (owner.getUniqueId().equals(p.getUniqueId())) continue;
+            if (owner.equals(p)) continue;
             NovaPlayer np = new NovaPlayer(p);
             if (!np.hasRating(this)) continue;
 
@@ -607,7 +607,7 @@ public final class Business implements ConfigurationSerializable {
      */
     @NotNull
     public Business blacklist(@NotNull Business business) throws IllegalArgumentException {
-        if (business.getUniqueId().equals(this.getUniqueId())) throw new IllegalArgumentException("Cannot blacklist self");
+        if (this.equals(business)) throw new IllegalArgumentException("Cannot blacklist self");
         if (this.blacklist.contains(business)) return this;
         if (business.blacklist.contains(this)) return this;
 
@@ -622,7 +622,7 @@ public final class Business implements ConfigurationSerializable {
      * @return true if blacklisted, else false
      */
     public boolean isBlacklisted(@NotNull Business business) {
-        if (business.getUniqueId().equals(this.getUniqueId())) return false;
+        if (this.equals(business)) return false;
         return this.blacklist.contains(business) || business.blacklist.contains(this);
     }
 
@@ -633,7 +633,7 @@ public final class Business implements ConfigurationSerializable {
      */
     @NotNull
     public Business unblacklist(@NotNull Business business) {
-        if (business.getUniqueId().equals(this.getUniqueId())) return this;
+        if (this.equals(business)) return this;
 
         if (this.blacklist.contains(business)) {
             this.blacklist.remove(business);
@@ -682,7 +682,7 @@ public final class Business implements ConfigurationSerializable {
                 owner,
                 (List<Product>) serial.get("products"), resources,
                 (BusinessStatistics) serial.getOrDefault("stats", null),
-                settings, creationDate, keywords, 0, new ArrayList<>(), false
+                settings, creationDate, keywords, 0, new ArrayList<>()
         );
         b.setHome(home, false);
 
@@ -938,10 +938,12 @@ public final class Business implements ConfigurationSerializable {
             matOs.close();
         }
 
-        Business b = new Business(id, name, icon, owner, product, resources, stats, settings1, creationDate, keywords, advertisingBalance, blacklist, false);
+        Business b = new Business(id, name, icon, owner, product, resources, stats, settings1, creationDate, keywords, advertisingBalance, blacklist);
         b.setHome(home, false);
         return b;
     }
+
+    private static final Set<Business> BUSINESS_CACHE = new HashSet<>();
 
     /**
      * Fetches an immutable version of all registered Businesses.
@@ -949,7 +951,9 @@ public final class Business implements ConfigurationSerializable {
      * @throws IllegalStateException if a business file is invalid
      */
     @NotNull
-    public static List<Business> getBusinesses() throws IllegalStateException {
+    public static Set<Business> getBusinesses() throws IllegalStateException {
+        if (!BUSINESS_CACHE.isEmpty()) return ImmutableSet.copyOf(BUSINESS_CACHE);
+
         List<Business> businesses = new ArrayList<>();
         for (File f : NovaConfig.getBusinessesFolder().listFiles()) {
             if (!f.isDirectory()) continue;
@@ -968,7 +972,9 @@ public final class Business implements ConfigurationSerializable {
             businesses.add(b);
         }
 
-        return ImmutableList.copyOf(businesses);
+        BUSINESS_CACHE.addAll(businesses);
+
+        return ImmutableSet.copyOf(BUSINESS_CACHE);
     }
 
     /**
@@ -1023,6 +1029,12 @@ public final class Business implements ConfigurationSerializable {
      */
     public static void remove(@Nullable Business b) {
         if (b == null) return;
+
+        for (File f : b.folder.listFiles()) {
+            if (f == null) continue;
+            f.delete();
+        }
+
         b.folder.delete();
     }
 
@@ -1315,6 +1327,19 @@ public final class Business implements ConfigurationSerializable {
     }
 
     /**
+     * Fetches the corporation that this Business belongs to.
+     * @return Parent Corporation, or null if none
+     */
+    @Nullable
+    public Corporation getParentCorporation() {
+        return Corporation.getCorporations()
+                .stream()
+                .filter(c -> c.getChildren().contains(this))
+                .findFirst()
+                .orElse(null);
+    }
+
+    /**
      * <p>Fetches a random business based on its advertising balance.</p>
      * <p>Will return null if {@link NovaConfig#isAdvertisingEnabled()} is false.</p>
      * @return Random Business
@@ -1464,12 +1489,14 @@ public final class Business implements ConfigurationSerializable {
             if (name.isEmpty()) throw new IllegalArgumentException("Name cannot be empty");
             Validate.notNull(icon, "Icon cannot be null");
 
+            if (Business.exists(name)) throw new UnsupportedOperationException("Business already exists");
+
+            BUSINESS_CACHE.clear();
+
             for (Settings.Business setting : Settings.Business.values()) settings.putIfAbsent(setting, setting.getDefaultValue());
 
             Business b = new Business(UUID.nameUUIDFromBytes(name.getBytes()), name, icon, owner,
-                    null, null, null, settings, System.currentTimeMillis(), keywords, 0, new ArrayList<>(), false);
-
-            if (Business.exists(name)) throw new UnsupportedOperationException("Business already exists");
+                    null, null, null, settings, System.currentTimeMillis(), keywords, 0, new ArrayList<>());
 
             b.saveBusiness();
 
