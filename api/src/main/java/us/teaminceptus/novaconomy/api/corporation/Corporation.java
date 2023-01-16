@@ -1,5 +1,6 @@
 package us.teaminceptus.novaconomy.api.corporation;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -12,6 +13,7 @@ import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.economy.market.StockHolder;
+import us.teaminceptus.novaconomy.api.events.corporation.CorporationCreateEvent;
 
 import java.io.*;
 import java.nio.file.Files;
@@ -45,6 +47,11 @@ public final class Corporation implements StockHolder {
     private double experience = 0.0;
 
     private final List<Business> children = new ArrayList<>();
+    private final Map<CorporationAchievement, Integer> achievements = new HashMap<>();
+
+    {
+        for (CorporationAchievement value : CorporationAchievement.values()) achievements.putIfAbsent(value, 0);
+    }
 
     private Corporation(@NotNull UUID id, long creationDate, OfflinePlayer owner) {
         this.id = id;
@@ -52,7 +59,6 @@ public final class Corporation implements StockHolder {
         this.owner = owner;
 
         this.folder = new File(NovaConfig.getCorporationsFolder(), id.toString());
-        if (!folder.exists()) folder.mkdir();
     }
 
     /**
@@ -96,6 +102,34 @@ public final class Corporation implements StockHolder {
     @NotNull
     public List<Business> getChildren() {
         return children;
+    }
+
+    /**
+     * Adds a Business to this Corporation's children.
+     * @param b Business to add
+     * @throws IllegalArgumentException if the Business already has a parent corporation, or is null
+     */
+    public void addChild(@NotNull Business b) throws IllegalArgumentException {
+        if (b == null) throw new IllegalArgumentException("Business cannot be null");
+        if (b.getParentCorporation() != null) throw new IllegalArgumentException("Business already has a parent corporation");
+        if (children.contains(b)) throw new IllegalArgumentException("Business is already a child of this corporation");
+
+        children.add(b);
+        saveCorporation();
+    }
+
+    /**
+     * Removes a Business from this Corporation's children.
+     * @param b Business to remove
+     * @throws IllegalArgumentException if the Business is not a child of this Corporation, is null, or Business matches owner's business
+     */
+    public void removeChild(@NotNull Business b) throws IllegalArgumentException {
+        if (b == null) throw new IllegalArgumentException("Business cannot be null");
+        if (!b.getParentCorporation().equals(this)) throw new IllegalArgumentException("Business is not a child of this corporation");
+        if (b.getOwner().equals(owner)) throw new IllegalArgumentException("Cannot remove a business owned by the corporation owner");
+
+        children.remove(b);
+        saveCorporation();
     }
 
     /**
@@ -213,7 +247,41 @@ public final class Corporation implements StockHolder {
         saveCorporation();
     }
 
+    /**
+     * Fetches an immutable version of all of the Corporation's Achievements to their level.
+     * @return Corporation Achievements
+     */
+    @NotNull
+    public Map<CorporationAchievement, Integer> getAchievements() {
+        return ImmutableMap.copyOf(achievements);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Corporation that = (Corporation) o;
+        return creationDate == that.creationDate && id.equals(that.id) && owner.equals(that.owner);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, creationDate, owner.getUniqueId());
+    }
+
+    @Override
+    public String toString() {
+        return "Corporation{" +
+                "id=" + id +
+                ", creationDate=" + creationDate +
+                ", owner=" + owner +
+                ", name='" + name + '\'' +
+                '}';
+    }
+
     // Static Methods
+
+    private static final Set<Corporation> CORPORATION_CACHE = new HashSet<>();
 
     /**
      * Fetches an immutable set of all of the corporations that exist.
@@ -221,6 +289,7 @@ public final class Corporation implements StockHolder {
      */
     @NotNull
     public static Set<Corporation> getCorporations() {
+        if (!CORPORATION_CACHE.isEmpty()) return ImmutableSet.copyOf(CORPORATION_CACHE);
         Set<Corporation> corporations = new HashSet<>();
 
         for (File folder : NovaConfig.getCorporationsFolder().listFiles()) {
@@ -241,7 +310,8 @@ public final class Corporation implements StockHolder {
             corporations.add(c);
         }
 
-        return ImmutableSet.copyOf(corporations);
+        CORPORATION_CACHE.addAll(corporations);
+        return ImmutableSet.copyOf(CORPORATION_CACHE);
     }
 
     /**
@@ -314,6 +384,22 @@ public final class Corporation implements StockHolder {
         if (owner == null) return false;
         return getCorporations().stream()
                 .anyMatch(c -> c.getOwner().equals(owner));
+    }
+
+    /**
+     * Deletes a Corporation.
+     * @param c Corporation to delete
+     */
+    public static void removeCorporation(@NotNull Corporation c) {
+        if (c == null) throw new IllegalArgumentException("Corporation cannot be null!");
+        CORPORATION_CACHE.clear();
+
+        for (File f : c.folder.listFiles()) {
+            if (f == null) continue;
+            f.delete();
+        }
+
+        c.folder.delete();
     }
 
     /**
@@ -413,16 +499,30 @@ public final class Corporation implements StockHolder {
         /**
          * Builds the Corporation.
          * @return New Corporation
+         * @throws IllegalStateException if one or more arguments is null
+         * @throws UnsupportedOperationException if corporation with name already exists
          */
         @NotNull
-        public Corporation build() {
+        public Corporation build() throws IllegalStateException, UnsupportedOperationException {
+            if (name == null) throw new IllegalStateException("Corporation Name cannot be null!");
+            if (owner == null) throw new IllegalStateException("Corporation Owner cannot be null!");
+            if (icon == null) throw new IllegalStateException("Corporation Icon cannot be null!");
+            if (Corporation.exists(name)) throw new UnsupportedOperationException("Corporation with name already exists!");
+
+            CORPORATION_CACHE.clear();
             UUID uid = UUID.randomUUID();
+
             Corporation c = new Corporation(uid, System.currentTimeMillis(), owner);
-            c.setName(name);
-            c.setIcon(icon);
-            c.setHeadquarters(headquarters);
+            c.name = name;
+            c.icon = icon;
+            c.headquarters = headquarters;
+
+            if (Business.exists(owner)) c.children.add(Business.getByOwner(owner));
 
             c.saveCorporation();
+
+            CorporationCreateEvent event = new CorporationCreateEvent(c);
+            Bukkit.getPluginManager().callEvent(event);
             return c;
         }
     }
@@ -442,6 +542,8 @@ public final class Corporation implements StockHolder {
     }
 
     private void writeCorporation() throws IOException {
+        if (!folder.exists()) folder.mkdir();
+
         File info = new File(folder, "info.dat");
         if (!info.exists()) info.createNewFile();
 
