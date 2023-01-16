@@ -62,34 +62,26 @@
         <module>abstraction</module>
         <module>plugin</module>
 
-        <module>1_8_R1</module>
-        <module>1_8_R2</module>
-        <module>1_8_R3</module>
-
-        <module>1_9_R1</module>
-        <module>1_9_R2</module>
-
-        <module>1_10_R1</module>
-        <module>1_11_R1</module>
-        <module>1_12_R1</module>
-
-        <module>1_13_R1</module>
-        <module>1_13_R2</module>
-
-        <module>1_14_R1</module>
-        <module>1_15_R1</module>
-
-        <module>1_16_R1</module>
-        <module>1_16_R2</module>
-        <module>1_16_R3</module>
-
-        <module>1_17_R1</module>
-
-        <module>1_18_R1</module>
-        <module>1_18_R2</module>
-
-        <module>1_19_R1</module>
-        <module>1_19_R2</module>
+        <module>nms/1_8_R1</module>
+        <module>nms/1_8_R2</module>
+        <module>nms/1_8_R3</module>
+        <module>nms/1_9_R1</module>
+        <module>nms/1_9_R2</module>
+        <module>nms/1_10_R1</module>
+        <module>nms/1_11_R1</module>
+        <module>nms/1_12_R1</module>
+        <module>nms/1_13_R1</module>
+        <module>nms/1_13_R2</module>
+        <module>nms/1_14_R1</module>
+        <module>nms/1_15_R1</module>
+        <module>nms/1_16_R1</module>
+        <module>nms/1_16_R2</module>
+        <module>nms/1_16_R3</module>
+        <module>nms/1_17_R1</module>
+        <module>nms/1_18_R1</module>
+        <module>nms/1_18_R2</module>
+        <module>nms/1_19_R1</module>
+        <module>nms/1_19_R2</module>
     </modules>
 
     <pluginRepositories>
