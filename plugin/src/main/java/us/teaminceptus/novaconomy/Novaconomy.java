@@ -36,9 +36,7 @@ import org.bukkit.inventory.*;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.permissions.PermissionAttachmentInfo;
 import org.bukkit.plugin.Plugin;
-import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.plugin.java.JavaPluginLoader;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -50,6 +48,7 @@ import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.business.BusinessStatistics;
 import us.teaminceptus.novaconomy.api.business.Rating;
 import us.teaminceptus.novaconomy.api.economy.Economy;
+import us.teaminceptus.novaconomy.api.economy.market.Stock;
 import us.teaminceptus.novaconomy.api.events.AutomaticTaxEvent;
 import us.teaminceptus.novaconomy.api.events.InterestEvent;
 import us.teaminceptus.novaconomy.api.events.business.BusinessProductAddEvent;
@@ -88,7 +87,7 @@ import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.BL_CATEGORIES;
+import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.*;
 
 /**
  * Class representing this Plugin
@@ -96,30 +95,14 @@ import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.BL_CATEGORIE
  */
 public final class Novaconomy extends JavaPlugin implements NovaConfig {
 
-	private static final String ECON_TAG = CommandWrapper.ECON_TAG;
-	private static final String AMOUNT_TAG = CommandWrapper.AMOUNT_TAG;
 	private static final String PRICE_TAG = "price";
 	private static final String PRODUCT_TAG = "product";
-	private static final String BUSINESS_TAG = CommandWrapper.BUSINESS_TAG;
 
 	/**
 	 * Main Novaconomy Constructor
 	 * <strong>DO NOT INSTANTIATE THIS WAY</strong>
 	 */
 	public Novaconomy() { /* Constructor should only be called by Bukkit Plugin Class Loader */}
-
-	/**
-	 * Unit testing constructor.
-	 * @param loader JavaPluginLoader
-	 * @param desc PluginDescriptionFile
-	 * @param dataFolder Plugin Data Folder
-	 * @param file Plugin File
-	 * @deprecated Should only be used by unit tests
-	 */
-	@Deprecated
-	public Novaconomy(JavaPluginLoader loader, PluginDescriptionFile desc, File dataFolder, File file) {
-		super(loader, desc, dataFolder, file);
-	}
 
 	private static final SecureRandom r = new SecureRandom();
 	private static final Wrapper w = getWrapper();
@@ -1882,6 +1865,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig {
 		add(BusinessStatistics.Transaction.class);
 		add(Rating.class);
 		add(PlayerStatistics.class);
+		add(Stock.class);
 	}};
 
 	private void loadPlaceholders() {
