@@ -541,7 +541,7 @@ public interface CommandWrapper {
             return;
         }
 
-        if (target.getUniqueId().equals(p.getUniqueId())) {
+        if (target.equals(p)) {
             p.sendMessage(getMessage("error.economy.pay_self"));
             return;
         }
@@ -939,7 +939,7 @@ public interface CommandWrapper {
             return;
         }
 
-        if (target.getUniqueId().equals(p.getUniqueId())) {
+        if (target.equals(p)) {
             p.sendMessage(getMessage("error.bounty.self"));
             return;
         }
@@ -978,7 +978,7 @@ public interface CommandWrapper {
             return;
         }
 
-        if (target.getUniqueId().equals(p.getUniqueId())) {
+        if (target.equals(p)) {
             p.sendMessage(getMessage("error.bounty.self"));
             return;
         }
@@ -1479,7 +1479,7 @@ public interface CommandWrapper {
             return;
         }
 
-        if (target.getUniqueId().equals(p.getUniqueId())) {
+        if (target.equals(p)) {
             p.sendMessage(getMessage("error.business.rate_self"));
             return;
         }
@@ -2432,7 +2432,7 @@ public interface CommandWrapper {
         FileConfiguration config = NovaConfig.loadConfig();
         ConfigurationSection modConfig = config.getConfigurationSection("NaturalCauses.Modifiers");
 
-        List<Map<Economy, Double>> mods = null;
+        List<Map.Entry<Economy, Double>> mods = null;
         double divider = -1;
 
         if (type.equalsIgnoreCase("death")) divider = 0; else mods = new ArrayList<>();
@@ -2458,7 +2458,7 @@ public interface CommandWrapper {
                 return;
             }
             else {
-                Map<Economy, Double> mod = ModifierReader.readString(v);
+                Map.Entry<Economy, Double> mod = ModifierReader.readString(v);
                 if (mod == null) {
                     sender.sendMessage(getMessage("error.argument.modifier"));
                     return;
