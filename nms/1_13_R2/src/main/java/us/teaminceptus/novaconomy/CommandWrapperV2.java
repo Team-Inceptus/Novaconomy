@@ -207,7 +207,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
     @Command({"pay", "econpay", "novapay", "givemoney", "givebal"})
     @Description("Pay another user")
     @CommandPermission("novaconomy.user.pay")
-    public void pay(Player p, Player target, @Optional Economy economy, @Default("0") @Range(min = 0) double amount) { CommandWrapper.super.pay(p, target, economy, amount); }
+    public void pay(Player p, Player target, @Optional Economy economy, @Optional(def = "0") @Range(min = 0) double amount) { CommandWrapper.super.pay(p, target, economy, amount); }
 
     @Override
     @Command({"convert", "conv"})
@@ -256,21 +256,21 @@ public final class CommandWrapperV2 implements CommandWrapper {
     @Description("Call a Custom Tax Event from the configuration")
     @CommandPermission("novaconomy.admin.tax_event")
     @AutoComplete("@event *")
-    public void callEvent(CommandSender sender, String event, @Default("true") boolean self) { CommandWrapper.super.callEvent(sender, event, self); }
+    public void callEvent(CommandSender sender, String event, @Optional(def = "true") boolean self) { CommandWrapper.super.callEvent(sender, event, self); }
 
     @Override
     @Command({"rate", "novarate", "nrate", "ratebusiness"})
     @Usage("/rate <business> [<comment>]")
     @Description("Rate a business")
     @CommandPermission("novaconomy.user.rate")
-    public void rate(Player p, Business business, @Default("") String comment) { CommandWrapper.super.rate(p, business, comment); }
+    public void rate(Player p, Business business, @Optional(def = "") String comment) { CommandWrapper.super.rate(p, business, comment); }
 
     @Override
     @Command({"statistics", "stats", "pstats", "pstatistics", "playerstats", "playerstatistics", "nstats", "nstatistics"})
     @Usage("/statistics")
     @Description("View your Novaconomy Statistics")
     @CommandPermission("novaconomy.user.stats")
-    public void playerStatistics(Player p, @Default("me") OfflinePlayer target) { CommandWrapper.super.playerStatistics(p, target); }
+    public void playerStatistics(Player p, @Optional(def = "me") OfflinePlayer target) { CommandWrapper.super.playerStatistics(p, target); }
 
     @Command({"businessleaderboard", "bboard", "businessl", "businessboard"})
     @Usage("/businessleaderboard")
@@ -292,7 +292,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
             handler.register(this);
         }
 
-        @Default
+        @DefaultFor({"business", "nbusiness", "nb", "b"})
         public void businessInfoDefault(Player p) { businessInfo(p); }
 
         @Subcommand({"info", "information"})
@@ -331,7 +331,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
         public void setIcon(Player p, Material icon) { wrapper.setBusinessIcon(p, icon); }
 
         @Subcommand("delete")
-        public void deleteBusiness(Player p, @Default("") String confirm) { wrapper.deleteBusiness(p, confirm.equalsIgnoreCase("confirm")); }
+        public void deleteBusiness(Player p, @Optional(def = "") String confirm) { wrapper.deleteBusiness(p, confirm.equalsIgnoreCase("confirm")); }
 
         @Subcommand("recover")
         public void businessRecover(Player p) { wrapper.businessRecover(p); }
@@ -346,17 +346,20 @@ public final class CommandWrapperV2 implements CommandWrapper {
         public void businessRating(Player p, OfflinePlayer target) { wrapper.businessRating(p, target); }
 
         @Subcommand("discover")
-        public void discoverBusiness(Player p, @Default("") String keywords) { wrapper.discoverBusinesses(p, keywords.split("[ ,]")); }
+        public void discoverBusiness(Player p, @Optional(def = "") String keywords) { wrapper.discoverBusinesses(p, keywords.split("[ ,]")); }
 
         @Subcommand("remove")
         @CommandPermission("novaconomy.admin.delete_business")
-        public void removeBusiness(CommandSender sender, Business b, @Default("") String confirm) { wrapper.removeBusiness(sender, b, confirm.equalsIgnoreCase("confirm"));}
+        public void removeBusiness(CommandSender sender, Business b, @Optional(def = "") String confirm) { wrapper.removeBusiness(sender, b, confirm.equalsIgnoreCase("confirm"));}
 
         @Subcommand({"editprice", "price"})
         public void editPrice(Player p, @Range(min = 0.01) double newPrice, @Optional Economy economy) { wrapper.editPrice(p, newPrice, economy); }
 
         @Subcommand({"keyword", "keywords"})
-        @Default
+        @DefaultFor({"business keyword", "business keywords",
+        "nbusiness keyword", "nbusiness keywords",
+        "nb keyword", "nb keywords",
+        "b keyword", "b keywords"})
         @CommandPermission("novaconomy.user.business.keywords")
         public void keywords(Player p) {
             wrapper.listKeywords(p);
@@ -379,7 +382,10 @@ public final class CommandWrapperV2 implements CommandWrapper {
         }
 
         @Subcommand({"advertising", "ads", "advertise"})
-        @Default
+        @DefaultFor({"business advertising", "business ads", "business advertise",
+        "nbusiness advertising", "nbusiness ads", "nbusiness advertise",
+        "nb advertising", "nb ads", "nb advertise",
+        "b advertising", "b ads", "b advertise"})
         public void businessAdvertising(Player p) {
             wrapper.businessAdvertising(p);
         }
@@ -401,7 +407,10 @@ public final class CommandWrapperV2 implements CommandWrapper {
         @Subcommand({"blacklist", "blist", "bl", "blackl",
         "blacklist list", "blist list", "bl list", "blackl list",
         "blacklist l", "blist l", "bl l", "blackl l"})
-        @Default
+        @DefaultFor({"business blacklist", "business blist", "business bl", "business blackl",
+        "nbusiness blacklist", "nbusiness blist", "nbusiness bl", "nbusiness blackl",
+        "nb blacklist", "nb blist", "nb bl", "nb blackl",
+        "b blacklist", "b blist", "b bl", "b blackl"})
         public void listBlacklist(Player p) { wrapper.listBlacklist(p); }
 
         @Subcommand({"blacklist add", "blist add", "bl add", "blackl add"})
@@ -464,7 +473,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
         @Subcommand({"create", "make"})
         @AutoComplete("* @symbol *")
         @CommandPermission("novaconomy.economy.create")
-        public void createEconomy(CommandSender sender, String name, String symbol, Material icon, @Default("1") @Range(min = 0.01, max = Integer.MAX_VALUE) double scale, @Named("natural-increase") @Default("true") boolean naturalIncrease, @Named("clickable-reward") @Default("true") boolean clickableReward) {
+        public void createEconomy(CommandSender sender, String name, String symbol, Material icon, @Optional(def = "1") @Range(min = 0.01, max = Integer.MAX_VALUE) double scale, @Named("natural-increase") @Optional(def = "true") boolean naturalIncrease, @Named("clickable-reward") @Optional(def = "true") boolean clickableReward) {
             wrapper.createEconomy(sender, name, symbol.startsWith("\"") || symbol.startsWith("'") ? symbol.charAt(1) : symbol.charAt(0), icon, scale, naturalIncrease, clickableReward);
         }
 
@@ -477,7 +486,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
         @Subcommand("interest")
         @AutoComplete("@interest")
         @CommandPermission("novaconomy.economy.interest")
-        public void interest(CommandSender sender, @Default("enable") String interest) {
+        public void interest(CommandSender sender, @Optional(def = "enable") String interest) {
             wrapper.interest(sender, interest.equalsIgnoreCase("enable") || interest.equalsIgnoreCase("true"));
         }
 
@@ -515,7 +524,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
 
         @Subcommand({"setnaturalincrease", "naturalincrease", "setnatural", "natural"})
         @CommandPermission("novaconomy.economy.create")
-        public void setNaturalIncrease(CommandSender sender, Economy economy, @Default("true") boolean naturalIncrease) { wrapper.setEconomyNatural(sender, economy, naturalIncrease); }
+        public void setNaturalIncrease(CommandSender sender, Economy economy, @Optional(def = "true") boolean naturalIncrease) { wrapper.setEconomyNatural(sender, economy, naturalIncrease); }
 
         @Subcommand({"check", "createcheck"})
         @CommandPermission("novaconomy.economy.check")
@@ -533,7 +542,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
 
         @Subcommand({"setclickablereward", "clickablereward", "setclickable", "clickable"})
         @CommandPermission("novaconomy.economy.create")
-        public void setClickableReward(CommandSender sender, Economy economy, @Default("true") boolean clickableReward) { wrapper.setEconomyRewardable(sender, economy, clickableReward); }
+        public void setClickableReward(CommandSender sender, Economy economy, @Optional(def = "true") boolean clickableReward) { wrapper.setEconomyRewardable(sender, economy, clickableReward); }
     }
 
     @Command({"bounty", "novabounty", "nbounty"})
