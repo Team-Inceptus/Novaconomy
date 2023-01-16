@@ -456,7 +456,7 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Economy economy = (Economy) o;
-        return economy.getName().equals(this.getName()) || economy.getUniqueId().equals(this.getUniqueId());
+        return economy.name.equals(this.name) || this.uid.equals(economy.uid);
     }
 
     @Override
