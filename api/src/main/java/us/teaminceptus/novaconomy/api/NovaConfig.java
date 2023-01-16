@@ -536,6 +536,12 @@ public interface NovaConfig  {
     boolean hasKillIncrease();
 
     /**
+     * Fetch if Indirect Killing (projectiles, pets) counts towards a Kill Increase.
+     * @return true if enabled, else false
+     */
+    boolean hasIndirectKillIncrease();
+
+    /**
      * Fetch if Death Decrease is enabled.
      * @return true if enabled, else false
      */
