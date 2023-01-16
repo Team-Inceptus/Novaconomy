@@ -51,7 +51,12 @@ public interface NovaConfig  {
      * @since 1.7.0
      */
     @NotNull
-    static File getCorporationsFolder() { return new File(getDataFolder(), "corporations"); }
+    static File getCorporationsFolder() {
+        File f = new File(getDataFolder(), "corporations");
+        if (!f.exists()) f.mkdir();
+
+        return f;
+    }
 
     /**
      * Prints a Throwable in the Plugin's Namespace and Format.
