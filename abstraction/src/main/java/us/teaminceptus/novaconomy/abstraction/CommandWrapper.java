@@ -2759,7 +2759,6 @@ public interface CommandWrapper {
             return;
         }
 
-        File configFile = NovaConfig.getConfigFile();
         FileConfiguration config = NovaConfig.loadConfig();
         ConfigurationSection modConfig = config.getConfigurationSection("NaturalCauses.Modifiers");
 
