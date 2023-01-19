@@ -14,36 +14,31 @@ import java.util.Map;
 public final class Stock implements ConfigurationSerializable {
 
     private final OfflinePlayer owner;
-    private final StockType type;
     private final long purchaseDate;
     private final double initialPrice;
 
     /**
      * Creates a new Stock with the timestamp of {@link System#currentTimeMillis()}.
      * @param owner The owner of the Stock
-     * @param type The type of Stock
      * @param initialPrice How much the stock was originally purchased for
      */
-    public Stock(@NotNull OfflinePlayer owner, @NotNull StockType type, double initialPrice) {
-        this(owner, type, initialPrice, new Date());
+    public Stock(@NotNull OfflinePlayer owner, double initialPrice) {
+        this(owner, initialPrice, new Date());
     }
 
     /**
      * Creates a new Stock.
      * @param owner The owner of the Stock
-     * @param type The type of Stock
      * @param initialPrice How much the stock was originally purchased for
      * @param purchaseDate The date the Stock was purchased
      * @throws IllegalArgumentException if the owner, type, or purchaseDate is null, and if the initialPrice is not positive
      */
-    public Stock(@NotNull OfflinePlayer owner, @NotNull StockType type, double initialPrice, @NotNull Date purchaseDate) throws IllegalArgumentException {
+    public Stock(@NotNull OfflinePlayer owner, double initialPrice, @NotNull Date purchaseDate) throws IllegalArgumentException {
         if (owner == null) throw new IllegalArgumentException("owner cannot be null");
-        if (type == null) throw new IllegalArgumentException("type cannot be null");
         if (purchaseDate == null) throw new IllegalArgumentException("purchaseDate cannot be null");
         if (initialPrice <= 0) throw new IllegalArgumentException("initialPrice must be positive");
 
         this.owner = owner;
-        this.type = type;
         this.purchaseDate = purchaseDate.getTime();
         this.initialPrice = initialPrice;
     }
@@ -55,15 +50,6 @@ public final class Stock implements ConfigurationSerializable {
     @NotNull
     public OfflinePlayer getOwner() {
         return owner;
-    }
-
-    /**
-     * Fetches the Stock Type.
-     * @return Stock Type
-     */
-    @NotNull
-    public StockType getType() {
-        return type;
     }
 
     /**
@@ -94,7 +80,6 @@ public final class Stock implements ConfigurationSerializable {
     public static Stock deserialize(@NotNull Map<String, Object> map) {
         return new Stock(
                 (OfflinePlayer) map.get("owner"),
-                StockType.valueOf(map.get("type").toString()),
                 (double) map.get("initial_price"),
                 new Date((long) map.get("purchase_date"))
         );
@@ -104,7 +89,6 @@ public final class Stock implements ConfigurationSerializable {
     public Map<String, Object> serialize() {
         return new HashMap<String, Object>() {{
             put("owner", owner);
-            put("type", type.name());
             put("initial_price", initialPrice);
             put("purchase_date", purchaseDate);
         }};
