@@ -10,7 +10,7 @@ import us.teaminceptus.novaconomy.abstraction.Wrapper;
 
 import java.util.List;
 
-import static us.teaminceptus.novaconomy.Novaconomy.get;
+import static us.teaminceptus.novaconomy.abstraction.Wrapper.*;
 
 final class Items {
 
