@@ -16,6 +16,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
+
+import us.teaminceptus.novaconomy.abstraction.NovaInventory;
 import us.teaminceptus.novaconomy.abstraction.Wrapper;
 
 public final class Wrapper1_13_R2 implements Wrapper {
@@ -187,4 +189,10 @@ public final class Wrapper1_13_R2 implements Wrapper {
         BlockData d = m.createBlockData();
         return d instanceof Ageable && !(d instanceof Fire);
     }
+
+    @Override
+    public NovaInventory createInventory(String id, String name, int size) {
+        return new NovaInventory1_13_R2(id, name, size);
+    }
+    
 }

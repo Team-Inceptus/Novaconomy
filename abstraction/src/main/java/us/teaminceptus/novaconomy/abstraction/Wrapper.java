@@ -9,8 +9,6 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.Plugin;
@@ -98,13 +96,17 @@ public interface Wrapper {
 
     void removeItem(PlayerInteractEvent p);
 
+    boolean isCrop(Material m);
+
+    NovaInventory createInventory(String id, String name, int size);
+
+    // Defaults
+
     default boolean hasID(ItemStack item) { return getID(item) != null && getID(item).length() > 0; }
 
     default boolean isProduct(ItemStack item) { return hasID(item) && (getID(item).equalsIgnoreCase("product") || getNBTBoolean(item, "is_product")); }
 
     default String getID(ItemStack item) { return getNBTString(item, "id"); }
-
-    boolean isCrop(Material m);
 
     default List<Material> getCrops() {
         return Arrays.stream(Material.values()).filter(this::isCrop).collect(Collectors.toList());
@@ -161,8 +163,9 @@ public interface Wrapper {
         return item;
     }
 
-    default Inventory generateBusinessData(Business b, Player viewer, boolean advertising) {
-        Inventory inv = genGUI(54, ChatColor.GOLD + b.getName(), new Wrapper.CancelHolder());
+    default NovaInventory generateBusinessData(Business b, Player viewer, boolean advertising) {
+        NovaInventory inv = genGUI(54, ChatColor.GOLD + b.getName());
+        inv.setCancelled();
 
         if (!b.getRatings().isEmpty()) inv.setItem(44, CommandWrapper.loading());
         for (int i = 46; i < 53; i++) inv.setItem(i, null);
@@ -326,15 +329,15 @@ public interface Wrapper {
 
     SecureRandom r = new SecureRandom();
 
-    default Inventory genGUI(int size, String name) {
-        return genGUI(size, name, null);
+    default NovaInventory genGUI(int size, String name) {
+        return genGUI("", size, name);
     }
 
-    default Inventory genGUI(int size, String name, InventoryHolder holder) {
+    default NovaInventory genGUI(String id, int size, String name) {
         if (size < 9 || size > 54) return null;
         if (size % 9 > 0) return null;
 
-        Inventory inv = Bukkit.createInventory(holder, size, name);
+        NovaInventory inv = createInventory(id, name, size);
         ItemStack bg = getGUIBackground();
 
         if (size < 27) return inv;
@@ -414,14 +417,6 @@ public interface Wrapper {
 
     default boolean isLegacy() {
         return getCommandVersion() == 1;
-    }
-
-    class CancelHolder implements InventoryHolder {
-
-        @Override
-        public Inventory getInventory() {
-            return null;
-        }
     }
 
     class APIPlayer {

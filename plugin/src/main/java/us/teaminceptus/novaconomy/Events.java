@@ -16,16 +16,10 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
-import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.inventory.InventoryCloseEvent;
-import org.bukkit.event.inventory.InventoryDragEvent;
-import org.bukkit.event.inventory.InventoryMoveItemEvent;
 import org.bukkit.event.player.PlayerFishEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.*;
 import org.bukkit.scheduler.BukkitRunnable;
-import us.teaminceptus.novaconomy.abstraction.CommandWrapper;
-import us.teaminceptus.novaconomy.abstraction.Wrapper;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.events.player.economy.PlayerChangeBalanceEvent;
@@ -39,10 +33,10 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 import static us.teaminceptus.novaconomy.Novaconomy.*;
-import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.AMOUNT_TAG;
-import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.ECON_TAG;
+import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.*;
 
 class Events implements Listener {
 
@@ -60,13 +54,12 @@ class Events implements Listener {
         if (p.getInventory().getItemInHand() == null) return;
 
         NovaPlayer np = new NovaPlayer(p);
-        Wrapper wrapper = w;
         ItemStack item = e.getItem();
         if (!w.hasID(item)) return;
         if (!w.getID(item).equalsIgnoreCase("economy:check")) return;
 
-        Economy econ = Economy.getEconomy(UUID.fromString(wrapper.getNBTString(item, ECON_TAG)));
-        double amount = wrapper.getNBTDouble(item, AMOUNT_TAG);
+        Economy econ = Economy.getEconomy(UUID.fromString(w.getNBTString(item, ECON_TAG)));
+        double amount = w.getNBTDouble(item, AMOUNT_TAG);
 
         np.add(econ, amount);
         new BukkitRunnable() {
@@ -313,6 +306,8 @@ class Events implements Listener {
         sendUpdateActionbar(p, msgs);
     }
 
+    static final List<ChatColor> COLORS = Arrays.stream(ChatColor.values()).filter(ChatColor::isColor).collect(Collectors.toList());
+
     private String callAddBalanceEvent(Player p, Economy econ, double amount, boolean random) {
         NovaPlayer np = new NovaPlayer(p);
         double divider = r.nextInt(2) + 1;
@@ -478,78 +473,4 @@ class Events implements Listener {
         return ChatColor.DARK_RED + "- " + ChatColor.RED + String.format("%,.2f", Math.floor(amount * 100) / 100) + econ.getSymbol();
     }
 
-    // Inventory
-
-    @EventHandler
-    public void click(InventoryClickEvent e) {
-        Inventory inv = e.getClickedInventory();
-        if (inv == null) return;
-        if (inv.getHolder() instanceof Wrapper.CancelHolder) e.setCancelled(true);
-        if (inv instanceof PlayerInventory) return;
-
-        if (e.getCurrentItem() == null) return;
-        ItemStack item = e.getCurrentItem();
-
-        if (item.isSimilar(w.getGUIBackground())) e.setCancelled(true);
-        if (!item.hasItemMeta()) return;
-        if (!w.hasID(item)) return;
-
-        String id = w.getNBTString(item, "id");
-        if (id == null) return;
-        if (!CLICK_ITEMS.containsKey(id)) return;
-
-        if (!e.isCancelled()) e.setCancelled(true);
-        CLICK_ITEMS.get(id).accept(e);
-    }
-
-    @EventHandler
-    public void drag(InventoryDragEvent e) {
-        Inventory inv = e.getView().getTopInventory();
-        if (inv == null) return;
-        if (inv.getHolder() != null && inv.getHolder() instanceof Wrapper.CancelHolder) e.setCancelled(true);
-        if (inv instanceof PlayerInventory) return;
-
-        for (ItemStack item : e.getNewItems().values()) {
-            if (item == null) return;
-            if (item.isSimilar(w.getGUIBackground())) e.setCancelled(true);
-        }
-    }
-
-    @EventHandler
-    public void close(InventoryCloseEvent e) {
-        Inventory inv = e.getInventory();
-        if (inv == null) return;
-
-        if (inv.getHolder() != null) {
-            InventoryHolder holder = inv.getHolder();
-            if (holder instanceof CommandWrapper.ReturnItemsHolder) {
-                CommandWrapper.ReturnItemsHolder h = (CommandWrapper.ReturnItemsHolder) holder;
-                Player p = h.player();
-
-                if (h.added()) return;
-
-                for (ItemStack i : inv.getContents()) {
-                    if (i == null) continue;
-                    if (h.ignoreIds().contains(w.getID(i))) continue;
-
-                    if (p.getInventory().firstEmpty() == -1) p.getWorld().dropItemNaturally(p.getLocation(), i);
-                    else p.getInventory().addItem(i);
-                }
-            }
-        }
-    }
-
-    @EventHandler
-    public void move(InventoryMoveItemEvent e) {
-        if (e.getItem() == null) return;
-        ItemStack item = e.getItem();
-        Inventory inv = e.getDestination();
-        if (inv instanceof PlayerInventory) return;
-        if (inv.getHolder() instanceof Wrapper.CancelHolder) e.setCancelled(true);
-
-        if (item.isSimilar(w.getGUIBackground())) e.setCancelled(true);
-
-        String id = w.getNBTString(item, "id");
-        if (id.length() > 0 && CLICK_ITEMS.containsKey(id)) e.setCancelled(true);
-    }
 }

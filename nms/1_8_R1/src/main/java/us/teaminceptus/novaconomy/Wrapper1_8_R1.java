@@ -12,6 +12,8 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.material.Crops;
+
+import us.teaminceptus.novaconomy.abstraction.NovaInventory;
 import us.teaminceptus.novaconomy.abstraction.Wrapper;
 
 public final class Wrapper1_8_R1 implements Wrapper {
@@ -181,5 +183,10 @@ public final class Wrapper1_8_R1 implements Wrapper {
     @Override
     public boolean isCrop(Material m) {
         return Crops.class.isAssignableFrom(m.getData());
+    }
+
+    @Override
+    public NovaInventory createInventory(String id, String name, int size) {
+        return new NovaInventory1_8_R1(id, name, size);
     }
 }
