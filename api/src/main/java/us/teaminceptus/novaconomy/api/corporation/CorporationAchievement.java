@@ -10,8 +10,22 @@ public enum CorporationAchievement {
     /**
      * The achievement for reaching 5, 15, 35, and 50 corporation children.
      */
-    MONOPOLY(4, "constants.corporation.achievement.monopoly", 3500),
+    MONOPOLY(4, "constants.corporation.achievement.monopoly", 5500),
 
+    /**
+     * The achievement for reaching a collective 10, 50K, 150K, 500K, 1M, and 5M Business and Corporation Views.
+     */
+    ADVERTISER(6, "constants.corporation.achievement.advertiser", 7800),
+    
+    /**
+     * The achievement for recahing a collective 5K, 15K, 100K, 350K, and 750K Business sales.
+     */
+    SELLER(5, "constants.corporation.achievement.seller", 10500),
+
+    /**
+     * The achievement for reaching a collective 1M, 5M, 10M, 25M, 50M, and 100M in profit.
+     */
+    SUPER_SELLLER(5, "constants.corporation.achievement.super_seller", 30750),
     
     ;
 

@@ -45,13 +45,10 @@ public final class Corporation implements StockHolder {
     private Location headquarters = null;
 
     private double experience = 0.0;
+    private int stockLimit;
 
-    private final List<Business> children = new ArrayList<>();
+    private final Set<Business> children = new HashSet<>();
     private final Map<CorporationAchievement, Integer> achievements = new HashMap<>();
-
-    {
-        for (CorporationAchievement value : CorporationAchievement.values()) achievements.putIfAbsent(value, 0);
-    }
 
     private Corporation(@NotNull UUID id, long creationDate, OfflinePlayer owner) {
         this.id = id;
@@ -78,7 +75,7 @@ public final class Corporation implements StockHolder {
     /**
      * Fetches the date that this Corporation was created.
      * @return Corporation Creation Date
-     */
+     */ 
     @NotNull
     public Date getCreationDate() {
         return new Date(creationDate);
@@ -96,12 +93,12 @@ public final class Corporation implements StockHolder {
     // Info
 
     /**
-     * Fetches all of the Businesses this Corporation is responsible for.
+     * Fetches an immutable set of the Businesses this Corporation is responsible for.
      * @return Business Children
      */
     @NotNull
-    public List<Business> getChildren() {
-        return children;
+    public Set<Business> getChildren() {
+        return ImmutableSet.copyOf(children);
     }
 
     /**
@@ -256,6 +253,45 @@ public final class Corporation implements StockHolder {
         return ImmutableMap.copyOf(achievements);
     }
 
+    /**
+     * Fetches an Corporation Achievement's level.
+     * @param achievement Achievement to fetch
+     * @return Achievement Level
+     */
+    @NotNull
+    public int getAchievementLevel(@NotNull CorporationAchievement achievement) {
+        if (achievement == null) throw new IllegalArgumentException("Corporation Achievement cannot be null!");
+        
+        return achievements.getOrDefault(achievement, 0);
+    }
+
+    /**
+     * Awards an Achievement to this Corporation, increasing its level by 1 and awarding the necessary experience.
+     * @param achievement Achievement to award
+     * @throws IllegalArgumentException if achievement is null, or achievement is already at max level
+     */
+    @NotNull
+    public void awardAchievement(@NotNull CorporationAchievement achievement) throws IllegalArgumentException {
+        if (achievement == null) throw new IllegalArgumentException("Corporation Achievement cannot be null!");
+        int newLevel = getAchievementLevel(achievement) + 1;
+
+        if (newLevel > achievement.getMaxLevel()) throw new IllegalArgumentException("Achievement is already at max level! (Max: " + achievement.getMaxLevel() + ")");
+        
+        achievements.put(achievement, newLevel);
+        experience += achievement.getExperienceReward() * newLevel;
+
+        saveCorporation();
+    }
+
+    /**
+     * Fetches the Corporation's Statistic.
+     * @return Corporation Statistics
+     */
+    @NotNull
+    public CorporationStatistics getStatistics() {
+        return new CorporationStatistics(this);
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -278,6 +314,22 @@ public final class Corporation implements StockHolder {
                 ", name='" + name + '\'' +
                 '}';
     }
+
+    // Stock Impl
+
+    @Override
+    public double getStockPrice() {
+        return Math.max(
+            getStatistics().getTotalProfit() * getStockLimit(),
+            0.01
+        );
+    }
+
+    @Override
+    public int getStockLimit() {
+        return stockLimit;
+    }
+
 
     // Static Methods
 
@@ -423,10 +475,15 @@ public final class Corporation implements StockHolder {
      * Converts the experience of a Corporation to a level.
      * @param experience Experience to convert to
      * @return Level conversion at the specified experience
+     * @throws IllegalArgumentException if experience is not positive
      */
-    public static int toLevel(double experience) {
+    public static int toLevel(double experience) throws IllegalArgumentException {
+        if (experience < 0) throw new IllegalArgumentException("Experience must be positive!");
+        if (experience < 40000) return 1;
+
         int level = 1;
-        while (toExperience(level) <= experience) level++;
+        while (toExperience(level) < experience) level++;
+
         return level;
     }
 
@@ -561,6 +618,12 @@ public final class Corporation implements StockHolder {
         data.set("experience", this.experience);
         data.set("icon", this.icon.name());
         data.set("headquarters", this.headquarters);
+        data.set("achievements", this.achievements
+                .entrySet()
+                .stream()
+                .map(e -> new AbstractMap.SimpleEntry<>(e.getKey().name().toLowerCase(), e.getValue()))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
+        data.set("share_limit", this.stockLimit);
         data.save(dataF);
 
         File childrenF = new File(folder, "children.yml");
@@ -596,6 +659,13 @@ public final class Corporation implements StockHolder {
         c.experience = data.getDouble("experience");
         c.icon = Material.valueOf(data.getString("icon"));
         c.headquarters = (Location) data.get("headquarters");
+        c.stockLimit = data.getInt("share_limit");
+
+        c.achievements.putAll(data.getConfigurationSection("achievements").getValues(false)
+                .entrySet()
+                .stream()
+                .map(e -> new AbstractMap.SimpleEntry<>(CorporationAchievement.valueOf(e.getKey().toUpperCase()), (Integer) e.getValue()))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
 
         File childrenF = new File(folder, "children.yml");
         if (!childrenF.exists()) throw new IllegalStateException("Could not find: children.yml");
@@ -609,5 +679,4 @@ public final class Corporation implements StockHolder {
 
         return c;
     }
-
 }
