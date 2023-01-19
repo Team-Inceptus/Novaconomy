@@ -269,7 +269,7 @@ public interface CommandWrapper {
             return;
         }
 
-        Inventory inv = w.genGUI(36, get("constants.economy.exchange"), new Wrapper.CancelHolder());
+        Inventory inv = w.genGUI(36, get("constants.economy.exchange"));
 
         List<Economy> economies = Economy.getEconomies().stream().sorted(Comparator.comparing(Economy::getName)).collect(Collectors.toList());
 
@@ -449,7 +449,7 @@ public interface CommandWrapper {
                 .collect(Collectors.toList()))
                 .subList(0, Math.min(Bukkit.getOfflinePlayers().length, 15));
 
-        Inventory inv = w.genGUI(54, get("constants.balance_leaderboard"), new Wrapper.CancelHolder());
+        Inventory inv = w.genGUI(54, get("constants.balance_leaderboard"));
 
         ItemStack type = new ItemStack(Material.PAPER);
         ItemMeta tMeta = type.getItemMeta();
@@ -561,7 +561,7 @@ public interface CommandWrapper {
 
         NovaPlayer np = new NovaPlayer(p);
 
-        Inventory inv = w.genGUI(54, get("constants.pay_player"), new Wrapper.CancelHolder());
+        Inventory inv = w.genGUI(54, get("constants.pay_player"));
 
         ItemStack head1 = createPlayerHead(p);
         ItemMeta hm1 = head1.getItemMeta();
@@ -824,7 +824,7 @@ public interface CommandWrapper {
             return;
         }
 
-        Inventory inv = w.genGUI(54, get("constants.business.remove_product"), new Wrapper.CancelHolder());
+        Inventory inv = w.genGUI(54, get("constants.business.remove_product"));
         Inventory bData = w.generateBusinessData(b, p, false);
 
         List<ItemStack> items = Arrays.stream(bData.getContents())
@@ -1025,7 +1025,7 @@ public interface CommandWrapper {
             return;
         }
 
-        Inventory inv = w.genGUI(36, owned ? get("constants.bounty.all") : get("constants.bounty.self"), new Wrapper.CancelHolder());
+        Inventory inv = w.genGUI(36, owned ? get("constants.bounty.all") : get("constants.bounty.self"));
         for (int i = 10; i < 12; i++) inv.setItem(i, w.getGUIBackground());
         for (int i = 15; i < 17; i++) inv.setItem(i, w.getGUIBackground());
 
@@ -1144,7 +1144,7 @@ public interface CommandWrapper {
         final Inventory settings;
         NovaPlayer np = new NovaPlayer(p);
         if (section == null) {
-            settings = w.genGUI(27, get("constants.settings.select"), new Wrapper.CancelHolder());
+            settings = w.genGUI(27, get("constants.settings.select"));
 
             ItemStack personal = createPlayerHead(p);
             ItemMeta meta = personal.getItemMeta();
@@ -1178,7 +1178,7 @@ public interface CommandWrapper {
                 return;
             }
 
-            settings = w.genGUI(36, get("constants.settings." + (business ? BUSINESS_TAG : "player")), new Wrapper.CancelHolder());
+            settings = w.genGUI(36, get("constants.settings." + (business ? BUSINESS_TAG : "player")));
 
             BiConsumer<Settings.NovaSetting<Boolean>, Boolean> func = (sett, value) -> {
                 ItemStack item = new ItemStack(value ? limeWool() : redWool());
@@ -1244,7 +1244,7 @@ public interface CommandWrapper {
             return;
         }
 
-        Inventory stats = w.genGUI(45, get("constants.business.statistics"), new Wrapper.CancelHolder());
+        Inventory stats = w.genGUI(45, get("constants.business.statistics"));
         BusinessStatistics statistics = b.getStatistics();
 
         boolean anonymous = !b.getSetting(Settings.Business.PUBLIC_OWNER) && !b.isOwner(p);
@@ -1437,7 +1437,7 @@ public interface CommandWrapper {
             return;
         }
 
-        Inventory rate = w.genGUI(36, String.format(get("constants.rating"), b.getName()), new Wrapper.CancelHolder());
+        Inventory rate = w.genGUI(36, String.format(get("constants.rating"), b.getName()));
 
         ItemStack ratingWheel = new ItemStack(getRatingMats()[2]);
         ItemMeta rMeta = ratingWheel.getItemMeta();
@@ -1493,7 +1493,7 @@ public interface CommandWrapper {
         }
 
         Rating rating = r.get();
-        Inventory pr = w.genGUI(27, target.getName() + " - \"" + b.getName() + "\"", new Wrapper.CancelHolder());
+        Inventory pr = w.genGUI(27, target.getName() + " - \"" + b.getName() + "\"");
 
         ItemStack head = createPlayerHead(target);
         ItemMeta hMeta = head.getItemMeta();
@@ -1526,7 +1526,7 @@ public interface CommandWrapper {
             return;
         }
 
-        Inventory discover = w.genGUI(54, get("constants.business.discover"), new Wrapper.CancelHolder());
+        Inventory discover = w.genGUI(54, get("constants.business.discover"));
 
         for (int i = 0; i < 28; i++) {
             int index = 10 + i;
@@ -1602,7 +1602,7 @@ public interface CommandWrapper {
         }
 
         Business b = Business.getByOwner(p);
-        Inventory select = w.genGUI(54, get("constants.business.select_product"), new Wrapper.CancelHolder());
+        Inventory select = w.genGUI(54, get("constants.business.select_product"));
         Inventory bData = w.generateBusinessData(b, p, false);
 
         List<ItemStack> items = Arrays.stream(bData.getContents())
@@ -1710,7 +1710,7 @@ public interface CommandWrapper {
         NovaPlayer np = new NovaPlayer(target);
         PlayerStatistics stats = np.getStatistics();
 
-        Inventory inv = w.genGUI(36, get("constants.player_statistics"), new Wrapper.CancelHolder());
+        Inventory inv = w.genGUI(36, get("constants.player_statistics"));
 
         ItemStack head = createPlayerHead(target);
         ItemMeta hMeta = head.getItemMeta();
@@ -1937,7 +1937,7 @@ public interface CommandWrapper {
 
         Business b = Business.getByOwner(p);
 
-        Inventory inv = w.genGUI(27, get("constants.business.advertising"), new Wrapper.CancelHolder());
+        Inventory inv = w.genGUI(27, get("constants.business.advertising"));
 
         ItemStack owner = createPlayerHead(p);
         ItemMeta ownerMeta = owner.getItemMeta();
@@ -2003,7 +2003,7 @@ public interface CommandWrapper {
                 1, 10, 50, 100, 500, 1000, 5000, 10000, 100000
         };
 
-        Inventory inv = w.genGUI(45, get("constants.business.advertising_" + (deposit ? "deposit" : "withdraw")), new Wrapper.CancelHolder());
+        Inventory inv = w.genGUI(45, get("constants.business.advertising_" + (deposit ? "deposit" : "withdraw")));
 
         for (int j = 0; j < 2; j++)
             for (int i = 0; i < amounts.length; i++) {
@@ -3258,7 +3258,7 @@ public interface CommandWrapper {
         Business randB = Business.randomAdvertisingBusiness();
 
         for (int i = 0; i < pageCount; i++) {
-            Inventory inv = w.genGUI(54, get("constants.balances") + " - " + String.format(get("constants.page"), i + 1), new Wrapper.CancelHolder());
+            Inventory inv = w.genGUI(54, get("constants.balances") + " - " + String.format(get("constants.page"), i + 1));
 
             ItemStack head = createPlayerHead(p);
             ItemMeta meta = head.getItemMeta();
@@ -3329,7 +3329,7 @@ public interface CommandWrapper {
         Business randB = Business.randomAdvertisingBusiness();
 
         for (int i = 0; i < pageCount; i++) {
-            Inventory inv = w.genGUI(54, get("constants.bank.balance") + " - " + String.format(get("constants.page"), i + 1), new Wrapper.CancelHolder());
+            Inventory inv = w.genGUI(54, get("constants.bank.balance") + " - " + String.format(get("constants.page"), i + 1));
 
             if (pageCount > 1 && i < pageCount - 1) {
                 ItemStack next = nextA.clone();
