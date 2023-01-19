@@ -126,4 +126,9 @@ final class TestWrapper implements Wrapper {
         return new ArrayList<>();
     }
 
+    @Override
+    public NovaInventory createInventory(String id, String name, int size) {
+        return null;
+    }
+
 }
