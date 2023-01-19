@@ -178,6 +178,14 @@ public final class Price implements ConfigurationSerializable, Comparable<Price>
         return this;
     }
 
+    /**
+     * Multiplies {@linkplain #getAmount() the amount} by the economy's {@linkplain Economy#getConversionScale() conversion scale}.
+     * @return Real Amount, factoring in the economy's conversion scale
+     */
+    public double getRealAmount() {
+        return amount * econ.getConversionScale();
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
