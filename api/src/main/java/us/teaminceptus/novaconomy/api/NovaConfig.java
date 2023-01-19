@@ -9,6 +9,7 @@ import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.api.economy.Economy;
+import us.teaminceptus.novaconomy.api.economy.market.NovaMarket;
 import us.teaminceptus.novaconomy.api.player.NovaPlayer;
 import us.teaminceptus.novaconomy.api.util.Price;
 
@@ -29,6 +30,22 @@ public interface NovaConfig  {
      */
     static NovaConfig getConfiguration() {
         return (NovaConfig) getPlugin();
+    }
+
+    /**
+     * Fetches the Novaconomy Market.
+     * @return Novaconomy Market
+     */
+    static NovaMarket getMarket() {
+        return (NovaMarket) getPlugin();
+    }
+
+    /**
+     * Fetches the file that the Market is stored in.
+     * @return Market File
+     */
+    static File getMarketFile() {
+        return new File(getDataFolder(), "market.dat");
     }
 
     /**
