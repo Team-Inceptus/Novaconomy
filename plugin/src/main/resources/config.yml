@@ -234,3 +234,16 @@ Business:
     # How much host businesses will be rewarded for having a click on their advertisement
     # The Economy is randomly selected, and this value is multiplied by its conversion scale
     ClickReward: 5
+
+# Corporation Section
+Corporation:
+
+  # Corporation Expereince Increase
+  ExperienceIncrease:
+
+    # Whether corporations get experience from Product Purchases
+    ProductIncrease: true
+
+    # The modifier for the amount of experience gained from a Product Purchase
+    # 1.0 ~ (Product Price Amount * Conversion Scale) / 2
+    ProductIncreaseModifier: 1.0
