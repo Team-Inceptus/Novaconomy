@@ -48,6 +48,14 @@ public enum NovaSound {
         play(en.getLocation(), volume, pitch);
     }
 
+    public void playSuccess(@NotNull Entity en) {
+        play(en, 1F, 2F);
+    }
+
+    public void playFailure(@NotNull Entity en) {
+        play(en, 1F, 0F);
+    }
+
     public void play(@NotNull Entity en) { play(en, 1F, 1F); }
 
 }
