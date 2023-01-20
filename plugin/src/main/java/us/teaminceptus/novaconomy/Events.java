@@ -18,11 +18,16 @@ import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerFishEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.inventory.*;
+import org.bukkit.inventory.EntityEquipment;
+import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
 import us.teaminceptus.novaconomy.api.NovaConfig;
+import us.teaminceptus.novaconomy.api.business.Business;
+import us.teaminceptus.novaconomy.api.corporation.Corporation;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.events.player.economy.PlayerChangeBalanceEvent;
+import us.teaminceptus.novaconomy.api.events.player.economy.PlayerPurchaseProductEvent;
 import us.teaminceptus.novaconomy.api.player.Bounty;
 import us.teaminceptus.novaconomy.api.player.NovaPlayer;
 import us.teaminceptus.novaconomy.util.NovaSound;
@@ -35,10 +40,11 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-import static us.teaminceptus.novaconomy.Novaconomy.*;
+import static us.teaminceptus.novaconomy.Novaconomy.isIgnored;
+import static us.teaminceptus.novaconomy.Novaconomy.r;
 import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.*;
 
-class Events implements Listener {
+final class Events implements Listener {
 
     private final Novaconomy plugin;
 
@@ -68,7 +74,7 @@ class Events implements Listener {
                 if (item.getAmount() > 1) item.setAmount(item.getAmount() - 1);
                 else w.removeItem(e);
 
-                NovaSound.ENTITY_ARROW_HIT_PLAYER.play(p, 3F, 2F);
+                NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
             }
         }.runTask(plugin);
     }
@@ -336,7 +342,7 @@ class Events implements Listener {
                 msgs.add(ChatColor.WHITE + "...");
             }
 
-            NovaSound.BLOCK_NOTE_BLOCK_PLING.play(p, 3F, 2F);
+            NovaSound.BLOCK_NOTE_BLOCK_PLING.playSuccess(p);
             w.sendActionbar(p, String.join(ChatColor.YELLOW + ", " + ChatColor.RESET, msgs.toArray(new String[0])));
         }
     }
@@ -471,6 +477,20 @@ class Events implements Listener {
         if (!event.isCancelled()) np.remove(econ, amount);
 
         return ChatColor.DARK_RED + "- " + ChatColor.RED + String.format("%,.2f", Math.floor(amount * 100) / 100) + econ.getSymbol();
+    }
+
+    // Corporation Leveling
+
+    @EventHandler
+    public void onPurchase(PlayerPurchaseProductEvent e) {
+        if (!plugin.hasProductIncrease()) return;
+
+        Business b = e.getProduct().getBusiness();
+        Corporation c = b.getParentCorporation();
+        if (c == null) return;
+
+        double exp = Math.min(1, r.nextDouble() * 2) * (e.getProduct().getPrice().getRealAmount() / 2);
+        c.addExperience(exp);
     }
 
 }
