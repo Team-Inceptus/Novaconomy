@@ -1,7 +1,6 @@
 package us.teaminceptus.novaconomy.api.economy.market;
 
 import org.jetbrains.annotations.NotNull;
-
 import us.teaminceptus.novaconomy.api.economy.Economy;
 
 /**
@@ -29,6 +28,12 @@ public interface StockHolder {
      * @return Stock Purchase Limit
      */
     int getStockLimit();
+
+    /**
+     * Sets the limit of how many shares can be bought of this StockHolder.
+     * @param limit Stock Purchase Limit
+     */
+    void setStockLimit(int limit);
 
     /**
      * Whether stocks can be bought from this StockHolder.

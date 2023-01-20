@@ -320,7 +320,7 @@ public final class Corporation implements StockHolder {
     @Override
     public double getStockPrice() {
         return Math.max(
-            getStatistics().getTotalProfit() * getStockLimit(),
+            getStatistics().getTotalProfit() / getStockLimit(),
             0.01
         );
     }
@@ -330,6 +330,11 @@ public final class Corporation implements StockHolder {
         return stockLimit;
     }
 
+    @Override
+    public void setStockLimit(int limit) {
+        this.stockLimit = limit;
+        saveCorporation();
+    }
 
     // Static Methods
 
