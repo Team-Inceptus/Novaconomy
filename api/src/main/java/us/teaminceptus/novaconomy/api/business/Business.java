@@ -1340,6 +1340,17 @@ public final class Business implements ConfigurationSerializable {
     }
 
     /**
+     * Makes this Business leave its parent Corporation.
+     * @throws IllegalStateException if this Business is not in a Corporation
+     */
+    public void leaveParentCorporation() throws IllegalStateException {
+        Corporation parent = getParentCorporation();
+        if (parent == null) throw new IllegalStateException("This business is not in a corporation!");
+
+        parent.removeChild(this);
+    }
+
+    /**
      * <p>Fetches a random business based on its advertising balance.</p>
      * <p>Will return null if {@link NovaConfig#isAdvertisingEnabled()} is false.</p>
      * @return Random Business
