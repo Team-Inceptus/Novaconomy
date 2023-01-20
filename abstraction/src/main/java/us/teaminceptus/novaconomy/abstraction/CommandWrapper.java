@@ -17,7 +17,6 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -60,11 +59,11 @@ public interface CommandWrapper {
 
     default void loadCommands() {}
 
-    Wrapper w = getWrapper();
-
     String BUSINESS_TAG = "business";
     String AMOUNT_TAG = "amount";
     String ECON_TAG = "economy";
+
+    Wrapper w = getWrapper();
     
     Map<String, List<String>> COMMANDS = new HashMap<String, List<String>>() {{
         put("ehelp", Arrays.asList("nhelp", "novahelp", "econhelp", "economyhelp"));
@@ -186,7 +185,7 @@ public interface CommandWrapper {
 
         p.sendMessage(ChatColor.GREEN + get("constants.loading"));
         p.openInventory(getBalancesGUI(p).get(0));
-        NovaSound.ENTITY_ARROW_HIT_PLAYER.play(p, 3F, 2F);
+        NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
     }
 
     default void reloadConfig(CommandSender sender) {
@@ -496,7 +495,7 @@ public interface CommandWrapper {
         }
 
         p.openInventory(inv);
-        NovaSound.BLOCK_NOTE_BLOCK_PLING.play(p, 3F, 1F);
+        NovaSound.BLOCK_NOTE_BLOCK_PLING.play(p, 1F, 1F);
     }
 
     default void createCheck(Player p, Economy econ, double amount, boolean take) {
@@ -627,7 +626,7 @@ public interface CommandWrapper {
         inv.setItem(50, cancel);
 
         p.openInventory(inv);
-        NovaSound.ENTITY_ARROW_HIT_PLAYER.play(p, 3F, 2F);
+        NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
     }
 
     default void deleteBusiness(Player p, boolean confirm) {
@@ -661,7 +660,7 @@ public interface CommandWrapper {
             return;
         }
         p.openInventory(w.generateBusinessData(b, p, false));
-        NovaSound.BLOCK_ENDER_CHEST_OPEN.play(p, 3F, 0.5F);
+        NovaSound.BLOCK_ENDER_CHEST_OPEN.play(p, 1F, 0.5F);
     }
 
     default void businessQuery(Player p, Business b) {
@@ -672,7 +671,7 @@ public interface CommandWrapper {
         boolean notOwner = !b.isOwner(p);
 
         p.openInventory(w.generateBusinessData(b, p, notOwner));
-        NovaSound.BLOCK_ENDER_CHEST_OPEN.play(p, 3F, 0.5F);
+        NovaSound.BLOCK_ENDER_CHEST_OPEN.play(p, 1F, 0.5F);
 
         if (notOwner) {
             b.getStatistics().addView();
@@ -788,7 +787,10 @@ public interface CommandWrapper {
             return;
         }
 
-        Inventory inv = Bukkit.createInventory(new ReturnItemsHolder(p, "business:add_resource"), 54, get("constants.business.add_stock"));
+        NovaInventory inv = w.createInventory("return_items", get("constants.business.add_stock"), 54);
+        inv.setAttribute("player", p);
+        inv.setAttribute("added", false);
+        inv.setAttribute("ignore_ids", ImmutableList.of("business:add_resource"));
 
         ItemStack confirm = new ItemStack(Material.BEACON);
         confirm = w.setID(confirm, "business:add_resource");
@@ -847,7 +849,7 @@ public interface CommandWrapper {
         p.sendMessage(ChatColor.BLUE + get("constants.loading"));
 
         p.openInventory(getBankBalanceGUI().get(0));
-        NovaSound.ENTITY_ARROW_HIT_PLAYER.play(p, 3F, 2F);
+        NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
     }
 
     default void bankDeposit(Player p, double amount, Economy econ) {
@@ -895,7 +897,7 @@ public interface CommandWrapper {
 
             p.sendMessage(ChatColor.DARK_AQUA + get("constants.teleporting"));
             p.teleport(b.getHome());
-            NovaSound.  ENTITY_ENDERMAN_TELEPORT.play(p, 3F, 1F);
+            NovaSound.  ENTITY_ENDERMAN_TELEPORT.play(p, 1F, 1F);
         }
     }
 
@@ -1073,7 +1075,7 @@ public interface CommandWrapper {
         }
 
         p.openInventory(inv);
-        NovaSound.BLOCK_NOTE_BLOCK_PLING.play(p, 3F, 1F);
+        NovaSound.BLOCK_NOTE_BLOCK_PLING.play(p, 1F, 1F);
     }
 
     default void callEvent(CommandSender sender, String event, boolean self) {
@@ -1235,7 +1237,7 @@ public interface CommandWrapper {
         }
 
         p.openInventory(settings);
-        NovaSound.BLOCK_ANVIL_USE.play(p, 3F, 1.5F);
+        NovaSound.BLOCK_ANVIL_USE.play(p, 1F, 1.5F);
     }
 
     default void businessStatistics(Player p, Business b) {
@@ -1584,7 +1586,7 @@ public interface CommandWrapper {
                     } else discover.setItem(index, w.getGUIBackground());
                 }
 
-                NovaSound.ENTITY_ARROW_HIT_PLAYER.play(p, 3F, 2F);
+                NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
             }
         }.runTaskAsynchronously(NovaConfig.getPlugin());
         p.openInventory(discover);
@@ -1790,7 +1792,7 @@ public interface CommandWrapper {
         inv.setItem(22, history);
 
         op.openInventory(inv);
-        NovaSound.BLOCK_ANVIL_USE.play(p, 3F, 1.5F);
+        NovaSound.BLOCK_ANVIL_USE.play(p, 1F, 1.5F);
     }
 
     default void businessRecover(Player p) {
@@ -2049,7 +2051,7 @@ public interface CommandWrapper {
         inv.setItem(41, cancel);
 
         p.openInventory(inv);
-        NovaSound.ENTITY_ARROW_HIT_PLAYER.play(p, 3F, 2F);
+        NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
     }
 
     default void setEconomyName(CommandSender sender, Economy econ, String name) {
@@ -2997,7 +2999,7 @@ public interface CommandWrapper {
 
                 items.forEach(inv::setItem);
 
-                NovaSound.ENTITY_ARROW_HIT_PLAYER.play(p, 3F, 2F);
+                NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
             }
         }.runTaskAsynchronously(NovaConfig.getPlugin());
     }
@@ -3046,38 +3048,6 @@ public interface CommandWrapper {
     static ItemStack redPane() {
         if (w.isLegacy()) return new ItemStack(Material.matchMaterial("STAINED_GLASS_PANE"), 14);
         else return new ItemStack(Material.matchMaterial("RED_STAINED_GLASS_PANE"));
-    }
-
-    class ReturnItemsHolder implements InventoryHolder {
-
-        private final Player p;
-        private final List<String> ignoreIds;
-
-        private boolean added;
-
-        public ReturnItemsHolder(Player p, String... ignoreIds) {
-            this.p = p;
-            this.ignoreIds = Arrays.asList(ignoreIds);
-            this.added = false;
-        }
-
-
-        @Override
-        public Inventory getInventory() {
-            return null;
-        }
-
-        public Player player() {
-            return this.p;
-        }
-
-        public boolean added() {
-            return this.added;
-        }
-
-        public void added(boolean added) { this.added = added; }
-
-        public List<String> ignoreIds() { return this.ignoreIds; }
     }
 
     static String formatTimeAgo(long start) {
