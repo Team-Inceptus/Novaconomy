@@ -1,16 +1,17 @@
 package us.teaminceptus.novaconomy.abstraction;
 
-import java.util.Map;
-
 import org.bukkit.inventory.Inventory;
+
+import java.util.Map;
 
 public interface NovaInventory extends Inventory {
     
+    @Override
     default String getTitle() {
         return getAttribute("_name", String.class);
     }
 
-    default String getIdentifier() {
+    default String getId() {
         return getAttribute("_id", String.class);
     }
 
