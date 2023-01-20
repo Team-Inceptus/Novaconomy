@@ -899,4 +899,28 @@ public interface NovaConfig  {
      */
     void setLanguage(@NotNull Language language) throws IllegalArgumentException;
 
+    /**
+     * Whether Corporations gain experience from Product Purchases.
+     * @return true if enabled, else false
+     */
+    boolean hasProductIncrease();
+
+    /**
+     * Sets whether Corporations gain experience from Product Purchases.
+     * @param enabled true if enabled, else false
+     */
+    void setProductIncrease(boolean enabled);
+
+    /**
+     * Fetches the multiplier to the experience of how much a Corporation gains from Product Purchases.
+     * @return Experience multiplier
+     */
+    double getProductIncreaseModifier();
+
+    /**
+     * Sets the multiplier to the experience of how much a Corporation gains from Product Purchases.
+     * @param modifier Experience multiplier
+     */
+    void setProductIncreaseModifier(double modifier);
+
 }

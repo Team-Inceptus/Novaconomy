@@ -727,6 +727,28 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 	}
 
 	@Override
+	public boolean hasProductIncrease() {
+		return config.getBoolean("Corporations.ExperienceIncrease.ProductIncrease", true);
+	}
+
+	@Override
+	public void setProductIncrease(boolean enabled) {
+		config.set("Corporations.ExperienceIncrease.ProductIncrease", enabled);
+		saveConfig();
+	}
+
+	@Override
+	public double getProductIncreaseModifier() {
+		return config.getDouble("Corporations.ExperienceIncrease.ProductIncreaseModifier", 1);
+	}
+
+	@Override
+	public void setProductIncreaseModifier(double modifier) {
+		config.set("Corporations.ExperienceIncrease.ProductIncreaseModifier", modifier);
+		saveConfig();
+	}
+
+	@Override
 	public boolean hasMiningIncrease() { return ncauses.getBoolean("MiningIncrease", true); }
 
 	@Override
