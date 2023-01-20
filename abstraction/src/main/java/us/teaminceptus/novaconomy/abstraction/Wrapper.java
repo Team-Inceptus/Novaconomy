@@ -16,6 +16,7 @@ import org.bukkit.util.ChatPaginator;
 import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.business.Business;
+import us.teaminceptus.novaconomy.api.corporation.Corporation;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.events.business.BusinessAdvertiseEvent;
 import us.teaminceptus.novaconomy.api.settings.Settings;
@@ -38,6 +39,8 @@ import java.util.stream.Collectors;
 public interface Wrapper {
 
     String ROOT = "Novaconomy";
+
+    SecureRandom r = new SecureRandom();
 
     default int getCommandVersion() {
         return 1;
@@ -102,7 +105,7 @@ public interface Wrapper {
 
     // Defaults
 
-    default boolean hasID(ItemStack item) { return getID(item) != null && getID(item).length() > 0; }
+    default boolean hasID(ItemStack item) { return getID(item) != null && !getID(item).isEmpty(); }
 
     default boolean isProduct(ItemStack item) { return hasID(item) && (getID(item).equalsIgnoreCase("product") || getNBTBoolean(item, "is_product")); }
 
@@ -327,7 +330,12 @@ public interface Wrapper {
         return inv;
     }
 
-    SecureRandom r = new SecureRandom();
+    default NovaInventory generateCorporationData(Corporation c, Player viewer) {
+        NovaInventory inv = genGUI(54, String.format(get("constants.corporation.title"), c.getName()));
+        inv.setCancelled();
+
+        return inv;
+    }
 
     default NovaInventory genGUI(int size, String name) {
         return genGUI("", size, name);
