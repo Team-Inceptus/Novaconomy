@@ -166,7 +166,7 @@
         <repository>
             <id>nms-repo</id>
             <name>NMS Repository</name>
-            <url>https://repo.codemc.org/repository/nms/</url>
+            <url>https://repo.codemc.io/repository/nms/</url>
             <releases>
                 <updatePolicy>never</updatePolicy>
             </releases>
