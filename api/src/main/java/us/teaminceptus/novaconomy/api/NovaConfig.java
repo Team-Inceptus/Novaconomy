@@ -196,6 +196,16 @@ public interface NovaConfig  {
     }
 
     /**
+     * Fetches the functionality.yml Configuration.
+     * @return Functionality Configuration
+     */
+    @NotNull
+    static FileConfiguration getFunctionalityConfig() {
+        if (!getFunctionalityFile().exists()) return loadFunctionalityFile();
+        return YamlConfiguration.loadConfiguration(getFunctionalityFile());
+    }
+
+    /**
      * Loads the Functionality Configuration.
      * @return Loaded Functionality Configuration
      */
@@ -207,8 +217,21 @@ public interface NovaConfig  {
 
         if (!config.isSet("CommandVersion")) config.set("CommandVersion", "auto");
 
-        if (!config.isDouble("MaxConvertAmount")) config.set("MaxConvertAmount", -1);
+        if (!config.isDouble("MaxConvertAmount") && !config.isInt("MaxConvertAmount")) config.set("MaxConvertAmount", -1);
         if (!config.isConfigurationSection("EconomyMaxConvertAmounts")) config.createSection("EconomyMaxConvertAmounts");
+        if (!config.isSet("VaultEconomy")) config.set("VaultEconomy", -1);
+
+        if (!config.isConfigurationSection("Essentials")) config.createSection("Essentials");
+        
+        if (!config.isConfigurationSection("Essentials.NickCost")) config.createSection("Essentials.NickCost");
+        if (!config.isBoolean("Essentials.NickCost.Enabled")) config.set("Essentials.NickCost.Enabled", false);
+        if (!config.isDouble("Essentials.NickCost.Amount") && !config.isInt("Essentials.NickCost.Amount")) config.set("Essentials.NickCost.Cost", 0.0);
+        if (!config.isString("Essentials.NickCost.Economy")) config.set("Essentials.NickCost.Economy", "default");
+
+        if (!config.isConfigurationSection("Essentials.TeleportCost")) config.createSection("Essentials.TeleportCost");
+        if (!config.isBoolean("Essentials.TeleportCost.Enabled")) config.set("Essentials.TeleportCost.Enabled", false);
+        if (!config.isDouble("Essentials.TeleportCost.Amount") && !config.isInt("Essentials.TeleportCost.Amount")) config.set("Essentials.TeleportCost.Cost", 0.0);
+        if (!config.isString("Essentials.TeleportCost.Economy")) config.set("Essentials.TeleportCost.Economy", "default");
 
         try { config.save(getFunctionalityFile()); } catch (IOException e) { getPlugin().getLogger().severe(e.getMessage()); }
 

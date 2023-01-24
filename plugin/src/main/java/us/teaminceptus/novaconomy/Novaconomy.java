@@ -37,6 +37,7 @@ import us.teaminceptus.novaconomy.api.player.PlayerStatistics;
 import us.teaminceptus.novaconomy.api.util.BusinessProduct;
 import us.teaminceptus.novaconomy.api.util.Price;
 import us.teaminceptus.novaconomy.api.util.Product;
+import us.teaminceptus.novaconomy.essentialsx.EssentialsListener;
 import us.teaminceptus.novaconomy.placeholderapi.Placeholders;
 import us.teaminceptus.novaconomy.treasury.TreasuryRegistry;
 import us.teaminceptus.novaconomy.vault.VaultRegistry;
@@ -273,26 +274,27 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 		add(PlayerStatistics.class);
 	}};
 
-	private void loadPlaceholders() {
+	private void loadAddons() {
 		if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
 			getLogger().info("Placeholder API Found! Hooking...");
 			new Placeholders(this);
 			getLogger().info("Hooked into Placeholder API!");
 		}
-	}
 
-	private void loadVault() {
 		if (hasVault()) {
 			getLogger().info("Vault Found! Hooking...");
 			VaultRegistry.reloadVault();
 		}
-	}
 
-	private void loadTreasury() {
 		if (Bukkit.getPluginManager().getPlugin("Treasury") != null) {
 			getLogger().info("Treasury Found! Hooking...");
 			new TreasuryRegistry(this);
 		}
+
+        if (Bukkit.getPluginManager().getPlugin("Essentials") != null) {
+            getLogger().info("Essentials Found! Hooking...");
+            new EssentialsListener(this);
+        }
 	}
 
 	/**
@@ -347,12 +349,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 			return;
 		}
 
-		// Placeholders
-		loadPlaceholders();
-
-		// Vault + Treasury
-		loadVault();
-		loadTreasury();
+		loadAddons();
 		getLogger().info("Loaded Optional Hooks...");
 
 		// Update Checker

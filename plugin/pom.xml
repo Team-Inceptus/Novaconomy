@@ -136,6 +136,12 @@
             <version>1.2.1</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>com.github.EssentialsX.Essentials</groupId>
+            <artifactId>EssentialsX</artifactId>
+            <version>2.19.7</version>
+            <scope>provided</scope>
+        </dependency>
 
         <!-- Abstraction -->
 
