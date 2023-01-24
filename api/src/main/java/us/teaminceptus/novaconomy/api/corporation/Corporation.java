@@ -102,6 +102,19 @@ public final class Corporation implements StockHolder {
     }
 
     /**
+     * Fetches an immutable map of the Business Owners this Corporation is responsible for.
+     * @return Business Owners
+     */
+    @NotNull
+    public Set<OfflinePlayer> getMembers() {
+        return ImmutableSet.copyOf(
+            children.stream()
+                    .map(Business::getOwner)
+                    .collect(Collectors.toList())
+        );
+    }
+
+    /**
      * Adds a Business to this Corporation's children.
      * @param b Business to add
      * @throws IllegalArgumentException if the Business already has a parent corporation, or is null
@@ -444,6 +457,19 @@ public final class Corporation implements StockHolder {
     }
 
     /**
+     * Whether the given member is in a Corporation.
+     * @param member Corporation Member
+     * @return true if member is in a corporation, false otherwise
+     */
+    public static boolean existsByMember(@Nullable OfflinePlayer member) {
+        if (member == null) return false;
+        if (exists(member)) return true;
+        
+        return getCorporations().stream()
+                .anyMatch(c -> c.getMembers().contains(member));
+    }
+
+    /**
      * Deletes a Corporation.
      * @param c Corporation to delete
      */
@@ -513,15 +539,18 @@ public final class Corporation implements StockHolder {
         Material icon = Material.STONE;
         Location headquarters;
 
-        Builder() {}
+        private Builder() {}
 
         /**
          * Sets the name of the Corporation.
          * @param name Corporation Name
          * @return this class, for chaining
+         * @throws IllegalArgumentException if name is null or longer than {@link #MAX_NAME_LENGTH}
          */
-        public Builder setName(@NotNull String name) {
+        public Builder setName(@NotNull String name) throws IllegalArgumentException {
             if (name == null) throw new IllegalArgumentException("Corporation Name cannot be null!");
+            if (name.length() > MAX_NAME_LENGTH) throw new IllegalArgumentException("Corporation Name is too long!");
+
             this.name = name;
             return this;
         }
@@ -530,8 +559,9 @@ public final class Corporation implements StockHolder {
          * Sets the owner of the Corporation.
          * @param owner Corporation Owner
          * @return this class, for chaining
+         * @throws IllegalArgumentException if owner is null
          */
-        public Builder setOwner(@NotNull OfflinePlayer owner) {
+        public Builder setOwner(@NotNull OfflinePlayer owner) throws IllegalArgumentException {
             if (owner == null) throw new IllegalArgumentException("Corporation Owner cannot be null!");
             this.owner = owner;
             return this;
@@ -541,8 +571,9 @@ public final class Corporation implements StockHolder {
          * Sets the icon of the Corporation.
          * @param icon Corporation Icon
          * @return this class, for chaining
+         * @throws IllegalArgumentException if icon is null
          */
-        public Builder setIcon(@NotNull Material icon) {
+        public Builder setIcon(@NotNull Material icon) throws IllegalArgumentException {
             if (icon == null) throw new IllegalArgumentException("Corporation Icon cannot be null!");
             this.icon = icon;
             return this;

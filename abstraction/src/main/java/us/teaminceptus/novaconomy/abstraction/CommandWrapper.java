@@ -31,6 +31,7 @@ import us.teaminceptus.novaconomy.api.bank.Bank;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.business.BusinessStatistics;
 import us.teaminceptus.novaconomy.api.business.Rating;
+import us.teaminceptus.novaconomy.api.corporation.Corporation;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.events.CommandTaxEvent;
 import us.teaminceptus.novaconomy.api.events.business.BusinessAdvertiseEvent;
@@ -56,6 +57,8 @@ import static us.teaminceptus.novaconomy.abstraction.Wrapper.r;
 
 @SuppressWarnings("unchecked")
 public interface CommandWrapper {
+
+    String ERROR_PERMISSION = getMessage("error.permission");
 
     default void loadCommands() {}
 
@@ -179,7 +182,7 @@ public interface CommandWrapper {
 
     default void balance(Player p) {
         if (!p.hasPermission("novaconomy.user.balance")) {
-            p.sendMessage(getMessage("error.permission"));
+            p.sendMessage(ERROR_PERMISSION);
             return;
         }
 
@@ -190,7 +193,7 @@ public interface CommandWrapper {
 
     default void reloadConfig(CommandSender sender) {
         if (!sender.hasPermission("novaconomy.admin.config")) {
-            sender.sendMessage(getMessage("error.permission"));
+            sender.sendMessage(ERROR_PERMISSION);
             return;
         }
 
@@ -212,7 +215,7 @@ public interface CommandWrapper {
 
     default void convert(Player p, Economy from, Economy to, double amount) {
         if (!p.hasPermission("novaconomy.user.convert")) {
-            p.sendMessage(getMessage("error.permission"));
+            p.sendMessage(ERROR_PERMISSION);
             return;
         }
 
@@ -248,7 +251,7 @@ public interface CommandWrapper {
 
     default void exchange(Player p, double amount) {
         if (!p.hasPermission("novaconomy.user.convert")) {
-            p.sendMessage(getMessage("error.permission"));
+            p.sendMessage(ERROR_PERMISSION);
             return;
         }
 
@@ -429,7 +432,7 @@ public interface CommandWrapper {
 
     default void balanceLeaderboard(Player p, Economy econ) {
         if (!p.hasPermission("novaconomy.user.leaderboard")) {
-            p.sendMessage(getMessage("error.permission"));
+            p.sendMessage(ERROR_PERMISSION);
             return;
         }
 
@@ -536,7 +539,7 @@ public interface CommandWrapper {
 
     default void pay(Player p, Player target, Economy economy, double amount) {
         if (!p.hasPermission("novaconomy.user.pay")) {
-            p.sendMessage(getMessage("error.permission"));
+            p.sendMessage(ERROR_PERMISSION);
             return;
         }
 
@@ -642,7 +645,7 @@ public interface CommandWrapper {
 
     default void removeBusiness(CommandSender sender, Business b, boolean confirm) {
         if (!sender.hasPermission("novaconomy.admin.delete_business")) {
-            sender.sendMessage(getMessage("error.permission"));
+            sender.sendMessage(ERROR_PERMISSION);
             return;
         }
 
@@ -1416,7 +1419,7 @@ public interface CommandWrapper {
 
     default void rate(Player p, Business b, String comment) {
         if (!p.hasPermission("novaconomy.user.rate")) {
-            p.sendMessage(getMessage("error.permission"));
+            p.sendMessage(ERROR_PERMISSION);
             return;
         }
 
@@ -1705,7 +1708,7 @@ public interface CommandWrapper {
         Player op = target.getPlayer();
         boolean online = op != null;
         if (!p.hasPermission("novaconomy.user.stats")) {
-            op.sendMessage(getMessage("error.permission"));
+            op.sendMessage(ERROR_PERMISSION);
             return;
         }
 
@@ -2164,7 +2167,7 @@ public interface CommandWrapper {
 
     default void configNaturalCauses(CommandSender sender, String option, String value) {
         if (!sender.hasPermission("novaconomy.admin.config")) {
-            sender.sendMessage(getMessage("error.permission"));
+            sender.sendMessage(ERROR_PERMISSION);
             return;
         }
 
@@ -2426,7 +2429,7 @@ public interface CommandWrapper {
 
     default void addCausesModifier(CommandSender sender, String type, String key, String... values) {
         if (!sender.hasPermission("novaconomy.admin.config")) {
-            sender.sendMessage(getMessage("error.permission"));
+            sender.sendMessage(ERROR_PERMISSION);
             return;
         }
 
@@ -2620,7 +2623,7 @@ public interface CommandWrapper {
 
     default void removeCausesModifier(CommandSender sender, String type, String key) {
         if (!sender.hasPermission("novaconomy.admin.config")) {
-            sender.sendMessage(getMessage("error.permission"));
+            sender.sendMessage(ERROR_PERMISSION);
             return;
         }
 
@@ -2757,7 +2760,7 @@ public interface CommandWrapper {
 
     default void viewCausesModifier(CommandSender sender, String type, String key) {
         if (!sender.hasPermission("novaconomy.admin.config")) {
-            sender.sendMessage(getMessage("error.permission"));
+            sender.sendMessage(ERROR_PERMISSION);
             return;
         }
 
@@ -2884,7 +2887,7 @@ public interface CommandWrapper {
 
     default void setDefaultEconomy(CommandSender sender, Economy econ) {
         if (!sender.hasPermission("novaconomy.admin.config")) {
-            sender.sendMessage(getMessage("error.permission"));
+            sender.sendMessage(ERROR_PERMISSION);
             return;
         }
 
@@ -2938,7 +2941,7 @@ public interface CommandWrapper {
 
     default void businessLeaderboard(Player p, String category) {
         if (!p.hasPermission("novaconomy.user.leaderboard")) {
-            p.sendMessage(getMessage("error.permission"));
+            p.sendMessage(ERROR_PERMISSION);
             return;
         }
 
@@ -2947,7 +2950,7 @@ public interface CommandWrapper {
             return;
         }
 
-        Inventory inv = w.genGUI(54, get("constants.business.leaderboard"));
+        NovaInventory inv = w.genGUI(54, get("constants.business.leaderboard"));
 
         for (int i = 30; i < 33; i++) inv.setItem(i, loading());
         for (int i = 37; i < 44; i++) inv.setItem(i, loading());
@@ -3006,7 +3009,7 @@ public interface CommandWrapper {
 
     default void basicConfig(CommandSender sender, String key, Object value) {
         if (!sender.hasPermission("novaconomy.admin.config")) {
-            sender.sendMessage(getMessage("error.permission"));
+            sender.sendMessage(ERROR_PERMISSION);
             return;
         }
 
@@ -3018,6 +3021,36 @@ public interface CommandWrapper {
         reloadFiles();
 
         sender.sendMessage(String.format(getMessage("success.config.set"), key, value));
+    }
+
+    default void createCorporation(Player p, String name, Material icon) {
+        if (!p.hasPermission("novaconomy.user.corporation.manage")) {
+            p.sendMessage(ERROR_PERMISSION);
+            return;
+        }
+
+        if (Corporation.exists(p)) {
+            p.sendMessage(getMessage("error.corporation.exists"));
+            return;
+        }
+
+        if (Corporation.exists(name)) {
+            p.sendMessage(getMessage("error.corporation.exists.name"));
+            return;
+        }
+
+        if (Corporation.existsByMember(p)) {
+            p.sendMessage(getMessage("error.corporation.exists.member"));
+            return;
+        }
+
+        Corporation.builder()
+            .setName(name)
+            .setOwner(p)
+            .setIcon(icon)
+            .build();
+
+        p.sendMessage(getMessage("success.corporation.create"));
     }
 
     // Util Classes & Other Static Methods
