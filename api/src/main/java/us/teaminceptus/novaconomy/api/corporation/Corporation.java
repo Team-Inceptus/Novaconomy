@@ -180,6 +180,7 @@ public final class Corporation implements StockHolder {
     public void setExperience(double experience) throws IllegalArgumentException {
         if (experience < 0) throw new IllegalArgumentException("Corporation experience cannot be negative!");
         this.experience = experience;
+
         saveCorporation();
     }
 
@@ -305,6 +306,13 @@ public final class Corporation implements StockHolder {
         return new CorporationStatistics(this);
     }
 
+    /**
+     * Deletes this Corporation.
+     */
+    public void delete() {
+        removeCorporation(this);
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -389,6 +397,7 @@ public final class Corporation implements StockHolder {
      * @param name Corporation Name
      * @return Corporation found, or null if not found
      */
+    @Nullable
     public static Corporation byName(@Nullable String name) {
         if (name == null) return null;
         return getCorporations().stream()
@@ -402,6 +411,7 @@ public final class Corporation implements StockHolder {
      * @param id Corporation ID
      * @return Corporation found, or null if not found
      */
+    @Nullable
     public static Corporation byId(@Nullable UUID id) {
         if (id == null) return null;
         return getCorporations().stream()
@@ -415,10 +425,39 @@ public final class Corporation implements StockHolder {
      * @param owner Corporation Owner
      * @return Corporation found, or null if not found
      */
+    @Nullable
     public static Corporation byOwner(@Nullable OfflinePlayer owner) {
         if (owner == null) return null;
         return getCorporations().stream()
                 .filter(c -> c.getOwner().equals(owner))
+                .findFirst()
+                .orElse(null);
+    }
+
+    /**
+     * Fetches a Corporation by a member.
+     * @param member Corporation Member
+     * @return Corporation found, or null if not found
+     */
+    @Nullable
+    public static Corporation byMember(@Nullable OfflinePlayer member) {
+        if (member == null) return null;
+        return getCorporations().stream()
+                .filter(c -> c.getMembers().contains(member) || c.getOwner().equals(member))
+                .findFirst()
+                .orElse(null);
+    }
+
+    /**
+     * Fetches a Corporation by a member.
+     * @param child Corporation Member as a Business
+     * @return Corporation found, or null if not found
+     */
+    @Nullable
+    public static Corporation byMember(@Nullable Business child) {
+        if (child == null) return null;
+        return getCorporations().stream()
+                .filter(c -> c.getChildren().contains(child))
                 .findFirst()
                 .orElse(null);
     }

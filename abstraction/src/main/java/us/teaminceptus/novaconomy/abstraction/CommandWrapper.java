@@ -87,6 +87,7 @@ public interface CommandWrapper {
         put("statistics", Arrays.asList("stats", "pstats", "pstatistics", "playerstats", "playerstatistics", "nstats", "nstatistics"));
         put("novaconfig", Arrays.asList("novaconomyconfig", "nconfig", "nconf"));
         put("businessleaderboard", Arrays.asList("bleaderboard", "bboard", "businessl", "bl", "businessboard"));
+        put("corporation", Arrays.asList("corp", "ncorp", "c", "nc"));
     }};
 
     Map<String, String> COMMAND_PERMISSION = new HashMap<String, String>() {{
@@ -106,6 +107,7 @@ public interface CommandWrapper {
        put("statistics", "novaconomy.user.stats");
        put("novaconfig", "novaconomy.admin.config");
        put("businessleaderboard", "novaconomy.user.leaderboard");
+       put("corporation", "novaconomy.user.corporation");
     }};
 
     Map<String, String> COMMAND_DESCRIPTION = new HashMap<String, String>() {{
@@ -127,6 +129,7 @@ public interface CommandWrapper {
        put("statistics", "View your Novaconomy Statistics");
        put("novaconfig", "View or edit the Novaconomy Configuration");
        put("businessleaderboard", "View the top 10 businesses in various categories");
+       put("corporation", "Manage your Novaconomy Corporation");
     }};
 
     Map<String, String> COMMAND_USAGE = new HashMap<String, String>() {{
@@ -148,6 +151,7 @@ public interface CommandWrapper {
        put("statistics", "/statistics");
        put("novaconfig", "/novaconfig <naturalcauses|reload|rl|...> <args...>");
        put("businessleaderboard", "/businessleaderboard");
+       put("corporation", "/nc <create|delete|edit|...> <args...>");
     }};
 
     static Plugin getPlugin() {
@@ -3023,6 +3027,16 @@ public interface CommandWrapper {
         sender.sendMessage(String.format(getMessage("success.config.set"), key, value));
     }
 
+    default void corporationInfo(Player p) {
+        if (!Corporation.existsByMember(p)) {
+            p.sendMessage(getMessage("error.corporation.none"));
+            return;
+        }
+
+        Corporation corp = Corporation.byMember(p);
+        p.openInventory(w.generateCorporationData(corp, p));
+    }
+
     default void createCorporation(Player p, String name, Material icon) {
         if (!p.hasPermission("novaconomy.user.corporation.manage")) {
             p.sendMessage(ERROR_PERMISSION);
@@ -3034,23 +3048,42 @@ public interface CommandWrapper {
             return;
         }
 
-        if (Corporation.exists(name)) {
-            p.sendMessage(getMessage("error.corporation.exists.name"));
-            return;
-        }
-
         if (Corporation.existsByMember(p)) {
             p.sendMessage(getMessage("error.corporation.exists.member"));
             return;
         }
 
-        Corporation.builder()
-            .setName(name)
-            .setOwner(p)
-            .setIcon(icon)
-            .build();
+        if (name.length() > Corporation.MAX_NAME_LENGTH) {
+            p.sendMessage(getMessage("error.corporation.name.too_long"));
+            return;
+        }
 
+        try {
+            Corporation.builder().setName(name).setOwner(p).setIcon(icon).build();
+        } catch (UnsupportedOperationException e) {
+            p.sendMessage(getMessage("error.corporation.exists.name"));
+            return;
+        }
+        
         p.sendMessage(getMessage("success.corporation.create"));
+    }
+
+    default void deleteCorporation(Player p, boolean confirm) {
+        if (!p.hasPermission("novaconomy.user.corporation.manage")) {
+            p.sendMessage(ERROR_PERMISSION);
+            return;
+        }
+
+        if (!Corporation.exists(p)) {
+            p.sendMessage(getMessage("error.corporation.none"));
+            return;
+        }
+
+        Corporation corp = Corporation.byOwner(p);
+        if (confirm) {
+            corp.delete();
+            p.sendMessage(getMessage("success.corporation.delete"));
+        } else p.sendMessage(getMessage("error.corporation.confirm_delete"));
     }
 
     // Util Classes & Other Static Methods

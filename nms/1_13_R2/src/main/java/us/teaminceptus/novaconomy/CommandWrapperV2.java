@@ -22,6 +22,7 @@ import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.economy.Economy;
+import us.teaminceptus.novaconomy.util.NovaSound;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -165,6 +166,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
         new BankCommands(this);
         new BountyCommands(this);
         new NovaConfigCommands(this);
+        new CorporationCommands(this);
 
         handler.registerBrigadier();
         handler.setLocale(Language.getCurrentLanguage().getLocale());
@@ -683,5 +685,37 @@ public final class CommandWrapperV2 implements CommandWrapper {
         public void setBountyBroadcast(CommandSender sender, boolean broadcast) {
             wrapper.basicConfig(sender, "Bounties.Broadcast", broadcast);
         }
+    }
+
+    @Command({"corporation", "corp", "ncorp", "c", "nc"})
+    @Description("Manage your Novaconomy Corporation")
+    @Usage("/corporation <create|delete|info|...> <args...>")
+    private static final class CorporationCommands {
+
+        private final CommandWrapperV2 wrapper;
+
+        CorporationCommands(CommandWrapperV2 wrapper) {
+            this.wrapper = wrapper;
+        }
+
+        @Subcommand("info")
+        @DefaultFor("corporation")
+        public void corporationInfo(Player p) {
+            wrapper.corporationInfo(p);
+            NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
+        }
+
+        @Subcommand("create")
+        @CommandPermission("novaconomy.user.corporation.manage")
+        public void createCorporation(Player p, String name, Material icon) {
+            wrapper.createCorporation(p, name, icon);
+        }
+
+        @Subcommand("delete")
+        @CommandPermission("novaconomy.user.corporation.manage")
+        public void deleteCorporation(Player p, @Single String confirm) {
+            wrapper.deleteCorporation(p, confirm.equalsIgnoreCase("confirm"));
+        }
+
     }
 }

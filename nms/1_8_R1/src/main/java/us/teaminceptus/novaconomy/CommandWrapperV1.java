@@ -1383,6 +1383,51 @@ public final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                 businessLeaderboard(p, "ratings");
                 break;
             }
+            case "corporation": {
+                if (!(sender instanceof Player)) return false;
+                Player p = (Player) sender;
+
+                if (args.length < 1) {
+                    corporationInfo(p);
+                    break;
+                }
+
+                switch (args[0]) {
+                    case "info": {
+                        corporationInfo(p);
+                        break;
+                    }
+                    case "create": {
+                        if (args.length < 2) {
+                            sender.sendMessage(getMessage("error.argument.name"));
+                            return false;
+                        }
+
+                        String name = args[1];
+
+                        if (args.length < 3) {
+                            sender.sendMessage(getMessage("error.argument.icon"));
+                            return false;
+                        }
+
+                        Material icon = Material.matchMaterial(args[2]);
+
+                        if (icon == null) {
+                            sender.sendMessage(getMessage("error.argument.icon"));
+                            return false;
+                        }
+
+                        createCorporation(p, name, icon);
+                        break;
+                    }
+                    case "delete": {
+                        String confirm = "";
+                        if (args.length > 1) confirm = args[1];
+                        deleteCorporation(p, confirm.equalsIgnoreCase("confirm"));
+                        break;
+                    }
+                }
+            }
             default: {
                 sender.sendMessage(getMessage("error.argument"));
                 return false;
