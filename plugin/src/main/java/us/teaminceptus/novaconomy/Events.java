@@ -26,6 +26,7 @@ import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.corporation.Corporation;
 import us.teaminceptus.novaconomy.api.economy.Economy;
+import us.teaminceptus.novaconomy.api.events.corporation.CorporationExperienceChangeEvent;
 import us.teaminceptus.novaconomy.api.events.player.economy.PlayerChangeBalanceEvent;
 import us.teaminceptus.novaconomy.api.events.player.economy.PlayerPurchaseProductEvent;
 import us.teaminceptus.novaconomy.api.player.Bounty;
@@ -490,7 +491,12 @@ final class Events implements Listener {
         if (c == null) return;
 
         double exp = Math.min(1, r.nextDouble() * 2) * (e.getProduct().getPrice().getRealAmount() / 2);
-        c.addExperience(exp);
+
+        CorporationExperienceChangeEvent event = new CorporationExperienceChangeEvent(c, c.getExperience(), c.getExperience() + exp);
+        Bukkit.getPluginManager().callEvent(event);
+
+        if (event.isCancelled()) return;
+        c.setExperience(event.getNewExperience());
     }
 
 }
