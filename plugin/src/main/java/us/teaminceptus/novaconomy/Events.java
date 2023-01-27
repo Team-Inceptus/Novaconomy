@@ -22,6 +22,8 @@ import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
+
+import us.teaminceptus.novaconomy.abstraction.NBTWrapper;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.corporation.Corporation;
@@ -44,6 +46,7 @@ import java.util.stream.Collectors;
 import static us.teaminceptus.novaconomy.Novaconomy.isIgnored;
 import static us.teaminceptus.novaconomy.Novaconomy.r;
 import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.*;
+import static us.teaminceptus.novaconomy.abstraction.NBTWrapper.*;
 
 final class Events implements Listener {
 
@@ -62,11 +65,13 @@ final class Events implements Listener {
 
         NovaPlayer np = new NovaPlayer(p);
         ItemStack item = e.getItem();
-        if (!w.hasID(item)) return;
-        if (!w.getID(item).equalsIgnoreCase("economy:check")) return;
+        if (!hasID(item)) return;
+        if (!getID(item).equalsIgnoreCase("economy:check")) return;
 
-        Economy econ = Economy.getEconomy(UUID.fromString(w.getNBTString(item, ECON_TAG)));
-        double amount = w.getNBTDouble(item, AMOUNT_TAG);
+        NBTWrapper nbt = of(item);
+
+        Economy econ = Economy.getEconomy(nbt.getUUID(ECON_TAG));
+        double amount = nbt.getDouble(AMOUNT_TAG);
 
         np.add(econ, amount);
         new BukkitRunnable() {

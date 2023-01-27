@@ -3,11 +3,14 @@ package us.teaminceptus.novaconomy.api.corporation;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.api.NovaConfig;
@@ -238,6 +241,19 @@ public final class Corporation implements StockHolder {
         if (icon == null) throw new IllegalArgumentException("Corporation Icon cannot be null!");
         this.icon = icon;
         saveCorporation();
+    }
+
+    /**
+     * Fetches this Corporation's Icon as an ItemStack.
+     * @return Corporation Icon
+     */
+    public ItemStack getPublicIcon() {
+        ItemStack icon = new ItemStack(this.icon);
+        ItemMeta meta = icon.getItemMeta();
+        meta.setDisplayName(ChatColor.AQUA + name);
+        icon.setItemMeta(meta);
+
+        return icon;
     }
 
     /**

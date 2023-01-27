@@ -17,6 +17,7 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 
+import us.teaminceptus.novaconomy.abstraction.NBTWrapper;
 import us.teaminceptus.novaconomy.abstraction.NovaInventory;
 import us.teaminceptus.novaconomy.abstraction.Wrapper;
 
@@ -33,27 +34,6 @@ public final class Wrapper1_19_R2 implements Wrapper {
     @Override
     public void sendActionbar(Player p, BaseComponent component) {
         p.spigot().sendMessage(ChatMessageType.ACTION_BAR, component);
-    }
-
-    @Override
-    public String getNBTString(org.bukkit.inventory.ItemStack item, String key) {
-        ItemStack nmsitem = CraftItemStack.asNMSCopy(item);
-        CompoundTag tag = nmsitem.getOrCreateTag();
-        CompoundTag novaconomy = tag.getCompound(ROOT);
-
-        return novaconomy.getString(key);
-    }
-
-    @Override
-    public org.bukkit.inventory.ItemStack setNBT(org.bukkit.inventory.ItemStack item, String key, String value) {
-        ItemStack nmsitem = CraftItemStack.asNMSCopy(item);
-        CompoundTag tag = nmsitem.getOrCreateTag();
-        CompoundTag novaconomy = tag.getCompound(ROOT);
-
-        novaconomy.putString(key, value);
-        tag.put(ROOT, novaconomy);
-        nmsitem.setTag(tag);
-        return CraftItemStack.asBukkitCopy(nmsitem);
     }
 
     @Override
@@ -76,97 +56,12 @@ public final class Wrapper1_19_R2 implements Wrapper {
     }
 
     @Override
-    public org.bukkit.inventory.ItemStack setNBT(org.bukkit.inventory.ItemStack item, String key, org.bukkit.inventory.ItemStack value) {
-        ItemStack nmsitem = CraftItemStack.asNMSCopy(item);
-        CompoundTag tag = nmsitem.getOrCreateTag();
-        CompoundTag novaconomy = tag.getCompound(ROOT);
-
-        ItemStack nmsvalue = CraftItemStack.asNMSCopy(value);
-        novaconomy.put(key, nmsvalue.save(nmsvalue.getOrCreateTag()));
-        tag.put(ROOT, novaconomy);
-        nmsitem.setTag(tag);
-        return CraftItemStack.asBukkitCopy(nmsitem);
-    }
-
-    @Override
-    public org.bukkit.inventory.ItemStack getNBTItem(org.bukkit.inventory.ItemStack item, String key) {
-        ItemStack nmsitem = CraftItemStack.asNMSCopy(item);
-        CompoundTag tag = nmsitem.getOrCreateTag();
-        CompoundTag novaconomy = tag.getCompound(ROOT);
-
-        CompoundTag nbt = novaconomy.getCompound(key);
-        return CraftItemStack.asBukkitCopy(ItemStack.of(nbt));
-    }
-
-    @Override
-    public double getNBTDouble(org.bukkit.inventory.ItemStack item, String key) {
-        ItemStack nmsitem = CraftItemStack.asNMSCopy(item);
-        CompoundTag tag = nmsitem.getOrCreateTag();
-        CompoundTag novaconomy = tag.getCompound(ROOT);
-
-        return novaconomy.getDouble(key);
-    }
-
-    @Override
-    public org.bukkit.inventory.ItemStack setNBT(org.bukkit.inventory.ItemStack item, String key, double value) {
-        ItemStack nmsitem = CraftItemStack.asNMSCopy(item);
-        CompoundTag tag = nmsitem.getOrCreateTag();
-        CompoundTag novaconomy = tag.getCompound(ROOT);
-
-        novaconomy.putDouble(key, value);
-        tag.put(ROOT, novaconomy);
-        nmsitem.setTag(tag);
-        return CraftItemStack.asBukkitCopy(nmsitem);
-    }
-
-    @Override
-    public org.bukkit.inventory.ItemStack setNBT(org.bukkit.inventory.ItemStack item, String key, boolean value) {
-        ItemStack nmsitem = CraftItemStack.asNMSCopy(item);
-        CompoundTag tag = nmsitem.hasTag() ? nmsitem.getTag() : new CompoundTag();
-        CompoundTag novaconomy = tag.getCompound(ROOT);
-
-        novaconomy.putBoolean(key, value);
-        tag.put(ROOT, novaconomy);
-        return CraftItemStack.asBukkitCopy(nmsitem);
-    }
-
-    @Override
-    public boolean getNBTBoolean(org.bukkit.inventory.ItemStack item, String key) {
-        ItemStack nmsitem = CraftItemStack.asNMSCopy(item);
-        CompoundTag tag = nmsitem.getOrCreateTag();
-        CompoundTag novaconomy = tag.getCompound(ROOT);
-
-        return novaconomy.getBoolean(key);
-    }
-
-    @Override
     public org.bukkit.inventory.ItemStack normalize(org.bukkit.inventory.ItemStack item) {
         ItemStack nmsitem = CraftItemStack.asNMSCopy(item);
         CompoundTag tag = nmsitem.getOrCreateTag();
 
         tag.remove("id");
         tag.remove("Count");
-        nmsitem.setTag(tag);
-        return CraftItemStack.asBukkitCopy(nmsitem);
-    }
-
-    @Override
-    public int getNBTInt(org.bukkit.inventory.ItemStack item, String key) {
-        ItemStack nmsitem = CraftItemStack.asNMSCopy(item);
-        CompoundTag tag = nmsitem.getOrCreateTag();
-        CompoundTag novaconomy = tag.getCompound(ROOT);
-
-        return novaconomy.getInt(key);
-    }
-
-    @Override
-    public org.bukkit.inventory.ItemStack setNBT(org.bukkit.inventory.ItemStack item, String key, int value) {
-        ItemStack nmsitem = CraftItemStack.asNMSCopy(item);
-        CompoundTag tag = nmsitem.getOrCreateTag();
-        CompoundTag novaconomy = tag.getCompound(ROOT);
-
-        novaconomy.putInt(key, value);
-        tag.put(ROOT, novaconomy);
         nmsitem.setTag(tag);
         return CraftItemStack.asBukkitCopy(nmsitem);
     }
@@ -191,6 +86,11 @@ public final class Wrapper1_19_R2 implements Wrapper {
     @Override
     public NovaInventory createInventory(String id, String name, int size) {
         return new NovaInventory1_19_R2(id, name, size);
+    }
+
+    @Override
+    public NBTWrapper createNBTWrapper(org.bukkit.inventory.ItemStack item) {
+        return new NBTWrapper1_19_R2(item);
     }
 
 }

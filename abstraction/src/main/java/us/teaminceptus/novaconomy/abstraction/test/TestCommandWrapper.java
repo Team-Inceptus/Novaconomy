@@ -1,6 +1,8 @@
-package us.teaminceptus.novaconomy.abstraction;
+package us.teaminceptus.novaconomy.abstraction.test;
 
 import org.bukkit.plugin.Plugin;
+
+import us.teaminceptus.novaconomy.abstraction.CommandWrapper;
 
 public final class TestCommandWrapper implements CommandWrapper {
 

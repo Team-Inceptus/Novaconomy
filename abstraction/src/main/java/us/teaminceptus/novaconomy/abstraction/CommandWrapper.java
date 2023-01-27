@@ -282,12 +282,12 @@ public interface CommandWrapper {
         Economy economy1 = economies.get(0);
         ItemStack econ1 = new ItemStack(economy1.getIcon());
         ItemMeta e1Meta = econ1.getItemMeta();
-        e1Meta.setLore(Collections.singletonList(ChatColor.YELLOW + "" + amount + "" + economy1.getSymbol()));
         econ1.setItemMeta(e1Meta);
         econ1 = w.setID(econ1, "exchange:1");
         econ1 = w.setNBT(econ1, ECON_TAG, economy1.getUniqueId().toString());
         econ1 = w.setNBT(econ1, AMOUNT_TAG, amount);
-        inv.setItem(12, econ1);
+        inv.setItem(12, builder(economy1.getIcon(),
+                meta -> e1Meta.setLore(Collections.singletonList(ChatColor.YELLOW + "" + amount + "" + economy1.getSymbol()));));
 
         ItemStack arrow = new ItemStack(Material.PAPER);
         ItemMeta arrowMeta = arrow.getItemMeta();
