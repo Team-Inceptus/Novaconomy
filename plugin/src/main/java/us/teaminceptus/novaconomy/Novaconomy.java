@@ -60,9 +60,6 @@ import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.*;
  */
 public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMarket {
 
-	static final String PRICE_TAG = "price";
-	static final String PRODUCT_TAG = "product";
-
 	/**
 	 * Main Novaconomy Constructor
 	 * <strong>DO NOT INSTANTIATE THIS WAY</strong>
@@ -312,9 +309,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 
 		funcConfig = NovaConfig.loadFunctionalityFile();
 		playerDir = new File(getDataFolder(), "players");
-
-		NovaConfig.loadConfig();
-		config = this.getConfig();
+		config = NovaConfig.loadConfig();
 		interest = config.getConfigurationSection("Interest");
 		ncauses = config.getConfigurationSection("NaturalCauses");
 
@@ -338,6 +333,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 			return;
 		}
 		new Events(this);
+		new GUIManager(this);
 
 		INTEREST_RUNNABLE.runTaskTimer(this, getInterestTicks(), getInterestTicks());
 		TAXES_RUNNABLE.runTaskTimer(this, getTaxesTicks(), getTaxesTicks());
@@ -348,9 +344,6 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 			getLogger().info("Finished Loading Test Plugin!");
 			return;
 		}
-
-		loadAddons();
-		getLogger().info("Loaded Optional Hooks...");
 
 		// Update Checker
 		new UpdateChecker(this, UpdateCheckSource.SPIGOT, "100503")
@@ -378,6 +371,10 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 		}));
 
 		getLogger().info("Loaded Dependencies...");
+
+		loadAddons();
+		getLogger().info("Loaded Optional Hooks...");
+
 		saveConfig();
 		getLogger().info("Successfully loaded Novaconomy");
 	}

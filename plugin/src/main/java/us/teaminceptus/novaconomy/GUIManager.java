@@ -4,7 +4,6 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.commons.lang.WordUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
-import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.HumanEntity;
@@ -21,6 +20,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.abstraction.CommandWrapper;
+import us.teaminceptus.novaconomy.abstraction.NBTWrapper;
 import us.teaminceptus.novaconomy.abstraction.NovaInventory;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.business.Business;
@@ -49,9 +49,16 @@ import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
-import static us.teaminceptus.novaconomy.Novaconomy.*;
+import static us.teaminceptus.novaconomy.Novaconomy.getCommandWrapper;
+import static us.teaminceptus.novaconomy.Novaconomy.r;
 import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.*;
+import static us.teaminceptus.novaconomy.abstraction.NBTWrapper.builder;
+import static us.teaminceptus.novaconomy.abstraction.NBTWrapper.of;
+import static us.teaminceptus.novaconomy.abstraction.Wrapper.getID;
+import static us.teaminceptus.novaconomy.abstraction.Wrapper.hasID;
+import static us.teaminceptus.novaconomy.util.Items.*;
 
+@SuppressWarnings("unchecked")
 public final class GUIManager implements Listener {
     
     public GUIManager(Novaconomy plugin) {
@@ -62,17 +69,17 @@ public final class GUIManager implements Listener {
 	static final String SETTING_TAG = "setting";
 
 	private static double getAmount(ItemStack item) {
-		return w.getNBTDouble(item, AMOUNT_TAG);
+		return of(item).getDouble(AMOUNT_TAG);
 	}
 
 	@Nullable
 	private static Economy getEconomy(ItemStack item) {
-		return Economy.getEconomy(UUID.fromString(w.getNBTString(item, ECON_TAG)));
+		return Economy.getEconomy(of(item).getUUID(ECON_TAG));
 	}
 
 	@Nullable
 	private static Business getBusiness(ItemStack item) {
-		return Business.getById(UUID.fromString(w.getNBTString(item, BUSINESS_TAG)));
+		return Business.getById(of(item).getUUID(BUSINESS_TAG));
 	}
 
 	@FunctionalInterface
@@ -83,7 +90,7 @@ public final class GUIManager implements Listener {
 	static final TriConsumer<InventoryClickEvent, Integer, List<Inventory>> CHANGE_PAGE_TRICONSUMER = (e, i, l) -> {
 		HumanEntity p = e.getWhoClicked();
 		ItemStack item = e.getCurrentItem();
-		int nextPage = w.getNBTInt(item, "page") + i;
+		int nextPage = of(item).getInt("page") + i;
 		Inventory nextInv = nextPage >= l.size() ? l.get(0) : l.get(nextPage);
 
 		p.openInventory(nextInv);
@@ -102,7 +109,7 @@ public final class GUIManager implements Listener {
 		double amount = getAmount(item);
 
 		ItemStack econWheel = inv.getItem(31);
-		Economy econ = Economy.getEconomy(w.getNBTString(econWheel, ECON_TAG));
+		Economy econ = Economy.getEconomy(of(econWheel).getString(ECON_TAG));
 
 		if (add && np.getBalance(econ) < amount) {
 			p.sendMessage(String.format(getMessage("error.economy.invalid_amount"), get("constants.deposit")));
@@ -141,16 +148,22 @@ public final class GUIManager implements Listener {
 
 		if (economies.size() == 1) {
 			ItemStack ec1 = inv.getItem(12);
-			ItemStack first = ec1.clone();
-			first = w.setID(first, "exchange:2");
-			first = w.setNBT(first, ECON_TAG, w.getNBTString(ec1, ECON_TAG));
-			first = w.setNBT(first, AMOUNT_TAG, getAmount(ec1));
+			ItemStack first = builder(ec1.clone(),
+                    nbt -> {
+                        nbt.setID("exchange:2");
+                        nbt.set(ECON_TAG, of(ec1).getUUID(ECON_TAG));
+                        nbt.set(AMOUNT_TAG, getAmount(ec1));
+                    }
+            );
 
 			ItemStack ec2 = inv.getItem(14);
-			ItemStack second = ec2.clone();
-			second = w.setID(second, "exchange:1");
-			second = w.setNBT(second, ECON_TAG, w.getNBTString(ec2, ECON_TAG));
-			second = w.setNBT(second, AMOUNT_TAG, getAmount(ec2));
+            ItemStack second = builder(ec1.clone(),
+                    nbt -> {
+                        nbt.setID("exchange:2");
+                        nbt.set(ECON_TAG, of(ec2).getUUID(ECON_TAG));
+                        nbt.set(AMOUNT_TAG, getAmount(ec2));
+                    }
+            );
 
 			inv.setItem(14, first);
 			inv.setItem(12, second);
@@ -161,27 +174,26 @@ public final class GUIManager implements Listener {
 		Economy next = economies.get(economies.indexOf(econ) + 1 >= economies.size() ? 0 : economies.indexOf(econ) + 1);
 		double amount = i == 12 ? getAmount(item) : Math.floor(econ2.convertAmount(next, getAmount(inv.getItem(12)) * 100) / 100);
 
-		ItemStack newItem = new ItemStack(next.getIcon());
-		ItemMeta meta = newItem.getItemMeta();
-		meta.setLore(Collections.singletonList(ChatColor.YELLOW + String.format("%,.2f", amount) + next.getSymbol()));
-		newItem.setItemMeta(meta);
-
-		newItem = w.setID(newItem, "exchange:" + (i == 14 ? "2" : "1"));
-		newItem = w.setNBT(newItem, ECON_TAG, next.getUniqueId().toString());
-		newItem = w.setNBT(newItem, AMOUNT_TAG, amount);
+		ItemStack newItem = builder(next.getIcon(),
+                meta -> meta.setLore(Collections.singletonList(ChatColor.YELLOW + String.format("%,.2f", amount) + next.getSymbol())),
+                nbt -> {
+                    nbt.setID("exchange:" + (i == 14 ? "2" : "1"));
+                    nbt.set(ECON_TAG, next.getUniqueId());
+                    nbt.set(AMOUNT_TAG, amount);
+                });
 
 		inv.setItem(e.getSlot(), newItem);
 
 		if (i == 12) {
 			double oAmount = Math.floor(next.convertAmount(econ2, amount) * 100) / 100;
-			ItemStack other = inv.getItem(14).clone();
-			ItemMeta oMeta = other.getItemMeta();
-			oMeta.setLore(Collections.singletonList(ChatColor.YELLOW + String.format("%,.2f", oAmount) + next.getSymbol()));
-			other.setItemMeta(oMeta);
-			other = w.setID(other, "exchange:2");
-			other = w.setNBT(other, ECON_TAG, econ2.getUniqueId().toString());
-			other = w.setNBT(other, AMOUNT_TAG, oAmount);
-
+			ItemStack other = builder(inv.getItem(14).clone(),
+                    meta -> meta.setLore(Collections.singletonList(ChatColor.YELLOW + String.format("%,.2f", oAmount) + next.getSymbol())),
+                    nbt -> {
+                        nbt.setID("exchange:2");
+                        nbt.set(ECON_TAG, econ2.getUniqueId());
+                        nbt.set(AMOUNT_TAG, oAmount);
+                    }
+            );
 			inv.setItem(14, other);
 		}
 
@@ -227,12 +239,12 @@ public final class GUIManager implements Listener {
         ItemStack item = e.getCurrentItem();
         String name = item.hasItemMeta() && item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : WordUtils.capitalizeFully(item.getType().name().replace('_', ' '));
 
-        if (!w.getNBTBoolean(item, "product:in_stock")) {
+        if (!of(item).getBoolean("product:in_stock")) {
             p.sendMessage(String.format(get("error.business.not_in_stock"), name));
             return;
         }
 
-        BusinessProduct pr = (BusinessProduct) w.getNBTProduct(item, PRODUCT_TAG);
+        BusinessProduct pr = (BusinessProduct) getProduct(item);
 
         if (np.getBalance(pr.getEconomy()) < pr.getPrice().getAmount()) {
             p.sendMessage(String.format(get("error.economy.invalid_amount"), get("constants.purchase")));
@@ -249,41 +261,34 @@ public final class GUIManager implements Listener {
                 boolean add = j == 0;
                 int amount = Math.min((int) Math.pow(10, i), 64);
 
-                ItemStack amountI = new ItemStack(add ? Items.limePane() : Items.redPane());
-                amountI.setAmount(amount);
-                ItemMeta aMeta = amountI.getItemMeta();
-                aMeta.setDisplayName((add ? ChatColor.GREEN + "+" : ChatColor.RED + "-") + amount);
-                amountI.setItemMeta(aMeta);
-                amountI = w.setID(amountI, "product:amount");
-                amountI = w.setNBT(amountI, "add", add);
-                amountI = w.setNBT(amountI, AMOUNT_TAG, amount);
+                ItemStack amountI = builder(add ? LIME_STAINED_GLASS_PANE : RED_STAINED_GLASS_PANE, amount,
+                        meta -> meta.setDisplayName((add ? ChatColor.GREEN + "+" : ChatColor.RED + "-") + amount),
+                        nbt -> {
+                            nbt.setID("product:amount");
+                            nbt.set("add", add);
+                            nbt.set(AMOUNT_TAG, amount);
+                            nbt.set(PRODUCT_TAG, pr);
+                        }
+                );
 
                 purchaseGUI.setItem(add ? 13 + (i + 1): 13 - (i + 1), amountI);
             }
 
-        if (np.getBalance(pr.getEconomy()) < pr.getPrice().getAmount()) {
-            ItemStack invalid = new ItemStack(Material.BARRIER);
-            ItemMeta meta = invalid.getItemMeta();
-            meta.setDisplayName(String.format(get("error.economy.invalid_amount"), get("constants.purchase")));
-            invalid.setItemMeta(meta);
-            invalid = w.setNBT(invalid, PRODUCT_TAG, pr);
-            purchaseGUI.setItem(21, invalid);
-        } else {
-            ItemStack yes = Items.yes("buy_product");
-            yes = w.setNBT(yes, PRODUCT_TAG, pr);
-            purchaseGUI.setItem(21, yes);
-        }
+        if (np.getBalance(pr.getEconomy()) < pr.getPrice().getAmount())
+            purchaseGUI.setItem(21, Items.invalid(get("constants.purchase")));
+        else
+            purchaseGUI.setItem(21, yes("buy_product", nbt -> nbt.set(PRODUCT_TAG, pr)));
 
-        ItemStack cancel = Items.cancel("no_product").clone();
-        cancel = w.setNBT(cancel, BUSINESS_TAG, pr.getBusiness().getUniqueId().toString());
-        purchaseGUI.setItem(23, cancel);
+        inv.setAttribute(PRODUCT_TAG, pr);
 
-        ItemStack amountPane = new ItemStack(item.getType());
-        ItemMeta aMeta = amountPane.getItemMeta();
-        aMeta.setDisplayName(ChatColor.YELLOW + "1");
-        aMeta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES);
-        amountPane.setItemMeta(aMeta);
-        amountPane = w.setNBT(amountPane, AMOUNT_TAG, 1);
+        purchaseGUI.setItem(23, Items.cancel("no_product", nbt -> nbt.set(BUSINESS_TAG, pr.getBusiness().getUniqueId())));
+
+        ItemStack amountPane = builder(item.getType(),
+                meta -> {
+                    meta.setDisplayName(ChatColor.YELLOW + "1");
+                    meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES);
+                }, nbt -> nbt.set(AMOUNT_TAG, 1)
+        );
         purchaseGUI.setItem(22, amountPane);
 
         p.openInventory(purchaseGUI);
@@ -294,34 +299,29 @@ public final class GUIManager implements Listener {
         Player p = (Player) e.getWhoClicked();
         NovaPlayer np = new NovaPlayer(p);
         ItemStack item = e.getCurrentItem();
-        boolean add = w.getNBTBoolean(item, "add");
-        int prev = w.getNBTInt(inv.getItem(22), AMOUNT_TAG);
-        int amount = w.getNBTInt(item, AMOUNT_TAG);
+
+        boolean add = of(item).getBoolean("add");
+        int prev = of(inv.getItem(22)).getInt(AMOUNT_TAG);
+        int amount = of(item).getInt(AMOUNT_TAG);
+
         int newA = add ? Math.min(prev + amount, 64) : Math.max(prev - amount, 1);
 
-        ItemStack newAmount = inv.getItem(22).clone();
-        newAmount.setAmount(newA);
-        ItemMeta nMeta = newAmount.getItemMeta();
-        nMeta.setDisplayName(ChatColor.YELLOW + "" + newA);
-        newAmount.setItemMeta(nMeta);
-        newAmount = w.setNBT(newAmount, AMOUNT_TAG, newA);
+        ItemStack newAmount = builder(inv.getItem(22), newA,
+                meta -> meta.setDisplayName(ChatColor.YELLOW + "" + newA),
+                nbt -> nbt.set(AMOUNT_TAG, newA)
+        );
         inv.setItem(22, newAmount);
         NovaSound.ENTITY_ARROW_HIT_PLAYER.play(e.getWhoClicked(), 1F, add ? 2F : 0F);
 
-        BusinessProduct pr = (BusinessProduct) w.getNBTProduct(inv.getItem(21), PRODUCT_TAG);
+        BusinessProduct pr = (BusinessProduct) getProduct(item);
 
-        if (np.getBalance(pr.getEconomy()) < pr.getPrice().getAmount() * newA) {
-            ItemStack invalid = new ItemStack(Material.BARRIER);
-            ItemMeta meta = invalid.getItemMeta();
-            meta.setDisplayName(String.format(get("error.economy.invalid_amount"), get("constants.purchase")));
-            invalid.setItemMeta(meta);
-            invalid = w.setNBT(invalid, PRODUCT_TAG, pr);
-            inv.setItem(21, invalid);
-        } else {
-            ItemStack yes = Items.yes("buy_product").clone();
-            yes = w.setNBT(yes, PRODUCT_TAG, pr);
-            inv.setItem(21, yes);
-        }
+        if (np.getBalance(pr.getEconomy()) < pr.getPrice().getAmount() * newA)
+            inv.setItem(21, Items.invalid(get("constants.purchase")));
+        else
+            inv.setItem(21, yes("buy_product", nbt -> nbt.set(PRODUCT_TAG, pr)));
+
+        inv.setAttribute(PRODUCT_TAG, pr);
+
         p.updateInventory();
     })
     .put("no:close", (e, inv) -> {
@@ -351,17 +351,17 @@ public final class GUIManager implements Listener {
         Economy.getEconomies().forEach(econ -> sortedList.add(econ.getName()));
         sortedList.sort(String.CASE_INSENSITIVE_ORDER);
 
-        Economy econ = Economy.getEconomy(w.getNBTString(item, ECON_TAG));
+        Economy econ = getEconomy(item);
         int nextI = sortedList.indexOf(econ.getName()) + 1;
         Economy next = sortedList.size() == 1 ? econ : Economy.getEconomy(sortedList.get(nextI == sortedList.size() ? 0 : nextI));
 
         item.setType(next.getIconType());
-        CommandWrapper.modelData(item, next.getCustomModelData());
-        item = w.setNBT(item, ECON_TAG, next.getName().toLowerCase());
+        modelData(item, next.getCustomModelData());
 
-        ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(ChatColor.GOLD + next.getName());
-        item.setItemMeta(meta);
+        item = builder(item,
+                meta -> meta.setDisplayName(ChatColor.GOLD + next.getName()),
+                nbt -> nbt.set(ECON_TAG, next.getUniqueId())
+        );
 
         e.getView().setItem(slot, item);
         NovaSound.BLOCK_NOTE_BLOCK_PLING.play(e.getWhoClicked());
@@ -370,15 +370,14 @@ public final class GUIManager implements Listener {
         items().get("economy:wheel").accept(e, inv);
 
         ItemStack item = e.getCurrentItem();
-        Economy econ = Economy.getEconomy(w.getNBTString(item, ECON_TAG));
+        Economy econ = getEconomy(item);
 
-        ItemStack confirm = inv.getItem(23);
-        confirm = w.setNBT(confirm, ECON_TAG, econ.getName().toLowerCase());
+        ItemStack confirm = builder(inv.getItem(23), nbt -> nbt.set(ECON_TAG, econ.getUniqueId()));
         inv.setItem(23, confirm);
 
-        ItemStack display = inv.getItem(13);
+        ItemStack display = new ItemStack(inv.getItem(13));
         ItemMeta dMeta = display.getItemMeta();
-        dMeta.setLore(Collections.singletonList(String.format(get("constants.business.price"), w.getNBTDouble(display, PRICE_TAG), econ.getSymbol())));
+        dMeta.setLore(Collections.singletonList(String.format(get("constants.business.price"), of(display).getDouble(PRICE_TAG), econ.getSymbol())));
         display.setItemMeta(dMeta);
         inv.setItem(13, display);
     })
@@ -386,7 +385,7 @@ public final class GUIManager implements Listener {
         if (!(e.getWhoClicked() instanceof Player)) return;
         Player p = (Player) e.getWhoClicked();
         ItemStack item = e.getCurrentItem();
-        String econ = w.getNBTString(item, "economy");
+        String econ = of(item).getString("economy");
 
         List<String> economies = new ArrayList<>();
         economies.add("all");
@@ -409,7 +408,7 @@ public final class GUIManager implements Listener {
         }
 
         NovaPlayer np = new NovaPlayer(p);
-        BusinessProduct bP = (BusinessProduct) w.getNBTProduct(item, PRODUCT_TAG);
+        BusinessProduct bP = (BusinessProduct) getProduct(item);
 
         if (!np.canAfford(bP)) {
             p.sendMessage(String.format(get("error.economy.invalid_amount"), get("constants.purchase")));
@@ -418,7 +417,7 @@ public final class GUIManager implements Listener {
         }
 
         ItemStack product = bP.getItem();
-        int size = Math.min((int) w.getNBTDouble(inv.getItem(22), AMOUNT_TAG), bP.getBusiness().getTotalStock(product));
+        int size = Math.min((int) of(inv.getItem(22)).getDouble(AMOUNT_TAG), bP.getBusiness().getTotalStock(product));
         product.setAmount(size);
 
         Economy econ = bP.getEconomy();
@@ -485,10 +484,11 @@ public final class GUIManager implements Listener {
         Player p = (Player) e.getWhoClicked();
         Business b = Business.getByOwner(p);
         ItemStack item = e.getCurrentItem();
+        NBTWrapper nbt = of(item);
 
-        double price = w.getNBTDouble(item, PRICE_TAG);
-        Economy econ = Economy.getEconomy(w.getNBTString(item, ECON_TAG));
-        ItemStack product = w.normalize(w.getNBTItem(item, "item"));
+        double price = nbt.getDouble(PRICE_TAG);
+        Economy econ = Economy.getEconomy(nbt.getString(ECON_TAG));
+        ItemStack product = w.normalize(nbt.getItem("item"));
 
         Product pr = new Product(product, econ, price);
 
@@ -520,7 +520,7 @@ public final class GUIManager implements Listener {
         // Remove Non-Products
         for (ItemStack item : res) {
             if (item == null) continue;
-            if (w.getID(item).equalsIgnoreCase("business:add_resource")) continue;
+            if (getID(item).equalsIgnoreCase("business:add_resource")) continue;
 
             if (b.isProduct(item)) resources.add(item);
             else extra.add(item);
@@ -543,8 +543,8 @@ public final class GUIManager implements Listener {
         Player p = (Player) e.getWhoClicked();
         Business b = Business.getByOwner(p);
         ItemStack item = e.getCurrentItem();
+        BusinessProduct pr = (BusinessProduct) getProduct(item);
 
-        BusinessProduct pr = (BusinessProduct) w.getNBTProduct(item, PRODUCT_TAG);
         ItemStack product = pr.getItem();
 
         b.removeProduct(pr);
@@ -629,7 +629,7 @@ public final class GUIManager implements Listener {
         if (!(e.getWhoClicked() instanceof Player)) return;
         Player p = (Player) e.getWhoClicked();
         ItemStack item = e.getCurrentItem();
-        String section = w.getNBTString(item, SETTING_TAG);
+        String section = of(item).getString(SETTING_TAG);
 
         getCommandWrapper().settings(p, section);
     })
@@ -637,25 +637,28 @@ public final class GUIManager implements Listener {
         if (!(e.getWhoClicked() instanceof Player)) return;
         Player p = (Player) e.getWhoClicked();
         ItemStack item = e.getCurrentItem();
-        String display = w.getNBTString(item, "display");
-        String section = w.getNBTString(item, "section");
-        String setting = w.getNBTString(item, SETTING_TAG);
-        boolean value = w.getNBTBoolean(item, "value");
+        NBTWrapper cNBT = of(item);
 
-        ItemStack nItem = new ItemStack(value ? CommandWrapper.redWool() : CommandWrapper.limeWool());
-        ItemMeta meta = nItem.getItemMeta();
-        meta.setDisplayName(ChatColor.YELLOW + display + ": " + (value ? ChatColor.RED + get("constants.off") : ChatColor.GREEN + get("constants.on")));
-        if (!value) {
-            meta.addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1, true);
-            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
-        }
-        nItem.setItemMeta(meta);
+        String display = cNBT.getString("display");
+        String section = cNBT.getString("section");
+        String setting = cNBT.getString(SETTING_TAG);
+        boolean value = cNBT.getBoolean("value");
 
-        nItem = w.setID(nItem, "setting_toggle");
-        nItem = w.setNBT(nItem, "display", display);
-        nItem = w.setNBT(nItem, "section", section);
-        nItem = w.setNBT(nItem, SETTING_TAG, setting);
-        nItem = w.setNBT(nItem, "value", !value);
+        ItemStack nItem = builder(value ? RED_WOOL : LIME_WOOL,
+                meta -> {
+                    meta.setDisplayName(ChatColor.YELLOW + display + ": " + (value ? ChatColor.RED + get("constants.off") : ChatColor.GREEN + get("constants.on")));
+                    if (!value) {
+                        meta.addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1, true);
+                        meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+                    }
+                }, nbt -> {
+                    nbt.setID("setting_toggle");
+                    nbt.set("display", display);
+                    nbt.set("section", section);
+                    nbt.set(SETTING_TAG, setting);
+                    nbt.set("value", !value);
+                }
+        );
 
         e.getView().setItem(e.getRawSlot(), nItem);
         p.updateInventory();
@@ -687,7 +690,7 @@ public final class GUIManager implements Listener {
         if (!(e.getWhoClicked() instanceof Player)) return;
         Player p = (Player) e.getWhoClicked();
         ItemStack item = e.getCurrentItem();
-        boolean anonymous = w.getNBTBoolean(item, "anonymous");
+        boolean anonymous = of(item).getBoolean("anonymous");
         Business b = getBusiness(item);
 
         if (anonymous) {
@@ -719,7 +722,7 @@ public final class GUIManager implements Listener {
         Player p = (Player) e.getWhoClicked();
         ItemStack item = e.getCurrentItem();
         Business b = getBusiness(item);
-        boolean anonymous = w.getNBTBoolean(item, "anonymous");
+        boolean anonymous = of(item).getBoolean("anonymous");
 
         if (anonymous) {
             p.sendMessage(get("plugin.prefix") + ChatColor.RED + get("constants.business.anonymous_statistics"));
@@ -733,28 +736,32 @@ public final class GUIManager implements Listener {
         Player p = (Player) e.getWhoClicked();
 
         ItemStack item = e.getCurrentItem();
-        int rating = w.getNBTInt(item, "rating");
+        int rating = of(item).getInt("rating");
         int newRating = rating + 1 > 4 ? 0 : rating + 1;
 
-        ItemStack nItem = item.clone();
+        ItemStack nItem = builder(item.clone(),
+                meta -> meta.setDisplayName(ChatColor.YELLOW + "" + (newRating + 1) + "⭐"),
+                nbt -> {
+                    nbt.setID("business:rating");
+                    nbt.set("rating", newRating);
+                }
+        );
         nItem.setType(CommandWrapper.getRatingMats()[newRating]);
-        ItemMeta meta = nItem.getItemMeta();
-        meta.setDisplayName(ChatColor.YELLOW + "" + (newRating + 1) + "⭐");
-        nItem.setItemMeta(meta);
-        nItem = w.setID(nItem, "business:rating");
-        nItem = w.setNBT(nItem, "rating", newRating);
         inv.setItem(e.getSlot(), nItem);
 
-        ItemStack confirm = inv.getItem(21);
-        String comment = w.getNBTString(confirm, "comment");
-        String business = w.getNBTString(confirm, BUSINESS_TAG);
+        String comment = of(inv.getItem(21)).getString("comment");
+        String business = of(inv.getItem(21)).getString(BUSINESS_TAG);
 
-        ItemStack nConfirm = confirm.clone();
-        nConfirm = w.setID(nConfirm, "yes:business_rate");
-        nConfirm = w.setNBT(nConfirm, "rating", newRating);
-        nConfirm = w.setNBT(nConfirm, "comment", comment);
-        nConfirm = w.setNBT(nConfirm, BUSINESS_TAG, business);
-        inv.setItem(21, nConfirm);
+        ItemStack confirm = builder(inv.getItem(21).clone(),
+                nbt -> {
+                    nbt.setID("yes:business_rate");
+                    nbt.set("rating", newRating);
+                    nbt.set("comment", comment);
+                    nbt.set(BUSINESS_TAG, business);
+                }
+        );
+
+        inv.setItem(21, confirm);
 
         (newRating > 1 ? NovaSound.ENTITY_ARROW_HIT_PLAYER : NovaSound.BLOCK_NOTE_BLOCK_PLING).play(p, 1F, 0.4F * (newRating + 1));
     })
@@ -763,10 +770,11 @@ public final class GUIManager implements Listener {
         Player p = (Player) e.getWhoClicked();
         NovaPlayer np = new NovaPlayer(p);
         ItemStack item = e.getCurrentItem();
+        NBTWrapper nbt = of(item);
 
-        int rating = w.getNBTInt(item, "rating") + 1;
-        UUID businessId = UUID.fromString(w.getNBTString(item, BUSINESS_TAG));
-        String comment = w.getNBTString(item, "comment");
+        int rating = nbt.getInt("rating") + 1;
+        UUID businessId = nbt.getUUID(BUSINESS_TAG);
+        String comment = nbt.getString("comment");
 
         Rating r = new Rating(p, businessId, rating, System.currentTimeMillis(), comment);
         Business b = Business.getById(businessId);
@@ -801,10 +809,10 @@ public final class GUIManager implements Listener {
         if (!(e.getWhoClicked() instanceof Player)) return;
         Player p = (Player) e.getWhoClicked();
         ItemStack item = e.getCurrentItem();
+        BusinessProduct pr = (BusinessProduct) getProduct(item);
 
-        double price = w.getNBTDouble(item, PRICE_TAG);
+        double price = of(item).getDouble(PRICE_TAG);
         Economy econ = getEconomy(item);
-        BusinessProduct pr = (BusinessProduct) w.getNBTProduct(item, PRODUCT_TAG);
         Business b = pr.getBusiness();
 
         b.getProduct(pr.getItem()).setPrice(new Price(econ, price));
@@ -817,7 +825,7 @@ public final class GUIManager implements Listener {
         if (!(e.getWhoClicked() instanceof Player)) return;
         ItemStack item = e.getCurrentItem();
         Player p = (Player) e.getWhoClicked();
-        OfflinePlayer target = Bukkit.getOfflinePlayer(UUID.fromString(w.getNBTString(item, "player")));
+        OfflinePlayer target = Bukkit.getOfflinePlayer(of(item).getUUID("player"));
 
         getCommandWrapper().playerStatistics(p, target);
     })
@@ -833,24 +841,26 @@ public final class GUIManager implements Listener {
         ItemStack item = e.getCurrentItem();
 
         Business b = getBusiness(item);
-        boolean add = w.getNBTBoolean(item, "add");
+        boolean add = of(item).getBoolean("add");
         double amount = getAmount(item);
         amount = add ? amount : -amount;
 
         ItemStack econWheel = inv.getItem(31);
-        Economy econ = Economy.getEconomy(w.getNBTString(econWheel, ECON_TAG));
-
-        ItemStack confirm = inv.getItem(39);
-        double currentTotal = getAmount(confirm);
+        Economy econ = Economy.getEconomy(of(econWheel).getString(ECON_TAG));
+        double currentTotal = getAmount(inv.getItem(39));
         double newAmount = Math.max(currentTotal + amount, 0);
-        confirm = w.setNBT(confirm, AMOUNT_TAG, newAmount);
-        confirm = w.setNBT(confirm, BUSINESS_TAG, b.getUniqueId().toString());
+
+        ItemStack confirm = builder(inv.getItem(39),
+                nbt -> {
+                    nbt.set(AMOUNT_TAG, newAmount);
+                    nbt.set(BUSINESS_TAG, b.getUniqueId());
+                }
+        );
         inv.setItem(39, confirm);
 
-        ItemStack total = inv.getItem(40).clone();
-        ItemMeta tMeta = total.getItemMeta();
-        tMeta.setDisplayName(ChatColor.GOLD + String.format("%,.0f", newAmount) + econ.getSymbol());
-        total.setItemMeta(tMeta);
+        ItemStack total = Items.builder(inv.getItem(40),
+                meta -> meta.setDisplayName(ChatColor.GOLD + String.format("%,.0f", newAmount) + econ.getSymbol())
+        );
         inv.setItem(40, total);
 
         (add ? NovaSound.ENTITY_ARROW_HIT_PLAYER : NovaSound.BLOCK_NOTE_BLOCK_PLING).play(p, 1F, add ? 2F : 0F);
@@ -859,15 +869,14 @@ public final class GUIManager implements Listener {
         items().get("economy:wheel").accept(e, inv);
 
         ItemStack item = e.getCurrentItem();
-        Economy econ = Economy.getEconomy(w.getNBTString(item, ECON_TAG));
+        Economy econ = Economy.getEconomy(of(item).getString(ECON_TAG));
 
         ItemStack confirm = inv.getItem(39);
         double currentTotal = getAmount(confirm);
 
-        ItemStack total = inv.getItem(40).clone();
-        ItemMeta tMeta = total.getItemMeta();
-        tMeta.setDisplayName(ChatColor.GOLD + String.format("%,.0f", currentTotal) + econ.getSymbol());
-        total.setItemMeta(tMeta);
+        ItemStack total = Items.builder(inv.getItem(40),
+                meta -> meta.setDisplayName(ChatColor.GOLD + String.format("%,.0f", currentTotal) + econ.getSymbol())
+        );
         inv.setItem(40, total);
     })
     .put("yes:deposit_advertising", (e, inv) -> BUSINESS_ADVERTISING_BICONSUMER.accept(e, true))
@@ -878,7 +887,7 @@ public final class GUIManager implements Listener {
         ItemStack item = e.getCurrentItem();
 
         Business to = getBusiness(item);
-        Business from = Business.getById(UUID.fromString(w.getNBTString(item, "from_business")));
+        Business from = Business.getById(of(item).getUUID("from_business"));
 
         double add = NovaConfig.getConfiguration().getBusinessAdvertisingReward();
         if (to.getAdvertisingBalance() < add) return;
@@ -906,9 +915,10 @@ public final class GUIManager implements Listener {
         if (!(e.getWhoClicked() instanceof Player)) return;
         Player p = (Player) e.getWhoClicked();
         ItemStack item = e.getCurrentItem();
+        NBTWrapper nbt = of(item);
 
-        OfflinePlayer owner = Bukkit.getOfflinePlayer(UUID.fromString(w.getNBTString(item, "owner")));
-        boolean anon = w.getNBTBoolean(item, "anonymous");
+        OfflinePlayer owner = Bukkit.getOfflinePlayer(nbt.getUUID("owner"));
+        boolean anon = nbt.getBoolean("anonymous");
 
         if (anon) return;
 
@@ -946,7 +956,7 @@ public final class GUIManager implements Listener {
         Player p = (Player) e.getWhoClicked();
         ItemStack item = e.getCurrentItem();
 
-        String category = w.getNBTString(item, "category");
+        String category = of(item).getString("category");
         String nextCategory = BL_CATEGORIES.get(BL_CATEGORIES.indexOf(category) == BL_CATEGORIES.size() - 1 ? 0 : BL_CATEGORIES.indexOf(category) + 1);
 
         getCommandWrapper().businessLeaderboard(p, nextCategory);
@@ -959,7 +969,7 @@ public final class GUIManager implements Listener {
         NovaPlayer np = new NovaPlayer(p);
         ItemStack item = e.getCurrentItem();
 
-        Economy econ = Economy.getEconomy(w.getNBTString(item, ECON_TAG));
+        Economy econ = getEconomy(item);
 
         ItemStack head1 = inv.getItem(10).clone();
         ItemMeta h1Meta = head1.getItemMeta();
@@ -971,16 +981,16 @@ public final class GUIManager implements Listener {
         double amount = getAmount(currentAmountO);
 
         if (np.getBalance(econ) < amount) amount = np.getBalance(econ);
+        final double fAmount = amount;
 
-        ItemStack currentAmount = currentAmountO.clone();
+        ItemStack currentAmount = builder(currentAmountO,
+                meta -> meta.setDisplayName(ChatColor.GOLD + String.format("%,.2f", fAmount) + econ.getSymbol()),
+                nbt -> {
+                    nbt.set(ECON_TAG, econ.getUniqueId());
+                    nbt.set(AMOUNT_TAG, fAmount);
+                }
+        );
         currentAmount.setType(econ.getIconType());
-
-        ItemMeta cMeta = currentAmount.getItemMeta();
-        cMeta.setDisplayName(ChatColor.GOLD + String.format("%,.2f", amount) + econ.getSymbol());
-        currentAmount.setItemMeta(cMeta);
-
-        currentAmount = w.setNBT(currentAmount, ECON_TAG, econ.getUniqueId().toString());
-        currentAmount = w.setNBT(currentAmount, AMOUNT_TAG, amount);
 
         inv.setItem(40, currentAmount);
         NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
@@ -992,7 +1002,7 @@ public final class GUIManager implements Listener {
 
         ItemStack item = e.getCurrentItem();
 
-        boolean add = w.getNBTBoolean(item, "add");
+        boolean add = of(item).getBoolean("add");
         double amount = getAmount(item) * (add ? 1 : -1);
 
         ItemStack currentAmountO = inv.getItem(40);
@@ -1015,12 +1025,14 @@ public final class GUIManager implements Listener {
             sound = NovaSound.ENTITY_ARROW_HIT_PLAYER;
         }
 
-        ItemStack currentAmount = currentAmountO.clone();
-        ItemMeta cMeta = currentAmount.getItemMeta();
-        cMeta.setDisplayName(ChatColor.GOLD + String.format("%,.2f", newAmount) + econ.getSymbol());
-        currentAmount.setItemMeta(cMeta);
-        currentAmount = w.setNBT(currentAmount, AMOUNT_TAG, newAmount);
-        currentAmount = w.setNBT(currentAmount, ECON_TAG, econ.getUniqueId().toString());
+        ItemStack currentAmount = builder(currentAmountO,
+                meta -> meta.setDisplayName(ChatColor.GOLD + String.format("%,.2f", newAmount) + econ.getSymbol()),
+                nbt -> {
+                    nbt.set(ECON_TAG, econ.getUniqueId());
+                    nbt.set(AMOUNT_TAG, newAmount);
+                }
+        );
+
         inv.setItem(40, currentAmount);
 
         sound.play(p, 1F, sound == NovaSound.BLOCK_NOTE_BLOCK_PLING ? 0F : (add ? 2F : 0F));
@@ -1031,7 +1043,7 @@ public final class GUIManager implements Listener {
         final NovaPlayer np = new NovaPlayer(p);
 
         ItemStack item = e.getCurrentItem();
-        final Player target = Bukkit.getPlayer(UUID.fromString(w.getNBTString(item, "target")));
+        final Player target = Bukkit.getPlayer(of(item).getUUID("target"));
         final NovaPlayer nt = new NovaPlayer(target);
 
         ItemStack currentAmountO = inv.getItem(40);
@@ -1074,6 +1086,13 @@ public final class GUIManager implements Listener {
     
     .build();
 
+    private static Product getProduct(ItemStack item) {
+        NBTWrapper nbt = of(item);
+        if (!nbt.isProduct()) throw new IllegalArgumentException("ItemStack is not a product! (Missing 'product' tag)");
+
+        return nbt.getProduct(PRODUCT_TAG);
+    }
+
     // Inventory
 
     @EventHandler
@@ -1087,10 +1106,10 @@ public final class GUIManager implements Listener {
 
         if (item.isSimilar(w.getGUIBackground())) e.setCancelled(true);
         if (!item.hasItemMeta()) return;
-        if (!w.hasID(item)) return;
+        if (!hasID(item)) return;
 
-        String id = w.getID(item);
-        if (id == null || !w.hasID(item)) return;
+        String id = getID(item);
+        if (id == null || !hasID(item)) return;
         if (!CLICK_ITEMS.containsKey(id)) return;
 
         if (!e.isCancelled()) e.setCancelled(true);
@@ -1125,7 +1144,7 @@ public final class GUIManager implements Listener {
 
                 for (ItemStack i : inv.getContents()) {
                     if (i == null) continue;
-                    if (ignore.contains(w.getID(i))) continue;
+                    if (ignore.contains(getID(i))) continue;
 
                     if (p.getInventory().firstEmpty() == -1) p.getWorld().dropItemNaturally(p.getLocation(), i);
                     else p.getInventory().addItem(i);
@@ -1147,7 +1166,7 @@ public final class GUIManager implements Listener {
 
         if (item.isSimilar(w.getGUIBackground())) e.setCancelled(true);
 
-        String id = w.getID(item);
+        String id = getID(item);
         if (id.length() > 0 && CLICK_ITEMS.containsKey(id)) e.setCancelled(true);
     }
 
