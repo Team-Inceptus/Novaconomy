@@ -1,15 +1,18 @@
 package us.teaminceptus.novaconomy;
 
+import net.minecraft.server.v1_8_R1.NBTTagCompound;
 import org.bukkit.craftbukkit.v1_8_R1.inventory.CraftItemStack;
 import org.bukkit.inventory.ItemStack;
-
-import net.minecraft.server.v1_8_R1.*;
 import us.teaminceptus.novaconomy.abstraction.NBTWrapper;
-
-import static us.teaminceptus.novaconomy.abstraction.Wrapper.ROOT;
+import us.teaminceptus.novaconomy.api.business.Business;
+import us.teaminceptus.novaconomy.api.economy.Economy;
+import us.teaminceptus.novaconomy.api.util.BusinessProduct;
+import us.teaminceptus.novaconomy.api.util.Product;
 
 import java.nio.ByteBuffer;
 import java.util.UUID;
+
+import static us.teaminceptus.novaconomy.abstraction.Wrapper.ROOT;
 
 public class NBTWrapper1_8_R1 extends NBTWrapper {
     
@@ -150,7 +153,74 @@ public class NBTWrapper1_8_R1 extends NBTWrapper {
 
         net.minecraft.server.v1_8_R1.ItemStack nms = CraftItemStack.asNMSCopy(item);
 
-        novaconomy.set(key, nms.hasTag() ? nms.getTag() : new NBTTagCompound());
+        novaconomy.set(key, nms.save(nms.hasTag() ? nms.getTag() : new NBTTagCompound()));
+        tag.set(ROOT, novaconomy);
+        nmsitem.setTag(tag);
+    }
+
+    @Override
+    public Product getProduct(String key) {
+        net.minecraft.server.v1_8_R1.ItemStack nmsitem = CraftItemStack.asNMSCopy(item);
+        NBTTagCompound tag = nmsitem.hasTag() ? nmsitem.getTag() : new NBTTagCompound();
+        NBTTagCompound novaconomy = tag.getCompound(ROOT);
+
+        NBTTagCompound productT = novaconomy.getCompound(key);
+        if (productT.isEmpty()) return null;
+        double amount = productT.getDouble("amount");
+
+        byte[] eBytes = productT.getByteArray("economy");
+        ByteBuffer ebb = ByteBuffer.wrap(eBytes);
+        long eF = ebb.getLong();
+        long eS = ebb.getLong();
+
+        Economy econ = Economy.getEconomy(new UUID(eF, eS));
+        ItemStack item = CraftItemStack.asBukkitCopy(net.minecraft.server.v1_8_R1.ItemStack.createStack(productT.getCompound("item")));
+
+        Product p = new Product(item, econ, amount);
+
+        if (productT.hasKey("business")) {
+            byte[] bBytes = productT.getByteArray("business");
+            ByteBuffer bbb = ByteBuffer.wrap(bBytes);
+            long bF = bbb.getLong();
+            long bS = bbb.getLong();
+
+            Business b = Business.getById(new UUID(bF, bS));
+            return new BusinessProduct(p, b);
+        }
+
+        return p;
+    }
+
+    @Override
+    public void set(String key, Product product) {
+        net.minecraft.server.v1_8_R1.ItemStack nmsitem = CraftItemStack.asNMSCopy(item);
+        NBTTagCompound tag = nmsitem.hasTag() ? nmsitem.getTag() : new NBTTagCompound();
+        NBTTagCompound novaconomy = tag.getCompound(ROOT);
+
+        NBTTagCompound productT = new NBTTagCompound();
+        productT.setDouble("amount", product.getAmount());
+
+        UUID id = product.getEconomy().getUniqueId();
+        ByteBuffer ebb = ByteBuffer.wrap(new byte[16]);
+        ebb.putLong(id.getMostSignificantBits());
+        ebb.putLong(id.getLeastSignificantBits());
+
+        productT.setByteArray("economy", ebb.array());
+
+        net.minecraft.server.v1_8_R1.ItemStack nms = CraftItemStack.asNMSCopy(product.getItem());
+        productT.set("item", nms.save(nms.hasTag() ? nms.getTag() : new NBTTagCompound()));
+
+        if (product instanceof BusinessProduct) {
+            UUID bId = ((BusinessProduct) product).getBusiness().getUniqueId();
+
+            ByteBuffer bbb = ByteBuffer.wrap(new byte[16]);
+            bbb.putLong(bId.getMostSignificantBits());
+            bbb.putLong(bId.getLeastSignificantBits());
+
+            productT.setByteArray("business", bbb.array());
+        }
+
+        novaconomy.set(key, productT);
         tag.set(ROOT, novaconomy);
         nmsitem.setTag(tag);
     }

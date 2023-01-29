@@ -4,16 +4,14 @@ import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-
-import us.teaminceptus.novaconomy.api.business.Business;
-import us.teaminceptus.novaconomy.api.economy.Economy;
-import us.teaminceptus.novaconomy.api.util.BusinessProduct;
+import org.jetbrains.annotations.NotNull;
 import us.teaminceptus.novaconomy.api.util.Product;
-
-import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.w;
 
 import java.util.UUID;
 import java.util.function.Consumer;
+
+import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.PRODUCT_TAG;
+import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.w;
 
 public abstract class NBTWrapper {
     
@@ -30,17 +28,24 @@ public abstract class NBTWrapper {
     }
 
     public static ItemStack builder(ItemStack item, Consumer<NBTWrapper> nbt) {
-        NBTWrapper w = of(item);
+        NBTWrapper w = of(item.clone());
         nbt.accept(w);
         return w.item;
     }
 
-    public static ItemStack builder(ItemStack item, Consumer<ItemMeta> metaC, Consumer<NBTWrapper> nbt) {
-        ItemMeta meta = item.hasItemMeta() ? item.getItemMeta() : Bukkit.getItemFactory().getItemMeta(item.getType());
+    public static ItemStack builder(@NotNull ItemStack item, Consumer<ItemMeta> metaC, Consumer<NBTWrapper> nbt) {
+        ItemStack item0 = item.clone();
+        ItemMeta meta = item0.hasItemMeta() ? item0.getItemMeta() : Bukkit.getItemFactory().getItemMeta(item0.getType());
         metaC.accept(meta);
-        item.setItemMeta(meta);
+        item0.setItemMeta(meta);
         
-        return builder(item, nbt);
+        return builder(item0, nbt);
+    }
+
+    public static ItemStack builder(@NotNull ItemStack item, int amount, Consumer<ItemMeta> metaC, Consumer<NBTWrapper> nbt) {
+        ItemStack item0 = item.clone();
+        item0.setAmount(amount);
+        return builder(item0, metaC, nbt);
     }
 
     public static ItemStack builder(Material m, int amount, Consumer<ItemMeta> metaC, Consumer<NBTWrapper> nbt) {
@@ -59,7 +64,11 @@ public abstract class NBTWrapper {
         return of(item).hasID();
     }
 
-    // Abstract
+    // Default & Abstract
+
+    public ItemStack getItem() {
+        return item;
+    }
 
     public abstract String getString(String key);
 
@@ -85,42 +94,40 @@ public abstract class NBTWrapper {
 
     public abstract void set(String key, ItemStack item);
 
+    public abstract Product getProduct(String key);
+
+    public abstract void set(String key, Product product);
+
     // Defaults
 
-    public boolean hasID() { return getID() != null && !getID().isEmpty(); }
-
     public boolean isProduct() {
-        return hasID() && (getID().equalsIgnoreCase("product") || getBoolean("is_product")); 
+        return getProduct(PRODUCT_TAG) != null;
     }
+
+    public boolean isProduct(String key) {
+        return getProduct(key) != null;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        NBTWrapper that = (NBTWrapper) o;
+        return item.equals(that.item);
+    }
+
+    @Override
+    public int hashCode() {
+        return item.hashCode();
+    }
+
+    public boolean hasID() { return getID() != null && !getID().isEmpty(); }
 
     public void setID(String key) { set("id", key); }
 
     public String getID() { return getString("id"); }
 
-    public void set(String key, Product p) {
-        set(key + "-product:amount", p.getPrice().getAmount());
-        set(key + "-product:economy", p.getEconomy().getUniqueId());
-        set(key + "-product:item", w.normalize(p.getItem()));
-
-        if (p instanceof BusinessProduct) {
-            BusinessProduct bp = (BusinessProduct) p;
-            set(key + "-bproduct:business", bp.getBusiness().getUniqueId());
-        }
-    }
-
-    public Product getProduct(String key) {
-        double amount = getDouble(key + "-product:amount");
-        Economy econ = Economy.getEconomy(getUUID(key + "-product:economy"));
-        ItemStack product = w.normalize(getItem(key + "-product:item"));
-
-        Product p = new Product(product, econ, amount);
-
-        UUID business = getUUID(key + "-bproduct:business");
-        if (business == null) return p;
-
-        if (Business.exists(business)) return new BusinessProduct(p, Business.getById(business));
-        else return p;
-    }
+    public void removeID() { setID(""); }
 
 
 }

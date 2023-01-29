@@ -1,14 +1,17 @@
 package us.teaminceptus.novaconomy;
 
+import net.minecraft.nbt.CompoundTag;
 import org.bukkit.craftbukkit.v1_19_R2.inventory.CraftItemStack;
 import org.bukkit.inventory.ItemStack;
-
-import net.minecraft.nbt.CompoundTag;
 import us.teaminceptus.novaconomy.abstraction.NBTWrapper;
-
-import static us.teaminceptus.novaconomy.abstraction.Wrapper.ROOT;
+import us.teaminceptus.novaconomy.api.business.Business;
+import us.teaminceptus.novaconomy.api.economy.Economy;
+import us.teaminceptus.novaconomy.api.util.BusinessProduct;
+import us.teaminceptus.novaconomy.api.util.Product;
 
 import java.util.UUID;
+
+import static us.teaminceptus.novaconomy.abstraction.Wrapper.ROOT;
 
 public class NBTWrapper1_19_R2 extends NBTWrapper {
     
@@ -138,7 +141,49 @@ public class NBTWrapper1_19_R2 extends NBTWrapper {
         CompoundTag tag = nmsitem.getOrCreateTag();
         CompoundTag novaconomy = tag.getCompound(ROOT);
 
-        novaconomy.put(key, CraftItemStack.asNMSCopy(item).getOrCreateTag());
+        novaconomy.put(key, CraftItemStack.asNMSCopy(item).save(CraftItemStack.asNMSCopy(item).getOrCreateTag()));
+        tag.put(ROOT, novaconomy);
+        nmsitem.setTag(tag);
+    }
+
+    @Override
+    public Product getProduct(String key) {
+        net.minecraft.world.item.ItemStack nmsitem = CraftItemStack.asNMSCopy(item);
+        CompoundTag tag = nmsitem.getOrCreateTag();
+        CompoundTag novaconomy = tag.getCompound(ROOT);
+
+        CompoundTag productT = novaconomy.getCompound(key);
+        if (productT.isEmpty()) return null;
+
+        double amount = productT.getDouble("amount");
+        Economy econ = Economy.getEconomy(productT.getUUID("economy"));
+        ItemStack item = CraftItemStack.asBukkitCopy(net.minecraft.world.item.ItemStack.of(productT.getCompound("item")));
+
+        Product p = new Product(item, econ, amount);
+
+        if (productT.contains("business")) {
+            Business b = Business.getById(productT.getUUID("business"));
+            return new BusinessProduct(p, b);
+        }
+
+        return p;
+    }
+
+    @Override
+    public void set(String key, Product product) {
+        net.minecraft.world.item.ItemStack nmsitem = CraftItemStack.asNMSCopy(item);
+        CompoundTag tag = nmsitem.getOrCreateTag();
+        CompoundTag novaconomy = tag.getCompound(ROOT);
+
+        CompoundTag productT = new CompoundTag();
+        productT.putDouble("amount", product.getAmount());
+        productT.putUUID("economy", product.getEconomy().getUniqueId());
+        productT.put("item", CraftItemStack.asNMSCopy(product.getItem()).save(CraftItemStack.asNMSCopy(product.getItem()).getOrCreateTag()));
+
+        if (product instanceof BusinessProduct bp)
+            productT.putUUID("business", bp.getBusiness().getUniqueId());
+
+        novaconomy.put(key, productT);
         tag.put(ROOT, novaconomy);
         nmsitem.setTag(tag);
     }
