@@ -13,7 +13,6 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.util.ChatPaginator;
-
 import us.teaminceptus.novaconomy.abstraction.test.TestWrapper;
 import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.NovaConfig;
@@ -39,8 +38,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-import static us.teaminceptus.novaconomy.abstraction.NBTWrapper.*;
-import static us.teaminceptus.novaconomy.util.Items.*;
+import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.PRODUCT_TAG;
+import static us.teaminceptus.novaconomy.abstraction.NBTWrapper.builder;
+import static us.teaminceptus.novaconomy.abstraction.NBTWrapper.of;
 
 public interface Wrapper {
 
@@ -133,7 +133,7 @@ public interface Wrapper {
                 }, nbt -> {
                     if (!anonymous) {
                         nbt.setID("player_stats");
-                        nbt.set("player", b.getOwner().getUniqueId().toString());
+                        nbt.set("player", b.getOwner().getUniqueId());
                     }
                 });
         inv.setItem(11, owner);
@@ -191,25 +191,23 @@ public interface Wrapper {
                         } else {
                             AtomicInteger index = new AtomicInteger();
                             b.getResources().forEach(res -> {
-                                if (item.isSimilar(res)) index.getAndAdd(res.getAmount());
+                                if (item.isSimilar(res)) index.addAndGet(res.getAmount());
                             });
             
                             lore.add(String.format(get("constants.business.stock_left"), String.format("%,.0f", (double) index.get())));
                         }
             
                         meta.setLore(lore);
-                    }, nbt -> {
-                        nbt.setID("product:buy");
-                        nbt.set("product", p);
-                    }
+                    }, nbt -> nbt.setID("product:buy")
             );
 
             NBTWrapper nbt = of(product);
 
             nbt.set("product:in_stock", stock.get());
-            nbt.set("is_product", true);
+            nbt.set(PRODUCT_TAG, p);
 
-            inv.setItem(slot.get(), product);
+            inv.setItem(slot.get(), nbt.getItem());
+
             slot.incrementAndGet();
         });
 
@@ -221,18 +219,16 @@ public interface Wrapper {
                         meta.setLore(Collections.singletonList(ChatColor.YELLOW + get("constants.business.hidden")));
                 }, nbt -> {
                     nbt.setID("business:statistics");
-                    nbt.set("business", b.getUniqueId().toString());
+                    nbt.set("business", b.getUniqueId());
                     nbt.set("anonymous", !pStats);
                 }
         );
         inv.setItem(14, stats);
 
-        if (b.isOwner(viewer)) {
-            inv.setItem(26, builder(Material.BUCKET,
+        if (b.isOwner(viewer)) inv.setItem(26, builder(Material.BUCKET,
                 meta -> meta.setDisplayName(ChatColor.AQUA + get("constants.business.advertising")),
                 nbt -> nbt.setID("business:advertising")
-            ));
-        }
+        ));
 
         Material kMaterial;
         try {
@@ -241,7 +237,7 @@ public interface Wrapper {
             kMaterial = Material.valueOf("OAK_SIGN");
         }
 
-        inv.setItem(35, builder(kMaterial, meta -> {
+        inv.setItem(35, Items.builder(kMaterial, meta -> {
             meta.setDisplayName(ChatColor.YELLOW + get("constants.business.keywords"));
             if (!b.getKeywords().isEmpty())
                 meta.setLore(Arrays.asList(ChatPaginator.wordWrap(ChatColor.AQUA + String.join(", ", b.getKeywords()), 30)));
@@ -252,7 +248,7 @@ public interface Wrapper {
             double avg = b.getAverageRating();
             int avgI = (int) Math.round(avg - 1);
 
-            ItemStack rating = builder(pRating ? CommandWrapper.getRatingMats()[avgI] : Material.BARRIER,
+            ItemStack rating = Items.builder(pRating ? CommandWrapper.getRatingMats()[avgI] : Material.BARRIER,
                 meta -> { meta.setDisplayName(pRating ? ChatColor.YELLOW + String.format("%,.1f", avg) + "⭐" : ChatColor.RED + get("constants.business.anonymous_rating"));
                 if (b.isOwner(viewer) && !b.getSetting(Settings.Business.PUBLIC_RATING))
                     meta.setLore(Collections.singletonList(ChatColor.YELLOW + get("constants.business.hidden")));
@@ -269,8 +265,8 @@ public interface Wrapper {
                 if (!event.isCancelled())
                     inv.setItem(27, builder(rand.getPublicIcon(), nbt -> {
                         nbt.setID("business:click:advertising");
-                        nbt.set("business", rand.getUniqueId().toString());
-                        nbt.set("from_business", b.getUniqueId().toString());
+                        nbt.set("business", rand.getUniqueId());
+                        nbt.set("from_business", b.getUniqueId());
                     }));
             }
         }
@@ -350,7 +346,6 @@ public interface Wrapper {
     static boolean hasID(ItemStack item) {
         return NBTWrapper.hasID(item);
     }
-
     
 
     static OfflinePlayer getPlayer(String name) {
