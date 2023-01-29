@@ -294,7 +294,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
             handler.register(this);
         }
 
-        @DefaultFor("business")
+        @DefaultFor({"business", "nbusiness", "nb", "b"})
         public void businessInfoDefault(Player p) { businessInfo(p); }
 
         @Subcommand({"info", "information"})
