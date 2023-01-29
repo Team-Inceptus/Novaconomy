@@ -14,7 +14,6 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -280,6 +279,8 @@ public interface CommandWrapper {
         }
 
         NovaInventory inv = w.genGUI(36, get("constants.economy.exchange"));
+        inv.setCancelled();
+
         List<Economy> economies = Economy.getEconomies().stream().sorted(Comparator.comparing(Economy::getName)).collect(Collectors.toList());
 
         Economy e1 = economies.get(0);
@@ -442,7 +443,8 @@ public interface CommandWrapper {
                 .collect(Collectors.toList()))
                 .subList(0, Math.min(Bukkit.getOfflinePlayers().length, 15));
 
-        Inventory inv = w.genGUI(54, get("constants.balance_leaderboard"));
+        NovaInventory inv = w.genGUI(54, get("constants.balance_leaderboard"));
+        inv.setCancelled();
 
         ItemStack type = builder(Material.PAPER,
                 meta -> { if (economy) meta.setDisplayName(ChatColor.AQUA + econ.getName()); else meta.setDisplayName(ChatColor.AQUA + get("constants.all_economies")); },
@@ -556,6 +558,7 @@ public interface CommandWrapper {
 
         NovaPlayer np = new NovaPlayer(p);
         NovaInventory inv = w.genGUI(54, get("constants.pay_player"));
+        inv.setCancelled();
 
         inv.setItem(10, Items.builder(createPlayerHead(p),
                 meta -> {
@@ -703,7 +706,9 @@ public interface CommandWrapper {
                 .sorted(Economy::compareTo)
                 .collect(Collectors.toList())
                 .get(0);
+
         NovaInventory inv = w.genGUI(36, pr.hasItemMeta() && pr.getItemMeta().hasDisplayName() ? pr.getItemMeta().getDisplayName() : WordUtils.capitalizeFully(pr.getType().name().replace('_', ' ')));
+        inv.setCancelled();
 
         ItemStack economyWheel = builder(econ.getIconType(),
                 meta -> meta.setDisplayName(ChatColor.GOLD + econ.getName()),
@@ -802,6 +807,8 @@ public interface CommandWrapper {
         }
 
         NovaInventory inv = w.genGUI(54, get("constants.business.remove_product"));
+        inv.setCancelled();
+
         NovaInventory bData = w.generateBusinessData(b, p, false);
 
         Arrays.stream(bData.getContents())
@@ -975,7 +982,7 @@ public interface CommandWrapper {
         np.add(b.getEconomy(), b.getAmount());
 
         config.set(key, null);
-        try { config.save(f); } catch (IOException e) { Bukkit.getLogger().severe(e.getMessage()); }
+        try { config.save(f); } catch (IOException e) { NovaConfig.print(e); }
         p.sendMessage(String.format(getMessage("success.bounty.delete"), target.getName()));
     }
 
@@ -1003,10 +1010,11 @@ public interface CommandWrapper {
             return;
         }
 
-        Inventory inv = w.genGUI(36, owned ? get("constants.bounty.all") : get("constants.bounty.self"));
+        NovaInventory inv = w.genGUI(36, owned ? get("constants.bounty.all") : get("constants.bounty.self"));
+        inv.setCancelled();
+
         for (int i = 10; i < 12; i++) inv.setItem(i, w.getGUIBackground());
         for (int i = 15; i < 17; i++) inv.setItem(i, w.getGUIBackground());
-
 
         ItemStack head = createPlayerHead(p);
         ItemMeta meta = head.getItemMeta();
@@ -1210,6 +1218,8 @@ public interface CommandWrapper {
             settings.setItem(31, nbt.getItem());
         }
 
+        settings.setCancelled();
+
         p.openInventory(settings);
         NovaSound.BLOCK_ANVIL_USE.play(p, 1F, 1.5F);
     }
@@ -1221,6 +1231,8 @@ public interface CommandWrapper {
         }
 
         NovaInventory stats = w.genGUI(45, get("constants.business.statistics"));
+        stats.setCancelled();
+
         BusinessStatistics statistics = b.getStatistics();
 
         boolean anonymous = !b.getSetting(Settings.Business.PUBLIC_OWNER) && !b.isOwner(p);
@@ -1421,6 +1433,7 @@ public interface CommandWrapper {
         }
 
         NovaInventory rate = w.genGUI(36, String.format(get("constants.rating"), b.getName()));
+        rate.setCancelled();
 
         rate.setItem(13, builder(getRatingMats()[2],
                 meta -> meta.setDisplayName(ChatColor.YELLOW + "3⭐"),
@@ -1470,6 +1483,7 @@ public interface CommandWrapper {
 
         Rating rating = r.get();
         NovaInventory pr = w.genGUI(27, target.getName() + " - \"" + b.getName() + "\"");
+        pr.setCancelled();
 
         pr.setItem(12, Items.builder(createPlayerHead(target),
                 meta -> {
@@ -1501,14 +1515,15 @@ public interface CommandWrapper {
             return;
         }
 
-        Inventory discover = w.genGUI(54, get("constants.business.discover"));
+        NovaInventory discover = w.genGUI(54, get("constants.business.discover"));
+        discover.setCancelled();
 
         for (int i = 0; i < 28; i++) {
             int index = 10 + i;
             if (index > 16) index += 2;
             if (index > 25) index += 2;
             if (index > 34) index += 2;
-            discover.setItem(index, loading());
+            discover.setItem(index, LOADING);
         }
 
         new BukkitRunnable() {
@@ -1579,6 +1594,8 @@ public interface CommandWrapper {
 
         Business b = Business.getByOwner(p);
         NovaInventory select = w.genGUI(54, get("constants.business.select_product"));
+        select.setCancelled();
+
         NovaInventory bData = w.generateBusinessData(b, p, false);
 
          Arrays.stream(bData.getContents())
@@ -1688,6 +1705,7 @@ public interface CommandWrapper {
         PlayerStatistics stats = np.getStatistics();
 
         NovaInventory inv = w.genGUI(36, get("constants.player_statistics"));
+        inv.setCancelled();
 
         inv.setItem(4, builder(createPlayerHead(target),
                 meta -> {
@@ -1912,6 +1930,7 @@ public interface CommandWrapper {
 
         Business b = Business.getByOwner(p);
         NovaInventory inv = w.genGUI(27, get("constants.business.advertising"));
+        inv.setCancelled();
 
         inv.setItem(4, Items.builder(createPlayerHead(p),
                 meta -> meta.setDisplayName(ChatColor.DARK_PURPLE + (p.getDisplayName() == null ? p.getName() : p.getDisplayName()))
@@ -1976,6 +1995,7 @@ public interface CommandWrapper {
         Business b = Business.getByOwner(p);
 
         NovaInventory inv = w.genGUI(45, get("constants.business.advertising_" + (deposit ? "deposit" : "withdraw")));
+        inv.setCancelled();
 
         for (int j = 0; j < 2; j++)
             for (int i = 0; i < ADVERTISING_AMOUNTS.length; i++) {
@@ -2914,9 +2934,10 @@ public interface CommandWrapper {
         }
 
         NovaInventory inv = w.genGUI(54, get("constants.business.leaderboard"));
+        inv.setCancelled();
 
-        for (int i = 30; i < 33; i++) inv.setItem(i, loading());
-        for (int i = 37; i < 44; i++) inv.setItem(i, loading());
+        for (int i = 30; i < 33; i++) inv.setItem(i, LOADING);
+        for (int i = 37; i < 44; i++) inv.setItem(i, LOADING);
 
         p.openInventory(inv);
         new BukkitRunnable() {
@@ -3082,14 +3103,6 @@ public interface CommandWrapper {
         return Wrapper.getWrapper();
     }
 
-    static ItemStack loading() {
-        ItemStack load = new ItemStack(createPlayerHead("eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYmRkMmViMGM2ZjhhOTU0M2VmNWZkNzI1MjVjYzJmYWIzNTY2M2NkNzA5MTM1ZTQzYjhlMjU3ZGMwYjc1ODk0OCJ9fX0="));
-        ItemMeta meta = load.getItemMeta();
-        meta.setDisplayName(ChatColor.DARK_RED + get("constants.loading"));
-        load.setItemMeta(meta);
-        return load;
-    }
-
     static void modelData(ItemStack item, int data) {
         ItemMeta meta = item.getItemMeta();
         try {
@@ -3103,8 +3116,8 @@ public interface CommandWrapper {
         item.setItemMeta(meta);
     }
 
-    static List<Inventory> getRatingsGUI(OfflinePlayer p, Business b) {
-        List<Inventory> invs = new ArrayList<>();
+    static List<NovaInventory> getRatingsGUI(OfflinePlayer p, Business b) {
+        List<NovaInventory> invs = new ArrayList<>();
 
         if (b.getRatings().isEmpty()) return invs;
 
@@ -3125,6 +3138,7 @@ public interface CommandWrapper {
 
         for (int i = 0; i < pageCount; i++) {
             NovaInventory inv = w.genGUI(54, ChatColor.DARK_AQUA + get("constants.business.ratings") + " - " + String.format(get("constants.page"), i + 1));
+            inv.setCancelled();
 
             if (pageCount > 1 && i < pageCount - 1) {
                 NBTWrapper nbtN = of(nextA.clone());
@@ -3172,8 +3186,8 @@ public interface CommandWrapper {
         return invs;
     }
 
-    static List<Inventory> getBalancesGUI(OfflinePlayer p) {
-        List<Inventory> invs = new ArrayList<>();
+    static List<NovaInventory> getBalancesGUI(OfflinePlayer p) {
+        List<NovaInventory> invs = new ArrayList<>();
         NovaPlayer np = new NovaPlayer(p);
 
         ItemStack nextA = next("balance");
@@ -3187,6 +3201,8 @@ public interface CommandWrapper {
 
         for (int i = 0; i < pageCount; i++) {
             NovaInventory inv = w.genGUI(54, get("constants.balances") + " - " + String.format(get("constants.page"), i + 1));
+            inv.setCancelled();
+
             inv.setItem(4, createPlayerHead(p));
 
             if (pageCount > 1 && i < pageCount - 1) {
@@ -3230,8 +3246,8 @@ public interface CommandWrapper {
     }
 
 
-    static List<Inventory> getBankBalanceGUI() {
-        List<Inventory> invs = new ArrayList<>();
+    static List<NovaInventory> getBankBalanceGUI() {
+        List<NovaInventory> invs = new ArrayList<>();
 
         ItemStack nextA = next("bank_balance");
         ItemStack prevA = prev("bank_balance");
@@ -3243,7 +3259,8 @@ public interface CommandWrapper {
         Business randB = Business.randomAdvertisingBusiness();
 
         for (int i = 0; i < pageCount; i++) {
-            Inventory inv = w.genGUI(54, get("constants.bank.balance") + " - " + String.format(get("constants.page"), i + 1));
+            NovaInventory inv = w.genGUI(54, get("constants.bank.balance") + " - " + String.format(get("constants.page"), i + 1));
+            inv.setCancelled();
 
             if (pageCount > 1 && i < pageCount - 1) {
                 NBTWrapper nbtN = of(nextA.clone());

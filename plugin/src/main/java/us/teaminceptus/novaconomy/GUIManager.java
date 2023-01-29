@@ -87,7 +87,7 @@ public final class GUIManager implements Listener {
 		void accept(T t, U u, L l);
 	}
 
-	static final TriConsumer<InventoryClickEvent, Integer, List<Inventory>> CHANGE_PAGE_TRICONSUMER = (e, i, l) -> {
+	static final TriConsumer<InventoryClickEvent, Integer, List<NovaInventory>> CHANGE_PAGE_TRICONSUMER = (e, i, l) -> {
 		HumanEntity p = e.getWhoClicked();
 		ItemStack item = e.getCurrentItem();
 		int nextPage = of(item).getInt("page") + i;
@@ -251,7 +251,9 @@ public final class GUIManager implements Listener {
             return;
         }
 
-        Inventory purchaseGUI = w.genGUI(27, WordUtils.capitalizeFully(get("constants.purchase")) + " \"" + ChatColor.RESET + name + ChatColor.RESET + "\"?");
+        NovaInventory purchaseGUI = w.genGUI(27, WordUtils.capitalizeFully(get("constants.purchase")) + " \"" + ChatColor.RESET + name + ChatColor.RESET + "\"?");
+        purchaseGUI.setCancelled();
+
         for (int i = 10; i < 17; i++) purchaseGUI.setItem(i, w.getGUIBackground());
 
         purchaseGUI.setItem(13, item);
