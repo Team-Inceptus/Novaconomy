@@ -256,8 +256,6 @@ public final class Business implements ConfigurationSerializable {
      */
     @NotNull
     public List<ItemStack> getResources() {
-        Bukkit.getLogger().info(this.resources.stream().filter(i -> i.getType() == Material.APPLE).mapToInt(ItemStack::getAmount).sum() + " (Grab)");
-
         return ImmutableList.copyOf(this.resources);
     }
 
@@ -713,6 +711,7 @@ public final class Business implements ConfigurationSerializable {
      */
     public void saveBusiness() {
         if (!folder.exists()) folder.mkdir();
+        BUSINESS_CACHE.clear();
 
         try {
             writeBusiness();
