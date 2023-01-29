@@ -170,6 +170,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
 
         handler.registerBrigadier();
         handler.setLocale(Language.getCurrentLanguage().getLocale());
+
         plugin.getLogger().info("Loaded Command Version v2 (1.13.2+)");
     }
 
@@ -290,11 +291,10 @@ public final class CommandWrapperV2 implements CommandWrapper {
         private BusinessCommands(CommandWrapperV2 wrapper) {
             this.wrapper = wrapper;
 
-            BukkitCommandHandler handler = CommandWrapperV2.handler;
             handler.register(this);
         }
 
-        @DefaultFor({"business", "nbusiness", "nb", "b"})
+        @DefaultFor("business")
         public void businessInfoDefault(Player p) { businessInfo(p); }
 
         @Subcommand({"info", "information"})
@@ -358,10 +358,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
         public void editPrice(Player p, @Range(min = 0.01) double newPrice, @Optional Economy economy) { wrapper.editPrice(p, newPrice, economy); }
 
         @Subcommand({"keyword", "keywords"})
-        @DefaultFor({"business keyword", "business keywords",
-        "nbusiness keyword", "nbusiness keywords",
-        "nb keyword", "nb keywords",
-        "b keyword", "b keywords"})
+        @DefaultFor({"business keyword"})
         @CommandPermission("novaconomy.user.business.keywords")
         public void keywords(Player p) {
             wrapper.listKeywords(p);
@@ -384,10 +381,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
         }
 
         @Subcommand({"advertising", "ads", "advertise"})
-        @DefaultFor({"business advertising", "business ads", "business advertise",
-        "nbusiness advertising", "nbusiness ads", "nbusiness advertise",
-        "nb advertising", "nb ads", "nb advertise",
-        "b advertising", "b ads", "b advertise"})
+        @DefaultFor({"business advertising"})
         public void businessAdvertising(Player p) {
             wrapper.businessAdvertising(p);
         }
@@ -409,10 +403,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
         @Subcommand({"blacklist", "blist", "bl", "blackl",
         "blacklist list", "blist list", "bl list", "blackl list",
         "blacklist l", "blist l", "bl l", "blackl l"})
-        @DefaultFor({"business blacklist", "business blist", "business bl", "business blackl",
-        "nbusiness blacklist", "nbusiness blist", "nbusiness bl", "nbusiness blackl",
-        "nb blacklist", "nb blist", "nb bl", "nb blackl",
-        "b blacklist", "b blist", "b bl", "b blackl"})
+        @DefaultFor({"business blacklist"})
         public void listBlacklist(Player p) { wrapper.listBlacklist(p); }
 
         @Subcommand({"blacklist add", "blist add", "bl add", "blackl add"})
@@ -437,7 +428,6 @@ public final class CommandWrapperV2 implements CommandWrapper {
         private BankCommands(CommandWrapperV2 wrapper) {
             this.wrapper = wrapper;
 
-            BukkitCommandHandler handler = CommandWrapperV2.handler;
             handler.register(this);
         }
 
@@ -463,8 +453,6 @@ public final class CommandWrapperV2 implements CommandWrapper {
 
         private EconomyCommands(CommandWrapperV2 wrapper) {
             this.wrapper = wrapper;
-
-            BukkitCommandHandler handler = CommandWrapperV2.handler;
 
             handler.getAutoCompleter().registerSuggestion("symbol", SuggestionProvider.of("'$'", "'%'", "Q", "L", "P", "A", "a", "r", "R", "C", "c", "D", "d", "W", "w", "B", "b"));
             handler.getAutoCompleter().registerSuggestion("interest", SuggestionProvider.of("enable", "disable"));
@@ -556,8 +544,6 @@ public final class CommandWrapperV2 implements CommandWrapper {
 
         BountyCommands(CommandWrapperV2 wrapper) {
             this.wrapper = wrapper;
-
-            BukkitCommandHandler handler = CommandWrapperV2.handler;
             handler.register(this);
         }
 
@@ -589,8 +575,6 @@ public final class CommandWrapperV2 implements CommandWrapper {
 
         NovaConfigCommands(CommandWrapperV2 wrapper) {
             this.wrapper = wrapper;
-
-            BukkitCommandHandler handler = CommandWrapperV2.handler;
             handler.register(this);
         }
 
@@ -696,6 +680,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
 
         CorporationCommands(CommandWrapperV2 wrapper) {
             this.wrapper = wrapper;
+            handler.register(this);
         }
 
         @Subcommand("info")
