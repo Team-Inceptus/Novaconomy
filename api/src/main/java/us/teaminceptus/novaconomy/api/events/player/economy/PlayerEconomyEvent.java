@@ -40,7 +40,7 @@ public abstract class PlayerEconomyEvent extends PlayerEvent {
      * @see HandlerList
      */
     @NotNull
-    public static HandlerList getHanderList() { return HANDLERS; }
+    public static HandlerList getHandlerList() { return HANDLERS; }
 
     /**
      * Fetch the amount involved in this event
