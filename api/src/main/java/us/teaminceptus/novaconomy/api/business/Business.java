@@ -256,6 +256,8 @@ public final class Business implements ConfigurationSerializable {
      */
     @NotNull
     public List<ItemStack> getResources() {
+        Bukkit.getLogger().info(this.resources.stream().filter(i -> i.getType() == Material.APPLE).mapToInt(ItemStack::getAmount).sum() + " (Grab)");
+
         return ImmutableList.copyOf(this.resources);
     }
 
@@ -1138,6 +1140,17 @@ public final class Business implements ConfigurationSerializable {
         if (o == null || getClass() != o.getClass()) return false;
         Business business = (Business) o;
         return id.equals(business.id);
+    }
+
+    @Override
+    public String toString() {
+        return "Business{" +
+                "id=" + id +
+                ", name='" + name + '\'' +
+                ", owner=" + owner +
+                ", icon=" + icon +
+                ", creationDate=" + new Date(creationDate) +
+                '}';
     }
 
     @Override

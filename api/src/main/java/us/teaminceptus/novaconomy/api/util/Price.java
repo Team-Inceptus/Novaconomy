@@ -19,6 +19,8 @@ import java.util.UUID;
  */
 public final class Price implements ConfigurationSerializable, Comparable<Price>, Externalizable {
 
+    private static final long serialVersionUID = 9211350596474508468L;
+
     private Economy econ;
     private double amount;
 
