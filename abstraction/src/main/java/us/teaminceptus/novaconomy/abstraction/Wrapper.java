@@ -114,7 +114,7 @@ public interface Wrapper {
         NovaInventory inv = genGUI(54, ChatColor.GOLD + b.getName());
         inv.setCancelled();
 
-        if (!b.getRatings().isEmpty()) inv.setItem(44, CommandWrapper.loading());
+        if (!b.getRatings().isEmpty()) inv.setItem(44, Items.LOADING);
         for (int i = 46; i < 53; i++) inv.setItem(i, null);
 
         ItemStack icon = new ItemStack(b.getIcon());

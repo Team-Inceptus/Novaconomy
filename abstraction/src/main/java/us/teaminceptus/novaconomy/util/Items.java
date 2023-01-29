@@ -13,7 +13,9 @@ import org.jetbrains.annotations.NotNull;
 import us.teaminceptus.novaconomy.abstraction.NBTWrapper;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 
+import java.io.IOException;
 import java.lang.reflect.Method;
+import java.util.Properties;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -70,7 +72,39 @@ public final class Items {
             meta -> meta.setDisplayName(ChatColor.AQUA + get("constants.previous"))
     );
 
+    public static final ItemStack LOADING = builder(getHead("loading"),
+            meta -> meta.setDisplayName(ChatColor.DARK_RED + get("constants.loading"))
+    );
+
     // Static Util
+
+    public static ItemStack getHead(String name) {
+        Properties p = new Properties();
+        try {
+            p.load(NovaConfig.getPlugin().getClass().getResourceAsStream("/util/heads.properties"));
+
+            String texture = p.getProperty(name);
+            ItemStack head = new ItemStack(w.isLegacy() ? Material.matchMaterial("SKULL_ITEM") : Material.matchMaterial("PLAYER_HEAD"));
+
+            SkullMeta meta = (SkullMeta) head.getItemMeta();
+            GameProfile profile = new GameProfile(UUID.randomUUID(), null);
+            profile.getProperties().put("textures", new Property("textures", texture));
+            try {
+                Method mtd = meta.getClass().getDeclaredMethod("setProfile", GameProfile.class);
+                mtd.setAccessible(true);
+                mtd.invoke(meta, profile);
+            } catch (Exception e) {
+                NovaConfig.print(e);
+            }
+            head.setItemMeta(meta);
+
+            return head;
+        } catch (IOException e) {
+            NovaConfig.print(e);
+            return null;
+        }
+    }
+
 
     public static ItemStack yes(String type) {
         return NBTWrapper.builder(LIME_WOOL,
@@ -143,21 +177,5 @@ public final class Items {
                     nbt.set("player", p.getUniqueId());
                 }
         );
-    }
-
-    public static ItemStack createPlayerHead(String texture) {
-        ItemStack head = new ItemStack(w.isLegacy() ? Material.matchMaterial("SKULL_ITEM") : Material.matchMaterial("PLAYER_HEAD"));
-        SkullMeta meta = (SkullMeta) head.getItemMeta();
-        GameProfile profile = new GameProfile(UUID.randomUUID(), null);
-        profile.getProperties().put("textures", new Property("textures", texture));
-        try {
-            Method mtd = meta.getClass().getDeclaredMethod("setProfile", GameProfile.class);
-            mtd.setAccessible(true);
-            mtd.invoke(meta, profile);
-        } catch (Exception e) {
-            NovaConfig.print(e);
-        }
-        head.setItemMeta(meta);
-        return head;
     }
 }
