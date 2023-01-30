@@ -1,14 +1,12 @@
 package us.teaminceptus.novaconomy.api.corporation;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.OfflinePlayer;
+import org.bukkit.*;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.configuration.serialization.DelegateDeserialization;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.jetbrains.annotations.NotNull;
@@ -19,6 +17,7 @@ import us.teaminceptus.novaconomy.api.economy.market.StockHolder;
 import us.teaminceptus.novaconomy.api.events.corporation.CorporationCreateEvent;
 
 import java.io.*;
+import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -26,6 +25,7 @@ import java.util.stream.Collectors;
 /**
  * Represents a Novaconomy Corporation
  */
+@SuppressWarnings("unchecked")
 public final class Corporation implements StockHolder {
 
     // Constants
@@ -52,6 +52,8 @@ public final class Corporation implements StockHolder {
 
     private final Set<Business> children = new HashSet<>();
     private final Map<CorporationAchievement, Integer> achievements = new HashMap<>();
+    private final List<ItemStack> resources = new ArrayList<>();
+    private final Map<UUID, CorporationPermission[]> businessPermissions = new HashMap<>();
 
     private Corporation(@NotNull UUID id, long creationDate, OfflinePlayer owner) {
         this.id = id;
@@ -325,8 +327,14 @@ public final class Corporation implements StockHolder {
     /**
      * Deletes this Corporation.
      */
-    public void delete() {
-        removeCorporation(this);
+    public void delete() { removeCorporation(this); }
+
+    /**
+     * Fetches an immutable copy of all of the shared resources this Corporation has.
+     * @return Corporation Resources
+     */
+    public List<ItemStack> getResources() {
+        return ImmutableList.copyOf(resources);
     }
 
     @Override
@@ -682,6 +690,9 @@ public final class Corporation implements StockHolder {
      * <p>This method is called automatically.</p>
      */
     public void saveCorporation() {
+        if (!folder.exists()) folder.mkdir();
+        CORPORATION_CACHE.clear();
+
         try {
             writeCorporation();
         } catch (IOException e) {
@@ -690,8 +701,6 @@ public final class Corporation implements StockHolder {
     }
 
     private void writeCorporation() throws IOException {
-        if (!folder.exists()) folder.mkdir();
-
         File info = new File(folder, "info.dat");
         if (!info.exists()) info.createNewFile();
 
@@ -725,8 +734,44 @@ public final class Corporation implements StockHolder {
                 .stream()
                 .map(Business::getUniqueId)
                 .map(UUID::toString)
-                .collect(Collectors.toList()));
+                .collect(Collectors.toList())
+        );
+
+        if (!children.isConfigurationSection("permissions")) children.createSection("permissions");
+        for (Map.Entry<UUID, CorporationPermission[]> entry : this.businessPermissions.entrySet())
+            children.set("permissions." + entry.getKey().toString(), Arrays.stream(entry.getValue())
+                    .map(CorporationPermission::getId)
+                    .collect(Collectors.toList()));
+
         children.save(childrenF);
+
+        // Global Resources
+
+        File sourcesF = new File(folder, "resources");
+        if (!sourcesF.exists()) sourcesF.mkdir();
+
+        Set<Material> mats = this.resources.stream().map(ItemStack::getType).collect(Collectors.toSet());
+        for (Material mat : mats) {
+            List<ItemStack> added = this.resources.stream().filter(i -> i.getType() == mat).collect(Collectors.toList());
+
+            File matF = new File(sourcesF, mat.name().toLowerCase() + ".dat");
+            if (!matF.exists()) matF.createNewFile();
+
+            FileOutputStream matFs = new FileOutputStream(matF);
+            ObjectOutputStream matOs = new ObjectOutputStream(new BufferedOutputStream(matFs));
+
+            matOs.writeInt(added.stream().filter(i -> !i.hasItemMeta()).mapToInt(ItemStack::getAmount).sum());
+
+            List<Map<String, Object>> res = new ArrayList<>();
+            for (ItemStack i : added.stream().filter(ItemStack::hasItemMeta).collect(Collectors.toList())) {
+                Map<String, Object> m = new HashMap<>(i.serialize());
+                if (i.hasItemMeta()) m.put("meta", i.getItemMeta().serialize());
+
+                res.add(m);
+            }
+            matOs.writeObject(res);
+            matOs.close();
+        }
     }
 
     @NotNull
@@ -767,6 +812,59 @@ public final class Corporation implements StockHolder {
                 .map(UUID::fromString)
                 .map(Business::getById)
                 .collect(Collectors.toList()));
+
+        for (Map.Entry<String, Object> entry : children.getConfigurationSection("permissions").getValues(false).entrySet()) {
+            UUID bid = UUID.fromString(entry.getKey());
+            CorporationPermission[] bPermissions = ((List<String>) entry.getValue())
+                    .stream()
+                    .map(CorporationPermission::byId)
+                    .toArray(CorporationPermission[]::new);
+
+            c.businessPermissions.put(bid, bPermissions);
+        }
+
+        // Global Resources
+        File sourcesF = new File(folder, "resources");
+        if (!sourcesF.exists()) sourcesF.mkdir();
+
+        List<ItemStack> resources = new ArrayList<>();
+        for (File matF : sourcesF.listFiles()) {
+            FileInputStream matFs = new FileInputStream(matF);
+            ObjectInputStream matOs = new ObjectInputStream(new BufferedInputStream(matFs));
+
+            int baseCount = matOs.readInt();
+            Material baseM = Material.valueOf(matF.getName().replace(".dat", "").toUpperCase());
+
+            while (baseCount > 0) {
+                int amount = Math.min(baseCount, baseM.getMaxStackSize());
+                ItemStack i = new ItemStack(baseM, amount);
+                resources.add(i);
+
+                baseCount -= amount;
+            }
+
+            List<Map<String, Object>> res = (List<Map<String, Object>>) matOs.readObject();
+            for (Map<String, Object> m : res) {
+                Map<String, Object> sItem = new HashMap<>(m);
+
+                ItemMeta base = Bukkit.getItemFactory().getItemMeta(Material.valueOf((String) m.get("type")));
+                DelegateDeserialization deserialization = base.getClass().getAnnotation(DelegateDeserialization.class);
+                Method deserialize = deserialization.value().getDeclaredMethod("deserialize", Map.class);
+                deserialize.setAccessible(true);
+
+                Map<String, Object> sMeta = (Map<String, Object>) sItem.getOrDefault("meta", base.serialize());
+                if (sMeta == null) sMeta = base.serialize();
+
+                ItemMeta meta = (ItemMeta) deserialize.invoke(null, sMeta);
+                sItem.put("meta", meta);
+                ItemStack i = ItemStack.deserialize(m);
+                i.setItemMeta(meta);
+
+                resources.add(i);
+            }
+
+        }
+        c.resources.addAll(resources);
 
         return c;
     }
