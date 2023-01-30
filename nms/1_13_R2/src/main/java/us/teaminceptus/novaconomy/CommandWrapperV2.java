@@ -294,10 +294,8 @@ public final class CommandWrapperV2 implements CommandWrapper {
             handler.register(this);
         }
 
-        @DefaultFor({"business", "nbusiness", "nb", "b"})
-        public void businessInfoDefault(Player p) { businessInfo(p); }
-
         @Subcommand({"info", "information"})
+        @DefaultFor({"business", "nbusiness", "nb", "b"})
         public void businessInfo(Player p) { wrapper.businessInfo(p); }
 
         @Subcommand("query")
