@@ -1426,6 +1426,19 @@ public final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         deleteCorporation(p, confirm.equalsIgnoreCase("confirm"));
                         break;
                     }
+                    case "setdescription":
+                    case "setdesc": {
+                        if (args.length < 2) {
+                            sender.sendMessage(getMessage("error.argument"));
+                            return false;
+                        }
+
+                        StringBuilder desc = new StringBuilder();
+                        for (int i = 1; i < args.length; i++) desc.append(args[i]).append(" ");
+
+                        setCorporationDescription(p, desc.toString());
+                        break;
+                    }
                 }
             }
             default: {

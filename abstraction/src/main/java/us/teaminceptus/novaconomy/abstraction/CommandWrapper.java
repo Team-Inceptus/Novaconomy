@@ -3072,6 +3072,22 @@ public interface CommandWrapper {
         } else p.sendMessage(getMessage("error.corporation.confirm_delete"));
     }
 
+    default void setCorporationDescription(Player p, String desc) {
+        if (!p.hasPermission("novaconomy.user.corporation.manage")) {
+            p.sendMessage(ERROR_PERMISSION);
+            return;
+        }
+
+        if (!Corporation.exists(p)) {
+            p.sendMessage(getMessage("error.corporation.none"));
+            return;
+        }
+
+        Corporation corp = Corporation.byOwner(p);
+        corp.setDescription(desc);
+        p.sendMessage(getMessage("success.corporation.description"));
+    }
+
     // Util Classes & Other Static Methods
 
     static String formatTimeAgo(long start) {

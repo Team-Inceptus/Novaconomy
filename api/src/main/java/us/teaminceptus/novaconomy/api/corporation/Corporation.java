@@ -34,6 +34,11 @@ public final class Corporation {
      */
     public static final int MAX_NAME_LENGTH = 32;
 
+    /**
+     * The maximum length of a corporation description
+     */
+    public static final int MAX_DESCRIPTION_LENGTH = 256;
+
     // Class
 
     private final UUID id;
@@ -43,6 +48,7 @@ public final class Corporation {
     private final File folder;
 
     private String name;
+    private String description = "";
     private Material icon;
     private Location headquarters = null;
 
@@ -164,6 +170,29 @@ public final class Corporation {
         if (name.length() > MAX_NAME_LENGTH) throw new IllegalArgumentException("Corporation name cannot be longer than 32 characters.");
 
         this.name = name;
+        saveCorporation();
+    }
+
+    /**
+     * Fetches the description of this Corporation.
+     * @return Corporation Description
+     */
+    @NotNull
+    public String getDescription() {
+        return description;
+    }
+
+    /**
+     * Sets the description of this Corporation.
+     * @param description New Corporation Description
+     * @throws IllegalArgumentException if description is too long according to {@link #MAX_DESCRIPTION_LENGTH} or is null
+     */
+    @NotNull
+    public void setDescription(@NotNull String description) throws IllegalArgumentException {
+        if (description == null) throw new IllegalArgumentException("Description cannot be null!");
+        if (description.length() > MAX_DESCRIPTION_LENGTH) throw new IllegalArgumentException("Corporation description cannot be longer than 256 characters.");
+        
+        this.description = description;
         saveCorporation();
     }
 

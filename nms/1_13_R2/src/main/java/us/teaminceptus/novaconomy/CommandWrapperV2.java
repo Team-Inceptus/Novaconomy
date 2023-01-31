@@ -29,6 +29,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@SuppressWarnings("deprecation")
 public final class CommandWrapperV2 implements CommandWrapper {
 
     private static BukkitCommandHandler handler;
@@ -295,7 +296,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
         }
 
         @Subcommand({"info", "information"})
-        @DefaultFor({"business", "nbusiness", "nb", "b"})
+        @Default
         public void businessInfo(Player p) { wrapper.businessInfo(p); }
 
         @Subcommand("query")
@@ -356,7 +357,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
         public void editPrice(Player p, @Range(min = 0.01) double newPrice, @Optional Economy economy) { wrapper.editPrice(p, newPrice, economy); }
 
         @Subcommand({"keyword", "keywords"})
-        @DefaultFor({"business keyword"})
+        @Default
         @CommandPermission("novaconomy.user.business.keywords")
         public void keywords(Player p) {
             wrapper.listKeywords(p);
@@ -379,7 +380,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
         }
 
         @Subcommand({"advertising", "ads", "advertise"})
-        @DefaultFor({"business advertising"})
+        @Default
         public void businessAdvertising(Player p) {
             wrapper.businessAdvertising(p);
         }
@@ -401,7 +402,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
         @Subcommand({"blacklist", "blist", "bl", "blackl",
         "blacklist list", "blist list", "bl list", "blackl list",
         "blacklist l", "blist l", "bl l", "blackl l"})
-        @DefaultFor({"business blacklist"})
+        @Default
         public void listBlacklist(Player p) { wrapper.listBlacklist(p); }
 
         @Subcommand({"blacklist add", "blist add", "bl add", "blackl add"})
@@ -682,7 +683,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
         }
 
         @Subcommand("info")
-        @DefaultFor("corporation")
+        @Default
         public void corporationInfo(Player p) {
             wrapper.corporationInfo(p);
             NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
@@ -698,6 +699,11 @@ public final class CommandWrapperV2 implements CommandWrapper {
         @CommandPermission("novaconomy.user.corporation.manage")
         public void deleteCorporation(Player p, @Single String confirm) {
             wrapper.deleteCorporation(p, confirm.equalsIgnoreCase("confirm"));
+        }
+
+        @Subcommand({"setdescription", "setdesc"})
+        public void setDescription(Player p, String description) {
+            wrapper.setCorporationDescription(p, description);
         }
 
     }
