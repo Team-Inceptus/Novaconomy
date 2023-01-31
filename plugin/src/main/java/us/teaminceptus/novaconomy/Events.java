@@ -44,7 +44,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import static us.teaminceptus.novaconomy.Novaconomy.isIgnored;
-import static us.teaminceptus.novaconomy.Novaconomy.r;
+import static us.teaminceptus.novaconomy.abstraction.Wrapper.r;
 import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.*;
 import static us.teaminceptus.novaconomy.abstraction.NBTWrapper.*;
 

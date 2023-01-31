@@ -26,6 +26,7 @@ import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.business.BusinessStatistics;
 import us.teaminceptus.novaconomy.api.business.Rating;
+import us.teaminceptus.novaconomy.api.corporation.Corporation;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.events.business.BusinessProductAddEvent;
 import us.teaminceptus.novaconomy.api.events.business.BusinessProductRemoveEvent;
@@ -50,12 +51,13 @@ import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
 import static us.teaminceptus.novaconomy.Novaconomy.getCommandWrapper;
-import static us.teaminceptus.novaconomy.Novaconomy.r;
 import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.*;
 import static us.teaminceptus.novaconomy.abstraction.NBTWrapper.builder;
 import static us.teaminceptus.novaconomy.abstraction.NBTWrapper.of;
 import static us.teaminceptus.novaconomy.abstraction.Wrapper.getID;
 import static us.teaminceptus.novaconomy.abstraction.Wrapper.hasID;
+import static us.teaminceptus.novaconomy.abstraction.Wrapper.r;
+import static us.teaminceptus.novaconomy.util.Generator.*;
 import static us.teaminceptus.novaconomy.util.Items.*;
 
 @SuppressWarnings("unchecked")
@@ -82,6 +84,11 @@ public final class GUIManager implements Listener {
 		return Business.getById(of(item).getUUID(BUSINESS_TAG));
 	}
 
+    @Nullable
+    private static Corporation getCorporation(ItemStack item) {
+        return Corporation.byId(of(item).getUUID(CORPORATION_TAG));
+    }
+
 	@FunctionalInterface
 	private interface TriConsumer<T, U, L> {
 		void accept(T t, U u, L l);
@@ -98,7 +105,6 @@ public final class GUIManager implements Listener {
 	};
 
 	static final BiConsumer<InventoryClickEvent, Boolean> BUSINESS_ADVERTISING_BICONSUMER = (e, add) -> {
-		if (!(e.getWhoClicked() instanceof Player)) return;
 		Player p = (Player) e.getWhoClicked();
 		NovaPlayer np = new NovaPlayer(p);
 
@@ -133,7 +139,6 @@ public final class GUIManager implements Listener {
 	};
 
 	static final BiConsumer<InventoryClickEvent, Integer> EXCHANGE_BICONSUMER = (e, i) -> {
-		if (!(e.getWhoClicked() instanceof Player)) return;
 		Player p = (Player) e.getWhoClicked();
 		ItemStack item = e.getCurrentItem();
 		Inventory inv = e.getView().getTopInventory();
@@ -219,13 +224,12 @@ public final class GUIManager implements Listener {
         inv.setItem(e.getSlot(), newEcon.getIcon());
     })
     .put(BUSINESS_TAG, (e, inv) -> {
-        if (!(e.getWhoClicked() instanceof Player)) return;
         Player p = (Player) e.getWhoClicked();
 
         ItemStack item = e.getCurrentItem();
         String name = ChatColor.stripColor(item.getItemMeta().getDisplayName()).toLowerCase();
         Business b = Business.getByName(name);
-        p.openInventory(w.generateBusinessData(b, p, true));
+        p.openInventory(generateBusinessData(b, p, true));
 
         if (!b.isOwner(p)) {
             b.getStatistics().addView();
@@ -233,7 +237,6 @@ public final class GUIManager implements Listener {
         }
     })
     .put("product:buy", (e, inv) -> {
-        if (!(e.getWhoClicked() instanceof Player)) return;
         Player p = (Player) e.getWhoClicked();
         NovaPlayer np = new NovaPlayer(p);
         ItemStack item = e.getCurrentItem();
@@ -251,7 +254,7 @@ public final class GUIManager implements Listener {
             return;
         }
 
-        NovaInventory purchaseGUI = w.genGUI(27, WordUtils.capitalizeFully(get("constants.purchase")) + " \"" + ChatColor.RESET + name + ChatColor.RESET + "\"?");
+        NovaInventory purchaseGUI = genGUI(27, WordUtils.capitalizeFully(get("constants.purchase")) + " \"" + ChatColor.RESET + name + ChatColor.RESET + "\"?");
         purchaseGUI.setCancelled();
 
         for (int i = 10; i < 17; i++) purchaseGUI.setItem(i, w.getGUIBackground());
@@ -297,7 +300,6 @@ public final class GUIManager implements Listener {
         NovaSound.BLOCK_CHEST_OPEN.playFailure(p);
     })
     .put("product:amount", (e, inv) -> {
-        if (!(e.getWhoClicked() instanceof Player)) return;
         Player p = (Player) e.getWhoClicked();
         NovaPlayer np = new NovaPlayer(p);
         ItemStack item = e.getCurrentItem();
@@ -331,13 +333,12 @@ public final class GUIManager implements Listener {
         en.closeInventory();
     })
     .put("no:no_product", (e, inv) -> {
-        if (!(e.getWhoClicked() instanceof Player)) return;
         Player p = (Player) e.getWhoClicked();
         ItemStack item = e.getCurrentItem();
         Business b = getBusiness(item);
 
         p.sendMessage(get("cancel.business.purchase"));
-        p.openInventory(w.generateBusinessData(b, p, true));
+        p.openInventory(generateBusinessData(b, p, true));
         NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
 
         if (!b.isOwner(p)) {
@@ -384,7 +385,6 @@ public final class GUIManager implements Listener {
         inv.setItem(13, display);
     })
     .put("economy:wheel:leaderboard", (e, inv) -> {
-        if (!(e.getWhoClicked() instanceof Player)) return;
         Player p = (Player) e.getWhoClicked();
         ItemStack item = e.getCurrentItem();
         String econ = of(item).getString("economy");
@@ -399,8 +399,6 @@ public final class GUIManager implements Listener {
         getCommandWrapper().balanceLeaderboard(p, next);
     })
     .put("yes:buy_product", (e, inv) -> {
-        if (!(e.getWhoClicked() instanceof Player)) return;
-
         ItemStack item = e.getCurrentItem();
         Player p = (Player) e.getWhoClicked();
 
@@ -482,7 +480,6 @@ public final class GUIManager implements Listener {
         Bukkit.getPluginManager().callEvent(event);
     })
     .put("business:add_product", (e, inv) -> {
-        if (!(e.getWhoClicked() instanceof Player)) return;
         Player p = (Player) e.getWhoClicked();
         Business b = Business.getByOwner(p);
         ItemStack item = e.getCurrentItem();
@@ -505,7 +502,6 @@ public final class GUIManager implements Listener {
         }
     })
     .put("business:add_resource", (e, inv) -> {
-        if (!(e.getWhoClicked() instanceof Player)) return;
         Player p = (Player) e.getWhoClicked();
         Business b = Business.getByOwner(p);
         inv.setAttribute("added", true);
@@ -541,7 +537,6 @@ public final class GUIManager implements Listener {
         Bukkit.getPluginManager().callEvent(event);
     })
     .put("product:remove", (e, inv) -> {
-        if (!(e.getWhoClicked() instanceof Player)) return;
         Player p = (Player) e.getWhoClicked();
         Business b = Business.getByOwner(p);
         ItemStack item = e.getCurrentItem();
@@ -572,7 +567,6 @@ public final class GUIManager implements Listener {
     .put("exchange:1", (e, inv) -> EXCHANGE_BICONSUMER.accept(e, 12))
     .put("exchange:2", (e, inv) -> EXCHANGE_BICONSUMER.accept(e, 14))
     .put("yes:exchange", (e, inv) -> {
-        if (!(e.getWhoClicked() instanceof Player)) return;
         Player p = (Player) e.getWhoClicked();
         NovaPlayer np = new NovaPlayer(p);
 
@@ -618,17 +612,14 @@ public final class GUIManager implements Listener {
     .put("next:bank_balance", (e, inv) -> CHANGE_PAGE_TRICONSUMER.accept(e, 1, CommandWrapper.getBankBalanceGUI()))
     .put("prev:bank_balance", (e, inv) -> CHANGE_PAGE_TRICONSUMER.accept(e, -1, CommandWrapper.getBankBalanceGUI()))
     .put("next:balance", (e, inv) -> {
-        if (!(e.getWhoClicked() instanceof Player)) return;
         Player p = (Player) e.getWhoClicked();
         CHANGE_PAGE_TRICONSUMER.accept(e, 1, CommandWrapper.getBalancesGUI(p));
     })
     .put("prev:balance", (e, inv) -> {
-        if (!(e.getWhoClicked() instanceof Player)) return;
         Player p = (Player) e.getWhoClicked();
         CHANGE_PAGE_TRICONSUMER.accept(e, -1, CommandWrapper.getBalancesGUI(p));
     })
     .put(SETTING_TAG, (e, inv) -> {
-        if (!(e.getWhoClicked() instanceof Player)) return;
         Player p = (Player) e.getWhoClicked();
         ItemStack item = e.getCurrentItem();
         String section = of(item).getString(SETTING_TAG);
@@ -636,7 +627,6 @@ public final class GUIManager implements Listener {
         getCommandWrapper().settings(p, section);
     })
     .put("setting_toggle", (e, inv) -> {
-        if (!(e.getWhoClicked() instanceof Player)) return;
         Player p = (Player) e.getWhoClicked();
         ItemStack item = e.getCurrentItem();
         NBTWrapper cNBT = of(item);
@@ -684,12 +674,10 @@ public final class GUIManager implements Listener {
         }
     })
     .put("back:settings", (e, inv) -> {
-        if (!(e.getWhoClicked() instanceof Player)) return;
         Player p = (Player) e.getWhoClicked();
         getCommandWrapper().settings(p, null);
     })
     .put("business:home", (e, inv) -> {
-        if (!(e.getWhoClicked() instanceof Player)) return;
         Player p = (Player) e.getWhoClicked();
         ItemStack item = e.getCurrentItem();
         boolean anonymous = of(item).getBoolean("anonymous");
@@ -715,12 +703,10 @@ public final class GUIManager implements Listener {
         NovaSound.ENTITY_ENDERMAN_TELEPORT.play(p, 1F, 1F);
     })
     .put("business:settings", (e, inv) -> {
-        if (!(e.getWhoClicked() instanceof Player)) return;
         Player p = (Player) e.getWhoClicked();
         getCommandWrapper().settings(p, BUSINESS_TAG);
     })
     .put("business:statistics", (e, inv) -> {
-        if (!(e.getWhoClicked() instanceof Player)) return;
         Player p = (Player) e.getWhoClicked();
         ItemStack item = e.getCurrentItem();
         Business b = getBusiness(item);
@@ -734,7 +720,6 @@ public final class GUIManager implements Listener {
         getCommandWrapper().businessStatistics(p, b);
     })
     .put("business:rating", (e, inv) -> {
-        if (!(e.getWhoClicked() instanceof Player)) return;
         Player p = (Player) e.getWhoClicked();
 
         ItemStack item = e.getCurrentItem();
@@ -768,7 +753,6 @@ public final class GUIManager implements Listener {
         (newRating > 1 ? NovaSound.ENTITY_ARROW_HIT_PLAYER : NovaSound.BLOCK_NOTE_BLOCK_PLING).play(p, 1F, 0.4F * (newRating + 1));
     })
     .put("yes:business_rate", (e, inv) -> {
-        if (!(e.getWhoClicked() instanceof Player)) return;
         Player p = (Player) e.getWhoClicked();
         NovaPlayer np = new NovaPlayer(p);
         ItemStack item = e.getCurrentItem();
@@ -792,14 +776,13 @@ public final class GUIManager implements Listener {
         }
     })
     .put("business:click", (e, inv) -> {
-        if (!(e.getWhoClicked() instanceof Player)) return;
         Player p = (Player) e.getWhoClicked();
         ItemStack item = e.getCurrentItem();
         Business b = getBusiness(item);
 
         boolean notOwner = !b.isOwner(p);
 
-        p.openInventory(w.generateBusinessData(b, p, notOwner));
+        p.openInventory(generateBusinessData(b, p, notOwner));
         NovaSound.BLOCK_ENDER_CHEST_OPEN.play(p, 1F, 0.5F);
 
         if (notOwner) {
@@ -808,7 +791,6 @@ public final class GUIManager implements Listener {
         }
     })
     .put("product:edit_price", (e, inv) -> {
-        if (!(e.getWhoClicked() instanceof Player)) return;
         Player p = (Player) e.getWhoClicked();
         ItemStack item = e.getCurrentItem();
         BusinessProduct pr = (BusinessProduct) getProduct(item);
@@ -824,7 +806,6 @@ public final class GUIManager implements Listener {
         p.closeInventory();
     })
     .put("player_stats", (e, inv) -> {
-        if (!(e.getWhoClicked() instanceof Player)) return;
         ItemStack item = e.getCurrentItem();
         Player p = (Player) e.getWhoClicked();
         OfflinePlayer target = Bukkit.getOfflinePlayer(of(item).getUUID("player"));
@@ -832,13 +813,11 @@ public final class GUIManager implements Listener {
         getCommandWrapper().playerStatistics(p, target);
     })
     .put("business:advertising", (e, inv) -> {
-        if (!(e.getWhoClicked() instanceof Player)) return;
         Player p = (Player) e.getWhoClicked();
 
         getCommandWrapper().businessAdvertising(p);
     })
     .put("business:change_advertising", (e, inv) -> {
-        if (!(e.getWhoClicked() instanceof Player)) return;
         Player p = (Player) e.getWhoClicked();
         ItemStack item = e.getCurrentItem();
 
@@ -884,7 +863,6 @@ public final class GUIManager implements Listener {
     .put("yes:deposit_advertising", (e, inv) -> BUSINESS_ADVERTISING_BICONSUMER.accept(e, true))
     .put("yes:withdraw_advertising", (e, inv) -> BUSINESS_ADVERTISING_BICONSUMER.accept(e, false))
     .put("business:click:advertising", (e, inv) -> {
-        if (!(e.getWhoClicked() instanceof Player)) return;
         items().get("business:click").accept(e, inv);
         ItemStack item = e.getCurrentItem();
 
@@ -901,7 +879,6 @@ public final class GUIManager implements Listener {
         from.addAdvertisingBalance(add, randomEcon);
     })
     .put("business:click:advertising_external", (e, inv) -> {
-        if (!(e.getWhoClicked() instanceof Player)) return;
         items().get("business:click").accept(e, inv);
         ItemStack item = e.getCurrentItem();
 
@@ -914,7 +891,6 @@ public final class GUIManager implements Listener {
         to.removeAdvertisingBalance(remove, randomEcon);
     })
     .put("business:pick_rating", (e, inv) -> {
-        if (!(e.getWhoClicked() instanceof Player)) return;
         Player p = (Player) e.getWhoClicked();
         ItemStack item = e.getCurrentItem();
         NBTWrapper nbt = of(item);
@@ -927,7 +903,6 @@ public final class GUIManager implements Listener {
         getCommandWrapper().businessRating(p, owner);
     })
     .put("business:all_ratings", (e, inv) -> {
-        if (!(e.getWhoClicked() instanceof Player)) return;
         Player p = (Player) e.getWhoClicked();
         ItemStack item = e.getCurrentItem();
 
@@ -936,25 +911,20 @@ public final class GUIManager implements Listener {
         p.openInventory(CommandWrapper.getRatingsGUI(p, b).get(0));
     })
     .put("next:ratings", (e, inv) -> {
-        if (!(e.getWhoClicked() instanceof Player)) return;
         Player p = (Player) e.getWhoClicked();
         ItemStack item = e.getCurrentItem();
-
         Business b = getBusiness(item);
 
         CHANGE_PAGE_TRICONSUMER.accept(e, 1, CommandWrapper.getRatingsGUI(p, b));
     })
     .put("prev:ratings", (e, inv) -> {
-        if (!(e.getWhoClicked() instanceof Player)) return;
         Player p = (Player) e.getWhoClicked();
         ItemStack item = e.getCurrentItem();
-
         Business b = getBusiness(item);
 
         CHANGE_PAGE_TRICONSUMER.accept(e, -1, CommandWrapper.getRatingsGUI(p, b));
     })
     .put("business:leaderboard_category", (e, inv) -> {
-        if (!(e.getWhoClicked() instanceof Player)) return;
         Player p = (Player) e.getWhoClicked();
         ItemStack item = e.getCurrentItem();
 
@@ -964,7 +934,6 @@ public final class GUIManager implements Listener {
         getCommandWrapper().businessLeaderboard(p, nextCategory);
     })
     .put("economy:wheel:pay", (e, inv) -> {
-        if (!(e.getWhoClicked() instanceof Player)) return;
         items().get("economy:wheel").accept(e, inv);
 
         Player p = (Player) e.getWhoClicked();
@@ -998,7 +967,6 @@ public final class GUIManager implements Listener {
         NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
     })
     .put("pay:amount", (e, inv) -> {
-        if (!(e.getWhoClicked() instanceof Player)) return;
         Player p = (Player) e.getWhoClicked();
         NovaPlayer np = new NovaPlayer(p);
 
@@ -1040,7 +1008,6 @@ public final class GUIManager implements Listener {
         sound.play(p, 1F, sound == NovaSound.BLOCK_NOTE_BLOCK_PLING ? 0F : (add ? 2F : 0F));
     })
     .put("pay:confirm", (e, inv) -> {
-        if (!(e.getWhoClicked() instanceof Player)) return;
         final Player p = (Player) e.getWhoClicked();
         final NovaPlayer np = new NovaPlayer(p);
 
@@ -1085,7 +1052,22 @@ public final class GUIManager implements Listener {
         target.sendMessage(String.format(getMessage("success.economy.receive"), amountS, gameName));
         w.sendActionbar(target, String.format(get("success.economy.receive_actionbar"), amountS, gameName));
     })
-    
+    .put("corporation:hq", (e, inv) -> {
+        Player p = (Player) e.getWhoClicked();
+        ItemStack item = e.getCurrentItem();
+        Corporation c = getCorporation(item);
+
+        if (c.getHeadquarters() == null) {
+            p.sendMessage(getMessage("error.corporation.no_hq"));
+            NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
+            return;
+        }
+
+        p.closeInventory();
+        p.teleport(c.getHeadquarters());
+        p.sendMessage(get("constants.teleporting"));
+        NovaSound.ENTITY_ENDERMAN_TELEPORT.playSuccess(p);
+    })
     .build();
 
     private static Product getProduct(ItemStack item) {
@@ -1100,6 +1082,8 @@ public final class GUIManager implements Listener {
     @EventHandler
     public void click(InventoryClickEvent e) {
         if (!(e.getClickedInventory() instanceof NovaInventory)) return;
+        if (!(e.getWhoClicked() instanceof Player)) return;
+
         NovaInventory inv = (NovaInventory) e.getClickedInventory();
         e.setCancelled(inv.isCancelled());
 
@@ -1131,7 +1115,6 @@ public final class GUIManager implements Listener {
     }
 
     @EventHandler
-    @SuppressWarnings("unchecked")
     public void close(InventoryCloseEvent e) {
         if (!(e.getInventory() instanceof NovaInventory)) return;
         NovaInventory inv = (NovaInventory) e.getInventory();
