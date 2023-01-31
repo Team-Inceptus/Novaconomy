@@ -6,6 +6,7 @@ import org.bstats.bukkit.Metrics;
 import org.bstats.charts.SimplePie;
 import org.bstats.charts.SingleLineChart;
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -28,6 +29,7 @@ import us.teaminceptus.novaconomy.api.business.BusinessStatistics;
 import us.teaminceptus.novaconomy.api.business.Rating;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.economy.market.NovaMarket;
+import us.teaminceptus.novaconomy.api.economy.market.Receipt;
 import us.teaminceptus.novaconomy.api.events.AutomaticTaxEvent;
 import us.teaminceptus.novaconomy.api.events.InterestEvent;
 import us.teaminceptus.novaconomy.api.events.player.PlayerMissTaxEvent;
@@ -43,9 +45,12 @@ import us.teaminceptus.novaconomy.treasury.TreasuryRegistry;
 import us.teaminceptus.novaconomy.vault.VaultRegistry;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.lang.reflect.InvocationTargetException;
-import java.security.SecureRandom;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -58,6 +63,7 @@ import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.*;
  * @see NovaConfig
  * @see NovaMarket
  */
+@SuppressWarnings("unchecked")
 public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMarket {
 
 	/**
@@ -66,8 +72,6 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 	 */
 	public Novaconomy() { /* Constructor should only be called by Bukkit Plugin Class Loader */}
 
-	static final SecureRandom r = new SecureRandom();
-	
 	static File playerDir;
 	static FileConfiguration economiesFile;
 	
@@ -76,6 +80,9 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 	static ConfigurationSection ncauses;
 
 	static String prefix;
+
+    static File marketFile;
+
 
 	/**
 	 * Performs an API request to turn an OfflinePlayer's name to an OfflinePlayer object.
@@ -324,6 +331,9 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 		SERIALIZABLE.forEach(ConfigurationSerialization::registerClass);
 
 		prefix = get("plugin.prefix");
+
+        marketFile = new File(getDataFolder(), "market.dat");
+        if (!marketFile.exists()) saveResource("market.dat", false);
 
 		getLogger().info("Loaded Files...");
 
@@ -891,5 +901,65 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 			}
 		}.runTask(plugin);
 	}
+
+    // Market Impl
+
+    static final Map<Material, Double> prices = new HashMap<>();
+    static final Map<Material, Integer> purchaseCount = new HashMap<>();
+
+    private void readMarket() throws IOException, ClassNotFoundException {
+        ObjectInputStream ois = new ObjectInputStream(new FileInputStream(marketFile));
+        prices.putAll((Map<Material, Double>) ois.readObject());
+        purchaseCount.putAll((Map<Material, Integer>) ois.readObject());
+        ois.close();
+    }
+
+    private void writeMarket() throws IOException {
+        ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(marketFile));
+        oos.writeObject(prices);
+        oos.writeObject(purchaseCount);
+        oos.close();
+    }
+
+    private void writeMarketWithCatch() {
+        try {
+            writeMarket();
+        } catch (IOException e) {
+            NovaConfig.print(e);    
+        }
+    }
+
+    private void readMarketWithCatch() {
+        try {
+            readMarket();
+        } catch (IOException | ClassNotFoundException e) {
+            NovaConfig.print(e);
+        }
+    }
+
+    @Override
+    public double getPrice(@NotNull Material m) {
+        if (prices.isEmpty()) readMarketWithCatch();
+        return prices.getOrDefault(m, 1.0);
+    }
+
+    @Override
+    public @NotNull Receipt buy(@NotNull OfflinePlayer buyer, @NotNull Material m, int amount, @NotNull Economy econ) throws IllegalArgumentException {
+        if (buyer == null) throw new IllegalArgumentException("Buyer cannot be null");
+        if (m == null) throw new IllegalArgumentException("Material cannot be null");
+        if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
+        NovaPlayer np = new NovaPlayer(buyer);
+
+        double price = getPrice(m, econ) * amount;
+        if (price <= 0) throw new IllegalArgumentException("Price must be positive");
+        
+        if (np.getBalance(econ) < price) throw new IllegalArgumentException("Insufficient funds");
+        np.remove(econ, price);
+        purchaseCount.put(m, purchaseCount.getOrDefault(m, 0) + amount);
+        writeMarketWithCatch();
+
+        Receipt receipt = new Receipt(m, price, buyer);
+        return receipt;
+    }
 
 }
