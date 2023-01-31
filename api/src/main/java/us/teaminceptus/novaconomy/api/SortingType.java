@@ -7,7 +7,6 @@ import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
 
 /**
  * Represents a Sorting Type for organizing a list of specific items.
@@ -36,15 +35,6 @@ public interface SortingType<T> extends Comparator<T> {
      * Sorts an item by its amount in descending order.
      */
     SortingType<Double> BIGGEST_DESCENDING = BIGGEST_ASCENDING.reversed();
-
-    @Override
-    default boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        SortingType<?> that = (SortingType<?>) o;
-
-        return Objects.equals(this, that);
-    }
 
     @Override
     default SortingType<T> reversed() {
