@@ -13,7 +13,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.business.Business;
-import us.teaminceptus.novaconomy.api.economy.market.StockHolder;
 import us.teaminceptus.novaconomy.api.events.corporation.CorporationCreateEvent;
 
 import java.io.*;
@@ -26,7 +25,7 @@ import java.util.stream.Collectors;
  * Represents a Novaconomy Corporation
  */
 @SuppressWarnings("unchecked")
-public final class Corporation implements StockHolder {
+public final class Corporation {
 
     // Constants
 
@@ -48,7 +47,6 @@ public final class Corporation implements StockHolder {
     private Location headquarters = null;
 
     private double experience = 0.0;
-    private int stockLimit;
 
     private final Set<Business> children = new HashSet<>();
     private final Map<CorporationAchievement, Integer> achievements = new HashMap<>();
@@ -358,27 +356,6 @@ public final class Corporation implements StockHolder {
                 ", owner=" + owner +
                 ", name='" + name + '\'' +
                 '}';
-    }
-
-    // Stock Impl
-
-    @Override
-    public double getStockPrice() {
-        return Math.max(
-            getStatistics().getTotalProfit() / getStockLimit(),
-            0.01
-        );
-    }
-
-    @Override
-    public int getStockLimit() {
-        return stockLimit;
-    }
-
-    @Override
-    public void setStockLimit(int limit) {
-        this.stockLimit = limit;
-        saveCorporation();
     }
 
     // Static Methods
@@ -723,7 +700,6 @@ public final class Corporation implements StockHolder {
                 .stream()
                 .map(e -> new AbstractMap.SimpleEntry<>(e.getKey().name().toLowerCase(), e.getValue()))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
-        data.set("share_limit", this.stockLimit);
         data.save(dataF);
 
         File childrenF = new File(folder, "children.yml");
@@ -795,7 +771,6 @@ public final class Corporation implements StockHolder {
         c.experience = data.getDouble("experience");
         c.icon = Material.valueOf(data.getString("icon"));
         c.headquarters = (Location) data.get("headquarters");
-        c.stockLimit = data.getInt("share_limit");
 
         c.achievements.putAll(data.getConfigurationSection("achievements").getValues(false)
                 .entrySet()
@@ -844,6 +819,7 @@ public final class Corporation implements StockHolder {
             }
 
             List<Map<String, Object>> res = (List<Map<String, Object>>) matOs.readObject();
+            matOs.close();
             for (Map<String, Object> m : res) {
                 Map<String, Object> sItem = new HashMap<>(m);
 
