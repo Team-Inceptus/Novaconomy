@@ -5,12 +5,15 @@ import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.TextComponent;
 import net.minecraft.server.v1_13_R2.*;
 
+import java.util.function.Consumer;
+
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.Ageable;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.type.Fire;
+import org.bukkit.craftbukkit.v1_13_R2.entity.CraftPlayer;
 import org.bukkit.craftbukkit.v1_13_R2.inventory.CraftItemStack;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -19,9 +22,13 @@ import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 
+import io.netty.channel.Channel;
 import us.teaminceptus.novaconomy.abstraction.NBTWrapper;
 import us.teaminceptus.novaconomy.abstraction.NovaInventory;
 import us.teaminceptus.novaconomy.abstraction.Wrapper;
+import us.teaminceptus.novaconomy.v1_13_R2.NBTWrapper1_13_R2;
+import us.teaminceptus.novaconomy.v1_13_R2.NovaInventory1_13_R2;
+import us.teaminceptus.novaconomy.v1_13_R2.PacketHandler1_13_R2;
 
 public final class Wrapper1_13_R2 implements Wrapper {
 
@@ -101,6 +108,35 @@ public final class Wrapper1_13_R2 implements Wrapper {
     @Override
     public NBTWrapper createNBTWrapper(org.bukkit.inventory.ItemStack item) {
         return new NBTWrapper1_13_R2(item);
+    }
+
+    @Override
+    public void addPacketInjector(Player p) {
+        EntityPlayer sp = ((CraftPlayer) p).getHandle();
+        Channel ch = sp.playerConnection.networkManager.channel;
+
+        if (ch.pipeline().get(PACKET_INJECTOR_ID) != null) return;
+
+        ch.pipeline().addBefore("packet_handler", PACKET_INJECTOR_ID, new PacketHandler1_13_R2(p));
+    }
+
+    @Override
+    public void removePacketInjector(Player p) {
+        EntityPlayer sp = ((CraftPlayer) p).getHandle();
+        Channel ch = sp.playerConnection.networkManager.channel;
+
+        if (ch.pipeline().get(PACKET_INJECTOR_ID) == null) return;
+        ch.pipeline().remove(PACKET_INJECTOR_ID);
+    }
+
+    @Override
+    public void sendSign(Player p, Consumer<String[]> lines) {
+        PacketHandler1_13_R2.PACKET_HANDLERS.put(p.getUniqueId(), packetO -> {
+            if (!(packetO instanceof PacketPlayInUpdateSign)) return;
+            PacketPlayInUpdateSign packet = (PacketPlayInUpdateSign) packetO;
+
+            lines.accept(packet.c());
+        });
     }
 
 }

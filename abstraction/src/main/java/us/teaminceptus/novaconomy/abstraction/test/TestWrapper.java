@@ -14,6 +14,7 @@ import org.bukkit.inventory.ItemStack;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 public final class TestWrapper implements Wrapper {
 
@@ -70,5 +71,14 @@ public final class TestWrapper implements Wrapper {
     public NBTWrapper createNBTWrapper(ItemStack item) {
         return null;
     }
+
+    @Override
+    public void addPacketInjector(Player p) {}
+
+    @Override
+    public void removePacketInjector(Player p) {}
+
+    @Override
+    public void sendSign(Player p, Consumer<String[]> lines) {}
 
 }

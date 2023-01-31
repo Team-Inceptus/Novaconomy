@@ -3,6 +3,8 @@ package us.teaminceptus.novaconomy;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.minecraft.server.v1_9_R1.*;
 
+import java.util.function.Consumer;
+
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.block.Block;
@@ -16,9 +18,13 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.material.Crops;
 
+import io.netty.channel.Channel;
 import us.teaminceptus.novaconomy.abstraction.NBTWrapper;
 import us.teaminceptus.novaconomy.abstraction.NovaInventory;
 import us.teaminceptus.novaconomy.abstraction.Wrapper;
+import us.teaminceptus.novaconomy.v1_9_R1.NBTWrapper1_9_R1;
+import us.teaminceptus.novaconomy.v1_9_R1.NovaInventory1_9_R1;
+import us.teaminceptus.novaconomy.v1_9_R1.PacketHandler1_9_R1;
 
 public final class Wrapper1_9_R1 implements Wrapper {
 
@@ -98,6 +104,35 @@ public final class Wrapper1_9_R1 implements Wrapper {
     @Override
     public NBTWrapper createNBTWrapper(org.bukkit.inventory.ItemStack item) {
         return new NBTWrapper1_9_R1(item);
+    }
+
+    @Override
+    public void addPacketInjector(Player p) {
+        EntityPlayer sp = ((CraftPlayer) p).getHandle();
+        Channel ch = sp.playerConnection.networkManager.channel;
+
+        if (ch.pipeline().get(PACKET_INJECTOR_ID) != null) return;
+
+        ch.pipeline().addBefore("packet_handler", PACKET_INJECTOR_ID, new PacketHandler1_9_R1(p));
+    }
+
+    @Override
+    public void removePacketInjector(Player p) {
+        EntityPlayer sp = ((CraftPlayer) p).getHandle();
+        Channel ch = sp.playerConnection.networkManager.channel;
+
+        if (ch.pipeline().get(PACKET_INJECTOR_ID) == null) return;
+        ch.pipeline().remove(PACKET_INJECTOR_ID);
+    }
+
+    @Override
+    public void sendSign(Player p, Consumer<String[]> lines) {
+        PacketHandler1_9_R1.PACKET_HANDLERS.put(p.getUniqueId(), packetO -> {
+            if (!(packetO instanceof PacketPlayInUpdateSign)) return;
+            PacketPlayInUpdateSign packet = (PacketPlayInUpdateSign) packetO;
+
+            lines.accept(packet.b());
+        });
     }
 
 }

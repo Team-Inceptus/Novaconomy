@@ -18,6 +18,8 @@ import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerFishEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
@@ -56,6 +58,22 @@ final class Events implements Listener {
         Bukkit.getPluginManager().registerEvents(this, plugin);
         this.plugin = plugin;
     }
+
+    // Util Events
+
+    @EventHandler
+    public void onJoin(PlayerJoinEvent e) {
+        Player p = e.getPlayer();
+        w.addPacketInjector(p);
+    }
+
+    @EventHandler
+    public void onLeave(PlayerQuitEvent e) {
+        Player p = e.getPlayer();
+        w.removePacketInjector(p);
+    }
+    
+    // Functionality Events
 
     @EventHandler
     public void claimCheck(PlayerInteractEvent e) {

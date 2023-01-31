@@ -3,6 +3,9 @@ package us.teaminceptus.novaconomy;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.minecraft.server.v1_8_R3.*;
 
+import java.util.Arrays;
+import java.util.function.Consumer;
+
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.block.Block;
@@ -15,9 +18,13 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.material.Crops;
 
+import io.netty.channel.Channel;
 import us.teaminceptus.novaconomy.abstraction.NBTWrapper;
 import us.teaminceptus.novaconomy.abstraction.NovaInventory;
 import us.teaminceptus.novaconomy.abstraction.Wrapper;
+import us.teaminceptus.novaconomy.v1_8_R3.NBTWrapper1_8_R3;
+import us.teaminceptus.novaconomy.v1_8_R3.NovaInventory1_8_R3;
+import us.teaminceptus.novaconomy.v1_8_R3.PacketHandler1_8_R3;
 
 public final class Wrapper1_8_R3 implements Wrapper {
 
@@ -89,6 +96,37 @@ public final class Wrapper1_8_R3 implements Wrapper {
     @Override
     public NBTWrapper createNBTWrapper(org.bukkit.inventory.ItemStack item) {
         return new NBTWrapper1_8_R3(item);
+    }
+
+    @Override
+    public void addPacketInjector(Player p) {
+        EntityPlayer sp = ((CraftPlayer) p).getHandle();
+        Channel ch = sp.playerConnection.networkManager.channel;
+
+        if (ch.pipeline().get(PACKET_INJECTOR_ID) != null) return;
+
+        ch.pipeline().addBefore("packet_handler", PACKET_INJECTOR_ID, new PacketHandler1_8_R3(p));
+    }
+
+    @Override
+    public void removePacketInjector(Player p) {
+        EntityPlayer sp = ((CraftPlayer) p).getHandle();
+        Channel ch = sp.playerConnection.networkManager.channel;
+
+        if (ch.pipeline().get(PACKET_INJECTOR_ID) == null) return;
+        ch.pipeline().remove(PACKET_INJECTOR_ID);
+    }
+
+    @Override
+    public void sendSign(Player p, Consumer<String[]> lines) {
+        PacketHandler1_8_R3.PACKET_HANDLERS.put(p.getUniqueId(), packetO -> {
+            if (!(packetO instanceof PacketPlayInUpdateSign)) return;
+            PacketPlayInUpdateSign packet = (PacketPlayInUpdateSign) packetO;
+
+            lines.accept(Arrays.stream(packet.b())
+                    .map(IChatBaseComponent::getText)
+                    .toArray(String[]::new));
+        });
     }
 
 }

@@ -25,11 +25,14 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 public interface Wrapper {
 
     String ROOT = "Novaconomy";
+
+    String PACKET_INJECTOR_ID = "novaconomy:packet_injector";
 
     SecureRandom r = new SecureRandom();
 
@@ -67,6 +70,12 @@ public interface Wrapper {
     NovaInventory createInventory(String id, String name, int size);
 
     NBTWrapper createNBTWrapper(ItemStack item);
+
+    void addPacketInjector(Player p);
+
+    void removePacketInjector(Player p);
+
+    void sendSign(Player p, Consumer<String[]> lines);
 
     // Defaults
 
