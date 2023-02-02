@@ -24,6 +24,7 @@ import org.bukkit.util.ChatPaginator;
 import us.teaminceptus.novaconomy.ModifierReader;
 import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.NovaConfig;
+import us.teaminceptus.novaconomy.api.SortingType;
 import us.teaminceptus.novaconomy.api.bank.Bank;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.business.BusinessStatistics;
@@ -356,7 +357,7 @@ public interface CommandWrapper {
                 String.format(get("constants.economy.natural_increase"), econ.hasNaturalIncrease()),
                 String.format(get("constants.economy.symbol"), econ.getSymbol()),
                 String.format(get("constants.economy.scale"), Math.floor(econ.getConversionScale() * 100) / 100),
-                String.format(get("constants.economy.custom_model_data"), String.format("%,.0f", (double) econ.getCustomModelData())),
+                String.format(get("constants.economy.custom_model_data"), String.format("%,d", econ.getCustomModelData())),
                 String.format(get("constants.economy.clickable"), econ.hasClickableReward()),
                 String.format(get("constants.economy.taxable"), econ.hasTax()),
         };
@@ -1260,9 +1261,9 @@ public interface CommandWrapper {
                     meta.setDisplayName(ChatColor.YELLOW + "" + ChatColor.UNDERLINE + get("constants.business.stats.global"));
                     meta.setLore(Arrays.asList(
                             "",
-                            String.format(get("constants.business.stats.global.sold"), String.format("%,.0f", (double) statistics.getTotalSales())),
-                            String.format(get("constants.business.stats.global.resources"), String.format("%,.0f", (double) statistics.getTotalResources())),
-                            String.format(get("constants.business.stats.global.ratings"), String.format("%,.0f", (double) b.getRatings().size()))
+                            String.format(get("constants.business.stats.global.sold"), String.format("%,d", statistics.getTotalSales())),
+                            String.format(get("constants.business.stats.global.resources"), String.format("%,d", statistics.getTotalResources())),
+                            String.format(get("constants.business.stats.global.ratings"), String.format("%,d", b.getRatings().size()))
                     ));
                 })
         );
@@ -1295,7 +1296,7 @@ public interface CommandWrapper {
         stats.setItem(21, latest);
         stats.setItem(22, Items.builder(Material.matchMaterial("SPYGLASS") == null ? Material.COMPASS : Material.matchMaterial("SPYGLASS"),
                 meta -> {
-                    meta.setDisplayName(String.format(get("constants.business.stats.views"), String.format("%,.0f", (double)b.getStatistics().getViews())));
+                    meta.setDisplayName(String.format(get("constants.business.stats.views"), String.format("%,d", b.getStatistics().getViews())));
                     meta.addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1, true);
                     meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
                 })
@@ -1377,7 +1378,7 @@ public interface CommandWrapper {
                             ItemStack item = pr.getItem();
                             String display = item.hasItemMeta() && item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : WordUtils.capitalizeFully(item.getType().name().replace('_', ' '));
 
-                            pLore.add(ChatColor.YELLOW + "#" + num + ") " + ChatColor.RESET + display + ChatColor.GOLD + " - " + ChatColor.BLUE + String.format("%,.2f", pr.getAmount()) + pr.getEconomy().getSymbol() + ChatColor.GOLD + " | " + ChatColor.AQUA + String.format("%,.0f", (double) sales));
+                            pLore.add(ChatColor.YELLOW + "#" + num + ") " + ChatColor.RESET + display + ChatColor.GOLD + " - " + ChatColor.BLUE + String.format("%,.2f", pr.getAmount()) + pr.getEconomy().getSymbol() + ChatColor.GOLD + " | " + ChatColor.AQUA + String.format("%,d", sales));
                         }
 
                         meta.setLore(pLore);
@@ -1730,7 +1731,7 @@ public interface CommandWrapper {
                 meta -> {
                     meta.setDisplayName(ChatColor.YELLOW + get("constants.player_statistics.business"));
                     meta.setLore(Arrays.asList(
-                            ChatColor.GOLD + String.format(get("constants.player_statistics.business.products_purchased"), String.format("%,.0f", (double) stats.getProductsPurchased())),
+                            ChatColor.GOLD + String.format(get("constants.player_statistics.business.products_purchased"), String.format("%,d", stats.getProductsPurchased())),
                             ChatColor.AQUA + String.format(get("constants.player_statistics.business.money_spent"), String.format("%,.2f", stats.getTotalMoneySpent()))
                     ));
                     meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
@@ -1755,8 +1756,8 @@ public interface CommandWrapper {
                 meta -> {
                     meta.setDisplayName(ChatColor.YELLOW + get("constants.player_statistics.bounty"));
                     meta.setLore(Arrays.asList(
-                            ChatColor.RED + String.format(get("constants.player_statistics.bounty.created"), String.format("%,.0f", (double) stats.getTotalBountiesCreated())),
-                            ChatColor.DARK_RED + String.format(get("constants.player_statistics.bounty.had"), String.format("%,.0f", (double) stats.getTotalBountiesTargeted()))
+                            ChatColor.RED + String.format(get("constants.player_statistics.bounty.created"), String.format("%,d", stats.getTotalBountiesCreated())),
+                            ChatColor.DARK_RED + String.format(get("constants.player_statistics.bounty.had"), String.format("%,d", stats.getTotalBountiesTargeted()))
                     ));
                 }
         ));
@@ -3020,7 +3021,7 @@ public interface CommandWrapper {
         }
 
         Corporation corp = Corporation.byMember(p);
-        p.openInventory(generateCorporationData(corp, p));
+        p.openInventory(generateCorporationData(corp, p, SortingType.BUSINESS_NAME_ASCENDING));
     }
 
     default void createCorporation(Player p, String name, Material icon) {
