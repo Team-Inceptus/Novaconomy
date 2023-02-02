@@ -2,6 +2,9 @@ package us.teaminceptus.novaconomy.api;
 
 import org.jetbrains.annotations.NotNull;
 
+import us.teaminceptus.novaconomy.api.business.Business;
+import us.teaminceptus.novaconomy.api.economy.Economy;
+
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
@@ -12,29 +15,50 @@ import java.util.List;
  * Represents a Sorting Type for organizing a list of specific items.
  * @param <T> Type of parameter to compare
  */
+@FunctionalInterface
 public interface SortingType<T> extends Comparator<T> {
+   
+    // Economies
 
     /**
-     * Sorts an item by its name in ascending order.
+     * Sorts an economy by its name in ascending order.
      */
-    SortingType<String> NAME_AZ = String::compareTo;
+    SortingType<Economy> ECONOMY_NAME_ASCENDING = (e1, e2) -> e1.getName().compareTo(e2.getName());
 
     /**
-     * Sorts an item by its name in descending order.
+     * Sorts an economy by its name in descending order.
      */
-    SortingType<String> NAME_ZA = NAME_AZ.reversed();
-
-    // Amounts
+    SortingType<Economy> ECONOMY_NAME_DESCENDING = ECONOMY_NAME_ASCENDING.reversed();
 
     /**
-     * Sorts an item by its amount in ascending order.
+     * Sorts an economy by whether it has natural causes.
      */
-    SortingType<Double> BIGGEST_ASCENDING = Double::compareTo;
+    SortingType<Economy> ECONOMY_NATURAL_CAUSES = (e1, e2) -> Boolean.compare(e1.hasNaturalIncrease(), e2.hasNaturalIncrease());
+
+
+    // Business
 
     /**
-     * Sorts an item by its amount in descending order.
+     * Sorts a business by its name in ascending order.
      */
-    SortingType<Double> BIGGEST_DESCENDING = BIGGEST_ASCENDING.reversed();
+    SortingType<Business> BUSINESS_NAME_ASCENDING = (b1, b2) -> b1.getName().compareTo(b2.getName());
+
+    /**
+     * Sorts a business by its name in descending order.
+     */
+    SortingType<Business> BUSINESS_NAME_DESCENDING = BUSINESS_NAME_ASCENDING.reversed();
+
+    /**
+     * Sorts a business by its creation date in ascending order.
+     */
+    SortingType<Business> BUSINESS_CREATION_DATE_ASCENDING = (b1, b2) -> b1.getCreationDate().compareTo(b2.getCreationDate());
+
+    /**
+     * Sorts a business by its creation date in descending order.
+     */
+    SortingType<Business> BUSINESS_CREATION_DATE_DESCENDING = BUSINESS_CREATION_DATE_ASCENDING.reversed();
+
+
 
     @Override
     default SortingType<T> reversed() {
