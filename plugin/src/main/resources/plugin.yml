@@ -203,6 +203,19 @@ permissions:
     children:
       novaconomy.user.bank: true
 
+  # User Corporation
+  novaconomy.user.corporation:
+    description: Access to all Corporation Actions and Commands
+    default: true
+    children:
+      novaconomy.user: true
+  
+  novaconomy.user.corporation.manage:
+    description: Access to Creating and Deleting one's own Corporation
+    default: true
+    children:
+      novaconomy.user.corporation: true
+
   
   
     

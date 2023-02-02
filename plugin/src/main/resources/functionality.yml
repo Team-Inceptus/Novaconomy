@@ -31,3 +31,45 @@ EconomyMaxConvertAmounts: {}
 # Specify an Economy that the plugin will register into Vault
 # Put "-1" to register all of them, the first economy alphabetically will be active.
 VaultEconomy: -1
+
+# Essentials API Integration
+Essentials:
+
+  # How much money changing the nickname costs
+  NickCost:
+    # Whether the Nickname Cost is enabled
+    Enabled: false
+
+    # Economy Name to use for the nickname cost
+    Economy: null
+
+    # Amount of money to charge for changing the nickname
+    Amount: 0
+
+  # How much money teleporting costs
+  TeleportCost:
+
+    # Whether the Teleport Cost is enabled
+    Enabled: false
+
+    # Economy Name to use for the teleport cost
+    Economy: null
+
+    # Amount of money to charge for teleporting
+    Amount: 0
+
+  # How much money teleporting to a warp costs
+  WarpCost:
+
+    # Whether the Warp Cost is enabled
+    Enabled: false
+
+    # Economy Name to use for the warp cost
+    Economy: null
+
+    # Amount of money to charge for teleporting to a warp
+    Amount: 0
+
+
+
+   

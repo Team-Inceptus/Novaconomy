@@ -12,8 +12,8 @@ import java.util.stream.Collectors;
 
 public class ModifierReader {
 
-    public static Map<String, Map<String, Set<Map<Economy, Double>>>> getAllModifiers() throws IllegalArgumentException {
-        Map<String, Map<String, Set<Map<Economy, Double>>>> mods = new HashMap<>();
+    public static Map<String, Map<String, Set<Entry<Economy, Double>>>> getAllModifiers() throws IllegalArgumentException {
+        Map<String, Map<String, Set<Entry<Economy, Double>>>> mods = new HashMap<>();
         FileConfiguration config = NovaConfig.getPlugin().getConfig();
 
         if (config.isConfigurationSection("NaturalCauses.Modifiers")) {
@@ -22,10 +22,10 @@ public class ModifierReader {
             modifiers.getKeys(false).forEach(s -> {
                 if (s.equalsIgnoreCase("Death")) return;
                 ConfigurationSection modifier = modifiers.getConfigurationSection(s);
-                Map<String, Set<Map<Economy, Double>>> map = new HashMap<>();
+                Map<String, Set<Entry<Economy, Double>>> map = new HashMap<>();
 
                 modifier.getValues(false).forEach((k, v) -> {
-                    Set<Map<Economy, Double>> value = new HashSet<>();
+                    Set<Entry<Economy, Double>> value = new HashSet<>();
                     String amount = v.toString();
 
                     if (amount.contains("[") && amount.contains("]")) {
@@ -52,7 +52,7 @@ public class ModifierReader {
         return mods;
     }
 
-    public static Map<String, Set<Map<Economy, Double>>> getModifier(String mod) {
+    public static Map<String, Set<Entry<Economy, Double>>> getModifier(String mod) {
         return getAllModifiers().get(mod);
     }
 
@@ -92,7 +92,7 @@ public class ModifierReader {
         return mods;
     }
 
-    public static Map<Economy, Double> readString(String s) {
+    public static Entry<Economy, Double> readString(String s) {
         try {
             char s1 = s.charAt(0);
             char s2 = s.charAt(s.length() - 1);
@@ -102,22 +102,18 @@ public class ModifierReader {
             String remove = Economy.exists(s1) ? s1 + "" : s2 + "";
             Economy econ = Economy.exists(s1) ? Economy.getEconomy(s1) : Economy.getEconomy(s2);
             double amountD = Double.parseDouble(s.replaceAll("[" + remove + "]", ""));
-            return Collections.singletonMap(econ, amountD);
+            return new AbstractMap.SimpleEntry<>(econ, amountD);
         } catch (NumberFormatException e) {
             return null;
         }
     }
 
-    public static String toModString(Map<Economy, Double> map) {
-        if (map == null) return null;
-        if (map.isEmpty()) return null;
-
-        Entry<Economy, Double> entry = map.entrySet().stream().findFirst().orElse(null);
+    public static String toModString(Entry<Economy, Double> entry) {
         if (entry == null) return null;
         return String.format("%,.0f", entry.getValue()) + entry.getKey().getSymbol();
     }
 
-    public static List<String> toModList(List<Map<Economy, Double>> list) {
+    public static List<String> toModList(List<Entry<Economy, Double>> list) {
         if (list == null) return null;
         if (list.isEmpty()) return null;
         return list.stream()

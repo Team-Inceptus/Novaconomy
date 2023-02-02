@@ -87,6 +87,15 @@ public final class BusinessProduct extends Product {
     }
 
     @Override
+    public String toString() {
+        return "BusinessProduct{" +
+                "business=" + business +
+                ", item=" + item +
+                ", price=" + price +
+                '}';
+    }
+
+    @Override
     public Map<String, Object> serialize() {
         return new HashMap<String, Object>(super.serialize()) {{
             put("business", business.getUniqueId().toString());

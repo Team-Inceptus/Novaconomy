@@ -6,6 +6,7 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 
 import java.io.File;
@@ -58,7 +59,7 @@ public final class Bounty implements ConfigurationSerializable, Comparable<Bount
      */
     public boolean isOwner(@Nullable OfflinePlayer p) {
         if (p == null) return false;
-        return p.getUniqueId().equals(owner.getUniqueId());
+        return p.equals(owner);
     }
 
     /**
@@ -114,7 +115,9 @@ public final class Bounty implements ConfigurationSerializable, Comparable<Bount
         if (config.getConfigurationSection("bounties") == null) config.createSection("bounties");
         if (!config.isSet(key)) return;
         config.set(key, this);
-        try { config.save(f); } catch (IOException e) { Bukkit.getLogger().severe(e.getMessage()); }
+        try { config.save(f); } catch (IOException e) {
+            NovaConfig.print(e);
+        }
     }
 
     /**
@@ -230,7 +233,7 @@ public final class Bounty implements ConfigurationSerializable, Comparable<Bount
 
             if (config.getConfigurationSection("bounties") == null) config.createSection("bounties");
             config.set(key, b);
-            try { config.save(f); } catch (IOException e) { Bukkit.getLogger().severe(e.getMessage()); }
+            try { config.save(f); } catch (IOException e) { NovaConfig.print(e); }
 
             NovaPlayer targetN = new NovaPlayer(target);
             targetN.stats.totalBountiesHad++;

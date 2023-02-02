@@ -449,7 +449,7 @@ public final class NovaPlayer {
         NovaPlayer that = (NovaPlayer) o;
         if (that == this) return true;
 
-        return p.getUniqueId().equals(that.p.getUniqueId());
+        return p.equals(that.p);
     }
 
     @Override
