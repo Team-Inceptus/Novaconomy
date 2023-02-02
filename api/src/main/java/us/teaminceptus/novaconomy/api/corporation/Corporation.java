@@ -19,6 +19,7 @@ import java.io.*;
 import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
@@ -362,6 +363,80 @@ public final class Corporation {
      */
     public List<ItemStack> getResources() {
         return ImmutableList.copyOf(resources);
+    }
+
+    /**
+     * Adds an arary of resources to this Corporation.
+     * @param resources Resources to add
+     */
+    public void addResource(@Nullable ItemStack... resources) {
+        if (resources == null) return;
+        addResource(Arrays.asList(resources));
+    }
+
+    /**
+     * Adds an iterable of resources to this Corporation.
+     * @param resources Resources to add
+     */
+    public void addResource(@Nullable Iterable<? extends ItemStack> resources) {
+        if (resources == null) return;
+
+        List<ItemStack> items = new ArrayList<>(ImmutableList.copyOf(resources));
+        Map<Integer, ItemStack> res = new HashMap<>();
+        AtomicInteger rIndex = new AtomicInteger();
+        items.forEach(i -> {
+            if (this.resources.contains(i)) {
+                int index = this.resources.indexOf(i);
+                if (this.resources.get(index).getAmount() < this.resources.get(index).getMaxStackSize()) {
+                    ItemStack clone = i.clone();
+                    clone.setAmount(i.getAmount() + 1);
+                    res.put(rIndex.get(), clone);
+                } else res.put(rIndex.get(), i);
+            } else res.put(rIndex.get(), i);
+            rIndex.getAndIncrement();
+        });
+
+        this.resources.addAll(res.values());
+        saveCorporation();
+    }
+
+    /**
+     * Removes an array of resources from this Corporation.
+     * @param resources Resources to remove
+     */
+    public void removeResource(@Nullable ItemStack... resources) {
+        if (resources == null) return;
+        removeResource(Arrays.asList(resources));
+    }
+
+    /**
+     * Removes an iterable of resources from this Corporation.
+     * @param resources Resources to remove
+     */
+    public void removeResource(@Nullable Iterable<? extends ItemStack> resources) {
+        if (resources == null) return;
+
+        List<ItemStack> newR = new ArrayList<>();
+        for (ItemStack item : resources)
+            for (int i = 0; i < item.getAmount(); i++) {
+                ItemStack clone = item.clone();
+                clone.setAmount(1);
+                newR.add(clone);
+            }
+
+        newR.forEach(i -> {
+            Iterator<ItemStack> it = this.resources.iterator();
+            while (it.hasNext()) {
+                ItemStack item = it.next();
+                if (item.isSimilar(i)) {
+                    if (item.getAmount() > i.getAmount()) item.setAmount(item.getAmount() - i.getAmount());
+                    else it.remove();
+                    break;
+                }
+            }
+        });
+
+        saveCorporation();
     }
 
     @Override

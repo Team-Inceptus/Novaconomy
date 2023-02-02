@@ -265,10 +265,11 @@ public final class Business implements ConfigurationSerializable {
      * @return this Business, fo rchaining
      */
     @NotNull
-    public Business addResource(@Nullable Collection<? extends ItemStack> resources) {
+    public Business addResource(@Nullable Iterable<? extends ItemStack> resources) {
         if (resources == null) return this;
 
-        List<ItemStack> items = new ArrayList<>(resources);
+        List<ItemStack> resources0 = ImmutableList.copyOf(resources);
+        List<ItemStack> items = new ArrayList<>(resources0);
         Map<Integer, ItemStack> res = new HashMap<>();
         AtomicInteger rIndex = new AtomicInteger();
         items.forEach(i -> {
@@ -286,7 +287,10 @@ public final class Business implements ConfigurationSerializable {
         this.resources.addAll(res.values());
 
         AtomicInteger amount = new AtomicInteger();
-        resources.stream().map(ItemStack::getAmount).forEach(amount::addAndGet);
+        resources0
+            .stream()
+            .map(ItemStack::getAmount)
+            .forEach(amount::addAndGet);
         this.stats.totalResources += amount.get();
 
         saveBusiness();
@@ -374,12 +378,12 @@ public final class Business implements ConfigurationSerializable {
     }
 
     /**
-     * Removes a Collection of Resources from this Business.
+     * Removes an iterable of Resources from this Business.
      * @param resources Resources to Remove
      * @return this Business, for chaining
      */
     @NotNull
-    public Business removeResource(@Nullable Collection<? extends ItemStack> resources) {
+    public Business removeResource(@Nullable Iterable<? extends ItemStack> resources) {
         if (resources == null) return this;
 
         List<ItemStack> newR = new ArrayList<>();
@@ -407,12 +411,12 @@ public final class Business implements ConfigurationSerializable {
     }
 
     /**
-     * Removes a Collection of Products from this Business.
+     * Removes an iterable of Products from this Business.
      * @param products Products to Remove
      * @return this Business, for chaining
      */
     @NotNull
-    public Business removeProduct(@Nullable Collection<? extends BusinessProduct> products) {
+    public Business removeProduct(@Nullable Iterable<? extends BusinessProduct> products) {
         if (products == null) return this;
 
         products.forEach(pr -> {

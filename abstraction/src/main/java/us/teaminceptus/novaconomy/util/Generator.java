@@ -11,6 +11,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -25,6 +26,7 @@ import us.teaminceptus.novaconomy.abstraction.NBTWrapper;
 import us.teaminceptus.novaconomy.abstraction.NovaInventory;
 import us.teaminceptus.novaconomy.abstraction.Wrapper;
 import us.teaminceptus.novaconomy.api.NovaConfig;
+import us.teaminceptus.novaconomy.api.SortingType;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.corporation.Corporation;
 import us.teaminceptus.novaconomy.api.economy.Economy;
@@ -127,7 +129,7 @@ public final class Generator {
                                 if (item.isSimilar(res)) index.addAndGet(res.getAmount());
                             });
             
-                            lore.add(String.format(get("constants.business.stock_left"), String.format("%,.0f", (double) index.get())));
+                            lore.add(String.format(get("constants.business.stock_left"), String.format("%,d", index.get())));
                         }
             
                         meta.setLore(lore);
@@ -207,17 +209,10 @@ public final class Generator {
         return inv;
     }
 
-    public static NovaInventory generateCorporationData(Corporation c, Player viewer) {
+    public static NovaInventory generateCorporationData(Corporation c, Player viewer, SortingType<Business> childrenSort) {
         NovaInventory inv = genGUI(54, String.format(get("constants.corporation.title"), c.getName()));
         inv.setCancelled();
     
-        ItemStack icon = Items.builder(c.getPublicIcon(),
-                meta -> meta.setLore(Collections.singletonList(
-                    ChatColor.YELLOW + "ID: " + c.getUniqueId().toString().replace("-", "")
-                ))
-        );
-        inv.setItem(13, icon);
-
         ItemStack hq = builder(Material.GLASS,
                 meta -> meta.setDisplayName(ChatColor.YELLOW + get("constants.headquarters")),
                 nbt -> {
@@ -226,7 +221,49 @@ public final class Generator {
                 }
         );
         inv.setItem(12, hq);
+
+        ItemStack icon = Items.builder(c.getPublicIcon(),
+                meta -> {
+                    List<String> lore = new ArrayList<>();
+                    String idLine = ChatColor.YELLOW + "ID: " + c.getUniqueId().toString().replace("-", "");
+                    String desc = c.getDescription();
+
+                    if (desc.isEmpty()) {
+                        lore.add(idLine);
+                        meta.setLore(lore);
+                        return;
+                    }
+                    
+                    lore.addAll(Arrays.stream(ChatPaginator.wordWrap(desc, 30))
+                            .map(s -> ChatColor.YELLOW + s)
+                            .collect(Collectors.toList())
+                    );
+
+                    lore.add(" ");
+                    lore.add(idLine);
+                    meta.setLore(lore);
+                }
+        );
+        inv.setItem(13, icon);
     
+        ItemStack leveling = builder(Material.GOLD_BLOCK,
+                meta -> {
+                    meta.setDisplayName(String.format(get("constants.corporation.leveling"), String.format("%,d", c.getLevel()) ));
+                    meta.setLore(Collections.singletonList(
+                        String.format(get("constants.corporation.experience"), String.format("%,.2f", c.getExperience()))
+                    ));
+                }, nbt -> nbt.setID("corporation:leveling")
+        );
+        inv.setItem(14, leveling);
+
+        // Children
+
+        List<Business> children = c.getChildren()
+                    .stream()
+                    .sorted(childrenSort)
+                    .limit(14)
+                    .collect(Collectors.toList());
+
         return inv;
     }
 
