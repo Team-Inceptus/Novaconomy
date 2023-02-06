@@ -1,8 +1,9 @@
 package us.teaminceptus.novaconomy.api.corporation;
 
 import org.jetbrains.annotations.NotNull;
-
 import us.teaminceptus.novaconomy.api.economy.Economy;
+
+import java.util.Map;
 
 /**
  * Utility class for Corporation Statistics
@@ -16,14 +17,14 @@ public final class CorporationStatistics {
     }
 
     /**
-     * Fetches all of the views this Corporation's Children have.
+     * Fetches all of the views this Corporation and its Children have received.
      * @return Total Views
      */
     public long getTotalViews() {
         return c.getChildren()
                 .stream()
                 .mapToLong(b -> b.getStatistics().getViews())
-                .sum();
+                .sum() + c.views;
     }
 
     /**
@@ -47,6 +48,7 @@ public final class CorporationStatistics {
                 .mapToDouble(b -> b.getStatistics().getProductSales()
                         .entrySet()
                         .stream()
+                        .filter(e -> e.getKey().getPrice().getEconomy() != null)
                         .mapToDouble(e -> e.getKey().getPrice().getRealAmount() * e.getValue())
                         .sum())
                 .sum();
@@ -65,6 +67,21 @@ public final class CorporationStatistics {
                         .stream()
                         .filter(e -> e.getKey().getPrice().getEconomy().equals(econ))
                         .mapToDouble(e -> e.getKey().getPrice().getAmount() * e.getValue())
+                        .sum())
+                .sum();
+    }
+
+    /**
+     * Fetches the total amount of products this Corporation has sold.
+     * @return Total Products Sold
+     */
+    public long getTotalProductsSold() {
+        return c.getChildren()
+                .stream()
+                .mapToLong(b -> b.getStatistics().getProductSales()
+                        .entrySet()
+                        .stream()
+                        .mapToLong(Map.Entry::getValue)
                         .sum())
                 .sum();
     }

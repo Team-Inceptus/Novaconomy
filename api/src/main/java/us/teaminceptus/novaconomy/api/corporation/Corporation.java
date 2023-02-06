@@ -1,26 +1,26 @@
 package us.teaminceptus.novaconomy.api.corporation;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.bukkit.*;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.configuration.serialization.DelegateDeserialization;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.business.Business;
+import us.teaminceptus.novaconomy.api.events.corporation.CorporationAwardAchievementEvent;
 import us.teaminceptus.novaconomy.api.events.corporation.CorporationCreateEvent;
+import us.teaminceptus.novaconomy.api.events.corporation.CorporationDeleteEvent;
 
 import java.io.*;
-import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+
+import static us.teaminceptus.novaconomy.api.corporation.CorporationAchievement.MONOPOLY;
 
 /**
  * Represents a Novaconomy Corporation
@@ -40,6 +40,11 @@ public final class Corporation {
      */
     public static final int MAX_DESCRIPTION_LENGTH = 256;
 
+    /**
+     * The maximum level a of a corporation
+     */
+    public static final int MAX_LEVEL = 100;
+
     // Class
 
     private final UUID id;
@@ -54,10 +59,11 @@ public final class Corporation {
     private Location headquarters = null;
 
     private double experience = 0.0;
+    long views = 0;
 
     private final Set<Business> children = new HashSet<>();
+    private final Map<UUID, Long> childrenJoinDates = new HashMap<>();
     private final Map<CorporationAchievement, Integer> achievements = new HashMap<>();
-    private final List<ItemStack> resources = new ArrayList<>();
     private final Map<UUID, CorporationPermission[]> businessPermissions = new HashMap<>();
 
     private Corporation(@NotNull UUID id, long creationDate, OfflinePlayer owner) {
@@ -100,6 +106,15 @@ public final class Corporation {
         return owner;
     }
 
+    /**
+     * Whether the player is the owner of this Corporation.
+     * @param owner Player to check
+     * @return true if player owns corporation, false otherwise
+     */
+    public boolean isOwner(@Nullable OfflinePlayer owner) {
+        return owner != null && owner.equals(this.owner);
+    }
+
     // Info
 
     /**
@@ -109,6 +124,14 @@ public final class Corporation {
     @NotNull
     public Set<Business> getChildren() {
         return ImmutableSet.copyOf(children);
+    }
+
+    /**
+     * Fetches the maximum amount of Children this Corporation can hold.
+     * @return Maximum Children
+     */
+    public int getMaxChildren() {
+        return ((getLevel() - 1) * 5) + 10;
     }
 
     /**
@@ -128,13 +151,25 @@ public final class Corporation {
      * Adds a Business to this Corporation's children.
      * @param b Business to add
      * @throws IllegalArgumentException if the Business already has a parent corporation, or is null
+     * @throws IllegalStateException if the Corporation already has the maximum amount of children
      */
-    public void addChild(@NotNull Business b) throws IllegalArgumentException {
+    public void addChild(@NotNull Business b) throws IllegalArgumentException, IllegalStateException {
         if (b == null) throw new IllegalArgumentException("Business cannot be null");
         if (b.getParentCorporation() != null) throw new IllegalArgumentException("Business already has a parent corporation");
         if (children.contains(b)) throw new IllegalArgumentException("Business is already a child of this corporation");
 
+        int newSize = children.size() + 1;
+        if (newSize > getMaxChildren()) throw new IllegalStateException("Cannot add a business to a corporation with too many children");
+
+        if ((newSize >= 5 && !(getAchievementLevel(MONOPOLY) >= 1))
+            || (newSize >= 15 && !(getAchievementLevel(MONOPOLY) >= 2))
+            || (newSize >= 35 && !(getAchievementLevel(MONOPOLY) >= 3))
+            || (newSize >= 50 && !(getAchievementLevel(MONOPOLY) >= 4))
+        ) awardAchievement(MONOPOLY);
+
         children.add(b);
+        childrenJoinDates.put(b.getUniqueId(), System.currentTimeMillis());
+
         saveCorporation();
     }
 
@@ -150,6 +185,20 @@ public final class Corporation {
 
         children.remove(b);
         saveCorporation();
+    }
+
+    /**
+     * Fetches the Date a Business joined this Corporation.
+     * @param b Business to fetch join date for
+     * @return Business Join Date
+     * @throws IllegalArgumentException if the Business is not a child of this Corporation, or is null
+     */
+    @NotNull
+    public Date getJoinDate(@NotNull Business b) throws IllegalArgumentException {
+        if (b == null) throw new IllegalArgumentException("Business cannot be null");
+        if (!children.contains(b)) throw new IllegalArgumentException("Business is not a child of this corporation");
+
+        return new Date(childrenJoinDates.get(b.getUniqueId()));
     }
 
     /**
@@ -180,6 +229,7 @@ public final class Corporation {
      */
     @NotNull
     public String getDescription() {
+        if (description == null) description = "";
         return description;
     }
 
@@ -212,8 +262,9 @@ public final class Corporation {
      */
     public void setExperience(double experience) throws IllegalArgumentException {
         if (experience < 0) throw new IllegalArgumentException("Corporation experience cannot be negative!");
-        this.experience = experience;
+        if (toLevel(experience) > MAX_LEVEL) throw new IllegalArgumentException("Corporation level cannot be higher than " + MAX_LEVEL + "!");
 
+        this.experience = experience;
         saveCorporation();
     }
 
@@ -250,6 +301,7 @@ public final class Corporation {
      */
     public void setLevel(int level) throws IllegalArgumentException {
         if (level < 1) throw new IllegalArgumentException("Corporation level must be postiive!");
+        if (level > MAX_LEVEL) throw new IllegalArgumentException("Corporation level cannot be greater than " + MAX_LEVEL + "!");
         setExperience(toExperience(level));
     }
 
@@ -298,8 +350,11 @@ public final class Corporation {
     /**
      * Sets the Location of this Corporation's Headquarters.
      * @param headquarters New Corporation Headquarters
+     * @throws IllegalStateException if Corporation is less than 5
      */
-    public void setHeadquarters(@Nullable Location headquarters) {
+    public void setHeadquarters(@Nullable Location headquarters) throws IllegalStateException {
+        if (getLevel() < 3) throw new IllegalStateException("Corporation must be level 5 to set headquarters!");
+
         this.headquarters = headquarters;
         saveCorporation();
     }
@@ -321,7 +376,6 @@ public final class Corporation {
     @NotNull
     public int getAchievementLevel(@NotNull CorporationAchievement achievement) {
         if (achievement == null) throw new IllegalArgumentException("Corporation Achievement cannot be null!");
-        
         return achievements.getOrDefault(achievement, 0);
     }
 
@@ -336,9 +390,14 @@ public final class Corporation {
         int newLevel = getAchievementLevel(achievement) + 1;
 
         if (newLevel > achievement.getMaxLevel()) throw new IllegalArgumentException("Achievement is already at max level! (Max: " + achievement.getMaxLevel() + ")");
-        
-        achievements.put(achievement, newLevel);
-        experience += achievement.getExperienceReward() * newLevel;
+
+        CorporationAwardAchievementEvent event = new CorporationAwardAchievementEvent(this, achievement, getAchievementLevel(achievement), newLevel);
+        Bukkit.getPluginManager().callEvent(event);
+
+        if (event.isCancelled()) return;
+
+        achievements.put(achievement, event.getNewLevel());
+        experience += achievement.getExperienceReward() * event.getNewLevel();
 
         saveCorporation();
     }
@@ -358,85 +417,27 @@ public final class Corporation {
     public void delete() { removeCorporation(this); }
 
     /**
-     * Fetches an immutable copy of all of the shared resources this Corporation has.
-     * @return Corporation Resources
+     * Fetches how many views this Corporation has received.
+     * @return Corporation Views
      */
-    public List<ItemStack> getResources() {
-        return ImmutableList.copyOf(resources);
+    public long getViews() {
+        return views;
     }
 
     /**
-     * Adds an arary of resources to this Corporation.
-     * @param resources Resources to add
+     * Adds a specific amount of views to this Corporation.
+     * @param count Views to add
      */
-    public void addResource(@Nullable ItemStack... resources) {
-        if (resources == null) return;
-        addResource(Arrays.asList(resources));
-    }
-
-    /**
-     * Adds an iterable of resources to this Corporation.
-     * @param resources Resources to add
-     */
-    public void addResource(@Nullable Iterable<? extends ItemStack> resources) {
-        if (resources == null) return;
-
-        List<ItemStack> items = new ArrayList<>(ImmutableList.copyOf(resources));
-        Map<Integer, ItemStack> res = new HashMap<>();
-        AtomicInteger rIndex = new AtomicInteger();
-        items.forEach(i -> {
-            if (this.resources.contains(i)) {
-                int index = this.resources.indexOf(i);
-                if (this.resources.get(index).getAmount() < this.resources.get(index).getMaxStackSize()) {
-                    ItemStack clone = i.clone();
-                    clone.setAmount(i.getAmount() + 1);
-                    res.put(rIndex.get(), clone);
-                } else res.put(rIndex.get(), i);
-            } else res.put(rIndex.get(), i);
-            rIndex.getAndIncrement();
-        });
-
-        this.resources.addAll(res.values());
+    public void addView(long count) {
+        views += count;
         saveCorporation();
     }
 
     /**
-     * Removes an array of resources from this Corporation.
-     * @param resources Resources to remove
+     * Adds a single view to this Corporation.
      */
-    public void removeResource(@Nullable ItemStack... resources) {
-        if (resources == null) return;
-        removeResource(Arrays.asList(resources));
-    }
-
-    /**
-     * Removes an iterable of resources from this Corporation.
-     * @param resources Resources to remove
-     */
-    public void removeResource(@Nullable Iterable<? extends ItemStack> resources) {
-        if (resources == null) return;
-
-        List<ItemStack> newR = new ArrayList<>();
-        for (ItemStack item : resources)
-            for (int i = 0; i < item.getAmount(); i++) {
-                ItemStack clone = item.clone();
-                clone.setAmount(1);
-                newR.add(clone);
-            }
-
-        newR.forEach(i -> {
-            Iterator<ItemStack> it = this.resources.iterator();
-            while (it.hasNext()) {
-                ItemStack item = it.next();
-                if (item.isSimilar(i)) {
-                    if (item.getAmount() > i.getAmount()) item.setAmount(item.getAmount() - i.getAmount());
-                    else it.remove();
-                    break;
-                }
-            }
-        });
-
-        saveCorporation();
+    public void addView() {
+        addView(1);
     }
 
     @Override
@@ -465,6 +466,14 @@ public final class Corporation {
     // Static Methods
 
     private static final Set<Corporation> CORPORATION_CACHE = new HashSet<>();
+
+    /**
+     * Reloads the Corporation Cache.
+     */
+    public static void reloadCorporations() {
+        CORPORATION_CACHE.clear();
+        getCorporations();
+    }
 
     /**
      * Fetches an immutable set of all of the corporations that exist.
@@ -534,7 +543,7 @@ public final class Corporation {
     public static Corporation byOwner(@Nullable OfflinePlayer owner) {
         if (owner == null) return null;
         return getCorporations().stream()
-                .filter(c -> c.getOwner().equals(owner))
+                .filter(c -> c.isOwner(owner))
                 .findFirst()
                 .orElse(null);
     }
@@ -548,7 +557,7 @@ public final class Corporation {
     public static Corporation byMember(@Nullable OfflinePlayer member) {
         if (member == null) return null;
         return getCorporations().stream()
-                .filter(c -> c.getMembers().contains(member) || c.getOwner().equals(member))
+                .filter(c -> c.getMembers().contains(member) || c.isOwner(member))
                 .findFirst()
                 .orElse(null);
     }
@@ -597,7 +606,7 @@ public final class Corporation {
     public static boolean exists(@Nullable OfflinePlayer owner) {
         if (owner == null) return false;
         return getCorporations().stream()
-                .anyMatch(c -> c.getOwner().equals(owner));
+                .anyMatch(c -> c.isOwner(owner));
     }
 
     /**
@@ -619,6 +628,10 @@ public final class Corporation {
      */
     public static void removeCorporation(@NotNull Corporation c) {
         if (c == null) throw new IllegalArgumentException("Corporation cannot be null!");
+
+        CorporationDeleteEvent event = new CorporationDeleteEvent(c);
+        Bukkit.getPluginManager().callEvent(event);
+
         CORPORATION_CACHE.clear();
 
         for (File f : c.folder.listFiles()) {
@@ -640,7 +653,7 @@ public final class Corporation {
         if (level == 1) return 0;
 
         double level0 = level - 1;
-        double num = Math.floor(Math.pow(2, level0 - 1) * 10000 * level0);
+        double num = Math.floor(Math.pow(1.5, level0 - 1) * 5000 * level0);
         double rem = num % 1000;
 
         return rem >= 1000 / 2D ? num - rem + 1000 : num - rem;
@@ -681,7 +694,6 @@ public final class Corporation {
         String name;
         OfflinePlayer owner;
         Material icon = Material.STONE;
-        Location headquarters;
 
         private Builder() {}
 
@@ -724,16 +736,6 @@ public final class Corporation {
         }
 
         /**
-         * Sets the headquarters of the Corporation.
-         * @param headquarters Corporation Headquarters
-         * @return this class, for chaining
-         */
-        public Builder setHeadquarters(@Nullable Location headquarters) {
-            this.headquarters = headquarters;
-            return this;
-        }
-
-        /**
          * Builds the Corporation.
          * @return New Corporation
          * @throws IllegalStateException if one or more arguments is null
@@ -752,7 +754,6 @@ public final class Corporation {
             Corporation c = new Corporation(uid, System.currentTimeMillis(), owner);
             c.name = name;
             c.icon = icon;
-            c.headquarters = headquarters;
 
             if (Business.exists(owner)) c.children.add(Business.getByOwner(owner));
 
@@ -796,6 +797,7 @@ public final class Corporation {
 
         FileConfiguration data = YamlConfiguration.loadConfiguration(dataF);
         data.set("name", this.name);
+        data.set("description", this.description);
         data.set("experience", this.experience);
         data.set("icon", this.icon.name());
         data.set("headquarters", this.headquarters);
@@ -804,6 +806,10 @@ public final class Corporation {
                 .stream()
                 .map(e -> new AbstractMap.SimpleEntry<>(e.getKey().name().toLowerCase(), e.getValue()))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
+
+        if (!data.isConfigurationSection("stats")) data.createSection("stats");
+        data.set("stats.views", this.views);
+
         data.save(dataF);
 
         File childrenF = new File(folder, "children.yml");
@@ -817,6 +823,10 @@ public final class Corporation {
                 .collect(Collectors.toList())
         );
 
+        if (!children.isConfigurationSection("join_dates")) children.createSection("join_dates");
+        for (Map.Entry<UUID, Long> entry : this.childrenJoinDates.entrySet())
+            children.set("join_dates." + entry.getKey().toString(), entry.getValue());
+
         if (!children.isConfigurationSection("permissions")) children.createSection("permissions");
         for (Map.Entry<UUID, CorporationPermission[]> entry : this.businessPermissions.entrySet())
             children.set("permissions." + entry.getKey().toString(), Arrays.stream(entry.getValue())
@@ -824,34 +834,6 @@ public final class Corporation {
                     .collect(Collectors.toList()));
 
         children.save(childrenF);
-
-        // Global Resources
-
-        File sourcesF = new File(folder, "resources");
-        if (!sourcesF.exists()) sourcesF.mkdir();
-
-        Set<Material> mats = this.resources.stream().map(ItemStack::getType).collect(Collectors.toSet());
-        for (Material mat : mats) {
-            List<ItemStack> added = this.resources.stream().filter(i -> i.getType() == mat).collect(Collectors.toList());
-
-            File matF = new File(sourcesF, mat.name().toLowerCase() + ".dat");
-            if (!matF.exists()) matF.createNewFile();
-
-            FileOutputStream matFs = new FileOutputStream(matF);
-            ObjectOutputStream matOs = new ObjectOutputStream(new BufferedOutputStream(matFs));
-
-            matOs.writeInt(added.stream().filter(i -> !i.hasItemMeta()).mapToInt(ItemStack::getAmount).sum());
-
-            List<Map<String, Object>> res = new ArrayList<>();
-            for (ItemStack i : added.stream().filter(ItemStack::hasItemMeta).collect(Collectors.toList())) {
-                Map<String, Object> m = new HashMap<>(i.serialize());
-                if (i.hasItemMeta()) m.put("meta", i.getItemMeta().serialize());
-
-                res.add(m);
-            }
-            matOs.writeObject(res);
-            matOs.close();
-        }
     }
 
     @NotNull
@@ -872,6 +854,7 @@ public final class Corporation {
 
         FileConfiguration data = YamlConfiguration.loadConfiguration(dataF);
         c.name = data.getString("name");
+        c.description = data.getString("description", "");
         c.experience = data.getDouble("experience");
         c.icon = Material.valueOf(data.getString("icon"));
         c.headquarters = (Location) data.get("headquarters");
@@ -881,6 +864,8 @@ public final class Corporation {
                 .stream()
                 .map(e -> new AbstractMap.SimpleEntry<>(CorporationAchievement.valueOf(e.getKey().toUpperCase()), (Integer) e.getValue()))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
+
+        c.views = data.getInt("stats.views");
 
         File childrenF = new File(folder, "children.yml");
         if (!childrenF.exists()) throw new IllegalStateException("Could not find: children.yml");
@@ -892,6 +877,13 @@ public final class Corporation {
                 .map(Business::getById)
                 .collect(Collectors.toList()));
 
+        for (Map.Entry<String, Object> entry : children.getConfigurationSection("join_dates").getValues(false).entrySet()) {
+            UUID bid = UUID.fromString(entry.getKey());
+            long joinDate = (long) entry.getValue();
+
+            c.childrenJoinDates.put(bid, joinDate);
+        }
+
         for (Map.Entry<String, Object> entry : children.getConfigurationSection("permissions").getValues(false).entrySet()) {
             UUID bid = UUID.fromString(entry.getKey());
             CorporationPermission[] bPermissions = ((List<String>) entry.getValue())
@@ -901,50 +893,6 @@ public final class Corporation {
 
             c.businessPermissions.put(bid, bPermissions);
         }
-
-        // Global Resources
-        File sourcesF = new File(folder, "resources");
-        if (!sourcesF.exists()) sourcesF.mkdir();
-
-        List<ItemStack> resources = new ArrayList<>();
-        for (File matF : sourcesF.listFiles()) {
-            FileInputStream matFs = new FileInputStream(matF);
-            ObjectInputStream matOs = new ObjectInputStream(new BufferedInputStream(matFs));
-
-            int baseCount = matOs.readInt();
-            Material baseM = Material.valueOf(matF.getName().replace(".dat", "").toUpperCase());
-
-            while (baseCount > 0) {
-                int amount = Math.min(baseCount, baseM.getMaxStackSize());
-                ItemStack i = new ItemStack(baseM, amount);
-                resources.add(i);
-
-                baseCount -= amount;
-            }
-
-            List<Map<String, Object>> res = (List<Map<String, Object>>) matOs.readObject();
-            matOs.close();
-            for (Map<String, Object> m : res) {
-                Map<String, Object> sItem = new HashMap<>(m);
-
-                ItemMeta base = Bukkit.getItemFactory().getItemMeta(Material.valueOf((String) m.get("type")));
-                DelegateDeserialization deserialization = base.getClass().getAnnotation(DelegateDeserialization.class);
-                Method deserialize = deserialization.value().getDeclaredMethod("deserialize", Map.class);
-                deserialize.setAccessible(true);
-
-                Map<String, Object> sMeta = (Map<String, Object>) sItem.getOrDefault("meta", base.serialize());
-                if (sMeta == null) sMeta = base.serialize();
-
-                ItemMeta meta = (ItemMeta) deserialize.invoke(null, sMeta);
-                sItem.put("meta", meta);
-                ItemStack i = ItemStack.deserialize(m);
-                i.setItemMeta(meta);
-
-                resources.add(i);
-            }
-
-        }
-        c.resources.addAll(resources);
 
         return c;
     }

@@ -1,6 +1,10 @@
 package us.teaminceptus.novaconomy.api.corporation;
 
+import org.bukkit.Material;
+import org.jetbrains.annotations.NotNull;
 import us.teaminceptus.novaconomy.api.Language;
+
+import java.util.function.BiFunction;
 
 /**
  * Represents an achievement that a Corporation can earn.
@@ -10,33 +14,100 @@ public enum CorporationAchievement {
     /**
      * The achievement for reaching 5, 15, 35, and 50 corporation children.
      */
-    MONOPOLY(4, "constants.corporation.achievement.monopoly", 5500),
+    MONOPOLY(Material.GOLD_INGOT, 4, "constants.corporation.achievement.monopoly", 25500, (c, level) -> {
+        int size = c.getChildren().size();
+
+        switch (level) {
+            case 0: return size / 5D;
+            case 1: return size / 15D;
+            case 2: return size / 35D;
+            case 3: return size / 50D;
+            default: return 1D;
+        }
+    }),
 
     /**
-     * The achievement for reaching a collective 10, 50K, 150K, 500K, 1M, and 5M Business and Corporation Views.
+     * The achievement for reaching a collective 10K, 50K, 150K, 500K, 1M, and 5M Business and Corporation Views.
      */
-    ADVERTISER(6, "constants.corporation.achievement.advertiser", 7800),
+    ADVERTISER(Material.PAPER,6, "constants.corporation.achievement.advertiser", 42500, (c, level) -> {
+        long views = c.getStatistics().getTotalViews();
+
+        switch (level) {
+            case 0: return views / 10_000D;
+            case 1: return views / 50_000D;
+            case 2: return views / 150_000D;
+            case 3: return views / 500_000D;
+            case 4: return views / 1_000_000D;
+            case 5: return views / 5_000_000D;
+            default: return 1D;
+        }
+    }),
     
     /**
-     * The achievement for recahing a collective 5K, 15K, 100K, 350K, and 750K Business sales.
+     * The achievement for reaching a collective 5K, 15K, 100K, 350K, 750K, 1.5M, 5M, 10M, 25M, 50M, and 100M Business sales.
      */
-    SELLER(5, "constants.corporation.achievement.seller", 10500),
+    SELLER(Material.EMERALD, 11, "constants.corporation.achievement.seller", 35000, (c, level) -> {
+        long sales = c.getStatistics().getTotalSales();
+
+        switch (level) {
+            case 0: return sales / 5_000D;
+            case 1: return sales / 15_000D;
+            case 2: return sales / 100_000D;
+            case 3: return sales / 350_000D;
+            case 4: return sales / 750_000D;
+            case 5: return sales / 1_500_000D;
+            case 6: return sales / 5_000_000D;
+            case 7: return sales / 10_000_000D;
+            case 8: return sales / 25_000_000D;
+            case 9: return sales / 50_000_000D;
+            case 10: return sales / 100_000_000D;
+            default: return 1D;
+        }
+    }),
 
     /**
-     * The achievement for reaching a collective 1M, 5M, 10M, 25M, 50M, and 100M in profit.
+     * The achievement for reaching a collective 100K, 450K, 1M, 2.5M, 7.5M, 15M, 40M, 75M, and 125M in total Business Profit.
      */
-    SUPER_SELLLER(5, "constants.corporation.achievement.super_seller", 30750),
+    BUSINESSMAN(Material.DIAMOND_BLOCK, 9, "constants.corporation.achievement.businessman", 155000, (c, level) -> {
+        double profit = c.getStatistics().getTotalProfit();
+
+        switch (level) {
+            case 0: return profit / 100_000D;
+            case 1: return profit / 450_000D;
+            case 2: return profit / 1_000_000D;
+            case 3: return profit / 2_500_000D;
+            case 4: return profit / 7_500_000D;
+            case 5: return profit / 15_000_000D;
+            case 6: return profit / 40_000_000D;
+            case 7: return profit / 75_000_000D;
+            case 8: return profit / 125_000_000D;
+            default: return 1D;
+        }
+    }),
     
     ;
 
     private final int maxLevel;
     private final String key;
     private final double experienceReward;
+    private final Material icon;
+    private final BiFunction<Corporation, Integer, Double> progress;
 
-    CorporationAchievement(int maxLevel, String key, double expReward) {
+    CorporationAchievement(Material icon, int maxLevel, String key, double expReward, BiFunction<Corporation, Integer, Double> progress) {
         this.maxLevel = maxLevel;
         this.key = key;
         this.experienceReward = expReward;
+        this.icon = icon;
+        this.progress = progress;
+    }
+
+    /**
+     * Fetches this CorporationAchievement's Material Icon.
+     * @return Material Icon
+     */
+    @NotNull
+    public Material getIcon() {
+        return icon;
     }
 
     /**
@@ -48,11 +119,21 @@ public enum CorporationAchievement {
     }
 
     /**
-     * Fetches the display name fo this Corporation Achievement.
-     * @return Display Name
+     * Fetches the display name for this Corporation Achievement.
+     * @return Localized Display Name
      */
+    @NotNull
     public String getDisplayName() {
         return Language.getCurrentLanguage().getMessage(key);
+    }
+
+    /**
+     * Fetches teh localized description for this Corporation Achievement.
+     * @return Localized Description
+     */
+    @NotNull
+    public String getDescription() {
+        return Language.getCurrentLanguage().getMessage(key + ".desc");
     }
 
     /**
@@ -62,5 +143,16 @@ public enum CorporationAchievement {
      */
     public double getExperienceReward() {
         return experienceReward;
+    }
+
+    /**
+     * Fetches the current progress percentage of the Corporation towards the next level of this achievement.
+     * @param c Corporation to check
+     * @return Percentage Progress towards Achievement out of 100%
+     * @throws IllegalArgumentException if Corporation is null
+     */
+    public double getProgress(@NotNull Corporation c) throws IllegalArgumentException {
+        if (c == null) throw new IllegalArgumentException("Corporation cannot be null.");
+        return progress.apply(c, c.getAchievementLevel(this)) * 100;
     }
 }
