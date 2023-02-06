@@ -29,6 +29,7 @@ import java.util.stream.Collectors;
 public final class Economy implements ConfigurationSerializable, Comparable<Economy> {
 
     private static final String IGNORE_TAXES = "Taxes.Automatic.Ignore";
+
     private final char symbol;
     private final File file;
     private String name;
@@ -272,6 +273,8 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
      * Saves this Economy to its file.
      */
     public void saveEconomy() {
+        ECONOMY_CACHE.clear();
+
         try {
             if (!this.file.exists()) this.file.createNewFile();
 
@@ -376,12 +379,15 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
      */
     public double getConversionScale() { return this.conversionScale; }
 
+    private static final Set<Economy> ECONOMY_CACHE = new HashSet<>();
+
     /**
      * Fetch a set of all economies registered on the Plugin
      * @return Set of Registered Economies
      */
     @NotNull
     public static Set<Economy> getEconomies() {
+        if (!ECONOMY_CACHE.isEmpty()) return ECONOMY_CACHE;
         Set<Economy> economies = new HashSet<>();
 
         List<File> files = NovaConfig.getEconomiesFolder().listFiles() == null ? new ArrayList<>() : Arrays.asList(NovaConfig.getEconomiesFolder().listFiles());
@@ -393,7 +399,8 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
             economies.add(getEconomy(id));
         }
 
-        return economies;
+        ECONOMY_CACHE.addAll(economies);
+        return ECONOMY_CACHE;
     }
 
     /**
@@ -660,6 +667,8 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
          */
         public Economy build() throws IllegalArgumentException, UnsupportedOperationException {
             if (this.name == null) throw new IllegalArgumentException("Name cannot be null");
+            ECONOMY_CACHE.clear();
+
             UUID id = UUID.nameUUIDFromBytes(this.name.getBytes(StandardCharsets.UTF_8));
             File file = new File(NovaConfig.getEconomiesFolder(), id + ".yml");
 
