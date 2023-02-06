@@ -24,18 +24,19 @@ import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
-
 import us.teaminceptus.novaconomy.abstraction.NBTWrapper;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.corporation.Corporation;
 import us.teaminceptus.novaconomy.api.economy.Economy;
+import us.teaminceptus.novaconomy.api.events.business.BusinessViewEvent;
 import us.teaminceptus.novaconomy.api.events.corporation.CorporationExperienceChangeEvent;
 import us.teaminceptus.novaconomy.api.events.player.economy.PlayerChangeBalanceEvent;
 import us.teaminceptus.novaconomy.api.events.player.economy.PlayerPurchaseProductEvent;
 import us.teaminceptus.novaconomy.api.player.Bounty;
 import us.teaminceptus.novaconomy.api.player.NovaPlayer;
 import us.teaminceptus.novaconomy.util.NovaSound;
+import us.teaminceptus.novaconomy.util.NovaUtil;
 
 import java.io.File;
 import java.io.IOException;
@@ -46,9 +47,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import static us.teaminceptus.novaconomy.Novaconomy.isIgnored;
-import static us.teaminceptus.novaconomy.abstraction.Wrapper.r;
-import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.*;
-import static us.teaminceptus.novaconomy.abstraction.NBTWrapper.*;
+import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.AMOUNT_TAG;
+import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.ECON_TAG;
+import static us.teaminceptus.novaconomy.abstraction.NBTWrapper.of;
+import static us.teaminceptus.novaconomy.abstraction.Wrapper.*;
+import static us.teaminceptus.novaconomy.api.corporation.CorporationAchievement.*;
 
 final class Events implements Listener {
 
@@ -92,15 +95,12 @@ final class Events implements Listener {
         double amount = nbt.getDouble(AMOUNT_TAG);
 
         np.add(econ, amount);
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                if (item.getAmount() > 1) item.setAmount(item.getAmount() - 1);
-                else w.removeItem(e);
+        NovaUtil.sync(() -> {
+            if (item.getAmount() > 1) item.setAmount(item.getAmount() - 1);
+            else w.removeItem(e);
 
-                NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
-            }
-        }.runTask(plugin);
+            NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
+        });
     }
 
     @EventHandler
@@ -172,23 +172,20 @@ final class Events implements Listener {
                 final double fIAmount = iAmount;
                 String fCategory = category;
 
-                new BukkitRunnable() {
-                    @Override
-                    public void run() {
-                        if (r.nextInt(100) < plugin.getKillChance())
-                            if (entry.containsKey(id) || entry.containsKey(fCategory)) {
-                                Set<Map.Entry<Economy, Double>> value = entry.getOrDefault(id, entry.get(fCategory));
-                                List<String> msgs = new ArrayList<>();
-                                for (Map.Entry<Economy, Double> entry : value) {
-                                    double amount = entry.getValue();
-                                    if (amount <= 0) continue;
-                                    msgs.add(callAddBalanceEvent(p, entry.getKey(), amount, false));
-                                }
+                NovaUtil.sync(() -> {
+                    if (r.nextInt(100) < plugin.getKillChance())
+                        if (entry.containsKey(id) || entry.containsKey(fCategory)) {
+                            Set<Map.Entry<Economy, Double>> value = entry.getOrDefault(id, entry.get(fCategory));
+                            List<String> msgs = new ArrayList<>();
+                            for (Map.Entry<Economy, Double> entry1 : value) {
+                                double amount = entry1.getValue();
+                                if (amount <= 0) continue;
+                                msgs.add(callAddBalanceEvent(p, entry1.getKey(), amount, false));
+                            }
 
-                                sendUpdateActionbar(p, msgs);
-                            } else update(p, fIAmount);
-                    }
-                }.runTask(plugin);
+                            sendUpdateActionbar(p, msgs);
+                        } else update(p, fIAmount);
+                });
             }
         }.runTaskAsynchronously(plugin);
     }
@@ -266,23 +263,22 @@ final class Events implements Listener {
 
                 int chance = mod.equalsIgnoreCase("Farming") ? plugin.getFarmingChance() : plugin.getMiningChance();
 
+                final double fAdd = add;
+
                 if (r.nextInt(100) < chance) if (entry.containsKey(id) || tagName != null) {
                     final String ftn = tagName;
-                    new BukkitRunnable() {
-                        @Override
-                        public void run() {
-                            Set<Map.Entry<Economy, Double>> value = entry.getOrDefault(id, entry.get(ftn));
-                            List<String> msgs = new ArrayList<>();
-                            for (Map.Entry<Economy, Double> entry : value) {
-                                double amount = entry.getValue();
-                                if (amount <= 0) continue;
-                                msgs.add(callAddBalanceEvent(p, entry.getKey(), amount, false));
-                            }
-
-                            sendUpdateActionbar(p, msgs);
+                    NovaUtil.sync(() -> {
+                        Set<Map.Entry<Economy, Double>> value = entry.getOrDefault(id, entry.get(ftn));
+                        List<String> msgs = new ArrayList<>();
+                        for (Map.Entry<Economy, Double> entry1 : value) {
+                            double amount = entry1.getValue();
+                            if (amount <= 0) continue;
+                            msgs.add(callAddBalanceEvent(p, entry1.getKey(), amount, false));
                         }
-                    }.runTask(plugin);
-                } else update(p, add);
+
+                        sendUpdateActionbar(p, msgs);
+                    });
+                } else NovaUtil.sync(() -> update(p, fAdd));
             }
         }.runTaskAsynchronously(plugin);
     }
@@ -426,21 +422,18 @@ final class Events implements Listener {
             bountyCount.incrementAndGet();
             nk.add(b.getEconomy(), b.getAmount());
 
-            new BukkitRunnable() {
-                @Override
-                public void run() {
-                    File pFile = new File(NovaConfig.getPlayerDirectory(), owner.getUniqueId() + ".yml");
-                    FileConfiguration pConfig = YamlConfiguration.loadConfiguration(pFile);
+            NovaUtil.sync(() -> {
+                File pFile = new File(NovaConfig.getPlayerDirectory(), owner.getUniqueId() + ".yml");
+                FileConfiguration pConfig = YamlConfiguration.loadConfiguration(pFile);
 
-                    pConfig.set(key, null);
+                pConfig.set(key, null);
 
-                    try {
-                        pConfig.save(pFile);
-                    } catch (IOException err) {
-                        NovaConfig.getLogger().severe(err.getMessage());
-                    }
+                try {
+                    pConfig.save(pFile);
+                } catch (IOException err) {
+                    NovaConfig.getLogger().severe(err.getMessage());
                 }
-            }.runTask(plugin);
+            });
         }
 
         if (!broadcast)
@@ -513,7 +506,60 @@ final class Events implements Listener {
         Corporation c = b.getParentCorporation();
         if (c == null) return;
 
+        long sales = c.getStatistics().getTotalSales();
+        if ((sales >= 5_000 && !(c.getAchievementLevel(SELLER) >= 1))
+                || (sales >= 15_000 && !(c.getAchievementLevel(SELLER) >= 2))
+                || (sales >= 100_000 && !(c.getAchievementLevel(SELLER) >= 3))
+                || (sales >= 350_000 && !(c.getAchievementLevel(SELLER) >= 4))
+                || (sales >= 750_000 && !(c.getAchievementLevel(SELLER) >= 5))
+                || (sales >= 1_500_000 && !(c.getAchievementLevel(SELLER) >= 6))
+                || (sales >= 5_000_000 && !(c.getAchievementLevel(SELLER) >= 7))
+                || (sales >= 10_000_000 && !(c.getAchievementLevel(SELLER) >= 8))
+                || (sales >= 25_000_000 && !(c.getAchievementLevel(SELLER) >= 9))
+                || (sales >= 50_000_000 && !(c.getAchievementLevel(SELLER) >= 10))
+                || (sales >= 100_000_000 && !(c.getAchievementLevel(SELLER) >= 11))
+        ) c.awardAchievement(SELLER);
+
+        double profit = c.getStatistics().getTotalProfit();
+        if ((profit >= 100_000 && !(c.getAchievementLevel(BUSINESSMAN) >= 1))
+                || (profit >= 450_000 && !(c.getAchievementLevel(BUSINESSMAN) >= 2))
+                || (profit >= 1_000_000 && !(c.getAchievementLevel(BUSINESSMAN) >= 3))
+                || (profit >= 2_500_000 && !(c.getAchievementLevel(BUSINESSMAN) >= 4))
+                || (profit >= 7_500_000 && !(c.getAchievementLevel(BUSINESSMAN) >= 5))
+                || (profit >= 15_000_000 && !(c.getAchievementLevel(BUSINESSMAN) >= 6))
+                || (profit >= 40_000_000 && !(c.getAchievementLevel(BUSINESSMAN) >= 7))
+                || (profit >= 75_000_000 && !(c.getAchievementLevel(BUSINESSMAN) >= 8))
+                || (profit >= 125_000_000 && !(c.getAchievementLevel(BUSINESSMAN) >= 9))
+        ) c.awardAchievement(BUSINESSMAN);
+
         double exp = Math.min(1, r.nextDouble() * 2) * (e.getProduct().getPrice().getRealAmount() / 2);
+
+        CorporationExperienceChangeEvent event = new CorporationExperienceChangeEvent(c, c.getExperience(), c.getExperience() + exp);
+        Bukkit.getPluginManager().callEvent(event);
+
+        if (event.isCancelled()) return;
+        c.setExperience(event.getNewExperience());
+    }
+
+    @EventHandler
+    public void onView(BusinessViewEvent e) {
+        Business b = e.getBusiness();
+        Player p = e.getViewer();
+
+        Corporation c = b.getParentCorporation();
+        if (c == null) return;
+
+        long views = c.getStatistics().getTotalViews();
+
+        if ((views >= 10_000 && !(c.getAchievementLevel(ADVERTISER) >= 1))
+                || (views >= 50_000 && !(c.getAchievementLevel(ADVERTISER) >= 2))
+                || (views >= 150_000 && !(c.getAchievementLevel(ADVERTISER) >= 3))
+                || (views >= 500_000 && !(c.getAchievementLevel(ADVERTISER) >= 4))
+                || (views >= 1_000_000 && !(c.getAchievementLevel(ADVERTISER) >= 5))
+                || (views >= 5_000_000 && !(c.getAchievementLevel(ADVERTISER) >= 6))
+        ) c.awardAchievement(ADVERTISER);
+
+        double exp = Math.min(0.5, r.nextDouble() / 2);
 
         CorporationExperienceChangeEvent event = new CorporationExperienceChangeEvent(c, c.getExperience(), c.getExperience() + exp);
         Bukkit.getPluginManager().callEvent(event);
