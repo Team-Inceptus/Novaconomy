@@ -1,30 +1,31 @@
 package us.teaminceptus.novaconomy;
 
+import io.netty.channel.Channel;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.minecraft.server.v1_8_R2.*;
-
-import java.util.Arrays;
-import java.util.function.Consumer;
-
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.block.Block;
-import org.bukkit.craftbukkit.v1_8_R2.inventory.CraftItemStack;
+import org.bukkit.craftbukkit.v1_8_R2.CraftWorld;
 import org.bukkit.craftbukkit.v1_8_R2.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_8_R2.inventory.CraftItemStack;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.material.Crops;
-
-import io.netty.channel.Channel;
+import org.bukkit.scheduler.BukkitRunnable;
 import us.teaminceptus.novaconomy.abstraction.NBTWrapper;
 import us.teaminceptus.novaconomy.abstraction.NovaInventory;
 import us.teaminceptus.novaconomy.abstraction.Wrapper;
+import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.v1_8_R2.NBTWrapper1_8_R2;
 import us.teaminceptus.novaconomy.v1_8_R2.NovaInventory1_8_R2;
 import us.teaminceptus.novaconomy.v1_8_R2.PacketHandler1_8_R2;
+
+import java.util.Arrays;
+import java.util.function.Consumer;
 
 public final class Wrapper1_8_R2 implements Wrapper {
 
@@ -40,15 +41,6 @@ public final class Wrapper1_8_R2 implements Wrapper {
     @Override
     public void sendActionbar(Player p, BaseComponent component) {
         sendActionbar(p, component.toLegacyText());
-    }
-    
-    @Override
-    public ItemStack getGUIBackground() {
-        ItemStack item = new ItemStack(Material.STAINED_GLASS_PANE, 1, (short)15);
-        ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(" ");
-        item.setItemMeta(meta);
-        return item;
     }
 
     @Override
@@ -105,7 +97,7 @@ public final class Wrapper1_8_R2 implements Wrapper {
 
         if (ch.pipeline().get(PACKET_INJECTOR_ID) != null) return;
 
-        ch.pipeline().addBefore("packet_handler", PACKET_INJECTOR_ID, new PacketHandler1_8_R2(p));
+        ch.pipeline().addAfter("decoder", PACKET_INJECTOR_ID, new PacketHandler1_8_R2(p));
     }
 
     @Override
@@ -119,14 +111,39 @@ public final class Wrapper1_8_R2 implements Wrapper {
 
     @Override
     public void sendSign(Player p, Consumer<String[]> lines) {
+        addPacketInjector(p);
+
+        Location l = p.getLocation();
+        WorldServer ws = ((CraftWorld) l.getWorld()).getHandle();
+        BlockPosition pos = new BlockPosition(l.getBlockX(), 255, l.getBlockZ());
+
+        PacketPlayOutBlockChange sent1 = new PacketPlayOutBlockChange(ws, pos);
+        sent1.block = Blocks.STANDING_SIGN.getBlockData();
+
+        ((CraftPlayer) p).getHandle().playerConnection.sendPacket(sent1);
+
+        PacketPlayOutOpenSignEditor sent2 = new PacketPlayOutOpenSignEditor(pos);
+        ((CraftPlayer) p).getHandle().playerConnection.sendPacket(sent2);
+
         PacketHandler1_8_R2.PACKET_HANDLERS.put(p.getUniqueId(), packetO -> {
-            if (!(packetO instanceof PacketPlayInUpdateSign)) return;
+            if (!(packetO instanceof PacketPlayInUpdateSign)) return false;
             PacketPlayInUpdateSign packet = (PacketPlayInUpdateSign) packetO;
 
             lines.accept(Arrays.stream(packet.b())
                     .map(IChatBaseComponent::getText)
                     .toArray(String[]::new));
+            return true;
         });
+
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                PacketPlayOutBlockChange sent3 = new PacketPlayOutBlockChange(ws, pos);
+                sent3.block = Blocks.AIR.getBlockData();
+
+                ((CraftPlayer) p).getHandle().playerConnection.sendPacket(sent3);
+            }
+        }.runTaskLater(NovaConfig.getPlugin(), 2L);
     }
 
 }

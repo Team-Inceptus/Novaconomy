@@ -3,6 +3,7 @@ package us.teaminceptus.novaconomy.abstraction;
 import com.google.gson.Gson;
 import net.md_5.bungee.api.chat.BaseComponent;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.block.Block;
@@ -10,7 +11,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
-
 import us.teaminceptus.novaconomy.abstraction.test.TestWrapper;
 import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.NovaConfig;
@@ -24,7 +24,9 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -44,9 +46,9 @@ public interface Wrapper {
 
     void sendActionbar(Player p, BaseComponent component);
 
-    ItemStack getGUIBackground();
-
     ItemStack createSkull(OfflinePlayer p);
+
+    Wrapper w = getWrapper();
 
     default boolean isItem(Material m) {
         try {
@@ -109,6 +111,10 @@ public interface Wrapper {
     }
 
     static String getMessage(String key) { return get("plugin.prefix") + get(key); }
+
+    static String getError(String key) { return get("plugin.prefix") + ChatColor.RED + get(key); }
+
+    static String getSuccess(String key) { return get("plugin.prefix") + ChatColor.GREEN + get(key); }
 
     static UUID untrimUUID(String oldUUID) {
         String p1 = oldUUID.substring(0, 8);

@@ -11,7 +11,7 @@ import java.util.UUID;
 import java.util.function.Consumer;
 
 import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.PRODUCT_TAG;
-import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.w;
+import static us.teaminceptus.novaconomy.abstraction.Wrapper.w;
 
 public abstract class NBTWrapper {
     

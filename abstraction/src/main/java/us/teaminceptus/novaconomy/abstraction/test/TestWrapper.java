@@ -1,16 +1,15 @@
 package us.teaminceptus.novaconomy.abstraction.test;
 
 import net.md_5.bungee.api.chat.BaseComponent;
-import us.teaminceptus.novaconomy.abstraction.NBTWrapper;
-import us.teaminceptus.novaconomy.abstraction.NovaInventory;
-import us.teaminceptus.novaconomy.abstraction.Wrapper;
-
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
+import us.teaminceptus.novaconomy.abstraction.NBTWrapper;
+import us.teaminceptus.novaconomy.abstraction.NovaInventory;
+import us.teaminceptus.novaconomy.abstraction.Wrapper;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -54,11 +53,6 @@ public final class TestWrapper implements Wrapper {
 
     @Override
     public NovaInventory createInventory(String id, String name, int size) {
-        return null;
-    }
-
-    @Override
-    public ItemStack getGUIBackground() {
         return null;
     }
 
