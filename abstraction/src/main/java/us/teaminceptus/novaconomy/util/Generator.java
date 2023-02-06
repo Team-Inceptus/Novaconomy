@@ -1,41 +1,50 @@
 package us.teaminceptus.novaconomy.util;
 
-import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.PRODUCT_TAG;
-import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.w;
-import static us.teaminceptus.novaconomy.abstraction.NBTWrapper.builder;
-import static us.teaminceptus.novaconomy.abstraction.NBTWrapper.of;
+import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.Material;
+import org.bukkit.OfflinePlayer;
+import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemFlag;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.util.ChatPaginator;
+import org.jetbrains.annotations.NotNull;
+import us.teaminceptus.novaconomy.abstraction.NBTWrapper;
+import us.teaminceptus.novaconomy.abstraction.NovaInventory;
+import us.teaminceptus.novaconomy.abstraction.Wrapper;
+import us.teaminceptus.novaconomy.api.NovaConfig;
+import us.teaminceptus.novaconomy.api.SortingType;
+import us.teaminceptus.novaconomy.api.bank.Bank;
+import us.teaminceptus.novaconomy.api.business.Business;
+import us.teaminceptus.novaconomy.api.business.Rating;
+import us.teaminceptus.novaconomy.api.corporation.Corporation;
+import us.teaminceptus.novaconomy.api.corporation.CorporationAchievement;
+import us.teaminceptus.novaconomy.api.economy.Economy;
+import us.teaminceptus.novaconomy.api.events.business.BusinessAdvertiseEvent;
+import us.teaminceptus.novaconomy.api.player.NovaPlayer;
+import us.teaminceptus.novaconomy.api.settings.Settings;
+import us.teaminceptus.novaconomy.api.util.BusinessProduct;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.Material;
-import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.util.ChatPaginator;
-
-import us.teaminceptus.novaconomy.abstraction.CommandWrapper;
-import us.teaminceptus.novaconomy.abstraction.NBTWrapper;
-import us.teaminceptus.novaconomy.abstraction.NovaInventory;
-import us.teaminceptus.novaconomy.abstraction.Wrapper;
-import us.teaminceptus.novaconomy.api.NovaConfig;
-import us.teaminceptus.novaconomy.api.SortingType;
-import us.teaminceptus.novaconomy.api.business.Business;
-import us.teaminceptus.novaconomy.api.corporation.Corporation;
-import us.teaminceptus.novaconomy.api.economy.Economy;
-import us.teaminceptus.novaconomy.api.events.business.BusinessAdvertiseEvent;
-import us.teaminceptus.novaconomy.api.settings.Settings;
-import us.teaminceptus.novaconomy.api.util.BusinessProduct;
-
-import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.CORPORATION_TAG;
-import static us.teaminceptus.novaconomy.abstraction.Wrapper.get;
+import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.*;
+import static us.teaminceptus.novaconomy.abstraction.NBTWrapper.builder;
+import static us.teaminceptus.novaconomy.abstraction.NBTWrapper.of;
+import static us.teaminceptus.novaconomy.abstraction.Wrapper.*;
+import static us.teaminceptus.novaconomy.api.corporation.Corporation.toExperience;
+import static us.teaminceptus.novaconomy.util.Items.*;
+import static us.teaminceptus.novaconomy.util.NovaUtil.suffix;
+import static us.teaminceptus.novaconomy.util.NovaUtil.toRoman;
 
 public final class Generator {
     
@@ -45,13 +54,32 @@ public final class Generator {
         return genGUI("", size, name);
     }
 
-    public static NovaInventory generateBusinessData(Business b, Player viewer, boolean advertising) {
+    public static NovaInventory generateBusinessData(Business b, Player viewer, boolean advertising, SortingType<BusinessProduct> sorter) {
         NovaInventory inv = genGUI(54, ChatColor.GOLD + b.getName());
         inv.setCancelled();
+
+        inv.setAttribute("sorting_type", BusinessProduct.class);
+        inv.setAttribute("sorting_function", (Function<SortingType<BusinessProduct>, NovaInventory>) s ->
+                generateBusinessData(b, viewer, advertising, s));
+
+        inv.setItem(18, Items.sorter(sorter));
     
         if (!b.getRatings().isEmpty()) inv.setItem(44, Items.LOADING);
         for (int i = 46; i < 53; i++) inv.setItem(i, null);
-    
+
+        Corporation parent = b.getParentCorporation();
+        if (parent != null) {
+            ItemStack pIcon = builder(parent.getPublicIcon(),
+                    meta -> meta.setLore(Collections.singletonList(
+                        ChatColor.GOLD + get("constants.parent_corporation")
+                    )), nbt -> {
+                        nbt.setID("corporation:click");
+                        nbt.set(CORPORATION_TAG, parent.getUniqueId());
+                    }
+            );
+            inv.setItem(13, pIcon);
+        }
+
         ItemStack icon = new ItemStack(b.getIcon());
         ItemMeta iMeta = icon.getItemMeta();
         iMeta.setDisplayName(ChatColor.GOLD + b.getName());
@@ -62,7 +90,7 @@ public final class Generator {
         boolean anonymous = !b.getSetting(Settings.Business.PUBLIC_OWNER) && !b.isOwner(viewer);
         ItemStack owner = builder(w.createSkull(anonymous ? null : b.getOwner()),
                 meta -> {
-                    meta.setDisplayName(anonymous ? ChatColor.AQUA + get("constants.business.anonymous") : String.format(get("constants.business.owner"), b.getOwner().getName()));
+                    meta.setDisplayName(anonymous ? ChatColor.AQUA + get("constants.business.anonymous") : String.format(get("constants.owner"), b.getOwner().getName()));
                     if (b.isOwner(viewer) && !b.getSetting(Settings.Business.PUBLIC_OWNER))
                         meta.setLore(Collections.singletonList(ChatColor.YELLOW + get("constants.business.hidden")));
                 }, nbt -> {
@@ -81,7 +109,7 @@ public final class Generator {
                         meta.setLore(Collections.singletonList(ChatColor.YELLOW + get("constants.business.hidden")));
                 }, nbt -> {
                     nbt.setID("business:home");
-                    nbt.set("business", b.getUniqueId());
+                    nbt.set(BUSINESS_TAG, b.getUniqueId());
                     nbt.set("anonymous", !pHome);
                 }
         );
@@ -93,14 +121,17 @@ public final class Generator {
                 meta -> meta.setDisplayName(ChatColor.GREEN + get("constants.settings.business")),
                 nbt -> {
                     nbt.setID("business:settings");
-                    nbt.set("business", b.getUniqueId());
+                    nbt.set(BUSINESS_TAG, b.getUniqueId());
                 }
         );
     
         if (b.isOwner(viewer)) inv.setItem(53, settings);
     
         AtomicInteger slot = new AtomicInteger(19);
-        List<BusinessProduct> bProducts = b.getProducts();
+        List<BusinessProduct> bProducts = b.getProducts()
+                .stream()
+                .sorted(sorter)
+                .collect(Collectors.toList());
     
         bProducts.forEach(p -> {
             if (slot.get() == 26) slot.set(28);
@@ -154,7 +185,7 @@ public final class Generator {
                         meta.setLore(Collections.singletonList(ChatColor.YELLOW + get("constants.business.hidden")));
                 }, nbt -> {
                     nbt.setID("business:statistics");
-                    nbt.set("business", b.getUniqueId());
+                    nbt.set(BUSINESS_TAG, b.getUniqueId());
                     nbt.set("anonymous", !pStats);
                 }
         );
@@ -183,7 +214,7 @@ public final class Generator {
             double avg = b.getAverageRating();
             int avgI = (int) Math.round(avg - 1);
     
-            ItemStack rating = Items.builder(pRating ? CommandWrapper.getRatingMats()[avgI] : Material.BARRIER,
+            ItemStack rating = Items.builder(pRating ? getRatingMats()[avgI] : Material.BARRIER,
                 meta -> { meta.setDisplayName(pRating ? ChatColor.YELLOW + String.format("%,.1f", avg) + "⭐" : ChatColor.RED + get("constants.business.anonymous_rating"));
                 if (b.isOwner(viewer) && !b.getSetting(Settings.Business.PUBLIC_RATING))
                     meta.setLore(Collections.singletonList(ChatColor.YELLOW + get("constants.business.hidden")));
@@ -200,7 +231,7 @@ public final class Generator {
                 if (!event.isCancelled())
                     inv.setItem(27, builder(rand.getPublicIcon(), nbt -> {
                         nbt.setID("business:click:advertising");
-                        nbt.set("business", rand.getUniqueId());
+                        nbt.set(BUSINESS_TAG, rand.getUniqueId());
                         nbt.set("from_business", b.getUniqueId());
                     }));
             }
@@ -210,22 +241,18 @@ public final class Generator {
     }
 
     public static NovaInventory generateCorporationData(Corporation c, Player viewer, SortingType<Business> childrenSort) {
-        NovaInventory inv = genGUI(54, String.format(get("constants.corporation.title"), c.getName()));
+        NovaInventory inv = genGUI(54, ChatColor.DARK_BLUE + c.getName());
         inv.setCancelled();
-    
-        ItemStack hq = builder(Material.GLASS,
-                meta -> meta.setDisplayName(ChatColor.YELLOW + get("constants.headquarters")),
-                nbt -> {
-                    nbt.setID("corporation:hq");
-                    nbt.set(CORPORATION_TAG, c.getUniqueId());
-                }
+
+        inv.setAttribute("sorting_type", Business.class);
+        inv.setAttribute("sorting_function", (Function<SortingType<Business>, NovaInventory>) s ->
+                generateCorporationData(c, viewer, s)
         );
-        inv.setItem(12, hq);
 
         ItemStack icon = Items.builder(c.getPublicIcon(),
                 meta -> {
                     List<String> lore = new ArrayList<>();
-                    String idLine = ChatColor.YELLOW + "ID: " + c.getUniqueId().toString().replace("-", "");
+                    String idLine = ChatColor.BLUE + "ID: " + c.getUniqueId().toString().replace("-", "");
                     String desc = c.getDescription();
 
                     if (desc.isEmpty()) {
@@ -233,9 +260,9 @@ public final class Generator {
                         meta.setLore(lore);
                         return;
                     }
-                    
+
                     lore.addAll(Arrays.stream(ChatPaginator.wordWrap(desc, 30))
-                            .map(s -> ChatColor.YELLOW + s)
+                            .map(s -> ChatColor.GOLD + s)
                             .collect(Collectors.toList())
                     );
 
@@ -244,25 +271,242 @@ public final class Generator {
                     meta.setLore(lore);
                 }
         );
-        inv.setItem(13, icon);
+        inv.setItem(4, icon);
+
+        int level = c.getLevel();
+
+        if (level >= 3) {
+            ItemStack hq = builder(Material.GLASS,
+                    meta -> meta.setDisplayName(ChatColor.YELLOW + get("constants.corporation.headquarters")),
+                    nbt -> {
+                        nbt.setID("corporation:hq");
+                        nbt.set(CORPORATION_TAG, c.getUniqueId());
+                    }
+            );
+            inv.setItem(11, hq);
+        } else if (c.isOwner(viewer)) inv.setItem(11, Items.LOCKED);
+
+        ItemStack achievements = builder(Material.BOOK,
+                meta -> meta.setDisplayName(ChatColor.YELLOW + get("constants.corporation.achievements")),
+                nbt -> {
+                    nbt.setID("corporation:achievements");
+                    nbt.set(CORPORATION_TAG, c.getUniqueId());
+                }
+        );
+        inv.setItem(12, achievements);
+
+        ItemStack owner = Items.builder(createPlayerHead(c.getOwner()),
+                meta -> meta.setDisplayName(String.format(get("constants.owner"), c.getOwner().getName()))
+        );
+        inv.setItem(13, owner);
+
+        ItemStack statistics = builder(Material.PAINTING,
+                meta -> meta.setDisplayName(ChatColor.YELLOW + get("constants.corporation.statistics")),
+                nbt -> {
+                    nbt.setID("corporation:statistics");
+                    nbt.set(CORPORATION_TAG, c.getUniqueId());
+                }
+        );
+        inv.setItem(14, statistics);
     
         ItemStack leveling = builder(Material.GOLD_BLOCK,
                 meta -> {
-                    meta.setDisplayName(String.format(get("constants.corporation.leveling"), String.format("%,d", c.getLevel()) ));
+                    meta.setDisplayName(ChatColor.YELLOW + String.format(get("constants.level"), String.format("%,d", c.getLevel()) ));
                     meta.setLore(Collections.singletonList(
-                        String.format(get("constants.corporation.experience"), String.format("%,.2f", c.getExperience()))
+                         ChatColor.GOLD + String.format(get("constants.experience"), String.format("%,.2f", c.getExperience()))
                     ));
-                }, nbt -> nbt.setID("corporation:leveling")
+                }, nbt -> {
+                    nbt.setID("corporation:leveling");
+                    nbt.set(CORPORATION_TAG, c.getUniqueId());
+                }
         );
-        inv.setItem(14, leveling);
+        inv.setItem(15, leveling);
 
         // Children
+
+        inv.setItem(27, Items.sorter(childrenSort));
 
         List<Business> children = c.getChildren()
                     .stream()
                     .sorted(childrenSort)
                     .limit(14)
                     .collect(Collectors.toList());
+
+        for (int i = 0; i < children.size(); i++) {
+            Business b = children.get(i);
+            int index = i < 7 ? 28 + i : 37 + i;
+
+            ItemStack bIcon = builder(b.getPublicIcon(),
+                    nbt -> {
+                        nbt.setID("business:click");
+                        nbt.set(BUSINESS_TAG, b.getUniqueId());
+                    }
+            );
+            inv.setItem(index, bIcon);
+        }
+
+        // Admin Editing
+
+        if (c.isOwner(viewer)) {
+            ItemStack editDesc = builder(Items.OAK_SIGN,
+                    meta -> meta.setDisplayName(ChatColor.YELLOW + get("constants.corporation.edit_description")),
+                    nbt -> {
+                        nbt.setID("corporation:edit_desc");
+                        nbt.set(CORPORATION_TAG, c.getUniqueId());
+                    }
+            );
+            inv.setItem(26, editDesc);
+        }
+
+        return inv;
+    }
+
+    public static NovaInventory generateCorporationLeveling(@NotNull Corporation c, int currentLevel) {
+        NovaInventory inv = genGUI(36, ChatColor.DARK_BLUE + c.getName() + " | " + get("constants.leveling") );
+        int level = c.getLevel();
+
+        inv.setCancelled();
+        inv.setAttribute(CORPORATION_TAG, c.getUniqueId());
+        inv.setAttribute("current_level", currentLevel);
+
+        ItemStack next = Items.next("corp_leveling");
+        ItemStack prev = Items.prev("corp_leveling");
+
+        if (currentLevel > 1) inv.setItem(19, prev);
+        if (currentLevel < Corporation.MAX_LEVEL) inv.setItem(25, next);
+
+        for (int i = 0; i < 7; i++) {
+            int index = 10 + i;
+            final int cLevel = (currentLevel - 3) + i;
+
+            if (cLevel < 1) {
+                inv.setItem(index, Items.GUI_BACKGROUND);
+                continue;
+            }
+
+            boolean completed = cLevel < level;
+
+            List<String> lore = new ArrayList<>();
+            lore.add((completed ? ChatColor.GREEN : ChatColor.YELLOW) + suffix(c.getExperience()) + " / " + suffix(toExperience(cLevel)));
+            lore.add(" ");
+
+            // Completed Information
+
+            lore.add((completed ? ChatColor.DARK_GREEN : ChatColor.RED) + String.format(get("constants.corporation.increase_children"), 5));
+
+            if (cLevel == 3)
+                lore.add(ChatColor.LIGHT_PURPLE + get("constants.corporation.headquarters"));
+
+            // Icon Setting
+
+            ItemStack icon;
+
+            if (cLevel < level) icon = Items.LIME_STAINED_GLASS_PANE;
+            else if (cLevel == level) icon = c.getPublicIcon();
+            else icon = Items.YELLOW_STAINED_GLASS_PANE;
+
+            icon = Items.builder(icon,
+                    meta -> {
+                        meta.setDisplayName(String.format((completed ? ChatColor.GREEN : ChatColor.YELLOW) + get("constants.level"), String.format("%,d", cLevel)));
+                        if (cLevel > 1) meta.setLore(lore);
+
+                        if (completed) {
+                            meta.addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1, true);
+                            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+                        }
+                    }
+            );
+
+            inv.setItem(index, icon);
+        }
+
+        inv.setItem(31, builder(Items.BACK, nbt -> {
+            nbt.setID("corporation:click");
+            nbt.set(CORPORATION_TAG, c.getUniqueId());
+        }));
+
+        return inv;
+    }
+
+    public static NovaInventory generateCorporationAchievements(Corporation c) {
+        NovaInventory inv = genGUI(54, ChatColor.DARK_BLUE + c.getName() + " | " + get("constants.achievements") );
+        inv.setCancelled();
+
+        inv.setItem(13, c.getPublicIcon());
+
+        for (int i = 0; i < 14; i++) {
+            if (CorporationAchievement.values().length <= i) break;
+
+            CorporationAchievement a = CorporationAchievement.values()[i];
+            int index = i < 7 ? 28 + i : 37 + i;
+
+            ItemStack icon = Items.builder(a.getIcon(),
+                    meta -> {
+                        int currentLevel = c.getAchievementLevel(a);
+                        meta.setDisplayName(ChatColor.GOLD + a.getDisplayName() + (currentLevel > 0 ? " " + toRoman(currentLevel) : ""));
+
+                        List<String> lore = new ArrayList<>();
+                        lore.add(" ");
+                        lore.addAll(Arrays.stream(ChatPaginator.wordWrap(a.getDescription(), 30))
+                                .map(s -> ChatColor.GRAY + s)
+                                .collect(Collectors.toList()));
+                        lore.add(" ");
+
+                        if (currentLevel < a.getMaxLevel()) {
+                            int next = currentLevel + 1;
+
+                            lore.add(ChatColor.YELLOW + a.getDisplayName() + " " + toRoman(next) + ":");
+                            lore.add(ChatColor.GOLD + "+" + String.format(get("constants.experience"), String.format("%,.0f", a.getExperienceReward() * next)));
+                            lore.add(" ");
+                            lore.add(ChatColor.DARK_GREEN + String.format(get("constants.completed"), String.format("%,.1f", a.getProgress(c)) + "%"));
+                        } else
+                            lore.add(ChatColor.DARK_GREEN + String.format(get("constants.completed"), "100.0%"));
+
+                        meta.setLore(lore);
+                    }
+            );
+
+            inv.setItem(index, icon);
+        }
+
+        inv.setItem(49, builder(Items.BACK, nbt -> {
+            nbt.setID("corporation:click");
+            nbt.set(CORPORATION_TAG, c.getUniqueId());
+        }));
+
+        return inv;
+    }
+
+    public static NovaInventory generateCorporationStatistics(@NotNull Corporation c) {
+        NovaInventory inv = genGUI(45, ChatColor.DARK_BLUE + c.getName() + " | " + get("constants.statistics") );
+        inv.setCancelled();
+
+        inv.setItem(13, c.getPublicIcon());
+
+        ItemStack views = Items.builder(Material.matchMaterial("SPYGLASS") == null ? Material.COMPASS : Material.matchMaterial("SPYGLASS"),
+                meta -> meta.setDisplayName(String.format(get("constants.views"), String.format("%,d", c.getViews())))
+        );
+        inv.setItem(21, views);
+
+        ItemStack moneyMade = Items.builder(Material.DIAMOND,
+                meta -> {
+                    meta.setDisplayName(ChatColor.AQUA + get("constants.stats.global.total_made"));
+                    meta.setLore(Collections.singletonList(
+                            ChatColor.GOLD + String.format("%,.2f", c.getStatistics().getTotalProfit())
+                    ));
+                }
+        );
+        inv.setItem(22, moneyMade);
+
+        ItemStack productsSold = Items.builder(Material.matchMaterial("BUNDLE") == null ? Material.CHEST : Material.matchMaterial("BUNDLE"),
+                meta -> meta.setDisplayName(String.format(get("constants.stats.global.sold"), String.format("%,d", c.getStatistics().getTotalProductsSold())))
+        );
+        inv.setItem(23, productsSold);
+
+        inv.setItem(40, builder(Items.BACK, nbt -> {
+            nbt.setID("corporation:click");
+            nbt.set(CORPORATION_TAG, c.getUniqueId());
+        }));
 
         return inv;
     }
@@ -272,7 +516,7 @@ public final class Generator {
         if (size % 9 > 0) return null;
     
         NovaInventory inv = w.createInventory(id, name, size);
-        ItemStack bg = w.getGUIBackground();
+        ItemStack bg = Items.GUI_BACKGROUND;
     
         if (size < 27) return inv;
     
@@ -301,4 +545,292 @@ public final class Generator {
                 });
     }
 
+    public static List<NovaInventory> getRatingsGUI(OfflinePlayer p, @NotNull Business b) {
+        List<NovaInventory> invs = new ArrayList<>();
+
+        if (b.getRatings().isEmpty()) return invs;
+
+        ItemStack nextA = builder(NEXT,
+                nbt -> {
+                    nbt.setID("next:ratings");
+                    nbt.set(BUSINESS_TAG, b.getUniqueId());
+                });
+
+        ItemStack prevA = builder(PREVIOUS,
+                nbt -> {
+                    nbt.setID("prev:ratings");
+                    nbt.set(BUSINESS_TAG, b.getUniqueId());
+                });
+
+        List<Rating> ratings = b.getRatings();
+
+        int pageCount = (int) Math.floor((ratings.size() - 1) / 28D) + 1;
+
+        for (int i = 0; i < pageCount; i++) {
+            NovaInventory inv = genGUI(54, ChatColor.DARK_AQUA + get("constants.business.ratings") + " - " + String.format(get("constants.page"), i + 1));
+            inv.setCancelled();
+
+            inv.setItem(4, b.getPublicIcon());
+
+            if (pageCount > 1 && i < pageCount - 1) {
+                NBTWrapper nbtN = of(nextA.clone());
+                nbtN.set("page", i);
+                inv.setItem(48, nbtN.getItem());
+            }
+
+            if (i > 0) {
+                NBTWrapper nbtP = of(prevA.clone());
+                nbtP.set("page", i);
+                inv.setItem(50, nbtP.getItem());
+            }
+
+            List<Rating> rlist = new ArrayList<>(ratings.subList(i * 28, Math.min((i + 1) * 28, ratings.size())));
+            rlist.forEach(r -> {
+                OfflinePlayer owner = r.getOwner();
+                NovaPlayer np = new NovaPlayer(owner);
+                boolean anon = np.getSetting(Settings.Personal.ANONYMOUS_RATING);
+
+                inv.addItem(builder(createPlayerHead(anon ? null : owner),
+                        meta -> {
+                            meta.setDisplayName(ChatColor.AQUA + (anon ? get("constants.business.anonymous") : owner.getName()));
+
+                            StringBuilder sBuilder = new StringBuilder();
+                            for (int j = 0; j < r.getRatingLevel(); j++) sBuilder.append("⭐");
+
+                            meta.setLore(
+                                    Arrays.asList(
+                                            " ",
+                                            ChatColor.GOLD + sBuilder.toString(),
+                                            ChatColor.YELLOW + "\"" + r.getComment() + "\""
+                                    )
+                            );
+                        }, nbt -> {
+                            nbt.setID("business:pick_rating");
+                            nbt.set("owner", owner.getUniqueId());
+                            nbt.set("anonymous", anon);
+                        }
+                ));
+            });
+
+            invs.add(inv);
+        }
+
+        return invs;
+    }
+
+    public static List<NovaInventory> getBalancesGUI(OfflinePlayer p, SortingType<Economy> sorter) {
+        List<NovaInventory> invs = new ArrayList<>();
+        NovaPlayer np = new NovaPlayer(p);
+
+        ItemStack nextA = next("balance");
+        ItemStack prevA = prev("balance");
+
+        List<Economy> econs = new ArrayList<>(Economy.getEconomies())
+                .stream()
+                .sorted(sorter)
+                .collect(Collectors.toList());
+
+        int pageCount = (int) Math.floor((econs.size() - 1D) / 28D) + 1;
+
+        boolean ad = r.nextBoolean() && NovaConfig.getConfiguration().isAdvertisingEnabled();
+        Business randB = Business.randomAdvertisingBusiness();
+
+        for (int i = 0; i < pageCount; i++) {
+            NovaInventory inv = genGUI(54, get("constants.balances") + " - " + String.format(get("constants.page"), i + 1));
+            inv.setCancelled();
+
+            final int fI = i;
+            inv.setAttribute("sorting_type", Economy.class);
+            inv.setAttribute("sorting_function", (Function<SortingType<Economy>, NovaInventory>) s ->
+                    getBalancesGUI(p, s).get(fI));
+
+            inv.setItem(4, createPlayerHead(p));
+            inv.setItem(18, Items.sorter(sorter));
+
+            if (pageCount > 1 && i < pageCount - 1) {
+                NBTWrapper nbtN = of(nextA.clone());
+                nbtN.set("page", i);
+                inv.setItem(48, nbtN.getItem());
+            }
+
+            if (i > 0) {
+                NBTWrapper nbtP = of(prevA.clone());
+                nbtP.set("page", i);
+                inv.setItem(50, nbtP.getItem());
+            }
+
+            List<Economy> elist = new ArrayList<>(econs.subList(i * 28, Math.min((i + 1) * 28, econs.size())));
+            elist.forEach(econ -> {
+                ItemStack item = econ.getIcon().clone();
+                ItemMeta eMeta = item.getItemMeta();
+                eMeta.setLore(Collections.singletonList(
+                        ChatColor.GOLD + String.format("%,.2f", np.getBalance(econ)) + econ.getSymbol()
+                ));
+                item.setItemMeta(eMeta);
+                inv.addItem(item);
+            });
+
+            if (ad && randB != null) {
+                BusinessAdvertiseEvent event = new BusinessAdvertiseEvent(randB);
+                Bukkit.getPluginManager().callEvent(event);
+                if (!event.isCancelled()) inv.setItem(27, builder(randB.getPublicIcon(),
+                        nbt -> {
+                            nbt.setID("business:click:advertising_external");
+                            nbt.set(BUSINESS_TAG, randB.getUniqueId());
+                        }
+                ));
+            }
+
+            invs.add(inv);
+        }
+
+        return invs;
+    }
+
+    public static List<NovaInventory> getBankBalanceGUI(SortingType<Economy> sorter) {
+        List<NovaInventory> invs = new ArrayList<>();
+
+        ItemStack nextA = next("bank_balance");
+        ItemStack prevA = prev("bank_balance");
+
+        List<Economy> econs = new ArrayList<>(Economy.getEconomies())
+                .stream()
+                .sorted(sorter)
+                .collect(Collectors.toList());
+        int pageCount = (int) Math.floor((econs.size() - 1D) / 28D) + 1;
+
+        boolean ad = r.nextBoolean() && NovaConfig.getConfiguration().isAdvertisingEnabled();
+        Business randB = Business.randomAdvertisingBusiness();
+
+        for (int i = 0; i < pageCount; i++) {
+            NovaInventory inv = genGUI(54, get("constants.bank.balance") + " - " + String.format(get("constants.page"), i + 1));
+            inv.setCancelled();
+
+            final int fI = i;
+            inv.setAttribute("sorting_type", Economy.class);
+            inv.setAttribute("sorting_function", (Function<SortingType<Economy>, NovaInventory>) s ->
+                    getBankBalanceGUI(s).get(fI));
+
+            inv.setItem(18, Items.sorter(sorter));
+
+            if (pageCount > 1 && i < pageCount - 1) {
+                NBTWrapper nbtN = of(nextA.clone());
+                nbtN.set("page", i);
+                inv.setItem(48, nbtN.getItem());
+            }
+
+            if (i > 0) {
+                NBTWrapper nbtP = of(prevA.clone());
+                nbtP.set("page", i);
+                inv.setItem(50, nbtP.getItem());
+            }
+
+            List<Economy> elist = new ArrayList<>(econs.subList(i * 28, Math.min((i + 1) * 28, econs.size())));
+            elist.forEach(econ -> {
+                ItemStack item = new ItemStack(econ.getIconType());
+                modelData(item, econ.getCustomModelData());
+
+                ItemMeta iMeta = item.getItemMeta();
+                iMeta.setDisplayName(ChatColor.AQUA + String.format("%,.2f", Bank.getBalance(econ)) + "" + econ.getSymbol() + " (" + econ.getName() + ")");
+                List<String> topDonors = new ArrayList<>();
+                topDonors.add(ChatColor.YELLOW + get("constants.bank.top_donors"));
+                topDonors.add(" ");
+                List<String> topDonorsNames = NovaPlayer.getTopDonators(econ, 10).stream().map(NovaPlayer::getPlayerName).collect(Collectors.toList());
+                List<Double> topDonorsAmounts = NovaPlayer.getTopDonators(econ, 10).stream().map(n -> n.getDonatedAmount(econ)).collect(Collectors.toList());
+                for (int j = 0; j < topDonorsNames.size(); j++)
+                    if (j < 2)
+                        topDonors.add(new ChatColor[]{ChatColor.GOLD, ChatColor.GRAY}[j] + "#" + (j + 1) + " - " + topDonorsNames.get(j) + " | " + String.format("%,.2f", topDonorsAmounts.get(j)) + econ.getSymbol());
+                    else if (j == 2)
+                        topDonors.add(ChatColor.translateAlternateColorCodes('&', "&x&c&c&6&6&3&3#3 - " + topDonorsNames.get(j) + " | " + String.format("%,.2f", topDonorsAmounts.get(j)) + econ.getSymbol()));
+                    else
+                        topDonors.add(ChatColor.BLUE + "#" + (j + 1) + " - " + topDonorsNames.get(j) + " | " + String.format("%,.2f", topDonorsAmounts.get(j)) + econ.getSymbol());
+                iMeta.setLore(topDonors);
+                item.setItemMeta(iMeta);
+                inv.addItem(item);
+            });
+
+            if (ad && randB != null) {
+                BusinessAdvertiseEvent event = new BusinessAdvertiseEvent(randB);
+                Bukkit.getPluginManager().callEvent(event);
+
+                if (!event.isCancelled()) inv.setItem(27, builder(randB.getPublicIcon(),
+                        nbt -> {
+                            nbt.setID("business:click:advertising_external");
+                            nbt.set(BUSINESS_TAG, randB.getUniqueId());
+                        }
+                ));
+            }
+
+            invs.add(inv);
+        }
+
+        return invs;
+    }
+
+    public static NovaInventory generateBusinessDiscovery(SortingType<Business> sorter, String... keywords) {
+        NovaInventory discover = genGUI(54, get("constants.business.discover"));
+        discover.setCancelled();
+
+        List<Business> businesses = Business.getBusinesses()
+                .stream()
+                .filter(b -> {
+                    if (keywords.length == 0) return true;
+
+                    AtomicBoolean contains = new AtomicBoolean(false);
+
+                    for (String s : keywords)
+                        if (b.getName().toLowerCase().contains(s.toLowerCase())) contains.compareAndSet(false, true);
+
+                    return contains.get();
+                })
+                .sorted(sorter)
+                .collect(Collectors.toList());
+
+        if (businesses.isEmpty()) return null;
+
+        Collections.shuffle(businesses);
+        for (int i = 0; i < 28; i++) {
+            int index = 10 + i;
+            if (index > 16) index += 2;
+            if (index > 25) index += 2;
+            if (index > 34) index += 2;
+            if (index > 43) break;
+
+            if (businesses.size() > i) {
+                Business b = businesses.get(i);
+
+                discover.setItem(index, builder(b.getPublicIcon(),
+                        nbt -> {
+                            nbt.setID("business:click");
+                            nbt.set(BUSINESS_TAG, b.getUniqueId());
+                        }
+                ));
+            } else discover.setItem(index, GUI_BACKGROUND);
+        }
+
+        return discover;
+    }
+
+    public static Material[] getRatingMats() {
+        return new Material[] {
+                Material.DIRT,
+                Material.COAL,
+                Material.IRON_INGOT,
+                Material.GOLD_INGOT,
+                Material.DIAMOND
+        };
+    }
+
+    public static void modelData(ItemStack item, int data) {
+        ItemMeta meta = item.getItemMeta();
+        try {
+            Method m = meta.getClass().getDeclaredMethod("setCustomModelData", Integer.class);
+            m.setAccessible(true);
+            m.invoke(meta, data);
+        } catch (NoSuchMethodException ignored) {}
+        catch (ReflectiveOperationException e) {
+            NovaConfig.print(e);
+        }
+        item.setItemMeta(meta);
+    }
 }

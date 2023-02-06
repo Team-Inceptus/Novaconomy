@@ -12,6 +12,7 @@ import org.bukkit.inventory.meta.SkullMeta;
 import org.jetbrains.annotations.NotNull;
 import us.teaminceptus.novaconomy.abstraction.NBTWrapper;
 import us.teaminceptus.novaconomy.api.NovaConfig;
+import us.teaminceptus.novaconomy.api.SortingType;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -20,8 +21,9 @@ import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.w;
+import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.TYPE_TAG;
 import static us.teaminceptus.novaconomy.abstraction.Wrapper.get;
+import static us.teaminceptus.novaconomy.abstraction.Wrapper.w;
 
 public final class Items {
 
@@ -51,9 +53,21 @@ public final class Items {
             () -> new ItemStack(Material.matchMaterial("STAINED_GLASS_PANE"), 1, (short) 14)
     );
 
+    public static final ItemStack YELLOW_STAINED_GLASS_PANE = checkLegacy(
+            () -> new ItemStack(Material.matchMaterial("YELLOW_STAINED_GLASS_PANE")),
+            () -> new ItemStack(Material.matchMaterial("STAINED_GLASS_PANE"), 1, (short) 4)
+    );
+
     public static final ItemStack CANCEL = NBTWrapper.builder(RED_WOOL,
             meta -> meta.setDisplayName(ChatColor.RED + get("constants.cancel")),
             nbt -> nbt.setID("no:close_effect")
+    );
+
+    public static final ItemStack GUI_BACKGROUND = builder(
+            checkLegacy(
+                    () -> new ItemStack(Material.matchMaterial("BLACK_STAINED_GLASS_PANE")),
+                    () -> new ItemStack(Material.matchMaterial("STAINED_GLASS_PANE"), 1, (short) 15)
+            ), meta -> meta.setDisplayName(" ")
     );
 
     public static final ItemStack CONFIRM = builder(Material.BEACON,
@@ -64,21 +78,54 @@ public final class Items {
             meta -> meta.setDisplayName(ChatColor.RED + get("constants.back"))
     );
 
-    public static final ItemStack NEXT = builder(Material.ARROW,
+    public static final ItemStack NEXT = builder(head("arrow_right"),
             meta -> meta.setDisplayName(ChatColor.AQUA + get("constants.next"))
     );
 
-    public static final ItemStack PREVIOUS = builder(Material.ARROW,
-            meta -> meta.setDisplayName(ChatColor.AQUA + get("constants.previous"))
+    public static final ItemStack PREVIOUS = builder(head("arrow_left"),
+            meta -> meta.setDisplayName(ChatColor.AQUA + get("constants.prev"))
     );
 
-    public static final ItemStack LOADING = builder(getHead("loading"),
+    public static final ItemStack LOADING = builder(head("loading"),
             meta -> meta.setDisplayName(ChatColor.DARK_RED + get("constants.loading"))
+    );
+
+    public static final ItemStack OAK_SIGN = checkLegacy(
+            () -> {
+                Material m;
+                try {
+                    m = Material.matchMaterial("OAK_SIGN");
+                } catch (IllegalArgumentException e) {
+                    m = Material.matchMaterial("SIGN");
+                }
+                return new ItemStack(m);
+            },
+            () -> new ItemStack(Material.matchMaterial("SIGN"))
+    );
+
+    public static final ItemStack YELLOW_TERRACOTTA = checkLegacy(
+            () -> new ItemStack(Material.matchMaterial("YELLOW_TERRACOTTA")),
+            () -> new ItemStack(Material.matchMaterial("STAINED_CLAY"), 1, (short) 4)
+    );
+
+    public static final ItemStack LOCKED = builder(Material.BEDROCK,
+            meta -> meta.setDisplayName(ChatColor.DARK_PURPLE + get("constants.locked"))
     );
 
     // Static Util
 
-    public static ItemStack getHead(String name) {
+    public static ItemStack sorter(SortingType<?> sortingType) {
+        return NBTWrapper.builder(YELLOW_TERRACOTTA,
+                meta -> meta.setDisplayName(ChatColor.GREEN + String.format(get("constants.sorting_by"), ChatColor.YELLOW + NovaUtil.getDisplayName(sortingType))),
+                nbt -> {
+                    nbt.setID("sorter");
+                    nbt.set(TYPE_TAG, NovaUtil.getId(sortingType));
+                }
+        );
+
+    }
+
+    public static ItemStack head(String name) {
         Properties p = new Properties();
         try {
             p.load(NovaConfig.getPlugin().getClass().getResourceAsStream("/util/heads.properties"));
