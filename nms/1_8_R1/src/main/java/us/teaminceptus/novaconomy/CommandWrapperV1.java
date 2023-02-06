@@ -19,6 +19,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import static us.teaminceptus.novaconomy.abstraction.Wrapper.getMessage;
+
 public final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
 
     private final Plugin plugin;
@@ -65,12 +67,6 @@ public final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
 
         return true;
     }
-
-
-    private static String getMessage(String key) {
-        return CommandWrapper.getMessage(key);
-    }
-
 
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
