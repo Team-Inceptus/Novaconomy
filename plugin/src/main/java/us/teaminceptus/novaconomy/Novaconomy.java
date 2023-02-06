@@ -27,6 +27,7 @@ import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.business.BusinessStatistics;
 import us.teaminceptus.novaconomy.api.business.Rating;
+import us.teaminceptus.novaconomy.api.corporation.Corporation;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.economy.market.NovaMarket;
 import us.teaminceptus.novaconomy.api.economy.market.Receipt;
@@ -42,21 +43,21 @@ import us.teaminceptus.novaconomy.api.util.Product;
 import us.teaminceptus.novaconomy.essentialsx.EssentialsListener;
 import us.teaminceptus.novaconomy.placeholderapi.Placeholders;
 import us.teaminceptus.novaconomy.treasury.TreasuryRegistry;
+import us.teaminceptus.novaconomy.util.NovaUtil;
 import us.teaminceptus.novaconomy.vault.VaultRegistry;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.lang.reflect.InvocationTargetException;
+import java.nio.file.Files;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
-import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.*;
+import static us.teaminceptus.novaconomy.abstraction.Wrapper.*;
 
 /**
  * Class representing this Plugin
@@ -333,7 +334,8 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 		prefix = get("plugin.prefix");
 
         marketFile = new File(getDataFolder(), "market.dat");
-        if (!marketFile.exists()) saveResource("market.dat", false);
+        if (!marketFile.exists())
+			try { marketFile.createNewFile(); } catch (IOException e) { NovaConfig.print(e); }
 
 		getLogger().info("Loaded Files...");
 
@@ -345,8 +347,15 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 		new Events(this);
 		new GUIManager(this);
 
+		// Load Cache
+		Business.getBusinesses();
+		Corporation.getCorporations();
+		Economy.getEconomies();
+
 		INTEREST_RUNNABLE.runTaskTimer(this, getInterestTicks(), getInterestTicks());
 		TAXES_RUNNABLE.runTaskTimer(this, getTaxesTicks(), getTaxesTicks());
+
+		for (Player p : Bukkit.getOnlinePlayers()) w.addPacketInjector(p);
 
 		getLogger().info("Loaded Core Functionality...");
 
@@ -392,6 +401,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 	@Override
 	public void onDisable() {
 		SERIALIZABLE.forEach(ConfigurationSerialization::unregisterClass);
+		for (Player p : Bukkit.getOnlinePlayers()) w.removePacketInjector(p);
 	}
 
 	private void loadLegacyBusinesses() {
@@ -429,13 +439,10 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 				econ.saveEconomy();
 			});
 
-			new BukkitRunnable() {
-				@Override
-				public void run() {
-					economies.delete();
-					getLogger().info("Migration complete!");
-				}
-			}.runTask(this);
+			NovaUtil.sync(() -> {
+				economies.delete();
+				getLogger().info("Migration complete!");
+			});
 		}
 	}
 
@@ -893,13 +900,10 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 			}
 		};
 
-		new BukkitRunnable() {
-			@Override
-			public void run() {
-				INTEREST_RUNNABLE.runTaskTimer(plugin, plugin.getInterestTicks(), plugin.getInterestTicks());
-				TAXES_RUNNABLE.runTaskTimer(plugin, plugin.getTaxesTicks(), plugin.getTaxesTicks());
-			}
-		}.runTask(plugin);
+		NovaUtil.sync(() -> {
+			INTEREST_RUNNABLE.runTaskTimer(plugin, plugin.getInterestTicks(), plugin.getInterestTicks());
+			TAXES_RUNNABLE.runTaskTimer(plugin, plugin.getTaxesTicks(), plugin.getTaxesTicks());
+		});
 	}
 
     // Market Impl
@@ -908,14 +912,14 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
     static final Map<Material, Integer> purchaseCount = new HashMap<>();
 
     private void readMarket() throws IOException, ClassNotFoundException {
-        ObjectInputStream ois = new ObjectInputStream(new FileInputStream(marketFile));
+        ObjectInputStream ois = new ObjectInputStream(Files.newInputStream(marketFile.toPath()));
         prices.putAll((Map<Material, Double>) ois.readObject());
         purchaseCount.putAll((Map<Material, Integer>) ois.readObject());
         ois.close();
     }
 
     private void writeMarket() throws IOException {
-        ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(marketFile));
+        ObjectOutputStream oos = new ObjectOutputStream(Files.newOutputStream(marketFile.toPath()));
         oos.writeObject(prices);
         oos.writeObject(purchaseCount);
         oos.close();
@@ -958,8 +962,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
         purchaseCount.put(m, purchaseCount.getOrDefault(m, 0) + amount);
         writeMarketWithCatch();
 
-        Receipt receipt = new Receipt(m, price, buyer);
-        return receipt;
+		return new Receipt(m, price, buyer);
     }
 
 }
