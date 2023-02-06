@@ -235,6 +235,6 @@ public final class Price implements ConfigurationSerializable, Comparable<Price>
 
     @Override
     public int compareTo(@NotNull Price r) {
-        return Double.compare(amount, r.amount);
+        return Double.compare(getRealAmount(), r.getRealAmount());
     }
 }
