@@ -951,6 +951,14 @@ public final class Business implements ConfigurationSerializable {
     private static final Set<Business> BUSINESS_CACHE = new HashSet<>();
 
     /**
+     * Reloads the Business Cache.
+     */
+    public static void reloadBusinesses() {
+        BUSINESS_CACHE.clear();
+        getBusinesses();
+    }
+
+    /**
      * Fetches an immutable version of all registered Businesses.
      * @return All Registered Businesses
      * @throws IllegalStateException if a business file is invalid
@@ -1330,7 +1338,7 @@ public final class Business implements ConfigurationSerializable {
         for (int j = 0; j < Math.round(getAverageRating()); j++) rB.append("⭐");
 
         hMeta.setLore(Arrays.asList(
-                pOwner ? String.format(Language.getCurrentLanguage().getMessage("constants.business.owner"), owner.getName()) : Language.getCurrentLanguage().getMessage("constants.business.anonymous"),
+                pOwner ? String.format(Language.getCurrentLanguage().getMessage("constants.owner"), owner.getName()) : Language.getCurrentLanguage().getMessage("constants.business.anonymous"),
                 ChatColor.AQUA + keywords.toString().replaceAll("[\\[\\]]", ""),
                 pRating ? ChatColor.YELLOW + rB.toString() : "")
         );
@@ -1365,6 +1373,18 @@ public final class Business implements ConfigurationSerializable {
 
         parent.removeChild(this);
     }
+
+    /**
+     * Fetches the date this Business joined its parent Corporation.
+     * @return Date joined, or null if not in a Corporation
+     */
+    @Nullable
+    public Date getCorporationJoinDate() {
+        if (getParentCorporation() == null) return null;
+        return getParentCorporation().getJoinDate(this);
+    }
+
+    // Static Util
 
     /**
      * <p>Fetches a random business based on its advertising balance.</p>
