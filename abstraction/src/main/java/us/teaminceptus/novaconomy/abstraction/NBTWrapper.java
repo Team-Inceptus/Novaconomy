@@ -5,6 +5,9 @@ import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.util.Product;
 
 import java.util.UUID;
@@ -106,6 +109,20 @@ public abstract class NBTWrapper {
 
     public boolean isProduct(String key) {
         return getProduct(key) != null;
+    }
+
+    public final void set(String key, Class<?> clazz) {
+        set(key, clazz.getName());
+    }
+
+    @Nullable
+    public final Class<?> getClass(String key) {
+        try {
+            return Class.forName(getString(key));
+        } catch (ClassNotFoundException e) {
+            NovaConfig.print(e);
+        }
+        return null;
     }
 
     @Override
