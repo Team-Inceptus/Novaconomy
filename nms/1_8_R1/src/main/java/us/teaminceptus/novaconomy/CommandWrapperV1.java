@@ -1425,7 +1425,7 @@ public final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                     case "setdescription":
                     case "setdesc": {
                         if (args.length < 2) {
-                            sender.sendMessage(getMessage("error.argument"));
+                            p.sendMessage(getMessage("error.argument"));
                             return false;
                         }
 
@@ -1435,6 +1435,45 @@ public final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         setCorporationDescription(p, desc.toString());
                         break;
                     }
+                    case "seticon":
+                    case "icon": {
+                        if (args.length < 2) {
+                            p.sendMessage(getMessage("error.argument.icon"));
+                            return false;
+                        }
+
+                        Material icon = Material.matchMaterial(args[1]);
+                        if (icon == null) {
+                            p.sendMessage(getMessage("error.argument.icon"));
+                            return false;
+                        }
+
+                        setCorporationIcon(p, icon);
+                        break;
+                    }
+                    case "setheadquarters":
+                    case "sethq":
+                    case "headquarters":
+                    case "hq": {
+                        setCorporationHeadquarters(p);
+                        break;
+                    }
+                    case "setname":
+                    case "name": {
+                        if (args.length < 2) {
+                            p.sendMessage(getMessage("error.argument.name"));
+                            return false;
+                        }
+
+                        setCorporationName(p, args[1]);
+                        break;
+                    }
+                    case "achievements": corporationAchievements(p); break;
+                    case "leveling":
+                    case "levelinfo":
+                    case "level": 
+                    case "progress":
+                    case "prog": corporationLeveling(p); break;
                 }
             }
             default: {

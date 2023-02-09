@@ -49,7 +49,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -1154,26 +1154,32 @@ public interface CommandWrapper {
                         nbt.set("setting", BUSINESS_TAG);
                     });
 
-            settings.addItem(personal, business);
-        } else {
-            if (!section.equalsIgnoreCase("personal") && !section.equalsIgnoreCase(BUSINESS_TAG)) {
-                p.sendMessage(getMessage("error.settings.section_inexistent"));
-                return;
-            }
-
-            boolean business = section.equalsIgnoreCase(BUSINESS_TAG);
-
-            if (business && !Business.exists(p)) {
-                p.sendMessage(getMessage("error.business.not_an_owner"));
-                return;
-            }
-
-            settings = genGUI(36, get("constants.settings." + (business ? BUSINESS_TAG : "player")));
-
-            BiConsumer<Settings.NovaSetting<Boolean>, Boolean> func = (sett, value) -> settings.addItem(builder(value ? LIME_WOOL : RED_WOOL,
+            ItemStack corporation = builder(Material.IRON_BLOCK,
                     meta -> {
-                        meta.setDisplayName(ChatColor.YELLOW + sett.getDisplayName() + ": " + (value ? ChatColor.GREEN + get("constants.on") : ChatColor.RED + get("constants.off")));
-                        if (value) {
+                        meta.setDisplayName(ChatColor.YELLOW + get("constants.settings.corporation")); // TODO
+                        meta.addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1, true);
+                        meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+                    }, nbt -> {
+                        nbt.setID("setting");
+                        nbt.set("setting", CORPORATION_TAG);
+                    });
+
+            settings.addItem(personal, business, corporation);
+        } else {
+            ItemStack back = BACK.clone();
+            NBTWrapper bNBT = of(back);
+
+            BiFunction<Settings.NovaSetting<?>, Object, ItemStack> func = (sett, value) -> {
+                ItemStack item = value instanceof Boolean ? ((Boolean) value ? LIME_WOOL : RED_WOOL) : CYAN_WOOL;
+                return builder(item,
+                    meta -> {
+                        String sValue;
+                        if (value instanceof Boolean)
+                            sValue = (Boolean) value ? ChatColor.GREEN + get("constants.on") : ChatColor.RED + get("constants.off");
+                        else sValue = ChatColor.AQUA + value.toString().toUpperCase();
+
+                        meta.setDisplayName(ChatColor.YELLOW + sett.getDisplayName() + ": " + sValue);
+                        if (value instanceof Boolean && (Boolean) value) {
                             meta.addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1, true);
                             meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
                         }
@@ -1190,32 +1196,59 @@ public interface CommandWrapper {
                         nbt.set("display", sett.getDisplayName());
                         nbt.set("section", section);
                         nbt.set("setting", sett.name());
-                        nbt.set("value", value);
+                        nbt.set("type", sett.getType());
+                        nbt.set("value", value.toString());
                     }
-            ));
+                );
+            };
 
-            ItemStack back = BACK.clone();
-            NBTWrapper nbt = of(back);
+            switch (section.toLowerCase()) {
+                case "personal": {
+                    settings = genGUI(36, "constants.settings.corporation");
 
-            if (business) {
-                Business b = Business.getByOwner(p);
-                for (Settings.Business sett : Settings.Business.values()) {
-                    boolean value = b.getSetting(sett);
-                    func.accept(sett, value);
+                    for (Settings.Personal sett : Settings.Personal.values()) {
+                        boolean value = np.getSetting(sett);
+                        settings.addItem(func.apply(sett, value));
+                    }
+                    break;
                 }
+                case BUSINESS_TAG: {
+                    if (!Business.exists(p)) {
+                        p.sendMessage(getMessage("error.business.not_an_owner"));
+                        return;
+                    }
 
-                nbt.setID("business:click");
-                nbt.set(BUSINESS_TAG, b.getUniqueId());
-            } else {
-                for (Settings.Personal sett : Settings.Personal.values()) {
-                    boolean value = np.getSetting(sett);
-                    func.accept(sett, value);
+                    Business b = Business.getByOwner(p);
+                    settings = genGUI(36, "constants.settings.business");
+
+                    for (Settings.Business sett : Settings.Business.values()) {
+                        boolean value = b.getSetting(sett);
+                        settings.addItem(func.apply(sett, value));
+                    }
+                    break;
                 }
+                case CORPORATION_TAG: {
+                    if (!Corporation.exists(p)) {
+                        p.sendMessage(getError("error.corporation.none"));
+                        return;
+                    }
+                    Corporation c = Corporation.byOwner(p);
 
-                nbt.setID("back:settings");
+                    settings = genGUI(36, "constants.settings.corporation"); // TODO
+
+                    for (Settings.Corporation<?> sett : Settings.Corporation.values()) {
+                        Object value = c.getSetting(sett);
+                        settings.addItem(func.apply(sett, value));
+                    }
+                    break;
+                }
+                default: {
+                    p.sendMessage(getMessage("error.settings.section_inexistent"));
+                    return;
+                }
             }
 
-            settings.setItem(31, nbt.getItem());
+            settings.setItem(31, bNBT.getItem());
         }
 
         settings.setCancelled();
@@ -1246,7 +1279,7 @@ public interface CommandWrapper {
 
         stats.setItem(14, Items.builder(Material.EGG,
                 meta -> {
-                    meta.setDisplayName(ChatColor.YELLOW + String.format(get("constants.business.stats.created"), formatTimeAgo(b.getCreationDate().getTime())));
+                    meta.setDisplayName(ChatColor.YELLOW + String.format(get("constants.business.stats.created"), NovaUtil.formatTimeAgo(b.getCreationDate().getTime())));
                     meta.addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1, true);
                     meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
                 })
@@ -1280,7 +1313,7 @@ public interface CommandWrapper {
                                 ChatColor.AQUA + "" + ChatColor.UNDERLINE + (buyer.isOnline() && buyer.getPlayer().getDisplayName() != null ? buyer.getPlayer().getDisplayName() : buyer.getName()),
                                 " ",
                                 ChatColor.WHITE + display + " (" + prI.getAmount() + ")" + ChatColor.GOLD + " | " + ChatColor.BLUE + String.format("%,.2f", pr.getAmount() * prI.getAmount()) + pr.getEconomy().getSymbol(),
-                                ChatColor.DARK_AQUA + formatTimeAgo(latestT.getTimestamp().getTime())
+                                ChatColor.DARK_AQUA + NovaUtil.formatTimeAgo(latestT.getTimestamp().getTime())
                         ));
                     }
             );
@@ -1478,7 +1511,7 @@ public interface CommandWrapper {
         pr.setItem(12, Items.builder(createPlayerHead(target),
                 meta -> {
                     meta.setDisplayName(ChatColor.YELLOW + target.getName());
-                    meta.setLore(Collections.singletonList(ChatColor.AQUA + formatTimeAgo(rating.getTimestamp().getTime())));
+                    meta.setLore(Collections.singletonList(ChatColor.AQUA + NovaUtil.formatTimeAgo(rating.getTimestamp().getTime())));
                 }
         ));
 
@@ -1715,7 +1748,7 @@ public interface CommandWrapper {
                                 + ChatColor.GOLD + " @ "
                                 + ChatColor.AQUA + (t.getBusiness() == null ? get("constants.unknown") : t.getBusiness().getName())
                                 + ChatColor.GOLD + " | "
-                                + ChatColor.DARK_AQUA + formatTimeAgo(t.getTimestamp().getTime()));
+                                + ChatColor.DARK_AQUA + NovaUtil.formatTimeAgo(t.getTimestamp().getTime()));
                     }
 
                     meta.setLore(lore);
@@ -3027,35 +3060,113 @@ public interface CommandWrapper {
         p.sendMessage(getSuccess("success.corporation.description"));
     }
 
-    // Util Classes & Other Static Methods
+    default void setCorporationIcon(Player p, Material icon) {
+        if (!p.hasPermission("novaconomy.user.corporation.manage")) {
+            p.sendMessage(ERROR_PERMISSION);
+            return;
+        }
 
-    static String formatTimeAgo(long start) {
-        long time = System.currentTimeMillis();
-        long diff = time - start;
+        if (!Corporation.exists(p)) {
+            p.sendMessage(getError("error.corporation.none"));
+            return;
+        }
 
-        double seconds = (double) diff / 1000D;
-
-        if (seconds < 2) return get("constants.time.ago.milli_ago");
-        if (seconds >= 2 && seconds < 60) return String.format(get("constants.time.ago.seconds_ago"), String.format("%,.0f", seconds));
-
-        double minutes = seconds / 60D;
-        if (minutes < 60) return String.format(get("constants.time.ago.minutes_ago"), String.format("%,.0f", minutes));
-
-        double hours = minutes / 60D;
-        if (hours < 24) return String.format(get("constants.time.ago.hours_ago"), String.format("%,.0f", hours));
-
-        double days = hours / 24D;
-        if (days < 7) return String.format(get("constants.time.ago.days_ago"), String.format("%,.0f", days));
-
-        double weeks = days / 7D;
-        if (weeks < 4) return String.format(get("constants.time.ago.weeks_ago"), String.format("%,.0f", weeks));
-
-        double months = weeks / 4D;
-        if (months < 12) return String.format(get("constants.time.ago.months_ago"), String.format("%,.0f", months));
-
-        double years = months / 12D;
-        return String.format(get("constants.time.ago.years_ago"), String.format("%,.0f", years));
+        Corporation corp = Corporation.byOwner(p);
+        corp.setIcon(icon);
+        p.sendMessage(getSuccess("success.corporation.icon")); // TODO
     }
 
+    default void setCorporationHeadquarters(Player p) {
+        if (!p.hasPermission("novaconomy.user.corporation.manage")) {
+            p.sendMessage(ERROR_PERMISSION);
+            return;
+        }
+
+        if (!Corporation.exists(p)) {
+            p.sendMessage(getError("error.corporation.none"));
+            return;
+        }
+
+        Corporation corp = Corporation.byOwner(p);
+
+        if (corp.getLevel() < 3) {
+            p.sendMessage(getError("error.corporation.too_low_level")); // TODO
+            return;
+        }
+
+        Location l = p.getLocation();
+        corp.setHeadquarters(l);
+        p.sendMessage(String.format(getSuccess("success.corporation.headquarters"), l.getBlockX(), l.getBlockY(), l.getBlockZ())); // TODO
+    }
+
+    default void setCorporationName(Player p, String name) {
+        if (!p.hasPermission("novaconomy.user.corporation.manage")) {
+            p.sendMessage(ERROR_PERMISSION);
+            return;
+        }
+
+        if (!Corporation.exists(p)) {
+            p.sendMessage(getError("error.corporation.none"));
+            return;
+        }
+
+        Corporation corp = Corporation.byOwner(p);
+        corp.setName(name);
+        p.sendMessage(String.format(getSuccess("success.corporation.name"), name)); // TODO
+    }
+
+    default void corporationAchievements(Player p) {
+        if (!Corporation.exists(p)) {
+            p.sendMessage(getError("error.corporation.none"));
+            return;
+        }
+
+        Corporation corp = Corporation.byOwner(p);
+        p.openInventory(Generator.generateCorporationAchievements(corp));
+        NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
+    }
+
+    default void corporationLeveling(Player p) {
+        if (!Corporation.exists(p)) {
+            p.sendMessage(getError("error.corporation.none"));
+            return;
+        }
+
+        Corporation corp = Corporation.byOwner(p);
+        p.openInventory(Generator.generateCorporationLeveling(corp, corp.getLevel()));
+        NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
+    }
+
+    default void corporationStatistics(Player p) {
+        if (!Corporation.exists(p)) {
+            p.sendMessage(getError("error.corporation.none"));
+            return;
+        }
+
+        Corporation corp = Corporation.byOwner(p);
+        p.openInventory(Generator.generateCorporationStatistics(corp));
+        NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
+    }
+
+    default void inviteBusiness(Player p, Business b) {
+        if (!Corporation.exists(p)) {
+            p.sendMessage(getError("error.corporation.none"));
+            return;
+        }
+
+        if (b.getParentCorporation() != null) {
+            p.sendMessage(getError("error.corporation.invite.business")); // TODO
+            return;
+        }
+
+        Corporation corp = Corporation.byOwner(p);
+
+        if (!(corp.getSetting(Settings.Corporation.JOIN_TYPE) == Corporation.JoinType.INVITE_ONLY)) {
+            p.sendMessage(getError("error.corporation.invite_only")); // TODO
+            return;
+        }
+
+
+    }
 
 }

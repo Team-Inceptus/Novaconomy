@@ -326,7 +326,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
         public void setHome(Player p) { wrapper.businessHome(p, true); }
 
         @Subcommand({"setname", "name"})
-        public void setName(Player p, String name) { wrapper.setBusinessName(p, name); }
+        public void setName(Player p, @Single String name) { wrapper.setBusinessName(p, name); }
 
         @Subcommand({"seticon", "icon"})
         public void setIcon(Player p, Material icon) { wrapper.setBusinessIcon(p, icon); }
@@ -525,7 +525,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
 
         @Subcommand({"setname", "name"})
         @CommandPermission("novaconomy.economy.create")
-        public void setName(CommandSender sender, Economy economy, String name) { wrapper.setEconomyName(sender, economy, name); }
+        public void setName(CommandSender sender, Economy economy, @Single String name) { wrapper.setEconomyName(sender, economy, name); }
 
         @Subcommand({"setclickablereward", "clickablereward", "setclickable", "clickable"})
         @CommandPermission("novaconomy.economy.create")
@@ -702,8 +702,40 @@ public final class CommandWrapperV2 implements CommandWrapper {
         }
 
         @Subcommand({"setdescription", "setdesc"})
+        @CommandPermission("novaconomy.user.corporation.manage")
         public void setDescription(Player p, String description) {
             wrapper.setCorporationDescription(p, description);
+        }
+
+        @Subcommand({"seticon", "icon"})
+        @CommandPermission("novaconomy.user.corporation.manage")
+        public void setIcon(Player p, Material icon) {
+            wrapper.setCorporationIcon(p, icon);
+        }
+
+        @Subcommand({"setheadquarters", "sethq", "headquarters", "hq"})
+        public void setHeadquarters(Player p) {
+            wrapper.setCorporationHeadquarters(p);
+        }
+
+        @Subcommand({"setname", "name"})
+        public void setName(Player p, @Single String name) {
+            wrapper.setCorporationName(p, name);
+        }
+
+        @Subcommand("achievements")
+        public void corporationAchievements(Player p) {
+            wrapper.corporationAchievements(p);
+        }
+
+        @Subcommand({"leveling", "levelinfo", "level", "progress", "prog"})
+        public void corporationLeveling(Player p) {
+            wrapper.corporationLeveling(p);
+        }
+
+        @Subcommand({"stats", "statistics"})
+        public void corporationStatistics(Player p) {
+            wrapper.corporationStatistics(p);
         }
 
     }
