@@ -29,6 +29,7 @@ import us.teaminceptus.novaconomy.api.business.Rating;
 import us.teaminceptus.novaconomy.api.corporation.Corporation;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.events.business.*;
+import us.teaminceptus.novaconomy.api.events.corporation.CorporationSettingChangeEvent;
 import us.teaminceptus.novaconomy.api.events.player.PlayerRateBusinessEvent;
 import us.teaminceptus.novaconomy.api.events.player.PlayerSettingChangeEvent;
 import us.teaminceptus.novaconomy.api.events.player.economy.PlayerChangeBalanceEvent;
@@ -460,10 +461,13 @@ public final class GUIManager implements Listener {
                 NovaSound.ENTITY_ARROW_HIT_PLAYER.play(p);
 
                 NovaPlayer owner = new NovaPlayer(bP.getBusiness().getOwner());
+                double mod = b.getParentCorporation() == null ? 1 : b.getParentCorporation().getProfitModifier();
+                double aAmount = amount * mod;
+
                 if (b.getSetting(Settings.Business.AUTOMATIC_DEPOSIT)) {
-                    owner.add(econ, amount * 0.85);
-                    b.addAdvertisingBalance(amount * 0.15, econ);
-                } else owner.add(econ, amount);
+                    owner.add(econ, aAmount * 0.85);
+                    b.addAdvertisingBalance(aAmount * 0.15, econ);
+                } else owner.add(econ, aAmount * mod);
 
                 if (owner.isOnline() && owner.hasNotifications()) {
                     String name = p.getDisplayName() == null ? p.getName() : p.getDisplayName();
@@ -640,44 +644,98 @@ public final class GUIManager implements Listener {
                 String display = cNBT.getString("display");
                 String section = cNBT.getString("section");
                 String setting = cNBT.getString(SETTING_TAG);
-                boolean value = cNBT.getBoolean("value");
+                String valueS = cNBT.getString("value");
+                Class<?> type = cNBT.getClass("type");
 
-                ItemStack nItem = builder(value ? RED_WOOL : LIME_WOOL,
-                        meta -> {
-                            meta.setDisplayName(ChatColor.YELLOW + display + ": " + (value ? ChatColor.RED + get("constants.off") : ChatColor.GREEN + get("constants.on")));
-                            if (!value) {
-                                meta.addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1, true);
-                                meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+                ItemStack nItem;
+                if (Boolean.class.isAssignableFrom(type)) {
+                    boolean value = Boolean.parseBoolean(valueS);
+                    
+                    nItem = builder(value ? RED_WOOL : LIME_WOOL,
+                            meta -> {
+                                meta.setDisplayName(ChatColor.YELLOW + display + ": " + (value ? ChatColor.RED + get("constants.off") : ChatColor.GREEN + get("constants.on")));
+                                if (!value) {
+                                    meta.addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1, true);
+                                    meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+                                }
+                            }, nbt -> {
+                                nbt.setID("setting_toggle");
+                                nbt.set("display", display);
+                                nbt.set("section", section);
+                                nbt.set(SETTING_TAG, setting);
+                                nbt.set("type", type);
+                                nbt.set("value", !value);
                             }
-                        }, nbt -> {
-                            nbt.setID("setting_toggle");
-                            nbt.set("display", display);
-                            nbt.set("section", section);
-                            nbt.set(SETTING_TAG, setting);
-                            nbt.set("value", !value);
+                    );
+
+                    if (value) NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p); else NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
+                
+                    switch (section.toLowerCase()) {
+                        case BUSINESS_TAG: {
+                            Business b = Business.getByOwner(p);
+                            Settings.Business sett = Settings.Business.valueOf(setting);
+                            b.setSetting(sett, !value);
+        
+                            BusinessSettingChangeEvent event = new BusinessSettingChangeEvent(b, value, !value, sett);
+                            Bukkit.getPluginManager().callEvent(event);
+                            break;
                         }
-                );
+                        case CORPORATION_TAG: {
+                            Corporation c = Corporation.byOwner(p);
+                            Settings.Corporation<Boolean> sett = Settings.Corporation.valueOf(setting, Boolean.class);
+                            c.setSetting(sett, !value);
+
+                            CorporationSettingChangeEvent event = new CorporationSettingChangeEvent(c, value, !value, sett);
+                            Bukkit.getPluginManager().callEvent(event);
+                            break;
+                        }
+                        case "personal": {
+                            NovaPlayer np = new NovaPlayer(p);
+                            Settings.Personal sett = Settings.Personal.valueOf(setting);
+                            np.setSetting(sett, !value);
+        
+                            PlayerSettingChangeEvent event = new PlayerSettingChangeEvent(p, value, !value, sett);
+                            Bukkit.getPluginManager().callEvent(event);
+                            break;
+                        }
+                    }
+                } else if (Enum.class.isAssignableFrom(type)) {
+                    Enum<?> value = Enum.valueOf(type.asSubclass(Enum.class), valueS);
+                    Enum<?> next = (Enum<?>) type.getEnumConstants()[value.ordinal() + 1 >= type.getEnumConstants().length ? 0 : value.ordinal() + 1];
+
+                    nItem = builder(CYAN_WOOL,
+                            meta ->meta.setDisplayName(ChatColor.YELLOW + display + ": " + ChatColor.AQUA + valueS.toUpperCase()),
+                            nbt -> {
+                                nbt.setID("setting_toggle");
+                                nbt.set("display", display);
+                                nbt.set("section", section);
+                                nbt.set(SETTING_TAG, setting);
+                                nbt.set("type", type);
+                                nbt.set("value", next.name());
+                            }
+                    );
+
+                    NovaSound.ITEM_BOOK_PAGE_TURN.play(p);
+
+                    switch (section.toLowerCase()) {
+                        case CORPORATION_TAG: {
+                            Corporation c = Corporation.byOwner(p);
+
+                            @SuppressWarnings({"rawtypes"})
+                            Settings.Corporation<Enum> sett = Settings.Corporation.valueOf(setting, Enum.class);
+                            c.setSetting(sett, next);
+
+                            CorporationSettingChangeEvent event = new CorporationSettingChangeEvent(c, value, next, sett);
+                            Bukkit.getPluginManager().callEvent(event);
+                            break;
+                        }
+                    }
+                } else throw new RuntimeException("Unknown setting type: " + type);
 
                 e.getView().setItem(e.getRawSlot(), nItem);
                 p.updateInventory();
 
-                if (value) NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p); else NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
 
-                if (section.equalsIgnoreCase(BUSINESS_TAG)) {
-                    Business b = Business.getByOwner(p);
-                    Settings.Business sett = Settings.Business.valueOf(setting);
-                    b.setSetting(sett, !value);
-
-                    BusinessSettingChangeEvent event = new BusinessSettingChangeEvent(b, value, !value, sett);
-                    Bukkit.getPluginManager().callEvent(event);
-                } else {
-                    NovaPlayer np = new NovaPlayer(p);
-                    Settings.Personal sett = Settings.Personal.valueOf(setting);
-                    np.setSetting(sett, !value);
-
-                    PlayerSettingChangeEvent event = new PlayerSettingChangeEvent(p, value, !value, sett);
-                    Bukkit.getPluginManager().callEvent(event);
-                }
             })
             .put("back:settings", (e, inv) -> {
                 Player p = (Player) e.getWhoClicked();
@@ -922,7 +980,6 @@ public final class GUIManager implements Listener {
                 Player p = (Player) e.getWhoClicked();
                 ItemStack item = e.getCurrentItem();
                 Business b = getBusiness(item);
-                SortingType<Rating> type = NovaUtil.byId(of(inv.getItem(18)).getString(TYPE_TAG), Rating.class);
 
                 CHANGE_PAGE_TRICONSUMER.accept(e, 1, getRatingsGUI(p, b));
             })
@@ -930,7 +987,6 @@ public final class GUIManager implements Listener {
                 Player p = (Player) e.getWhoClicked();
                 ItemStack item = e.getCurrentItem();
                 Business b = getBusiness(item);
-                SortingType<Rating> type = NovaUtil.byId(of(inv.getItem(18)).getString(TYPE_TAG), Rating.class);
 
                 CHANGE_PAGE_TRICONSUMER.accept(e, -1, getRatingsGUI(p, b));
             })

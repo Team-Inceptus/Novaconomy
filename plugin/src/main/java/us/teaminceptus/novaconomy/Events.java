@@ -544,8 +544,6 @@ final class Events implements Listener {
     @EventHandler
     public void onView(BusinessViewEvent e) {
         Business b = e.getBusiness();
-        Player p = e.getViewer();
-
         Corporation c = b.getParentCorporation();
         if (c == null) return;
 
