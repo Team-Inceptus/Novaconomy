@@ -90,6 +90,11 @@ public final class Items {
             meta -> meta.setDisplayName(ChatColor.DARK_RED + get("constants.loading"))
     );
 
+    public static final ItemStack CYAN_WOOL = checkLegacy(
+            () -> new ItemStack(Material.matchMaterial("CYAN_WOOL")),
+            () -> new ItemStack(Material.matchMaterial("WOOL"), 1, (short) 6)
+    );
+
     public static final ItemStack OAK_SIGN = checkLegacy(
             () -> {
                 Material m;

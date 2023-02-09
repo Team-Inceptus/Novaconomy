@@ -80,11 +80,12 @@ public final class Generator {
             inv.setItem(13, pIcon);
         }
 
-        ItemStack icon = new ItemStack(b.getIcon());
-        ItemMeta iMeta = icon.getItemMeta();
-        iMeta.setDisplayName(ChatColor.GOLD + b.getName());
-        iMeta.setLore(Collections.singletonList(ChatColor.YELLOW + "ID: " + b.getUniqueId().toString().replace("-", "")));
-        icon.setItemMeta(iMeta);
+        ItemStack icon = Items.builder(b.getIcon(),
+            meta -> {
+                meta.setDisplayName(ChatColor.GOLD + b.getName());
+                meta.setLore(Collections.singletonList(ChatColor.YELLOW + "ID: " + b.getUniqueId().toString().replace("-", "")));        
+            }
+        );
         inv.setItem(15, icon);
     
         boolean anonymous = !b.getSetting(Settings.Business.PUBLIC_OWNER) && !b.isOwner(viewer);
@@ -392,11 +393,14 @@ public final class Generator {
 
             // Completed Information
 
-            lore.add((completed ? ChatColor.DARK_GREEN : ChatColor.RED) + String.format(get("constants.corporation.increase_children"), 5));
+            lore.add((completed ? ChatColor.GREEN : ChatColor.RED) + String.format(get("constants.corporation.increase_children"), 5));
 
             if (cLevel == 3)
                 lore.add(ChatColor.LIGHT_PURPLE + get("constants.corporation.headquarters"));
 
+            if (cLevel >= 5 && cLevel <= 50 && cLevel % 5 == 0)
+                lore.add(ChatColor.DARK_GREEN + get("constants.corporation.profit_modifier")); // TODO
+             
             // Icon Setting
 
             ItemStack icon;

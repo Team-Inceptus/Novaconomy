@@ -99,5 +99,33 @@ public final class NovaUtil {
         return ROMAN_MAP.get(i) + toRoman(number - i);
     }
 
+    public static String formatTimeAgo(long start) {
+        long time = System.currentTimeMillis();
+        long diff = time - start;
+    
+        double seconds = (double) diff / 1000D;
+    
+        if (seconds < 2) return get("constants.time.ago.milli_ago");
+        if (seconds >= 2 && seconds < 60) return String.format(get("constants.time.ago.seconds_ago"), String.format("%,.0f", seconds));
+    
+        double minutes = seconds / 60D;
+        if (minutes < 60) return String.format(get("constants.time.ago.minutes_ago"), String.format("%,.0f", minutes));
+    
+        double hours = minutes / 60D;
+        if (hours < 24) return String.format(get("constants.time.ago.hours_ago"), String.format("%,.0f", hours));
+    
+        double days = hours / 24D;
+        if (days < 7) return String.format(get("constants.time.ago.days_ago"), String.format("%,.0f", days));
+    
+        double weeks = days / 7D;
+        if (weeks < 4) return String.format(get("constants.time.ago.weeks_ago"), String.format("%,.0f", weeks));
+    
+        double months = weeks / 4D;
+        if (months < 12) return String.format(get("constants.time.ago.months_ago"), String.format("%,.0f", months));
+    
+        double years = months / 12D;
+        return String.format(get("constants.time.ago.years_ago"), String.format("%,.0f", years));
+    }
+
 
 }
