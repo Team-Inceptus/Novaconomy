@@ -14,6 +14,7 @@ import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.events.corporation.CorporationAwardAchievementEvent;
 import us.teaminceptus.novaconomy.api.events.corporation.CorporationCreateEvent;
 import us.teaminceptus.novaconomy.api.events.corporation.CorporationDeleteEvent;
+import us.teaminceptus.novaconomy.api.settings.Settings;
 
 import java.io.*;
 import java.nio.file.Files;
@@ -65,6 +66,7 @@ public final class Corporation {
     private final Map<UUID, Long> childrenJoinDates = new HashMap<>();
     private final Map<CorporationAchievement, Integer> achievements = new HashMap<>();
     private final Map<UUID, CorporationPermission[]> businessPermissions = new HashMap<>();
+    private final Map<Settings.Corporation<?>, Object> settings = new HashMap<>();
 
     private Corporation(@NotNull UUID id, long creationDate, OfflinePlayer owner) {
         this.id = id;
@@ -440,6 +442,104 @@ public final class Corporation {
         addView(1);
     }
 
+    /**
+     * Fetches the profit modifier when purchasing products from a Corporation's Child.
+     * @return Profit Modifier
+     */
+    public double getProfitModifier() {
+        if (getLevel() < 5) return 1.0D;
+
+        return Math.min(1 + (Math.floor( ((getLevel() - 5) / 5) + 1) * 0.1D), 2.0D);
+    }
+
+    /**
+     * Fetches the value of a Corporation's setting.
+     * @param <T> Setting Type
+     * @param setting Setting to fetch
+     * @return Setting Value, or null if not found
+     */
+    @Nullable
+    public <T> T getSetting(@NotNull Settings.Corporation<T> setting) {
+        return getSetting(setting, null);
+    }
+
+    /**
+     * Fetches the value of a Corporation's setting.
+     * @param <T> Setting Type
+     * @param setting Setting to fetch
+     * @param def Default value to return if setting is not found
+     * @return Setting Value, or default value if not found
+     */
+    @Nullable
+    public <T> T getSetting(@NotNull Settings.Corporation<T> setting, @Nullable T def) {
+        if (setting == null) return null;
+        return (T) settings.getOrDefault(setting, def);
+    }
+
+    /**
+     * Sets the value of a Corporation's setting.
+     * @param <T> Setting Type
+     * @param setting Setting to set
+     * @param value New value of setting
+     * @throws IllegalArgumentException if setting or value is null, or value is not a valid value for this setting
+     */
+    public <T> void setSetting(@NotNull Settings.Corporation<T> setting, @NotNull T value) throws IllegalArgumentException {
+        if (setting == null) throw new IllegalArgumentException("Setting cannot be null!");
+        if (value == null) throw new IllegalArgumentException("Value cannot be null!");
+        if (!setting.getPossibleValues().contains(value)) throw new IllegalArgumentException("Value is not a valid value for this setting!");
+
+        settings.put(setting, value);
+        saveCorporation();
+    }
+
+    private final Map<UUID, Boolean> invited = new HashMap<>();
+
+    /**
+     * Whether this Business has an invite to this Corporation.
+     * @param business Business to check
+     * @return true if Business has an invite, false otherwise
+     * @throws IllegalArgumentException if business is null
+     * @throws IllegalStateException if Corporation is not invite only
+     */
+    public boolean hasInvite(@NotNull Business business) throws IllegalArgumentException, IllegalStateException {
+        if (business == null) throw new IllegalArgumentException("Business cannot be null!");
+        if (getSetting(Settings.Corporation.JOIN_TYPE) != JoinType.INVITE_ONLY) throw new IllegalStateException("Corporation is not invite only!");
+
+
+        return invited.containsKey(business.getUniqueId());
+    }
+
+    /**
+     * Fetches an immutable set of all of the businesses invited to this Corporation.
+     * @return Businesses invited to this Corporation
+     * @throws IllegalStateException if Corporation is not invite only
+     */
+    @NotNull
+    public Set<Business> getInvited() throws IllegalStateException {
+        if (getSetting(Settings.Corporation.JOIN_TYPE) != JoinType.INVITE_ONLY) throw new IllegalStateException("Corporation is not invite only!");
+
+        return ImmutableSet.copyOf(invited
+                .keySet()
+                .stream()
+                .map(Business::getById)
+                .collect(Collectors.toSet()));
+    }
+
+    /**
+     * Invites a Business to this Corporation.
+     * @param business Business to invite
+     * @throws IllegalArgumentException if business is null, or business is already apart of this Corporation
+     * @throws IllegalStateException if Corporation is not invite only
+     */
+    public void inviteBusiness(@NotNull Business business) throws IllegalArgumentException, IllegalStateException {
+        if (business == null) throw new IllegalArgumentException("Business cannot be null!");
+        if (children.contains(business)) throw new IllegalArgumentException("Business is already apart of this Corporation!");
+        if (getSetting(Settings.Corporation.JOIN_TYPE) != JoinType.INVITE_ONLY) throw new IllegalStateException("Corporation is not invite only!");
+
+        invited.put(business.getUniqueId(), true);
+        saveCorporation();
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -675,6 +775,30 @@ public final class Corporation {
         return level;
     }
 
+    // Static Classes
+
+    /**
+     * Represents the joining type of a Corporation.
+     */
+    public enum JoinType {
+
+        /**
+         * Represents a Corporation that is public and joinable by anyone.
+         */
+        PUBLIC, 
+
+        /**
+         * Represents a Corporation that can only be joined by invitation.
+         */
+        INVITE_ONLY,
+
+        /**
+         * Represents a Corporation that is private and cannot be joined by anyone.
+         */
+        PRIVATE
+
+    }
+
     // Builder
 
     /**
@@ -833,7 +957,24 @@ public final class Corporation {
                     .map(CorporationPermission::getId)
                     .collect(Collectors.toList()));
 
+        children.set("invited", this.invited
+                .entrySet()
+                .stream()
+                .map(e -> new AbstractMap.SimpleEntry<>(e.getKey().toString(), e.getValue()))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
+        );
+
         children.save(childrenF);
+
+        File settingsF = new File(folder, "settings.yml");
+        if (!settingsF.exists()) settingsF.createNewFile();
+
+        FileConfiguration settings = YamlConfiguration.loadConfiguration(settingsF);
+        settings.set("settings", this.settings
+                .entrySet()
+                .stream()
+                .map(e -> new AbstractMap.SimpleEntry<>(e.getKey().name().toLowerCase(), e.getValue()))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
     }
 
     @NotNull
@@ -893,6 +1034,26 @@ public final class Corporation {
 
             c.businessPermissions.put(bid, bPermissions);
         }
+
+        c.invited.putAll(children.getConfigurationSection("invited").getValues(false)
+                .entrySet()
+                .stream()
+                .map(e -> new AbstractMap.SimpleEntry<>(UUID.fromString(e.getKey()), (Boolean) e.getValue() ))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
+        );
+
+        File settingsF = new File(folder, "settings.yml");
+        if (!settingsF.exists()) throw new IllegalStateException("Could not find: settings.yml");
+
+        FileConfiguration settings = YamlConfiguration.loadConfiguration(settingsF);
+        c.settings.putAll(settings.getConfigurationSection("settings").getValues(false)
+                .entrySet()
+                .stream()
+                .map(e -> new AbstractMap.SimpleEntry<>(Arrays.stream(Settings.Corporation.values())
+                        .filter(sett -> sett.name().equalsIgnoreCase(e.getKey()))
+                        .findFirst()
+                        .orElseThrow(IllegalStateException::new), (Boolean) e.getValue()))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
 
         return c;
     }

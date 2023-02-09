@@ -49,7 +49,7 @@ public final class CorporationStatistics {
                         .entrySet()
                         .stream()
                         .filter(e -> e.getKey().getPrice().getEconomy() != null)
-                        .mapToDouble(e -> e.getKey().getPrice().getRealAmount() * e.getValue())
+                        .mapToDouble(e -> e.getKey().getPrice().getRealAmount() * e.getValue() * c.getProfitModifier())
                         .sum())
                 .sum();
     }
@@ -66,7 +66,7 @@ public final class CorporationStatistics {
                         .entrySet()
                         .stream()
                         .filter(e -> e.getKey().getPrice().getEconomy().equals(econ))
-                        .mapToDouble(e -> e.getKey().getPrice().getAmount() * e.getValue())
+                        .mapToDouble(e -> e.getKey().getPrice().getAmount() * e.getValue() * c.getProfitModifier())
                         .sum())
                 .sum();
     }
