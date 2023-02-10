@@ -738,5 +738,10 @@ public final class CommandWrapperV2 implements CommandWrapper {
             wrapper.corporationStatistics(p);
         }
 
+        @Subcommand("invite")
+        public void inviteBusiness(Player p, Business b) {
+            wrapper.inviteBusiness(p, b);
+        }
+
     }
 }

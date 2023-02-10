@@ -1474,6 +1474,24 @@ public final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                     case "level": 
                     case "progress":
                     case "prog": corporationLeveling(p); break;
+                    case "stats":
+                    case "statistics": corporationStatistics(p); break;
+                    case "invite": {
+                        if (args.length < 2) {
+                            p.sendMessage(getMessage("error.argument.business"));
+                            return false;
+                        }
+
+                        Business b = Business.getByName(args[1]);
+
+                        if (b == null) {
+                            p.sendMessage(getMessage("error.business.inexistent"));
+                            return false;
+                        }
+
+                        inviteBusiness(p, b);
+                        break;
+                    }
                 }
             }
             default: {
