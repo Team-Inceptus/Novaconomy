@@ -11,15 +11,9 @@ import java.util.Arrays;
 public enum CorporationPermission {
 
     /**
-     * Permission to add resources to the Corporation's Global Supply.
+     * Permission to invite other Businesses to the Corporation.
      */
-    ADD_RESOURCE,
-
-    /**
-     * Permission to deposit resources from the Corporation's Global Supply into own Business Resources.
-     */
-    DEPOSIT_RESOURCE,
-
+    INVITE_BUSINESS
 
     ;
 
