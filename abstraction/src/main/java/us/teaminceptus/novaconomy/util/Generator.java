@@ -399,7 +399,7 @@ public final class Generator {
                 lore.add(ChatColor.LIGHT_PURPLE + get("constants.corporation.headquarters"));
 
             if (cLevel >= 5 && cLevel <= 50 && cLevel % 5 == 0)
-                lore.add(ChatColor.DARK_GREEN + get("constants.corporation.profit_modifier")); // TODO
+                lore.add(ChatColor.DARK_GREEN + String.format(get("constants.corporation.profit_modifier"), 10));
              
             // Icon Setting
 
