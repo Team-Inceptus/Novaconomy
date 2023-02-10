@@ -1156,7 +1156,7 @@ public interface CommandWrapper {
 
             ItemStack corporation = builder(Material.IRON_BLOCK,
                     meta -> {
-                        meta.setDisplayName(ChatColor.YELLOW + get("constants.settings.corporation")); // TODO
+                        meta.setDisplayName(ChatColor.YELLOW + get("constants.settings.corporation"));
                         meta.addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1, true);
                         meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
                     }, nbt -> {
@@ -1234,7 +1234,7 @@ public interface CommandWrapper {
                     }
                     Corporation c = Corporation.byOwner(p);
 
-                    settings = genGUI(36, "constants.settings.corporation"); // TODO
+                    settings = genGUI(36, "constants.settings.corporation");
 
                     for (Settings.Corporation<?> sett : Settings.Corporation.values()) {
                         Object value = c.getSetting(sett);
@@ -3073,7 +3073,7 @@ public interface CommandWrapper {
 
         Corporation corp = Corporation.byOwner(p);
         corp.setIcon(icon);
-        p.sendMessage(getSuccess("success.corporation.icon")); // TODO
+        p.sendMessage(String.format(getSuccess("success.corporation.icon"), ChatColor.GOLD + icon.name()));
     }
 
     default void setCorporationHeadquarters(Player p) {
@@ -3090,13 +3090,17 @@ public interface CommandWrapper {
         Corporation corp = Corporation.byOwner(p);
 
         if (corp.getLevel() < 3) {
-            p.sendMessage(getError("error.corporation.too_low_level")); // TODO
+            p.sendMessage(getError("error.corporation.too_low_level"));
             return;
         }
 
         Location l = p.getLocation();
         corp.setHeadquarters(l);
-        p.sendMessage(String.format(getSuccess("success.corporation.headquarters"), l.getBlockX(), l.getBlockY(), l.getBlockZ())); // TODO
+        p.sendMessage(String.format(getSuccess("success.corporation.headquarters"),
+                ChatColor.GOLD + "" + l.getBlockX(),
+                ChatColor.GOLD + "" + l.getBlockY(),
+                ChatColor.GOLD + "" + l.getBlockZ())
+        );
     }
 
     default void setCorporationName(Player p, String name) {
@@ -3112,7 +3116,7 @@ public interface CommandWrapper {
 
         Corporation corp = Corporation.byOwner(p);
         corp.setName(name);
-        p.sendMessage(String.format(getSuccess("success.corporation.name"), name)); // TODO
+        p.sendMessage(String.format(getSuccess("success.corporation.name"), name));
     }
 
     default void corporationAchievements(Player p) {
@@ -3155,18 +3159,20 @@ public interface CommandWrapper {
         }
 
         if (b.getParentCorporation() != null) {
-            p.sendMessage(getError("error.corporation.invite.business")); // TODO
+            p.sendMessage(getError("error.corporation.invite.business"));
             return;
         }
 
         Corporation corp = Corporation.byOwner(p);
 
         if (!(corp.getSetting(Settings.Corporation.JOIN_TYPE) == Corporation.JoinType.INVITE_ONLY)) {
-            p.sendMessage(getError("error.corporation.invite_only")); // TODO
+            p.sendMessage(getError("error.corporation.invite_only"));
             return;
         }
 
-
+        corp.inviteBusiness(b);
+        p.sendMessage(String.format(getSuccess("success.corporation.invite.business"), ChatColor.GOLD + b.getName()));
+        NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
     }
 
 }
