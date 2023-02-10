@@ -1,5 +1,6 @@
 package us.teaminceptus.novaconomy;
 
+import com.google.common.collect.ImmutableList;
 import com.jeff_media.updatechecker.UpdateCheckSource;
 import com.jeff_media.updatechecker.UpdateChecker;
 import org.bstats.bukkit.Metrics;
@@ -28,6 +29,7 @@ import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.business.BusinessStatistics;
 import us.teaminceptus.novaconomy.api.business.Rating;
 import us.teaminceptus.novaconomy.api.corporation.Corporation;
+import us.teaminceptus.novaconomy.api.corporation.CorporationInvite;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.economy.market.NovaMarket;
 import us.teaminceptus.novaconomy.api.economy.market.Receipt;
@@ -266,18 +268,19 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 
 	private static FileConfiguration funcConfig;
 
-	static final List<Class<? extends ConfigurationSerializable>> SERIALIZABLE = new ArrayList<Class<? extends ConfigurationSerializable>>() {{
-		add(Economy.class);
-		add(Business.class);
-		add(Price.class);
-		add(Product.class);
-		add(BusinessProduct.class);
-		add(Bounty.class);
-		add(BusinessStatistics.class);
-		add(BusinessStatistics.Transaction.class);
-		add(Rating.class);
-		add(PlayerStatistics.class);
-	}};
+	static final List<Class<? extends ConfigurationSerializable>> SERIALIZABLE = ImmutableList.<Class<? extends ConfigurationSerializable>>builder()
+			.add(Economy.class)
+			.add(Business.class)
+			.add(Price.class)
+			.add(Product.class)
+			.add(BusinessProduct.class)
+			.add(Bounty.class)
+			.add(BusinessStatistics.class)
+			.add(BusinessStatistics.Transaction.class)
+			.add(Rating.class)
+			.add(PlayerStatistics.class)
+			.add(CorporationInvite.class)
+			.build();
 
 	private void loadAddons() {
 		if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {

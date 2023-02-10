@@ -5,10 +5,12 @@ import com.google.common.collect.ImmutableSet;
 import org.bukkit.*;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.events.corporation.CorporationAwardAchievementEvent;
@@ -45,6 +47,11 @@ public final class Corporation {
      * The maximum level a of a corporation
      */
     public static final int MAX_LEVEL = 100;
+
+    /**
+     * The maximum amount of pending invites this Corporation can have
+     */
+    public static final int MAX_INVITES = 10;
 
     // Class
 
@@ -449,7 +456,7 @@ public final class Corporation {
     public double getProfitModifier() {
         if (getLevel() < 5) return 1.0D;
 
-        return Math.min(1 + (Math.floor( ((getLevel() - 5) / 5) + 1) * 0.1D), 2.0D);
+        return Math.min(( Math.floor( (double) getLevel() / 5) * 0.1D) + 1, 2.0D);
     }
 
     /**
@@ -492,22 +499,7 @@ public final class Corporation {
         saveCorporation();
     }
 
-    private final Map<UUID, Boolean> invited = new HashMap<>();
-
-    /**
-     * Whether this Business has an invite to this Corporation.
-     * @param business Business to check
-     * @return true if Business has an invite, false otherwise
-     * @throws IllegalArgumentException if business is null
-     * @throws IllegalStateException if Corporation is not invite only
-     */
-    public boolean hasInvite(@NotNull Business business) throws IllegalArgumentException, IllegalStateException {
-        if (business == null) throw new IllegalArgumentException("Business cannot be null!");
-        if (getSetting(Settings.Corporation.JOIN_TYPE) != JoinType.INVITE_ONLY) throw new IllegalStateException("Corporation is not invite only!");
-
-
-        return invited.containsKey(business.getUniqueId());
-    }
+    private final Set<CorporationInvite> invited = new HashSet<>();
 
     /**
      * Fetches an immutable set of all of the businesses invited to this Corporation.
@@ -519,25 +511,78 @@ public final class Corporation {
         if (getSetting(Settings.Corporation.JOIN_TYPE) != JoinType.INVITE_ONLY) throw new IllegalStateException("Corporation is not invite only!");
 
         return ImmutableSet.copyOf(invited
-                .keySet()
                 .stream()
-                .map(Business::getById)
+                .map(CorporationInvite::getTo)
                 .collect(Collectors.toSet()));
     }
 
     /**
-     * Invites a Business to this Corporation.
-     * @param business Business to invite
-     * @throws IllegalArgumentException if business is null, or business is already apart of this Corporation
-     * @throws IllegalStateException if Corporation is not invite only
+     * Whether this Business has been invited to this Corporation.
+     * @param b Business to check
+     * @return true if Business has been invited, false otherwise
+     * @throws IllegalArgumentException if business is null
      */
-    public void inviteBusiness(@NotNull Business business) throws IllegalArgumentException, IllegalStateException {
-        if (business == null) throw new IllegalArgumentException("Business cannot be null!");
-        if (children.contains(business)) throw new IllegalArgumentException("Business is already apart of this Corporation!");
-        if (getSetting(Settings.Corporation.JOIN_TYPE) != JoinType.INVITE_ONLY) throw new IllegalStateException("Corporation is not invite only!");
+    public boolean isInvited(@NotNull Business b) throws IllegalArgumentException {
+        if (b == null) throw new IllegalArgumentException("Business cannot be null!");
+        return invited.stream()
+                .anyMatch(i -> i.getTo().equals(b));
+    }
 
-        invited.put(business.getUniqueId(), true);
+    /**
+     * Removes an invite to this Corporation.
+     * @param b Business to remove invite from
+     * @throws IllegalArgumentException if business is null, or business is not invited to this Corporation
+     */
+    public void removeInvite(@NotNull Business b) throws IllegalArgumentException {
+        if (b == null) throw new IllegalArgumentException("Business cannot be null!");
+        if (!isInvited(b)) throw new IllegalArgumentException("Business is not invited to this Corporation!");
+
+        invited.removeIf(i -> i.getTo().equals(b));
         saveCorporation();
+    }
+
+    /**
+     * Fetches this Businesses' CorporationInvite.
+     * @param b Business to fetch invite for
+     * @return CorporationInvite, or null if Business is not invited
+     * @throws IllegalArgumentException if business is null
+     */
+    @Nullable
+    public CorporationInvite getInvite(@NotNull Business b) throws IllegalArgumentException {
+        if (b == null) throw new IllegalArgumentException("Business cannot be null!");
+        if (!isInvited(b)) return null;
+
+        return invited.stream()
+                .filter(i -> i.getTo().equals(b))
+                .findFirst()
+                .orElse(null);
+    }
+
+    /**
+     * Invites a Business to this Corporation.
+     * @param b Business to invite
+     * @return CorporationInvite Object
+     * @throws IllegalArgumentException if business is null, business is already apart of this Corporation, or has already been invited
+     * @throws IllegalStateException if Corporation is not invite only or invite count is above {@link #MAX_INVITES}
+     */
+    @NotNull
+    public CorporationInvite inviteBusiness(@NotNull Business b) throws IllegalArgumentException, IllegalStateException {
+        if (b == null) throw new IllegalArgumentException("Business cannot be null!");
+        if (children.contains(b)) throw new IllegalArgumentException("Business is already apart of this Corporation!");
+        if (isInvited(b)) throw new IllegalArgumentException("Business is already invited to this Corporation");
+        if (getSetting(Settings.Corporation.JOIN_TYPE) != JoinType.INVITE_ONLY) throw new IllegalStateException("Corporation is not invite only!");
+        if (invited.size() >= MAX_INVITES) throw new IllegalStateException("Corporation has reached maximum invite count of \"" + MAX_INVITES + "\"!");
+
+        CorporationInvite invite = new CorporationInvite(this, b);
+        invited.add(invite);
+        saveCorporation();
+
+        if (b.getOwner().isOnline()) {
+            Player owner = b.getOwner().getPlayer();
+            owner.sendMessage(ChatColor.YELLOW + String.format(Language.getCurrentMessage("constants.corporation.invite"), ChatColor.AQUA + getName()));
+        }
+
+        return invite;
     }
 
     @Override
@@ -557,7 +602,7 @@ public final class Corporation {
     public String toString() {
         return "Corporation{" +
                 "id=" + id +
-                ", creationDate=" + creationDate +
+                ", creationDate=" + new Date(creationDate) +
                 ", owner=" + owner +
                 ", name='" + name + '\'' +
                 '}';
@@ -957,13 +1002,7 @@ public final class Corporation {
                     .map(CorporationPermission::getId)
                     .collect(Collectors.toList()));
 
-        children.set("invited", this.invited
-                .entrySet()
-                .stream()
-                .map(e -> new AbstractMap.SimpleEntry<>(e.getKey().toString(), e.getValue()))
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
-        );
-
+        children.set("invited", this.invited);
         children.save(childrenF);
 
         File settingsF = new File(folder, "settings.yml");
@@ -1035,12 +1074,7 @@ public final class Corporation {
             c.businessPermissions.put(bid, bPermissions);
         }
 
-        c.invited.putAll(children.getConfigurationSection("invited").getValues(false)
-                .entrySet()
-                .stream()
-                .map(e -> new AbstractMap.SimpleEntry<>(UUID.fromString(e.getKey()), (Boolean) e.getValue() ))
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
-        );
+        c.invited.addAll((List<CorporationInvite>) children.getList("invited"));
 
         File settingsF = new File(folder, "settings.yml");
         if (!settingsF.exists()) throw new IllegalStateException("Could not find: settings.yml");
