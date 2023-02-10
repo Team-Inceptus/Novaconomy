@@ -1,10 +1,8 @@
 package us.teaminceptus.novaconomy.api.settings;
 
+import com.google.common.collect.ImmutableSet;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import com.google.common.collect.ImmutableSet;
-
 import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.corporation.Corporation.JoinType;
@@ -127,8 +125,7 @@ public final class Settings {
         @NotNull
         @Override
         public String getDisplayName() {
-            String lang = NovaConfig.getConfiguration().getLanguage();
-            return Language.getById(lang).getMessage(dKey);
+            return Language.getCurrentMessage(dKey);
         }
 
         @Nullable
@@ -208,8 +205,7 @@ public final class Settings {
         @NotNull
         @Override
         public String getDisplayName() {
-            String lang = NovaConfig.getConfiguration().getLanguage();
-            return Language.getById(lang).getMessage(dKey);
+            return Language.getCurrentMessage(dKey);
         }
 
         @Nullable
@@ -258,7 +254,7 @@ public final class Settings {
             this.clazz = clazz;
         }
 
-        private static final <T extends Enum<T>> Corporation<T> ofEnum(String key, String dKey, Class<T> clazz, T defaultValue) {
+        private static <T extends Enum<T>> Corporation<T> ofEnum(String key, String dKey, Class<T> clazz, T defaultValue) {
             return new Corporation<>(key, dKey, clazz, defaultValue, ImmutableSet.copyOf(defaultValue.getDeclaringClass().getEnumConstants()));
         }
 
@@ -275,8 +271,7 @@ public final class Settings {
         @NotNull
         @Override
         public String getDisplayName() {
-            String lang = NovaConfig.getConfiguration().getLanguage();
-            return Language.getById(lang).getMessage(dKey);
+            return Language.getCurrentMessage(dKey);
         }
 
         @Nullable

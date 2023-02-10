@@ -151,4 +151,13 @@ public enum Language {
         return getById(NovaConfig.getConfiguration().getLanguage());
     }
 
+    /**
+     * Fetches a message in the current language.
+     * @param key Key to fetch
+     * @return Message in the current language
+     */
+    public static String getCurrentMessage(String key) {
+        return getCurrentLanguage().getMessage(key);
+    }
+
 }

@@ -123,18 +123,14 @@ public enum CorporationAchievement {
      * @return Localized Display Name
      */
     @NotNull
-    public String getDisplayName() {
-        return Language.getCurrentLanguage().getMessage(key);
-    }
+    public String getDisplayName() { return Language.getCurrentMessage(key); }
 
     /**
      * Fetches teh localized description for this Corporation Achievement.
      * @return Localized Description
      */
     @NotNull
-    public String getDescription() {
-        return Language.getCurrentLanguage().getMessage(key + ".desc");
-    }
+    public String getDescription() { return Language.getCurrentMessage(key + ".desc"); }
 
     /**
      * <p>Fetches the base experience reward for achieving this Corporation Achievement.</p>
