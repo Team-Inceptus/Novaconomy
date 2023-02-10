@@ -19,6 +19,7 @@ import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.corporation.Corporation;
+import us.teaminceptus.novaconomy.api.corporation.CorporationInvite;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.events.business.BusinessCreateEvent;
 import us.teaminceptus.novaconomy.api.player.NovaPlayer;
@@ -1338,7 +1339,7 @@ public final class Business implements ConfigurationSerializable {
         for (int j = 0; j < Math.round(getAverageRating()); j++) rB.append("⭐");
 
         hMeta.setLore(Arrays.asList(
-                pOwner ? String.format(Language.getCurrentLanguage().getMessage("constants.owner"), owner.getName()) : Language.getCurrentLanguage().getMessage("constants.business.anonymous"),
+                pOwner ? String.format(Language.getCurrentMessage("constants.owner"), owner.getName()) : Language.getCurrentMessage("constants.business.anonymous"),
                 ChatColor.AQUA + keywords.toString().replaceAll("[\\[\\]]", ""),
                 pRating ? ChatColor.YELLOW + rB.toString() : "")
         );
@@ -1358,7 +1359,7 @@ public final class Business implements ConfigurationSerializable {
     public Corporation getParentCorporation() {
         return Corporation.getCorporations()
                 .stream()
-                .filter(c -> c.getChildren().contains(this))
+                .filter(c -> c.getChildren().contains(this) || owner.equals(c.getOwner()))
                 .findFirst()
                 .orElse(null);
     }
@@ -1382,6 +1383,25 @@ public final class Business implements ConfigurationSerializable {
     public Date getCorporationJoinDate() {
         if (getParentCorporation() == null) return null;
         return getParentCorporation().getJoinDate(this);
+    }
+
+    /**
+     * Fetches an immutable set of all of the Corporations this Business has been invited to.
+     * @return Set of Corporation Invites
+     */
+    @NotNull
+    public Set<CorporationInvite> getInvites() {
+        if (getParentCorporation() != null) return ImmutableSet.of();
+
+        Set<CorporationInvite> invites = new HashSet<>();
+
+        for (Corporation c : Corporation.getCorporations()) {
+            if (!c.isInvited(this)) continue;
+
+            invites.add(c.getInvite(this));
+        }
+
+        return ImmutableSet.copyOf(invites);
     }
 
     // Static Util
