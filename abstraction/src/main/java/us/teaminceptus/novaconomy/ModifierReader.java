@@ -5,6 +5,7 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.event.entity.EntityDamageEvent;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.economy.Economy;
+import us.teaminceptus.novaconomy.util.NovaUtil;
 
 import java.util.*;
 import java.util.Map.Entry;
@@ -110,7 +111,7 @@ public class ModifierReader {
 
     public static String toModString(Entry<Economy, Double> entry) {
         if (entry == null) return null;
-        return String.format("%,.0f", entry.getValue()) + entry.getKey().getSymbol();
+        return NovaUtil.format("%,.0f", entry.getValue()) + entry.getKey().getSymbol();
     }
 
     public static List<String> toModList(List<Entry<Economy, Double>> list) {

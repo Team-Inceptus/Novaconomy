@@ -10,7 +10,6 @@ import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.plugin.Plugin;
 import us.teaminceptus.novaconomy.abstraction.test.TestWrapper;
 import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.NovaConfig;
@@ -83,10 +82,6 @@ public interface Wrapper {
 
     default List<Material> getCrops() {
         return Arrays.stream(Material.values()).filter(this::isCrop).collect(Collectors.toList());
-    }
-
-    static Plugin getPlugin() {
-        return Bukkit.getPluginManager().getPlugin("Novaconomy");
     }
 
     // Util

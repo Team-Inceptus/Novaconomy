@@ -1,6 +1,7 @@
 package us.teaminceptus.novaconomy.abstraction;
 
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
 
 import java.util.Map;
 
@@ -41,6 +42,34 @@ public interface NovaInventory extends Inventory {
 
     default <T> T getAttribute(String key, Class<T> type, T def) {
         return type.cast(getAttribute(key, def));
+    }
+
+    // Util
+
+    default void setItem(int a, int b, ItemStack item) {
+        setItem(a, item);
+        setItem(b, item);
+    }
+
+    default void setItem(int a, int b, int c, ItemStack item) {
+        setItem(a, item);
+        setItem(b, item);
+        setItem(c, item);
+    }
+
+    default void setItem(int a, int b, int c, int d, ItemStack item) {
+        setItem(a, item);
+        setItem(b, item);
+        setItem(c, item);
+        setItem(d, item);
+    }
+
+    default void addItem(int times, ItemStack item) {
+        for (int i = 0; i < times; i++) {
+            int next = firstEmpty();
+            if (next == -1) break;
+            setItem(next, item);
+        }
     }
 
 }
