@@ -2,6 +2,7 @@ package us.teaminceptus.novaconomy.util;
 
 import org.bukkit.scheduler.BukkitRunnable;
 import org.jetbrains.annotations.NotNull;
+import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.SortingType;
 
@@ -54,12 +55,12 @@ public final class NovaUtil {
     private NovaUtil() {}
 
     public static String suffix(double number){
-        if (number >= 1_000_000_000_000L) return String.format("%.2fT", number / 1_000_000_000_000L);
-        if (number >= 1_000_000_000) return String.format("%.2fB", number / 1_000_000_000);
-        if (number >= 1_000_000) return String.format("%.2fM", number / 1_000_000);
-        if (number >= 1_000) return String.format("%.2fK", number / 1_000);
+        if (number >= 1_000_000_000_000L) return format("%.2fT", number / 1_000_000_000_000L);
+        if (number >= 1_000_000_000) return format("%.2fB", number / 1_000_000_000);
+        if (number >= 1_000_000) return format("%.2fM", number / 1_000_000);
+        if (number >= 1_000) return format("%.2fK", number / 1_000);
 
-        return String.format("%,.2f", number);
+        return format("%,.2f", number);
     }
 
     public static void sync(Runnable r) {
@@ -99,32 +100,37 @@ public final class NovaUtil {
         return ROMAN_MAP.get(i) + toRoman(number - i);
     }
 
+    @NotNull
+    public static String format(String format, Object... args) {
+        return String.format(Language.getCurrentLocale(), format, args);
+    }
+
     public static String formatTimeAgo(long start) {
         long time = System.currentTimeMillis();
         long diff = time - start;
     
-        double seconds = (double) diff / 1000D;
+        long seconds = diff / 1000;
     
         if (seconds < 2) return get("constants.time.ago.milli_ago");
-        if (seconds >= 2 && seconds < 60) return String.format(get("constants.time.ago.seconds_ago"), String.format("%,.0f", seconds));
+        if (seconds >= 2 && seconds < 60) return format(get("constants.time.ago.seconds_ago"), format("%,d", seconds));
     
-        double minutes = seconds / 60D;
-        if (minutes < 60) return String.format(get("constants.time.ago.minutes_ago"), String.format("%,.0f", minutes));
+        long minutes = seconds / 60;
+        if (minutes < 60) return format(get("constants.time.ago.minutes_ago"), format("%,d", minutes));
     
-        double hours = minutes / 60D;
-        if (hours < 24) return String.format(get("constants.time.ago.hours_ago"), String.format("%,.0f", hours));
+        long hours = minutes / 60;
+        if (hours < 24) return format(get("constants.time.ago.hours_ago"), format("%,d", hours));
     
-        double days = hours / 24D;
-        if (days < 7) return String.format(get("constants.time.ago.days_ago"), String.format("%,.0f", days));
+        long days = hours / 24;
+        if (days < 7) return format(get("constants.time.ago.days_ago"), format("%,d", days));
     
-        double weeks = days / 7D;
-        if (weeks < 4) return String.format(get("constants.time.ago.weeks_ago"), String.format("%,.0f", weeks));
+        long weeks = days / 7;
+        if (weeks < 4) return format(get("constants.time.ago.weeks_ago"), format("%,d", weeks));
     
-        double months = weeks / 4D;
-        if (months < 12) return String.format(get("constants.time.ago.months_ago"), String.format("%,.0f", months));
+        long months = weeks / 4;
+        if (months < 12) return format(get("constants.time.ago.months_ago"), format("%,d", months));
     
-        double years = months / 12D;
-        return String.format(get("constants.time.ago.years_ago"), String.format("%,.0f", years));
+        long years = months / 12;
+        return format(get("constants.time.ago.years_ago"), format("%,d", years));
     }
 
 

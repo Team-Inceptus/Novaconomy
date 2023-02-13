@@ -52,6 +52,7 @@ import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.ECON_TAG;
 import static us.teaminceptus.novaconomy.abstraction.NBTWrapper.of;
 import static us.teaminceptus.novaconomy.abstraction.Wrapper.*;
 import static us.teaminceptus.novaconomy.api.corporation.CorporationAchievement.*;
+import static us.teaminceptus.novaconomy.util.NovaUtil.format;
 
 final class Events implements Listener {
 
@@ -347,7 +348,7 @@ final class Events implements Listener {
         if (!event.isCancelled()) {
             np.add(econ, increase);
 
-            return COLORS.get(r.nextInt(COLORS.size())) + "+" + String.format("%,.2f", (Math.floor(increase * 100) / 100)) + econ.getSymbol();
+            return COLORS.get(r.nextInt(COLORS.size())) + "+" + format("%,.2f", (Math.floor(increase * 100) / 100)) + econ.getSymbol();
         }
 
         return "";
@@ -414,9 +415,9 @@ final class Events implements Listener {
             OfflinePlayer owner = b.getOwner();
 
             if (broadcast)
-                Bukkit.broadcastMessage(String.format(get("success.bounty.broadcast"), kName, tName, String.format("%,.2f", b.getAmount()) + b.getEconomy().getSymbol()));
+                Bukkit.broadcastMessage(format(get("success.bounty.broadcast"), kName, tName, format("%,.2f", b.getAmount()) + b.getEconomy().getSymbol()));
             else if (owner.isOnline())
-                owner.getPlayer().sendMessage(String.format(getMessage("success.bounty.redeem"), kName, tName));
+                owner.getPlayer().sendMessage(format(getMessage("success.bounty.redeem"), kName, tName));
 
             amount.addAndGet(b.getAmount());
             bountyCount.incrementAndGet();
@@ -437,7 +438,7 @@ final class Events implements Listener {
         }
 
         if (!broadcast)
-            killer.sendMessage(String.format(getMessage("success.bounty.claim"), bountyCount.get(), tName));
+            killer.sendMessage(format(getMessage("success.bounty.claim"), bountyCount.get(), tName));
     }
 
     @EventHandler
@@ -493,7 +494,7 @@ final class Events implements Listener {
         PlayerChangeBalanceEvent event = new PlayerChangeBalanceEvent(p, econ, amount, previousBal, previousBal - amount, true);
         if (!event.isCancelled()) np.remove(econ, amount);
 
-        return ChatColor.DARK_RED + "- " + ChatColor.RED + String.format("%,.2f", Math.floor(amount * 100) / 100) + econ.getSymbol();
+        return ChatColor.DARK_RED + "- " + ChatColor.RED + format("%,.2f", Math.floor(amount * 100) / 100) + econ.getSymbol();
     }
 
     // Corporation Leveling

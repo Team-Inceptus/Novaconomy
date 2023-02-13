@@ -3,6 +3,7 @@ package us.teaminceptus.novaconomy.api.util;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 
 import java.io.Externalizable;
@@ -203,7 +204,7 @@ public final class Price implements ConfigurationSerializable, Comparable<Price>
 
     @Override
     public String toString() {
-        return String.format("%,.2f", amount) + econ.getSymbol();
+        return String.format(Language.getCurrentLocale(), "%,.2f", amount) + econ.getSymbol();
     }
 
     @Override

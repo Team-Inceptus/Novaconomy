@@ -60,6 +60,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
 import static us.teaminceptus.novaconomy.abstraction.Wrapper.*;
+import static us.teaminceptus.novaconomy.util.NovaUtil.format;
 
 /**
  * Class representing this Plugin
@@ -180,7 +181,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 			}
 
 			if (np.isOnline() && np.hasNotifications())
-				np.getOnlinePlayer().sendMessage(String.format(getMessage("notification.interest"), i + " ", i == 1 ? get("constants.economy") : get("constants.economies")));
+				np.getOnlinePlayer().sendMessage(format(getMessage("notification.interest"), i + " ", i == 1 ? get("constants.economy") : get("constants.economies")));
 		}
 	}
 	
@@ -251,10 +252,10 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 			int j = missedMap.get(np).size();
 			int i = Economy.getTaxableEconomies().size() - j;
 			if (j > 0)
-				np.getOnlinePlayer().sendMessage(String.format(getMessage("notification.tax.missed"), j + " ", j == 1 ? get("constants.economy") : get("constants.economies")));
+				np.getOnlinePlayer().sendMessage(format(getMessage("notification.tax.missed"), j + " ", j == 1 ? get("constants.economy") : get("constants.economies")));
 
 			if (i > 0)
-				np.getOnlinePlayer().sendMessage(String.format(getMessage("notification.tax"), i + " ", i == 1 ? get("constants.economy") : get("constants.economies")));
+				np.getOnlinePlayer().sendMessage(format(getMessage("notification.tax"), i + " ", i == 1 ? get("constants.economy") : get("constants.economies")));
 		}
 	}
 
@@ -343,7 +344,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 		getLogger().info("Loaded Files...");
 
 		if (getCommandWrapper() == null) {
-			getLogger().severe(String.format("Command Wrapper not found for version \"%s\" Disabling...", Bukkit.getBukkitVersion()));
+			getLogger().severe(format("Command Wrapper not found for version \"%s\" Disabling...", Bukkit.getBukkitVersion()));
 			Bukkit.getPluginManager().disablePlugin(this);
 			return;
 		}
