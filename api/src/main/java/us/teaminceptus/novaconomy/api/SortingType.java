@@ -2,6 +2,7 @@ package us.teaminceptus.novaconomy.api;
 
 import org.jetbrains.annotations.NotNull;
 import us.teaminceptus.novaconomy.api.business.Business;
+import us.teaminceptus.novaconomy.api.corporation.CorporationInvite;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.util.BusinessProduct;
 
@@ -92,6 +93,28 @@ public interface SortingType<T> extends Comparator<T> {
      * Sorts a business product by its stock in descending order.
      */
     SortingType<BusinessProduct> PRODUCT_STOCK_DESCENDING = PRODUCT_STOCK_ASCENDING.reversed();
+
+    // Corporation Invites
+
+    /**
+     * Sorts a corporation invite by its date in ascending order.
+     */
+    SortingType<CorporationInvite> CORPORATION_INVITE_DATE_ASCENDING = (i1, i2) -> i1.getInvitedTimestamp().compareTo(i2.getInvitedTimestamp());
+
+    /**
+     * Sorts a corporation invite by its date in descending order.
+     */
+    SortingType<CorporationInvite> CORPORATION_INVITE_DATE_DESCENDING = CORPORATION_INVITE_DATE_ASCENDING.reversed();
+
+    /**
+     * Sorts a corporation invite by who it's from in ascending order.
+     */
+    SortingType<CorporationInvite> CORPORATION_INVITE_CORPORATION_ASCENDING = (i1, i2) -> i1.getFrom().getName().compareTo(i2.getFrom().getName());
+
+    /**
+     * Sorts a corporation invite by who it's from in descending order.
+     */
+    SortingType<CorporationInvite> CORPORATION_INVITE_CORPORATION_DESCENDING = CORPORATION_INVITE_CORPORATION_ASCENDING.reversed();
 
     @Override
     default SortingType<T> reversed() {
