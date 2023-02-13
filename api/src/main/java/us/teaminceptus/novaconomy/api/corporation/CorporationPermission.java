@@ -1,5 +1,6 @@
 package us.teaminceptus.novaconomy.api.corporation;
 
+import org.bukkit.Material;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -13,19 +14,26 @@ public enum CorporationPermission {
     /**
      * Permission to invite other Businesses to the Corporation.
      */
-    INVITE_BUSINESS
+    INVITE_BUSINESS(Material.PAPER),
+
+    /**
+     * Permission to teleport to the Corporation's Headquarters.
+     */
+    TELEPORT_HEADQUARTERS(Material.ENDER_PEARL),
 
     ;
 
+    private final Material icon;
     private final String id;
     private final boolean defaultState;
 
-    CorporationPermission() {
-        this(true);
+    CorporationPermission(Material icon) {
+        this(icon, true);
     }
 
-    CorporationPermission(boolean defaultState) {
+    CorporationPermission(Material icon, boolean defaultState) {
         this.id = name().toLowerCase();
+        this.icon = icon;
         this.defaultState = defaultState;
     }
 
@@ -44,6 +52,15 @@ public enum CorporationPermission {
      */
     public boolean getDefaultState() {
         return defaultState;
+    }
+
+    /**
+     * Fetches this Permission's icon.
+     * @return Material icon
+     */
+    @NotNull
+    public Material getIcon() {
+        return icon;
     }
 
     /**
