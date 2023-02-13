@@ -3,6 +3,7 @@ package us.teaminceptus.novaconomy.api.corporation;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.bukkit.*;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -72,7 +73,7 @@ public final class Corporation {
     private final Set<Business> children = new HashSet<>();
     private final Map<UUID, Long> childrenJoinDates = new HashMap<>();
     private final Map<CorporationAchievement, Integer> achievements = new HashMap<>();
-    private final Map<UUID, CorporationPermission[]> businessPermissions = new HashMap<>();
+    private final Map<UUID, Set<CorporationPermission>> businessPermissions = new HashMap<>();
     private final Map<Settings.Corporation<?>, Object> settings = new HashMap<>();
 
     private Corporation(@NotNull UUID id, long creationDate, OfflinePlayer owner) {
@@ -524,6 +525,8 @@ public final class Corporation {
      */
     public boolean isInvited(@NotNull Business b) throws IllegalArgumentException {
         if (b == null) throw new IllegalArgumentException("Business cannot be null!");
+        if (getSetting(Settings.Corporation.JOIN_TYPE) != JoinType.INVITE_ONLY) return false;
+
         return invited.stream()
                 .anyMatch(i -> i.getTo().equals(b));
     }
@@ -579,10 +582,109 @@ public final class Corporation {
 
         if (b.getOwner().isOnline()) {
             Player owner = b.getOwner().getPlayer();
-            owner.sendMessage(ChatColor.YELLOW + String.format(Language.getCurrentMessage("constants.corporation.invite"), ChatColor.AQUA + getName()));
+            owner.sendMessage(ChatColor.YELLOW + String.format(Language.getCurrentLocale(), Language.getCurrentMessage("constants.corporation.invite"), ChatColor.AQUA + getName()));
         }
 
         return invite;
+    }
+
+    /**
+     * Fetches an immutable set of all of the permissions a Business has in this Corporation.
+     * @param b Business to fetch permissions for
+     * @return Set of CorporationPermissions
+     * @throws IllegalArgumentException if business is null or not apart of this Corporation
+     */
+    @NotNull
+    public Set<CorporationPermission> getBusinessPermissions(@NotNull Business b) throws IllegalArgumentException {
+        if (b == null) throw new IllegalArgumentException("Business cannot be null!");
+        if (!children.contains(b)) throw new IllegalArgumentException("Business is not apart of this Corporation!");
+
+        return ImmutableSet.copyOf(businessPermissions.getOrDefault(b.getUniqueId(), new HashSet<>()));
+    }
+
+    /**
+     * Sets the permissions a Business has in this Corporation.
+     * @param b Business to set permissions for
+     * @param permissions Array of Permissions to set
+     * @throws IllegalArgumentException if business is null, permissions is null, or business is not apart of this Corporation
+     */
+    public void setBusinessPermissions(@NotNull Business b, @NotNull CorporationPermission... permissions) throws IllegalArgumentException {
+        setBusinessPermissions(b, Arrays.asList(permissions));
+    }
+
+    /**
+     * Sets the permissions a Business has in this Corporation.
+     * @param b Business to set permissions for
+     * @param permissions Iterable of Permissions to set
+     * @throws IllegalArgumentException if business is null, permissions is null, or business is not apart of this Corporation
+     */
+    public void setBusinessPermissions(@NotNull Business b, @NotNull Iterable<? extends CorporationPermission> permissions) throws IllegalArgumentException {
+        if (b == null) throw new IllegalArgumentException("Business cannot be null!");
+        if (permissions == null) throw new IllegalArgumentException("Permissions cannot be null!");
+        if (!children.contains(b)) throw new IllegalArgumentException("Business is not apart of this Corporation!");
+
+        Set<CorporationPermission> perms = new HashSet<>();
+        permissions.forEach(perms::add);
+
+        businessPermissions.put(b.getUniqueId(), perms);
+        saveCorporation();
+    }
+
+    /**
+     * Grants a permission from a Business in this Corporation.
+     * @param b Business to grant permission to
+     * @param permissions Array of Permissions to grant
+     * @throws IllegalArgumentException if business is null, permissions is null, or business is not apart of this Corporation
+     */
+    public void grantPermission(@NotNull Business b, CorporationPermission... permissions) throws IllegalArgumentException {
+        grantPermission(b, Arrays.asList(permissions));
+    }
+
+    /**
+     * Grants a permission from a Business in this Corporation.
+     * @param b Business to grant permission to
+     * @param permissions Iterable of Permissions to grant
+     * @throws IllegalArgumentException if business is null, permissions is null, or business is not apart of this Corporation
+     */
+    public void grantPermission(@NotNull Business b, @NotNull Iterable<? extends CorporationPermission> permissions) throws IllegalArgumentException {
+        if (b == null) throw new IllegalArgumentException("Business cannot be null!");
+        if (permissions == null) throw new IllegalArgumentException("Permissions cannot be null!");
+        if (!children.contains(b)) throw new IllegalArgumentException("Business is not apart of this Corporation!");
+
+        Set<CorporationPermission> perms = new HashSet<>(businessPermissions.getOrDefault(b.getUniqueId(), new HashSet<>()));
+        permissions.forEach(perms::add);
+
+        businessPermissions.put(b.getUniqueId(), perms);
+        saveCorporation();
+    }
+
+    /**
+     * Revokes a permission from a Business in this Corporation.
+     * @param b Business to revoke permission from
+     * @param permissions Array of Permissions to revoke
+     * @throws IllegalArgumentException if business is null, permissions is null, or business is not apart of this Corporation
+     */
+    public void revokePermission(@NotNull Business b, @NotNull CorporationPermission... permissions) throws IllegalArgumentException {
+        revokePermission(b, Arrays.asList(permissions));
+    }
+
+    /**
+     * Revokes a permission from a Business in this Corporation.
+     * @param b Business to revoke permission from
+     * @param permissions Iterable of Permissions to revoke
+     * @throws IllegalArgumentException if business is null, permissions is null, or business is not apart of this Corporation
+     */
+    public void revokePermission(@NotNull Business b, @NotNull Iterable<? extends CorporationPermission> permissions) throws IllegalArgumentException {
+        if (b == null) throw new IllegalArgumentException("Business cannot be null!");
+        if (permissions == null) throw new IllegalArgumentException("Permissions cannot be null!");
+        if (!children.contains(b)) throw new IllegalArgumentException("Business is not apart of this Corporation!");
+
+        Set<CorporationPermission> perms = new HashSet<>(businessPermissions.getOrDefault(b.getUniqueId(), new HashSet<>()));
+        Set<CorporationPermission> removed = ImmutableSet.copyOf(permissions);
+        perms.removeIf(removed::contains);
+
+        businessPermissions.put(b.getUniqueId(), perms);
+        saveCorporation();
     }
 
     @Override
@@ -924,7 +1026,7 @@ public final class Corporation {
             c.name = name;
             c.icon = icon;
 
-            if (Business.exists(owner)) c.children.add(Business.getByOwner(owner));
+            if (Business.exists(owner)) c.children.add(Business.byOwner(owner));
 
             c.saveCorporation();
 
@@ -997,8 +1099,9 @@ public final class Corporation {
             children.set("join_dates." + entry.getKey().toString(), entry.getValue());
 
         if (!children.isConfigurationSection("permissions")) children.createSection("permissions");
-        for (Map.Entry<UUID, CorporationPermission[]> entry : this.businessPermissions.entrySet())
-            children.set("permissions." + entry.getKey().toString(), Arrays.stream(entry.getValue())
+        for (Map.Entry<UUID, Set<CorporationPermission>> entry : this.businessPermissions.entrySet())
+            children.set("permissions." + entry.getKey().toString(), entry.getValue()
+                    .stream()
                     .map(CorporationPermission::getId)
                     .collect(Collectors.toList()));
 
@@ -1009,11 +1112,16 @@ public final class Corporation {
         if (!settingsF.exists()) settingsF.createNewFile();
 
         FileConfiguration settings = YamlConfiguration.loadConfiguration(settingsF);
-        settings.set("settings", this.settings
-                .entrySet()
+        if (!settings.isConfigurationSection("settings")) settings.createSection("settings");
+        ConfigurationSection settingsSection = settings.getConfigurationSection("settings");
+
+        this.settings.entrySet()
                 .stream()
-                .map(e -> new AbstractMap.SimpleEntry<>(e.getKey().name().toLowerCase(), e.getValue()))
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
+                .map(e -> new AbstractMap.SimpleEntry<>(e.getKey().name().toLowerCase(), e.getValue().toString()))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
+                .forEach(settingsSection::set);
+
+        settings.save(settingsF);
     }
 
     @NotNull
@@ -1030,7 +1138,7 @@ public final class Corporation {
         Corporation c = new Corporation(id, creationDate, owner);
 
         File dataF = new File(folder, "data.yml");
-        if (!dataF.exists()) throw new IllegalStateException("Could not find: data.yml");
+        if (!dataF.exists()) dataF.createNewFile();
 
         FileConfiguration data = YamlConfiguration.loadConfiguration(dataF);
         c.name = data.getString("name");
@@ -1048,46 +1156,53 @@ public final class Corporation {
         c.views = data.getInt("stats.views");
 
         File childrenF = new File(folder, "children.yml");
-        if (!childrenF.exists()) throw new IllegalStateException("Could not find: children.yml");
+        if (!childrenF.exists()) childrenF.createNewFile();
 
         FileConfiguration children = YamlConfiguration.loadConfiguration(childrenF);
         c.children.addAll(children.getStringList("children")
                 .stream()
                 .map(UUID::fromString)
-                .map(Business::getById)
+                .map(Business::byId)
                 .collect(Collectors.toList()));
 
-        for (Map.Entry<String, Object> entry : children.getConfigurationSection("join_dates").getValues(false).entrySet()) {
-            UUID bid = UUID.fromString(entry.getKey());
-            long joinDate = (long) entry.getValue();
+        if (children.isConfigurationSection("join_dates"))
+            for (Map.Entry<String, Object> entry : children.getConfigurationSection("join_dates").getValues(false).entrySet()) {
+                UUID bid = UUID.fromString(entry.getKey());
+                long joinDate = (long) entry.getValue();
 
-            c.childrenJoinDates.put(bid, joinDate);
-        }
+                c.childrenJoinDates.put(bid, joinDate);
+            }
 
-        for (Map.Entry<String, Object> entry : children.getConfigurationSection("permissions").getValues(false).entrySet()) {
-            UUID bid = UUID.fromString(entry.getKey());
-            CorporationPermission[] bPermissions = ((List<String>) entry.getValue())
-                    .stream()
-                    .map(CorporationPermission::byId)
-                    .toArray(CorporationPermission[]::new);
+        if (children.isConfigurationSection("permissions"))
+            for (Map.Entry<String, Object> entry : children.getConfigurationSection("permissions").getValues(false).entrySet()) {
+                UUID bid = UUID.fromString(entry.getKey());
+                Set<CorporationPermission> bPermissions = ((List<String>) entry.getValue())
+                        .stream()
+                        .map(CorporationPermission::byId)
+                        .collect(Collectors.toSet());
 
-            c.businessPermissions.put(bid, bPermissions);
-        }
+                c.businessPermissions.put(bid, bPermissions);
+            }
 
-        c.invited.addAll((List<CorporationInvite>) children.getList("invited"));
+        c.invited.addAll((List<CorporationInvite>) children.getList("invited", new ArrayList<>()));
 
         File settingsF = new File(folder, "settings.yml");
-        if (!settingsF.exists()) throw new IllegalStateException("Could not find: settings.yml");
+        if (!settingsF.exists()) settingsF.createNewFile();
 
         FileConfiguration settings = YamlConfiguration.loadConfiguration(settingsF);
-        c.settings.putAll(settings.getConfigurationSection("settings").getValues(false)
-                .entrySet()
-                .stream()
-                .map(e -> new AbstractMap.SimpleEntry<>(Arrays.stream(Settings.Corporation.values())
-                        .filter(sett -> sett.name().equalsIgnoreCase(e.getKey()))
-                        .findFirst()
-                        .orElseThrow(IllegalStateException::new), (Boolean) e.getValue()))
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
+        if (settings.isConfigurationSection("settings"))
+            c.settings.putAll(settings.getConfigurationSection("settings").getValues(false)
+                    .entrySet()
+                    .stream()
+                    .map(e -> {
+                        Settings.Corporation<?> key = Arrays.stream(Settings.Corporation.values())
+                                .filter(sett -> sett.name().equalsIgnoreCase(e.getKey()))
+                                .findFirst()
+                                .orElseThrow(IllegalStateException::new);
+
+                        return new AbstractMap.SimpleEntry<>(key, key.parseValue(e.getValue().toString()));
+                    })
+                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
 
         return c;
     }
