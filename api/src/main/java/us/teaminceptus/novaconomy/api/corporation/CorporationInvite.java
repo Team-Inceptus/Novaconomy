@@ -78,6 +78,16 @@ public final class CorporationInvite implements ConfigurationSerializable {
         from.addChild(to);
     }
 
+    /**
+     * Declines this invite, removing the Business from the Corporation's invite list.
+     * @throws IllegalStateException if the Business is no longer invited
+     */
+    public void decline() throws IllegalStateException {
+        if (!from.isInvited(to)) throw new IllegalStateException("Business is no longer invited to this corporation");
+
+        from.removeInvite(to);
+    }
+
     @Override
     @NotNull
     public String toString() {
