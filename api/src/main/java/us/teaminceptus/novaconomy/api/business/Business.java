@@ -20,6 +20,7 @@ import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.corporation.Corporation;
 import us.teaminceptus.novaconomy.api.corporation.CorporationInvite;
+import us.teaminceptus.novaconomy.api.corporation.CorporationPermission;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.events.business.BusinessCreateEvent;
 import us.teaminceptus.novaconomy.api.player.NovaPlayer;
@@ -854,7 +855,7 @@ public final class Business implements ConfigurationSerializable {
         List<String> keywords = oConfig.getStringList("keywords");
         Location home = (Location) oConfig.get("home");
         double advertisingBalance = oConfig.getDouble("adverising_balance", 0);
-        List<Business> blacklist = oConfig.getStringList("blacklist").stream().map(UUID::fromString).map(Business::getById).collect(Collectors.toList());
+        List<Business> blacklist = oConfig.getStringList("blacklist").stream().map(UUID::fromString).map(Business::byId).collect(Collectors.toList());
 
         File products = new File(folder, "products.dat");
         if (!products.exists()) throw new IllegalStateException("Business \"products.dat\" file does not exist!");
@@ -998,7 +999,7 @@ public final class Business implements ConfigurationSerializable {
      * @throws IllegalStateException if the business file is malformed
      */
     @Nullable
-    public static Business getById(@Nullable UUID uid) throws IllegalStateException {
+    public static Business byId(@Nullable UUID uid) throws IllegalStateException {
         if (uid == null) return null;
 
         File f = new File(NovaConfig.getBusinessesFolder(), uid.toString());
@@ -1021,7 +1022,7 @@ public final class Business implements ConfigurationSerializable {
      * @return Found business, or null if not found
      */
     @Nullable
-    public static Business getByName(@Nullable String name) {
+    public static Business byName(@Nullable String name) {
         if (name == null) return null;
         return getBusinesses().stream().filter(b -> b.getName().equalsIgnoreCase(name)).findFirst().orElse(null);
     }
@@ -1032,7 +1033,7 @@ public final class Business implements ConfigurationSerializable {
      * @return Found business, or null if not found / Player is null
      */
     @Nullable
-    public static Business getByOwner(@Nullable OfflinePlayer p) {
+    public static Business byOwner(@Nullable OfflinePlayer p) {
         if (p == null) return null;
         return getBusinesses().stream().filter(b -> b.isOwner(p)).findFirst().orElse(null);
     }
@@ -1059,7 +1060,7 @@ public final class Business implements ConfigurationSerializable {
      */
     public static boolean exists(@Nullable String name) {
         if (name == null) return false;
-        return getByName(name) != null;
+        return byName(name) != null;
     }
 
     /**
@@ -1177,7 +1178,7 @@ public final class Business implements ConfigurationSerializable {
      */
     public static boolean exists(@Nullable UUID uid) {
         if (uid == null) return false;
-        return getById(uid) != null;
+        return byId(uid) != null;
     }
 
     /**
@@ -1187,7 +1188,7 @@ public final class Business implements ConfigurationSerializable {
      */
     public static boolean exists(@Nullable OfflinePlayer p) {
         if (p == null) return false;
-        return getByOwner(p) != null;
+        return byOwner(p) != null;
     }
 
     /**
@@ -1393,15 +1394,33 @@ public final class Business implements ConfigurationSerializable {
     public Set<CorporationInvite> getInvites() {
         if (getParentCorporation() != null) return ImmutableSet.of();
 
-        Set<CorporationInvite> invites = new HashSet<>();
+        return ImmutableSet.copyOf(Corporation.getCorporations()
+                .stream()
+                .filter(c -> c.isInvited(this))
+                .map(c -> c.getInvite(this))
+                .collect(Collectors.toList())
+        );
+    }
 
-        for (Corporation c : Corporation.getCorporations()) {
-            if (!c.isInvited(this)) continue;
+    /**
+     * Fetches an immutable set of all of the Corporation Permissions this Business has.
+     * @return Set of Corporation Permissions, or empty if not in a Corporation
+     */
+    @NotNull
+    public Set<CorporationPermission> getCorporationPermissions() {
+        Corporation parent = getParentCorporation();
+        if (parent == null) return ImmutableSet.of();
 
-            invites.add(c.getInvite(this));
-        }
+        return parent.getBusinessPermissions(this);
+    }
 
-        return ImmutableSet.copyOf(invites);
+    /**
+     * Whether this Business has a specific Corporation Permission.
+     * @param permission Permission to check
+     * @return true if this Business has a parent corporation and has the permission, else false
+     */
+    public boolean hasCorporationPermission(@NotNull CorporationPermission permission) {
+        return getCorporationPermissions().contains(permission);
     }
 
     // Static Util

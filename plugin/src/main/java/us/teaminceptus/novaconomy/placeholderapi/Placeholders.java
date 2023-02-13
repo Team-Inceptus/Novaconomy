@@ -30,23 +30,23 @@ public class Placeholders extends PlaceholderExpansion {
 
     private static final Map<String, Function<OfflinePlayer, String>> OFFLINE_PH = ImmutableMap.<String, Function<OfflinePlayer, String>>builder()
             .put("business_name", p -> {
-                if (Business.exists(p)) return Business.getByOwner(p).getName();
+                if (Business.exists(p)) return Business.byOwner(p).getName();
                 return "";
             })
             .put("business_product_count", p -> {
-                if (Business.exists(p)) return String.valueOf(Business.getByOwner(p).getProducts().size());
+                if (Business.exists(p)) return String.valueOf(Business.byOwner(p).getProducts().size());
                 return "";
             })
             .put("business_resource_count", p -> {
-                if (Business.exists(p)) return String.valueOf(Business.getByOwner(p).getResources().size());
+                if (Business.exists(p)) return String.valueOf(Business.byOwner(p).getResources().size());
                 return "";
             })
             .put("business_id", p -> {
-                if (Business.exists(p)) return Business.getByOwner(p).getUniqueId().toString();
+                if (Business.exists(p)) return Business.byOwner(p).getUniqueId().toString();
                 return "";
             })
             .put("business_icon", p -> {
-                if (Business.exists(p)) return Business.getByOwner(p).getIcon().getType().toString();
+                if (Business.exists(p)) return Business.byOwner(p).getIcon().getType().toString();
                 return "";
             })
             .put("all_balances", p -> {
@@ -63,19 +63,19 @@ public class Placeholders extends PlaceholderExpansion {
             .put("last_deposit_economy", p -> String.valueOf(new NovaPlayer(p).getLastBankDeposit().getEconomy().getName()))
 
             .put("business_product_purchases", p -> {
-                if (Business.exists(p)) return String.valueOf(Business.getByOwner(p).getStatistics().getTotalSales());
+                if (Business.exists(p)) return String.valueOf(Business.byOwner(p).getStatistics().getTotalSales());
                 return "";
             })
             .put("business_last_transaction_timestamp", p -> {
-                if (Business.exists(p)) return String.valueOf(Business.getByOwner(p).getStatistics().getLastTransaction().getTimestamp().getTime());
+                if (Business.exists(p)) return String.valueOf(Business.byOwner(p).getStatistics().getLastTransaction().getTimestamp().getTime());
                 return "";
             })
             .put("business_last_transaction_amount", p -> {
-                if (Business.exists(p)) return String.valueOf(Business.getByOwner(p).getStatistics().getLastTransaction().getProduct().getAmount());
+                if (Business.exists(p)) return String.valueOf(Business.byOwner(p).getStatistics().getLastTransaction().getProduct().getAmount());
                 return "";
             })
             .put("business_advertising_balance", p -> {
-                if (Business.exists(p)) return String.valueOf(Business.getByOwner(p).getAdvertisingBalance());
+                if (Business.exists(p)) return String.valueOf(Business.byOwner(p).getAdvertisingBalance());
                 return "";
             })
             .put("corporation_name", p -> {

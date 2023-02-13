@@ -184,7 +184,7 @@ public class NBTWrapper1_8_R3 extends NBTWrapper {
             long bF = bbb.getLong();
             long bS = bbb.getLong();
 
-            Business b = Business.getById(new UUID(bF, bS));
+            Business b = Business.byId(new UUID(bF, bS));
             return new BusinessProduct(p, b);
         }
 

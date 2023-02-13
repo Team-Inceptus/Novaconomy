@@ -161,7 +161,7 @@ public class NBTWrapper1_18_R1 extends NBTWrapper {
         Product p = new Product(item, econ, amount);
 
         if (productT.contains("business")) {
-            Business b = Business.getById(productT.getUUID("business"));
+            Business b = Business.byId(productT.getUUID("business"));
             return new BusinessProduct(p, b);
         }
 
