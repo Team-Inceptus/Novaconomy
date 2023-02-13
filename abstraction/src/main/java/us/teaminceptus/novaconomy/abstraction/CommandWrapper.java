@@ -21,6 +21,7 @@ import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.ChatPaginator;
+import org.jetbrains.annotations.NotNull;
 import us.teaminceptus.novaconomy.ModifierReader;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.SortingType;
@@ -29,6 +30,7 @@ import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.business.BusinessStatistics;
 import us.teaminceptus.novaconomy.api.business.Rating;
 import us.teaminceptus.novaconomy.api.corporation.Corporation;
+import us.teaminceptus.novaconomy.api.corporation.CorporationInvite;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.events.CommandTaxEvent;
 import us.teaminceptus.novaconomy.api.events.business.BusinessAdvertiseEvent;
@@ -40,10 +42,10 @@ import us.teaminceptus.novaconomy.api.settings.SettingDescription;
 import us.teaminceptus.novaconomy.api.settings.Settings;
 import us.teaminceptus.novaconomy.api.util.Price;
 import us.teaminceptus.novaconomy.api.util.Product;
-import us.teaminceptus.novaconomy.util.Generator;
-import us.teaminceptus.novaconomy.util.Items;
 import us.teaminceptus.novaconomy.util.NovaSound;
 import us.teaminceptus.novaconomy.util.NovaUtil;
+import us.teaminceptus.novaconomy.util.inventory.Generator;
+import us.teaminceptus.novaconomy.util.inventory.Items;
 
 import java.io.File;
 import java.io.IOException;
@@ -54,15 +56,18 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static us.teaminceptus.novaconomy.abstraction.NBTWrapper.builder;
-import static us.teaminceptus.novaconomy.abstraction.NBTWrapper.of;
 import static us.teaminceptus.novaconomy.abstraction.Wrapper.*;
-import static us.teaminceptus.novaconomy.util.Generator.*;
-import static us.teaminceptus.novaconomy.util.Items.*;
+import static us.teaminceptus.novaconomy.util.NovaUtil.format;
+import static us.teaminceptus.novaconomy.util.inventory.Generator.*;
+import static us.teaminceptus.novaconomy.util.inventory.Items.*;
 
 @SuppressWarnings("unchecked")
 public interface CommandWrapper {
 
     String ERROR_PERMISSION = getMessage("error.permission");
+
+    String ERROR_PERMISSION_ARGUMENT = getMessage("error.permission.argument");
+    String SETTING_TAG = "setting";
 
     default void loadCommands() {}
 
@@ -161,10 +166,6 @@ public interface CommandWrapper {
        put(CORPORATION_TAG, "/nc <create|delete|edit|...> <args...>");
     }};
 
-    static Plugin getPlugin() {
-        return Bukkit.getPluginManager().getPlugin("Novaconomy");
-    }
-
     // Command Methods
 
     default void help(CommandSender sender) {
@@ -207,7 +208,7 @@ public interface CommandWrapper {
     }
 
     static void reloadFiles() {
-        Plugin plugin = getPlugin();
+        Plugin plugin = NovaConfig.getPlugin();
 
         plugin.reloadConfig();
         NovaConfig.loadConfig();
@@ -240,12 +241,12 @@ public interface CommandWrapper {
 
         double max = NovaConfig.getConfiguration().getMaxConvertAmount(from);
         if (max >= 0 && amount > max) {
-            p.sendMessage(String.format(getMessage("error.economy.transfer_max"), String.format("%,.2f", max) + from.getSymbol(), String.format("%,.2f", amount) + from.getSymbol()));
+            p.sendMessage(format(getMessage("error.economy.transfer_max"), format("%,.2f", max) + from.getSymbol(), format("%,.2f", amount) + from.getSymbol()));
             return;
         }
 
         if (np.getBalance(from) < amount) {
-            p.sendMessage(String.format(getMessage("error.economy.invalid_amount"), ChatColor.RED + get("constants.convert")));
+            p.sendMessage(format(getMessage("error.economy.invalid_amount"), ChatColor.RED + get("constants.convert")));
             return;
         }
 
@@ -253,7 +254,7 @@ public interface CommandWrapper {
 
         np.remove(from, amount);
         np.add(to, toBal);
-        p.sendMessage(String.format(getMessage("success.economy.convert"), String.format("%,.2f", amount) + from.getSymbol(), String.format("%,.2f", Math.floor(toBal * 100) / 100)) + to.getSymbol());
+        p.sendMessage(format(getMessage("success.economy.convert"), format("%,.2f", amount) + from.getSymbol(), format("%,.2f", Math.floor(toBal * 100) / 100)) + to.getSymbol());
     }
 
     default void exchange(Player p, double amount) {
@@ -274,7 +275,7 @@ public interface CommandWrapper {
 
         double max = NovaConfig.loadFunctionalityFile().getDouble("MaxConvertAmount");
         if (max >= 0 && amount > max) {
-            p.sendMessage(String.format(getMessage("error.economy.transfer_max"), String.format("%,.2f", max),   String.format("%,.2f", amount)));
+            p.sendMessage(format(getMessage("error.economy.transfer_max"), format("%,.2f", max),   format("%,.2f", amount)));
             return;
         }
 
@@ -349,13 +350,13 @@ public interface CommandWrapper {
         }
 
         String[] components = {
-                String.format(get("constants.economy.info"), econ.getName()),
-                String.format(get("constants.economy.natural_increase"), econ.hasNaturalIncrease()),
-                String.format(get("constants.economy.symbol"), econ.getSymbol()),
-                String.format(get("constants.economy.scale"), Math.floor(econ.getConversionScale() * 100) / 100),
-                String.format(get("constants.economy.custom_model_data"), String.format("%,d", econ.getCustomModelData())),
-                String.format(get("constants.economy.clickable"), econ.hasClickableReward()),
-                String.format(get("constants.economy.taxable"), econ.hasTax()),
+                format(get("constants.economy.info"), econ.getName()),
+                format(get("constants.economy.natural_increase"), econ.hasNaturalIncrease()),
+                format(get("constants.economy.symbol"), econ.getSymbol()),
+                format(get("constants.economy.scale"), Math.floor(econ.getConversionScale() * 100) / 100),
+                format(get("constants.economy.custom_model_data"), format("%,d", econ.getCustomModelData())),
+                format(get("constants.economy.clickable"), econ.hasClickableReward()),
+                format(get("constants.economy.taxable"), econ.hasTax()),
         };
         sender.sendMessage(String.join("\n", components));
     }
@@ -374,7 +375,7 @@ public interface CommandWrapper {
         }
 
         nt.add(econ, add);
-        sender.sendMessage(String.format(getMessage("success.economy.addbalance"),  String.format("%,.2f", add), econ.getSymbol(), target.getName()));
+        sender.sendMessage(format(getMessage("success.economy.addbalance"),  format("%,.2f", add), econ.getSymbol(), target.getName()));
     }
 
     default void removeBalance(CommandSender sender, Economy econ, Player target, double remove) {
@@ -391,7 +392,7 @@ public interface CommandWrapper {
         }
 
         nt.remove(econ, remove);
-        sender.sendMessage(String.format(getMessage("success.economy.removebalance"),  String.format("%,.2f", remove), econ.getSymbol(), target.getName()));
+        sender.sendMessage(format(getMessage("success.economy.removebalance"),  format("%,.2f", remove), econ.getSymbol(), target.getName()));
     }
 
     default void setBalance(CommandSender sender, Economy econ, Player target, double balance) {
@@ -408,7 +409,7 @@ public interface CommandWrapper {
         }
 
         nt.setBalance(econ, balance);
-        sender.sendMessage(String.format(getMessage("success.economy.setbalance"), target.getName(), econ.getName(), String.format("%,.2f", balance) + econ.getSymbol()));
+        sender.sendMessage(format(getMessage("success.economy.setbalance"), target.getName(), econ.getName(), format("%,.2f", balance) + econ.getSymbol()));
     }
 
     default void interest(CommandSender sender, boolean enabled) {
@@ -471,7 +472,7 @@ public interface CommandWrapper {
             inv.setItem(index, Items.builder(createPlayerHead(np.getPlayer()),
                     meta -> {
                         meta.setDisplayName(color + "#" + level + " - " + (op != null && op.getDisplayName() != null ? op.getDisplayName() : np.getPlayer().getName()));
-                        meta.setLore(Collections.singletonList(ChatColor.GOLD + String.format("%,.2f", economy ? np.getBalance(econ) : np.getTotalBalance()) + (economy ? econ.getSymbol() : "")));
+                        meta.setLore(Collections.singletonList(ChatColor.GOLD + format("%,.2f", economy ? np.getBalance(econ) : np.getTotalBalance()) + (economy ? econ.getSymbol() : "")));
                     })
             );
         }
@@ -509,14 +510,14 @@ public interface CommandWrapper {
 
         NovaPlayer nt = new NovaPlayer(p);
         if (take && nt.getBalance(econ) < amount) {
-            p.sendMessage(String.format(getMessage("error.economy.invalid_amount"), get("constants.purchase")));
+            p.sendMessage(format(getMessage("error.economy.invalid_amount"), get("constants.purchase")));
             return;
         }
 
         p.getInventory().addItem(Generator.createCheck(econ, amount));
         if (take) nt.remove(econ, amount);
 
-        p.sendMessage(String.format(getMessage("success.economy.check"), amount + "", econ.getSymbol() + ""));
+        p.sendMessage(format(getMessage("success.economy.check"), amount + "", econ.getSymbol() + ""));
     }
 
     default void removeEconomy(CommandSender sender, Economy econ) {
@@ -527,9 +528,9 @@ public interface CommandWrapper {
 
         String name = econ.getName();
 
-        sender.sendMessage(String.format(getMessage("command.economy.delete.deleting"), name));
+        sender.sendMessage(format(getMessage("command.economy.delete.deleting"), name));
         Economy.removeEconomy(econ);
-        sender.sendMessage(String.format(getMessage("success.economy.delete"), name));
+        sender.sendMessage(format(getMessage("success.economy.delete"), name));
     }
 
     double[] PAY_AMOUNTS = { 0.5, 1, 10, 100, 1000, 10000, 100000 };
@@ -563,7 +564,7 @@ public interface CommandWrapper {
         inv.setItem(10, Items.builder(createPlayerHead(p),
                 meta -> {
                     meta.setDisplayName(ChatColor.AQUA + (p.getDisplayName() == null ? p.getName() : p.getDisplayName()));
-                    meta.setLore(Collections.singletonList(ChatColor.GOLD + String.format("%,.2f", np.getBalance(econ)) + econ.getSymbol()));
+                    meta.setLore(Collections.singletonList(ChatColor.GOLD + format("%,.2f", np.getBalance(econ)) + econ.getSymbol()));
                 }));
         inv.setItem(16, Items.builder(createPlayerHead(target),
                 meta -> meta.setDisplayName(ChatColor.AQUA + (target.getDisplayName() == null ? target.getName() : target.getDisplayName()))
@@ -584,7 +585,7 @@ public interface CommandWrapper {
                 boolean add = i == 0;
                 double pAmount = PAY_AMOUNTS[j];
                 inv.setItem(19 + (i * 9) + j, builder(add ? Items.LIME_STAINED_GLASS_PANE : Items.RED_STAINED_GLASS_PANE,
-                        meta -> meta.setDisplayName((add ? ChatColor.GREEN + "+" : ChatColor.RED + "-") + String.format("%,.2f", pAmount)),
+                        meta -> meta.setDisplayName((add ? ChatColor.GREEN + "+" : ChatColor.RED + "-") + format("%,.2f", pAmount)),
                         nbt -> {
                             nbt.setID("pay:amount");
                             nbt.set("add", add);
@@ -594,7 +595,7 @@ public interface CommandWrapper {
             }
 
         inv.setItem(40, builder(econ.getIcon().clone(),
-                meta -> meta.setDisplayName(ChatColor.GOLD + String.format("%,.2f", amount) + econ.getSymbol()),
+                meta -> meta.setDisplayName(ChatColor.GOLD + format("%,.2f", amount) + econ.getSymbol()),
                 nbt -> {
                     nbt.set(AMOUNT_TAG, amount);
                     nbt.set(ECON_TAG, econ.getUniqueId());
@@ -614,14 +615,14 @@ public interface CommandWrapper {
     }
 
     default void deleteBusiness(Player p, boolean confirm) {
-        Business b = Business.getByOwner(p);
+        Business b = Business.byOwner(p);
         if (b == null) {
             p.sendMessage(getMessage("error.business.not_an_owner"));
             return;
         }
 
         if (confirm) Business.remove(b);
-        else p.sendMessage(String.format(getMessage("constants.confirm_command"), "/business delete confirm"));
+        else p.sendMessage(format(getMessage("constants.confirm_command"), "/business delete confirm"));
     }
 
     default void removeBusiness(CommandSender sender, Business b, boolean confirm) {
@@ -634,11 +635,11 @@ public interface CommandWrapper {
             Business.remove(b);
             sender.sendMessage(getMessage("success.business.delete"));
         }
-        else sender.sendMessage(String.format(getMessage("constants.confirm_command"), "/business remove <business> confirm"));
+        else sender.sendMessage(format(getMessage("constants.confirm_command"), "/business remove <business> confirm"));
     }
 
     default void businessInfo(Player p) {
-        Business b = Business.getByOwner(p);
+        Business b = Business.byOwner(p);
         if (b == null) {
             p.sendMessage(getMessage("error.business.not_an_owner"));
             return;
@@ -672,7 +673,7 @@ public interface CommandWrapper {
             return;
         }
 
-        Business b = Business.getByOwner(p);
+        Business b = Business.byOwner(p);
         if (b == null) {
             p.sendMessage(getMessage("error.business.not_an_owner"));
             return;
@@ -723,7 +724,7 @@ public interface CommandWrapper {
         inv.setItem(22, economyWheel);
 
         inv.setItem(13, builder(pr,
-                meta -> meta.setLore(Collections.singletonList(String.format(get("constants.business.price"), price, econ.getSymbol()) )),
+                meta -> meta.setLore(Collections.singletonList(format(get("constants.business.price"), price, econ.getSymbol()) )),
                 nbt -> nbt.set(PRICE_TAG, price)
         ));
 
@@ -747,7 +748,7 @@ public interface CommandWrapper {
 
         try {
             Business.builder().setOwner(p).setName(name).setIcon(icon).build();
-            p.sendMessage(String.format(getMessage("success.business.create"), name));
+            p.sendMessage(format(getMessage("success.business.create"), name));
         } catch (IllegalArgumentException e) {
             p.sendMessage(getMessage("error.argument"));
         } catch (UnsupportedOperationException e) {
@@ -766,7 +767,7 @@ public interface CommandWrapper {
             return;
         }
 
-        Business b = Business.getByOwner(p);
+        Business b = Business.byOwner(p);
         if (b == null) {
             p.sendMessage(getMessage("error.business.not_an_owner"));
             return;
@@ -798,7 +799,7 @@ public interface CommandWrapper {
             return;
         }
 
-        Business b = Business.getByOwner(p);
+        Business b = Business.byOwner(p);
         if (b == null) {
             p.sendMessage(getMessage("error.business.not_an_owner"));
             return;
@@ -841,17 +842,17 @@ public interface CommandWrapper {
     default void bankDeposit(Player p, double amount, Economy econ) {
         NovaPlayer np = new NovaPlayer(p);
         if (np.getBalance(econ) < amount) {
-            p.sendMessage(String.format(getMessage("error.economy.invalid_amount"), get("constants.bank.deposit")));
+            p.sendMessage(format(getMessage("error.economy.invalid_amount"), get("constants.bank.deposit")));
             return;
         }
 
         if (amount < NovaConfig.getConfiguration().getMinimumPayment(econ)) {
-            p.sendMessage(String.format(getMessage("error.bank.minimum_payment"), String.format("%,.2f", NovaConfig.getConfiguration().getMinimumPayment(econ)) + econ.getSymbol(), String.format("%,.2f", amount) + econ.getSymbol()));
+            p.sendMessage(format(getMessage("error.bank.minimum_payment"), format("%,.2f", NovaConfig.getConfiguration().getMinimumPayment(econ)) + econ.getSymbol(), format("%,.2f", amount) + econ.getSymbol()));
             return;
         }
 
         np.deposit(econ, amount);
-        p.sendMessage(String.format(getMessage("success.bank.deposit"), amount + "" + econ.getSymbol(), econ.getName()));
+        p.sendMessage(format(getMessage("success.bank.deposit"), amount + "" + econ.getSymbol(), econ.getName()));
     }
 
     default void businessHome(Player p, boolean set) {
@@ -865,11 +866,11 @@ public interface CommandWrapper {
             return;
         }
 
-        Business b = Business.getByOwner(p);
+        Business b = Business.byOwner(p);
         if (set) {
             Location loc = p.getLocation();
             b.setHome(loc);
-            p.sendMessage(String.format(getMessage("success.business.set_home"), ChatColor.GOLD + "" + loc.getBlockX() + ", " + loc.getBlockY() + ", " + loc.getBlockZ()));
+            p.sendMessage(format(getMessage("success.business.set_home"), ChatColor.GOLD + "" + loc.getBlockX() + ", " + loc.getBlockY() + ", " + loc.getBlockZ()));
         } else {
             if (!b.hasHome()) {
                 p.sendMessage(getMessage("error.business.no_home"));
@@ -889,12 +890,12 @@ public interface CommandWrapper {
 
     default void bankWithdraw(Player p, double amount, Economy econ) {
         if (amount > NovaConfig.getConfiguration().getMaxWithdrawAmount(econ)) {
-            p.sendMessage(String.format(getMessage("error.bank.maximum_withdraw"), String.format("%,.2f", NovaConfig.getConfiguration().getMaxWithdrawAmount(econ)) + econ.getSymbol(), String.format("%,.2f", amount) + econ.getSymbol()));
+            p.sendMessage(format(getMessage("error.bank.maximum_withdraw"), format("%,.2f", NovaConfig.getConfiguration().getMaxWithdrawAmount(econ)) + econ.getSymbol(), format("%,.2f", amount) + econ.getSymbol()));
             return;
         }
 
         if (amount > Bank.getBalance(econ)) {
-            p.sendMessage(String.format(getMessage("error.bank.maximum_withdraw"), String.format("%,.2f", Bank.getBalance(econ)) + econ.getSymbol(), String.format("%,.2f", amount) + econ.getSymbol()));
+            p.sendMessage(format(getMessage("error.bank.maximum_withdraw"), format("%,.2f", Bank.getBalance(econ)) + econ.getSymbol(), format("%,.2f", amount) + econ.getSymbol()));
             return;
         }
 
@@ -908,12 +909,12 @@ public interface CommandWrapper {
         else timeS = ((long) Math.floor((double) timeSecs / (60D * 60D)) + " ").replace("L", "") + get("constants.time.hour");
 
         if (time > 0) {
-            p.sendMessage(String.format(getMessage("error.bank.withdraw_time"), timeS));
+            p.sendMessage(format(getMessage("error.bank.withdraw_time"), timeS));
             return;
         }
 
         np.withdraw(econ, amount);
-        p.sendMessage(String.format(getMessage("success.bank.withdraw"), amount + "" + econ.getSymbol(), econ.getName()));
+        p.sendMessage(format(getMessage("success.bank.withdraw"), amount + "" + econ.getSymbol(), econ.getName()));
     }
 
     default void createBounty(Player p, OfflinePlayer target, Economy econ, double amount) {
@@ -939,19 +940,19 @@ public interface CommandWrapper {
 
         NovaPlayer np = new NovaPlayer(p);
         if (np.getBalance(econ) < amount) {
-            p.sendMessage(String.format(getMessage("error.economy.invalid_amount"), get("constants.place_bounty")));
+            p.sendMessage(format(getMessage("error.economy.invalid_amount"), get("constants.place_bounty")));
             return;
         }
 
         try {
             Bounty.builder().setOwner(np).setAmount(amount).setTarget(target).setEconomy(econ).build();
             np.remove(econ, amount);
-            p.sendMessage(String.format(getMessage("success.bounty.create"), target.getName()));
+            p.sendMessage(format(getMessage("success.bounty.create"), target.getName()));
 
             if (target.isOnline() && NovaConfig.getConfiguration().hasNotifications())
-                target.getPlayer().sendMessage(String.format(getMessage("notification.bounty"), p.getDisplayName() == null ? p.getName() : p.getDisplayName(), String.format("%,.2f", amount) + econ.getSymbol()));
+                target.getPlayer().sendMessage(format(getMessage("notification.bounty"), p.getDisplayName() == null ? p.getName() : p.getDisplayName(), format("%,.2f", amount) + econ.getSymbol()));
         } catch (UnsupportedOperationException e) {
-            p.sendMessage(String.format(getMessage("error.bounty.exists"), target.isOnline() && target.getPlayer().getDisplayName() == null ? target.getName() : target.getPlayer().getDisplayName()));
+            p.sendMessage(format(getMessage("error.bounty.exists"), target.isOnline() && target.getPlayer().getDisplayName() == null ? target.getName() : target.getPlayer().getDisplayName()));
         }
     }
 
@@ -986,7 +987,7 @@ public interface CommandWrapper {
 
         config.set(key, null);
         try { config.save(f); } catch (IOException e) { NovaConfig.print(e); }
-        p.sendMessage(String.format(getMessage("success.bounty.delete"), target.getName()));
+        p.sendMessage(format(getMessage("success.bounty.delete"), target.getName()));
     }
 
     default void listBounties(Player p, boolean owned) {
@@ -1022,7 +1023,7 @@ public interface CommandWrapper {
         ItemStack head = createPlayerHead(p);
         ItemMeta meta = head.getItemMeta();
         meta.setDisplayName(ChatColor.AQUA + (p.getDisplayName() == null ? p.getName() : p.getDisplayName()));
-        if (owned) meta.setLore(Collections.singletonList(String.format(get("constants.bounty.amount"), np.getOwnedBounties().size())));
+        if (owned) meta.setLore(Collections.singletonList(format(get("constants.bounty.amount"), np.getOwnedBounties().size())));
         head.setItemMeta(meta);
         inv.setItem(4, head);
 
@@ -1041,7 +1042,7 @@ public interface CommandWrapper {
                 SkullMeta bMeta = (SkullMeta) bHead.getItemMeta();
                 bMeta.setOwner(target.getName());
                 bMeta.setDisplayName(ChatColor.AQUA + (target.isOnline() && target.getPlayer().getDisplayName() == null ? target.getPlayer().getDisplayName() : target.getName()));
-                bMeta.setLore(Collections.singletonList(ChatColor.YELLOW + String.format("%,.2f", b.getAmount()) + b.getEconomy().getSymbol()));
+                bMeta.setLore(Collections.singletonList(ChatColor.YELLOW + format("%,.2f", b.getAmount()) + b.getEconomy().getSymbol()));
                 bHead.setItemMeta(bMeta);
                 inv.setItem(index, bHead);
             }
@@ -1054,7 +1055,7 @@ public interface CommandWrapper {
 
                 ItemStack bMap = new ItemStack(Material.MAP);
                 ItemMeta bMeta = bMap.getItemMeta();
-                bMeta.setDisplayName(ChatColor.YELLOW + String.format("%,.2f", b.getAmount()) + b.getEconomy().getSymbol());
+                bMeta.setDisplayName(ChatColor.YELLOW + format("%,.2f", b.getAmount()) + b.getEconomy().getSymbol());
                 bMap.setItemMeta(bMeta);
 
                 inv.setItem(index, bMap);
@@ -1123,7 +1124,7 @@ public interface CommandWrapper {
                     p.getPlayer().sendMessage(ChatColor.translateAlternateColorCodes('&', custom.getMessage()));
             });
 
-        sender.sendMessage(String.format(getMessage("success.tax.custom_event"), custom.getName()));
+        sender.sendMessage(format(getMessage("success.tax.custom_event"), custom.getName()));
     }
 
     default void settings(Player p, String section) {
@@ -1139,8 +1140,8 @@ public interface CommandWrapper {
                         meta.addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1, true);
                         meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
                     }, nbt -> {
-                        nbt.setID("setting");
-                        nbt.set("setting", "personal");
+                        nbt.setID(SETTING_TAG);
+                        nbt.set(SETTING_TAG, "personal");
                     }
             );
 
@@ -1150,8 +1151,8 @@ public interface CommandWrapper {
                         meta.addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1, true);
                         meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
                     }, nbt -> {
-                        nbt.setID("setting");
-                        nbt.set("setting", BUSINESS_TAG);
+                        nbt.setID(SETTING_TAG);
+                        nbt.set(SETTING_TAG, BUSINESS_TAG);
                     });
 
             ItemStack corporation = builder(Material.IRON_BLOCK,
@@ -1160,17 +1161,16 @@ public interface CommandWrapper {
                         meta.addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1, true);
                         meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
                     }, nbt -> {
-                        nbt.setID("setting");
-                        nbt.set("setting", CORPORATION_TAG);
+                        nbt.setID(SETTING_TAG);
+                        nbt.set(SETTING_TAG, CORPORATION_TAG);
                     });
 
             settings.addItem(personal, business, corporation);
         } else {
-            ItemStack back = BACK.clone();
-            NBTWrapper bNBT = of(back);
-
-            BiFunction<Settings.NovaSetting<?>, Object, ItemStack> func = (sett, value) -> {
+            BiFunction<Settings.NovaSetting<?>, Object, ItemStack> func = (sett, valueO) -> {
+                Object value = valueO == null ? sett.getDefaultValue() : valueO;
                 ItemStack item = value instanceof Boolean ? ((Boolean) value ? LIME_WOOL : RED_WOOL) : CYAN_WOOL;
+
                 return builder(item,
                     meta -> {
                         String sValue;
@@ -1195,7 +1195,7 @@ public interface CommandWrapper {
                         nbt.setID("setting_toggle");
                         nbt.set("display", sett.getDisplayName());
                         nbt.set("section", section);
-                        nbt.set("setting", sett.name());
+                        nbt.set(SETTING_TAG, sett.name());
                         nbt.set("type", sett.getType());
                         nbt.set("value", value.toString());
                     }
@@ -1204,7 +1204,7 @@ public interface CommandWrapper {
 
             switch (section.toLowerCase()) {
                 case "personal": {
-                    settings = genGUI(36, "constants.settings.corporation");
+                    settings = genGUI(36, get("constants.settings.corporation"));
 
                     for (Settings.Personal sett : Settings.Personal.values()) {
                         boolean value = np.getSetting(sett);
@@ -1218,8 +1218,8 @@ public interface CommandWrapper {
                         return;
                     }
 
-                    Business b = Business.getByOwner(p);
-                    settings = genGUI(36, "constants.settings.business");
+                    Business b = Business.byOwner(p);
+                    settings = genGUI(36, get("constants.settings.business"));
 
                     for (Settings.Business sett : Settings.Business.values()) {
                         boolean value = b.getSetting(sett);
@@ -1234,7 +1234,7 @@ public interface CommandWrapper {
                     }
                     Corporation c = Corporation.byOwner(p);
 
-                    settings = genGUI(36, "constants.settings.corporation");
+                    settings = genGUI(36, get("constants.settings.corporation"));
 
                     for (Settings.Corporation<?> sett : Settings.Corporation.values()) {
                         Object value = c.getSetting(sett);
@@ -1248,7 +1248,7 @@ public interface CommandWrapper {
                 }
             }
 
-            settings.setItem(31, bNBT.getItem());
+            settings.setItem(31, builder(BACK, nbt -> nbt.setID("back:settings")));
         }
 
         settings.setCancelled();
@@ -1271,7 +1271,7 @@ public interface CommandWrapper {
         boolean anonymous = !b.getSetting(Settings.Business.PUBLIC_OWNER) && !b.isOwner(p);
         stats.setItem(12, Items.builder(createPlayerHead(anonymous ? null : b.getOwner()),
                 meta -> {
-                    meta.setDisplayName(anonymous ? ChatColor.AQUA + get("constants.business.anonymous") : String.format(get("constants.owner"), b.getOwner().getName()));
+                    meta.setDisplayName(anonymous ? ChatColor.AQUA + get("constants.business.anonymous") : format(get("constants.owner"), b.getOwner().getName()));
                     if (b.isOwner(p) && !b.getSetting(Settings.Business.PUBLIC_OWNER))
                         meta.setLore(Collections.singletonList(ChatColor.YELLOW + get("constants.business.hidden")));
                 }
@@ -1279,7 +1279,7 @@ public interface CommandWrapper {
 
         stats.setItem(14, Items.builder(Material.EGG,
                 meta -> {
-                    meta.setDisplayName(ChatColor.YELLOW + String.format(get("constants.business.stats.created"), NovaUtil.formatTimeAgo(b.getCreationDate().getTime())));
+                    meta.setDisplayName(ChatColor.YELLOW + format(get("constants.business.stats.created"), NovaUtil.formatTimeAgo(b.getCreationDate().getTime())));
                     meta.addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1, true);
                     meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
                 })
@@ -1290,9 +1290,9 @@ public interface CommandWrapper {
                     meta.setDisplayName(ChatColor.YELLOW + "" + ChatColor.UNDERLINE + get("constants.business.stats.global"));
                     meta.setLore(Arrays.asList(
                             "",
-                            String.format(get("constants.stats.global.sold"), String.format("%,d", statistics.getTotalSales())),
-                            String.format(get("constants.business.stats.global.resources"), String.format("%,d", statistics.getTotalResources())),
-                            String.format(get("constants.business.stats.global.ratings"), String.format("%,d", b.getRatings().size()))
+                            format(get("constants.stats.global.sold"), format("%,d", statistics.getTotalSales())),
+                            format(get("constants.business.stats.global.resources"), format("%,d", statistics.getTotalResources())),
+                            format(get("constants.business.stats.global.ratings"), format("%,d", b.getRatings().size()))
                     ));
                 })
         );
@@ -1312,7 +1312,7 @@ public interface CommandWrapper {
                         meta.setLore(Arrays.asList(
                                 ChatColor.AQUA + "" + ChatColor.UNDERLINE + (buyer.isOnline() && buyer.getPlayer().getDisplayName() != null ? buyer.getPlayer().getDisplayName() : buyer.getName()),
                                 " ",
-                                ChatColor.WHITE + display + " (" + prI.getAmount() + ")" + ChatColor.GOLD + " | " + ChatColor.BLUE + String.format("%,.2f", pr.getAmount() * prI.getAmount()) + pr.getEconomy().getSymbol(),
+                                ChatColor.WHITE + display + " (" + prI.getAmount() + ")" + ChatColor.GOLD + " | " + ChatColor.BLUE + format("%,.2f", pr.getAmount() * prI.getAmount()) + pr.getEconomy().getSymbol(),
                                 ChatColor.DARK_AQUA + NovaUtil.formatTimeAgo(latestT.getTimestamp().getTime())
                         ));
                     }
@@ -1325,7 +1325,7 @@ public interface CommandWrapper {
         stats.setItem(21, latest);
         stats.setItem(22, Items.builder(Material.matchMaterial("SPYGLASS") == null ? Material.COMPASS : Material.matchMaterial("SPYGLASS"),
                 meta -> {
-                    meta.setDisplayName(String.format(get("constants.views"), String.format("%,d", b.getStatistics().getViews())));
+                    meta.setDisplayName(format(get("constants.views"), format("%,d", b.getStatistics().getViews())));
                     meta.addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1, true);
                     meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
                 })
@@ -1373,7 +1373,7 @@ public interface CommandWrapper {
                         Economy econ = entry.getKey();
                         double total = entry.getValue();
 
-                        lore.add((switcher ? ChatColor.AQUA : ChatColor.BLUE) + String.format("%,.2f", total) + econ.getSymbol());
+                        lore.add((switcher ? ChatColor.AQUA : ChatColor.BLUE) + format("%,.2f", total) + econ.getSymbol());
                         switcher = !switcher;
                     }
 
@@ -1407,7 +1407,7 @@ public interface CommandWrapper {
                             ItemStack item = pr.getItem();
                             String display = item.hasItemMeta() && item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : WordUtils.capitalizeFully(item.getType().name().replace('_', ' '));
 
-                            pLore.add(ChatColor.YELLOW + "#" + num + ") " + ChatColor.RESET + display + ChatColor.GOLD + " - " + ChatColor.BLUE + String.format("%,.2f", pr.getAmount()) + pr.getEconomy().getSymbol() + ChatColor.GOLD + " | " + ChatColor.AQUA + String.format("%,d", sales));
+                            pLore.add(ChatColor.YELLOW + "#" + num + ") " + ChatColor.RESET + display + ChatColor.GOLD + " - " + ChatColor.BLUE + format("%,.2f", pr.getAmount()) + pr.getEconomy().getSymbol() + ChatColor.GOLD + " | " + ChatColor.AQUA + format("%,d", sales));
                         }
 
                         meta.setLore(pLore);
@@ -1451,14 +1451,14 @@ public interface CommandWrapper {
         else timeS = ((long) Math.floor((double) timeSecs / (60D * 60D)) + " ").replace("L", "") + get("constants.time.hour");
 
         if (time > 0) {
-            p.sendMessage(String.format(get("error.business.rate_time"), timeS, b.getName()));
+            p.sendMessage(format(get("error.business.rate_time"), timeS, b.getName()));
             return;
         }
 
-        NovaInventory rate = genGUI(36, String.format(get("constants.rating"), b.getName()));
+        NovaInventory rate = genGUI(36, format(get("constants.rating"), b.getName()));
         rate.setCancelled();
 
-        rate.setItem(13, builder(getRatingMats()[2],
+        rate.setItem(13, builder(RATING_MATS[2],
                 meta -> meta.setDisplayName(ChatColor.YELLOW + "3⭐"),
                 nbt -> {
                     nbt.setID("business:rating");
@@ -1496,7 +1496,7 @@ public interface CommandWrapper {
             return;
         }
 
-        Business b = Business.getByOwner(p);
+        Business b = Business.byOwner(p);
 
         Optional<Rating> r = b.getRatings().stream().filter(ra -> ra.isOwner(target) && !new NovaPlayer(ra.getOwner()).getSetting(Settings.Personal.ANONYMOUS_RATING)).findFirst();
         if (!r.isPresent()) {
@@ -1515,7 +1515,7 @@ public interface CommandWrapper {
                 }
         ));
 
-        pr.setItem(14, Items.builder(getRatingMats()[rating.getRatingLevel() - 1],
+        pr.setItem(14, Items.builder(RATING_MATS[rating.getRatingLevel() - 1],
                 meta -> {
                     meta.setDisplayName(ChatColor.YELLOW + "" + rating.getRatingLevel() + "⭐");
                     meta.setLore(Collections.singletonList(ChatColor.YELLOW + "\"" + (rating.getComment().isEmpty() ? get("constants.no_comment") : rating.getComment()) + "\""));
@@ -1565,7 +1565,7 @@ public interface CommandWrapper {
             return;
         }
 
-        Business b = Business.getByOwner(p);
+        Business b = Business.byOwner(p);
         NovaInventory select = genGUI(54, get("constants.business.select_product"));
         select.setCancelled();
 
@@ -1594,20 +1594,20 @@ public interface CommandWrapper {
             return;
         }
 
-        Business b = Business.getByOwner(p);
+        Business b = Business.byOwner(p);
         if (name.isEmpty()) {
             p.sendMessage(getMessage("error.argument.empty"));
             return;
         }
 
-        Business other = Business.getByName(name);
+        Business other = Business.byName(name);
         if (other != null && !other.equals(b)) {
             p.sendMessage(getMessage("error.business.exists_name"));
             return;
         }
 
         b.setName(name);
-        p.sendMessage(String.format(getMessage("success.business.set_name"), name));
+        p.sendMessage(format(getMessage("success.business.set_name"), name));
     }
 
     default void setBusinessIcon(Player p, Material icon) {
@@ -1616,9 +1616,9 @@ public interface CommandWrapper {
             return;
         }
 
-        Business b = Business.getByOwner(p);
+        Business b = Business.byOwner(p);
         b.setIcon(icon);
-        p.sendMessage(String.format(getMessage("success.business.set_icon"), WordUtils.capitalizeFully(icon.name().replace("_", " "))));
+        p.sendMessage(format(getMessage("success.business.set_icon"), WordUtils.capitalizeFully(icon.name().replace("_", " "))));
     }
 
     default void setEconomyModel(CommandSender sender, Economy econ, int data) {
@@ -1628,7 +1628,7 @@ public interface CommandWrapper {
         }
 
         econ.setCustomModelData(data);
-        sender.sendMessage(String.format(getMessage("success.economy.set_model_data"), econ.getName(), data));
+        sender.sendMessage(format(getMessage("success.economy.set_model_data"), econ.getName(), data));
     }
 
     default void setEconomyIcon(CommandSender sender, Economy econ, Material icon) {
@@ -1643,7 +1643,7 @@ public interface CommandWrapper {
         }
 
         econ.setIcon(icon);
-        sender.sendMessage(String.format(getMessage("success.economy.set_icon"), econ.getName(), WordUtils.capitalizeFully(icon.name().replace("_", " "))));
+        sender.sendMessage(format(getMessage("success.economy.set_icon"), econ.getName(), WordUtils.capitalizeFully(icon.name().replace("_", " "))));
     }
 
     default void setEconomyScale(CommandSender sender, Economy econ, double scale) {
@@ -1653,7 +1653,7 @@ public interface CommandWrapper {
         }
 
         econ.setConversionScale(scale);
-        sender.sendMessage(String.format(getMessage("success.economy.set_scale"), econ.getName(), scale));
+        sender.sendMessage(format(getMessage("success.economy.set_scale"), econ.getName(), scale));
     }
 
     default void setEconomyNatural(CommandSender sender, Economy econ, boolean naturalIncrease) {
@@ -1690,7 +1690,7 @@ public interface CommandWrapper {
         inv.setItem(10, Items.builder(Material.EMERALD_BLOCK,
                 meta -> {
                     meta.setDisplayName(ChatColor.YELLOW + get("constants.player_statistics.highest_balance"));
-                    String s = stats.getHighestBalance() == null ? String.format("%,.2f", np.getTotalBalance()) : stats.getHighestBalance().toString();
+                    String s = stats.getHighestBalance() == null ? format("%,.2f", np.getTotalBalance()) : stats.getHighestBalance().toString();
 
                     meta.setLore(Collections.singletonList(ChatColor.GOLD + s));
                 }
@@ -1700,8 +1700,8 @@ public interface CommandWrapper {
                 meta -> {
                     meta.setDisplayName(ChatColor.YELLOW + get("constants.player_statistics.business"));
                     meta.setLore(Arrays.asList(
-                            ChatColor.GOLD + String.format(get("constants.player_statistics.business.products_purchased"), String.format("%,d", stats.getProductsPurchased())),
-                            ChatColor.AQUA + String.format(get("constants.player_statistics.business.money_spent"), String.format("%,.2f", stats.getTotalMoneySpent()))
+                            ChatColor.GOLD + format(get("constants.player_statistics.business.products_purchased"), format("%,d", stats.getProductsPurchased())),
+                            ChatColor.AQUA + format(get("constants.player_statistics.business.money_spent"), format("%,.2f", stats.getTotalMoneySpent()))
                     ));
                     meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
                 })
@@ -1711,7 +1711,7 @@ public interface CommandWrapper {
                 meta -> {
                     meta.setDisplayName(ChatColor.YELLOW + get("constants.player_statistics.bank"));
                     meta.setLore(Arrays.asList(
-                            String.format(get("constants.player_statistics.bank.total_withdrawn"), String.format("%,.2f", stats.getTotalWithdrawn()))
+                            format(get("constants.player_statistics.bank.total_withdrawn"), format("%,.2f", stats.getTotalWithdrawn()))
                     ));
                 })
         );
@@ -1725,8 +1725,8 @@ public interface CommandWrapper {
                 meta -> {
                     meta.setDisplayName(ChatColor.YELLOW + get("constants.player_statistics.bounty"));
                     meta.setLore(Arrays.asList(
-                            ChatColor.RED + String.format(get("constants.player_statistics.bounty.created"), String.format("%,d", stats.getTotalBountiesCreated())),
-                            ChatColor.DARK_RED + String.format(get("constants.player_statistics.bounty.had"), String.format("%,d", stats.getTotalBountiesTargeted()))
+                            ChatColor.RED + format(get("constants.player_statistics.bounty.created"), format("%,d", stats.getTotalBountiesCreated())),
+                            ChatColor.DARK_RED + format(get("constants.player_statistics.bounty.had"), format("%,d", stats.getTotalBountiesTargeted()))
                     ));
                 }
         ));
@@ -1765,7 +1765,7 @@ public interface CommandWrapper {
             return;
         }
 
-        Business b = Business.getByOwner(p);
+        Business b = Business.byOwner(p);
         if (b.getLeftoverStock().isEmpty()) {
             p.sendMessage(getMessage("error.business.no_leftover_stock"));
             return;
@@ -1812,7 +1812,7 @@ public interface CommandWrapper {
             return;
         }
 
-        Business b = Business.getByOwner(p);
+        Business b = Business.byOwner(p);
 
         if (b.getKeywords().isEmpty()) {
             p.sendMessage(getMessage("error.business.no_keywords"));
@@ -1837,7 +1837,7 @@ public interface CommandWrapper {
             return;
         }
 
-        Business b = Business.getByOwner(p);
+        Business b = Business.byOwner(p);
 
         if (keywords == null) {
             p.sendMessage(getMessage("error.argument.keywords"));
@@ -1855,7 +1855,7 @@ public interface CommandWrapper {
         }
 
         b.addKeywords(keywords);
-        p.sendMessage(String.format(getMessage("success.business.add_keywords"), keywords.length));
+        p.sendMessage(format(getMessage("success.business.add_keywords"), keywords.length));
     }
 
     default void removeKeywords(Player p, String... keywords) {
@@ -1869,7 +1869,7 @@ public interface CommandWrapper {
             return;
         }
 
-        Business b = Business.getByOwner(p);
+        Business b = Business.byOwner(p);
 
         if (keywords == null) {
             p.sendMessage(getMessage("error.argument.keywords"));
@@ -1882,7 +1882,7 @@ public interface CommandWrapper {
         }
 
         b.removeKeywords(keywords);
-        p.sendMessage(String.format(getMessage("success.business.remove_keywords"), keywords.length));
+        p.sendMessage(format(getMessage("success.business.remove_keywords"), keywords.length));
     }
 
     default void businessAdvertising(Player p) {
@@ -1901,7 +1901,7 @@ public interface CommandWrapper {
             return;
         }
 
-        Business b = Business.getByOwner(p);
+        Business b = Business.byOwner(p);
         NovaInventory inv = genGUI(27, get("constants.business.advertising"));
         inv.setCancelled();
 
@@ -1914,7 +1914,7 @@ public interface CommandWrapper {
         inv.setItem(12, Items.builder(Material.GOLD_INGOT,
                 meta -> {
                     meta.setDisplayName(ChatColor.YELLOW + get("constants.business.advertising_balance"));
-                    meta.setLore(Collections.singletonList(ChatColor.GOLD + String.format("%,.2f", advertisingBalance)));
+                    meta.setLore(Collections.singletonList(ChatColor.GOLD + format("%,.2f", advertisingBalance)));
                 }
         ));
 
@@ -1923,7 +1923,7 @@ public interface CommandWrapper {
                 meta -> {
                     meta.setDisplayName(ChatColor.YELLOW + get("constants.other_info"));
                     meta.setLore(Arrays.asList(
-                            ChatColor.GREEN + String.format(get("constants.business.advertising_chance"), ChatColor.GOLD + String.format("%,.2f", advertisingBalance < NovaConfig.getConfiguration().getBusinessAdvertisingReward() ? 0.0D : (advertisingBalance * 100) / adTotal) + "%")
+                            ChatColor.GREEN + format(get("constants.business.advertising_chance"), ChatColor.GOLD + format("%,.2f", advertisingBalance < NovaConfig.getConfiguration().getBusinessAdvertisingReward() ? 0.0D : (advertisingBalance * 100) / adTotal) + "%")
                     ));
                 }
         ));
@@ -1965,7 +1965,7 @@ public interface CommandWrapper {
         }
 
         Economy first = economies.stream().findFirst().get();
-        Business b = Business.getByOwner(p);
+        Business b = Business.byOwner(p);
 
         NovaInventory inv = genGUI(45, get("constants.business.advertising_" + (deposit ? "deposit" : "withdraw")));
         inv.setCancelled();
@@ -1976,7 +1976,7 @@ public interface CommandWrapper {
                 boolean add = j == 0;
 
                 ItemStack change = builder(add ? LIME_STAINED_GLASS_PANE : RED_STAINED_GLASS_PANE,
-                        meta -> meta.setDisplayName((add ? ChatColor.GREEN + "+" : ChatColor.RED + "-") + String.format("%,.0f", am)),
+                        meta -> meta.setDisplayName((add ? ChatColor.GREEN + "+" : ChatColor.RED + "-") + format("%,.0f", am)),
                         nbt -> {
                             nbt.setID("business:change_advertising");
                             nbt.set(AMOUNT_TAG, am);
@@ -2030,7 +2030,7 @@ public interface CommandWrapper {
 
         String old = econ.getName();
         econ.setName(name);
-        sender.sendMessage(String.format(getMessage("success.economy.set_name"), old, name));
+        sender.sendMessage(format(getMessage("success.economy.set_name"), old, name));
     }
 
     default void listBlacklist(Player p) {
@@ -2039,7 +2039,7 @@ public interface CommandWrapper {
             return;
         }
 
-        Business b = Business.getByOwner(p);
+        Business b = Business.byOwner(p);
         List<Business> blacklist = b.getBlacklist();
 
         if (blacklist.isEmpty()) {
@@ -2067,14 +2067,14 @@ public interface CommandWrapper {
             return;
         }
 
-        Business b = Business.getByOwner(p);
+        Business b = Business.byOwner(p);
         if (b.isBlacklisted(business)) {
             p.sendMessage(getMessage("error.business.exists_blacklist"));
             return;
         }
 
         b.blacklist(business);
-        p.sendMessage(String.format(getMessage("success.business.add_blacklist"), business.getName()));
+        p.sendMessage(format(getMessage("success.business.add_blacklist"), business.getName()));
     }
 
     default void removeBlacklist(Player p, Business business) {
@@ -2083,14 +2083,14 @@ public interface CommandWrapper {
             return;
         }
 
-        Business b = Business.getByOwner(p);
+        Business b = Business.byOwner(p);
         if (!b.isBlacklisted(business)) {
             p.sendMessage(getMessage("error.business.not_blacklisted"));
             return;
         }
 
         b.unblacklist(business);
-        p.sendMessage(String.format(getMessage("success.business.remove_blacklist"), business.getName()));
+        p.sendMessage(format(getMessage("success.business.remove_blacklist"), business.getName()));
     }
 
     default void allBusinessRatings(Player p) {
@@ -2099,7 +2099,7 @@ public interface CommandWrapper {
             return;
         }
 
-        Business b = Business.getByOwner(p);
+        Business b = Business.byOwner(p);
 
         if (b.getRatings().isEmpty()) {
             p.sendMessage(getMessage("error.business.no_ratings"));
@@ -2116,7 +2116,7 @@ public interface CommandWrapper {
         }
 
         econ.setHasClickableReward(rewardable);
-        sender.sendMessage(String.format(getMessage("success.economy." + (rewardable ? "enable" : "disable") + "_reward"), econ.getName()));
+        sender.sendMessage(format(getMessage("success.economy." + (rewardable ? "enable" : "disable") + "_reward"), econ.getName()));
     }
 
     // Configuration Management Commands
@@ -2133,7 +2133,7 @@ public interface CommandWrapper {
         switch (option.toLowerCase()) {
             case "enchant_bonus": {
                 if (value == null) {
-                    sender.sendMessage(String.format(getMessage("success.config.print_value"), "EnchantBonus", config.get("NaturalCauses.EnchantBonus")));
+                    sender.sendMessage(format(getMessage("success.config.print_value"), "EnchantBonus", config.get("NaturalCauses.EnchantBonus")));
                     return;
                 }
 
@@ -2144,12 +2144,12 @@ public interface CommandWrapper {
 
                 boolean b = Boolean.parseBoolean(value);
                 config.set("NaturalCauses.EnchantBonus", b);
-                sender.sendMessage(String.format(getMessage("success.config.set"), "EnchantBonus", b));
+                sender.sendMessage(format(getMessage("success.config.set"), "EnchantBonus", b));
                 break;
             }
             case "max_increase": {
                 if (value == null) {
-                    sender.sendMessage(String.format(getMessage("success.config.print_value"), "MaxIncrease", config.get("NaturalCauses.MaxIncrease")));
+                    sender.sendMessage(format(getMessage("success.config.print_value"), "MaxIncrease", config.get("NaturalCauses.MaxIncrease")));
                     return;
                 }
 
@@ -2161,7 +2161,7 @@ public interface CommandWrapper {
                     }
 
                     config.set("NaturalCauses.MaxIncrease", i);
-                    sender.sendMessage(String.format(getMessage("success.config.set"), "MaxIncrease", i));
+                    sender.sendMessage(format(getMessage("success.config.set"), "MaxIncrease", i));
                 } catch (NumberFormatException e) {
                     sender.sendMessage(getMessage("error.argument.amount"));
                     return;
@@ -2170,7 +2170,7 @@ public interface CommandWrapper {
             }
             case "kill_increase": {
                 if (value == null) {
-                    sender.sendMessage(String.format(getMessage("success.config.print_value"), "KillIncrease", config.get("NaturalCauses.KillIncrease")));
+                    sender.sendMessage(format(getMessage("success.config.print_value"), "KillIncrease", config.get("NaturalCauses.KillIncrease")));
                     return;
                 }
 
@@ -2181,12 +2181,12 @@ public interface CommandWrapper {
 
                 boolean b = Boolean.parseBoolean(value);
                 config.set("NaturalCauses.KillIncrease", b);
-                sender.sendMessage(String.format(getMessage("success.config.set"), "KillIncrease", b));
+                sender.sendMessage(format(getMessage("success.config.set"), "KillIncrease", b));
                 break;
             }
             case "kill_increase_chance": {
                 if (value == null) {
-                    sender.sendMessage(String.format(getMessage("success.config.print_value"), "KillIncreaseChance", config.get("NaturalCauses.KillIncreaseChance")));
+                    sender.sendMessage(format(getMessage("success.config.print_value"), "KillIncreaseChance", config.get("NaturalCauses.KillIncreaseChance")));
                     return;
                 }
 
@@ -2198,7 +2198,7 @@ public interface CommandWrapper {
                     }
 
                     config.set("NaturalCauses.KillIncreaseChance", i);
-                    sender.sendMessage(String.format(getMessage("success.config.set"), "KillIncreaseChance", i));
+                    sender.sendMessage(format(getMessage("success.config.set"), "KillIncreaseChance", i));
                 } catch (NumberFormatException e) {
                     sender.sendMessage(getMessage("error.argument.amount"));
                     return;
@@ -2207,7 +2207,7 @@ public interface CommandWrapper {
             }
             case "kill_increase_indirect": {
                 if (value == null) {
-                    sender.sendMessage(String.format(getMessage("success.config.print_value"), "KillIncreaseIndirect", config.get("NaturalCauses.KillIncreaseIndirect")));
+                    sender.sendMessage(format(getMessage("success.config.print_value"), "KillIncreaseIndirect", config.get("NaturalCauses.KillIncreaseIndirect")));
                     return;
                 }
 
@@ -2218,12 +2218,12 @@ public interface CommandWrapper {
 
                 boolean b = Boolean.parseBoolean(value);
                 config.set("NaturalCauses.KillIncreaseIndirect", b);
-                sender.sendMessage(String.format(getMessage("success.config.set"), "KillIncreaseIndirect", b));
+                sender.sendMessage(format(getMessage("success.config.set"), "KillIncreaseIndirect", b));
                 break;
             }
             case "fishing_increase": {
                 if (value == null) {
-                    sender.sendMessage(String.format(getMessage("success.config.print_value"), "FishingIncrease", config.get("NaturalCauses.FishingIncrease")));
+                    sender.sendMessage(format(getMessage("success.config.print_value"), "FishingIncrease", config.get("NaturalCauses.FishingIncrease")));
                     return;
                 }
 
@@ -2234,12 +2234,12 @@ public interface CommandWrapper {
 
                 boolean b = Boolean.parseBoolean(value);
                 config.set("NaturalCauses.FishingIncrease", b);
-                sender.sendMessage(String.format(getMessage("success.config.set"), "FishingIncrease", b));
+                sender.sendMessage(format(getMessage("success.config.set"), "FishingIncrease", b));
                 break;
             }
             case "fishing_increase_chance": {
                 if (value == null) {
-                    sender.sendMessage(String.format(getMessage("success.config.print_value"), "FishingIncreaseChance", config.get("NaturalCauses.FishingIncreaseChance")));
+                    sender.sendMessage(format(getMessage("success.config.print_value"), "FishingIncreaseChance", config.get("NaturalCauses.FishingIncreaseChance")));
                     return;
                 }
 
@@ -2251,7 +2251,7 @@ public interface CommandWrapper {
                     }
 
                     config.set("NaturalCauses.FishingIncreaseChance", i);
-                    sender.sendMessage(String.format(getMessage("success.config.set"), "FishingIncreaseChance", i));
+                    sender.sendMessage(format(getMessage("success.config.set"), "FishingIncreaseChance", i));
                 } catch (NumberFormatException e) {
                     sender.sendMessage(getMessage("error.argument.amount"));
                     return;
@@ -2260,7 +2260,7 @@ public interface CommandWrapper {
             }
             case "farming_increase": {
                 if (value == null) {
-                    sender.sendMessage(String.format(getMessage("success.config.print_value"), "FarmingIncrease", config.get("NaturalCauses.FarmingIncrease")));
+                    sender.sendMessage(format(getMessage("success.config.print_value"), "FarmingIncrease", config.get("NaturalCauses.FarmingIncrease")));
                     return;
                 }
 
@@ -2271,12 +2271,12 @@ public interface CommandWrapper {
 
                 boolean b = Boolean.parseBoolean(value);
                 config.set("NaturalCauses.FarmingIncrease", b);
-                sender.sendMessage(String.format(getMessage("success.config.set"), "FarmingIncrease", b));
+                sender.sendMessage(format(getMessage("success.config.set"), "FarmingIncrease", b));
                 break;
             }
             case "farming_increase_chance": {
                 if (value == null) {
-                    sender.sendMessage(String.format(getMessage("success.config.print_value"), "FarmingIncreaseChance", config.get("NaturalCauses.FarmingIncreaseChance")));
+                    sender.sendMessage(format(getMessage("success.config.print_value"), "FarmingIncreaseChance", config.get("NaturalCauses.FarmingIncreaseChance")));
                     return;
                 }
 
@@ -2288,7 +2288,7 @@ public interface CommandWrapper {
                     }
 
                     config.set("NaturalCauses.FarmingIncreaseChance", i);
-                    sender.sendMessage(String.format(getMessage("success.config.set"), "FarmingIncreaseChance", i));
+                    sender.sendMessage(format(getMessage("success.config.set"), "FarmingIncreaseChance", i));
                 } catch (NumberFormatException e) {
                     sender.sendMessage(getMessage("error.argument.amount"));
                     return;
@@ -2297,7 +2297,7 @@ public interface CommandWrapper {
             }
             case "mining_increase": {
                 if (value == null) {
-                    sender.sendMessage(String.format(getMessage("success.config.print_value"), "MiningIncrease", config.get("NaturalCauses.MiningIncrease")));
+                    sender.sendMessage(format(getMessage("success.config.print_value"), "MiningIncrease", config.get("NaturalCauses.MiningIncrease")));
                     return;
                 }
 
@@ -2308,12 +2308,12 @@ public interface CommandWrapper {
 
                 boolean b = Boolean.parseBoolean(value);
                 config.set("NaturalCauses.MiningIncrease", b);
-                sender.sendMessage(String.format(getMessage("success.config.set"), "MiningIncrease", b));
+                sender.sendMessage(format(getMessage("success.config.set"), "MiningIncrease", b));
                 break;
             }
             case "mining_increase_chance": {
                 if (value == null) {
-                    sender.sendMessage(String.format(getMessage("success.config.print_value"), "MiningIncreaseChance", config.get("NaturalCauses.MiningIncreaseChance")));
+                    sender.sendMessage(format(getMessage("success.config.print_value"), "MiningIncreaseChance", config.get("NaturalCauses.MiningIncreaseChance")));
                     return;
                 }
 
@@ -2325,7 +2325,7 @@ public interface CommandWrapper {
                     }
 
                     config.set("NaturalCauses.MiningIncreaseChance", i);
-                    sender.sendMessage(String.format(getMessage("success.config.set"), "MiningIncreaseChance", i));
+                    sender.sendMessage(format(getMessage("success.config.set"), "MiningIncreaseChance", i));
                 } catch (NumberFormatException e) {
                     sender.sendMessage(getMessage("error.argument.amount"));
                     return;
@@ -2334,7 +2334,7 @@ public interface CommandWrapper {
             }
             case "death_decrease": {
                 if (value == null) {
-                    sender.sendMessage(String.format(getMessage("success.config.print_value"), "DeathDecrease", config.get("NaturalCauses.DeathDecrease")));
+                    sender.sendMessage(format(getMessage("success.config.print_value"), "DeathDecrease", config.get("NaturalCauses.DeathDecrease")));
                     return;
                 }
 
@@ -2345,12 +2345,12 @@ public interface CommandWrapper {
 
                 boolean b = Boolean.parseBoolean(value);
                 config.set("NaturalCauses.DeathDecrease", b);
-                sender.sendMessage(String.format(getMessage("success.config.set"), "DeathDecrease", b));
+                sender.sendMessage(format(getMessage("success.config.set"), "DeathDecrease", b));
                 break;
             }
             case "death_divider": {
                 if (value == null) {
-                    sender.sendMessage(String.format(getMessage("success.config.print_value"), "DeathDivider", config.get("NaturalCauses.DeathDivider")));
+                    sender.sendMessage(format(getMessage("success.config.print_value"), "DeathDivider", config.get("NaturalCauses.DeathDivider")));
                     return;
                 }
 
@@ -2362,7 +2362,7 @@ public interface CommandWrapper {
                     }
 
                     config.set("NaturalCauses.DeathDivider", i);
-                    sender.sendMessage(String.format(getMessage("success.config.set"), "DeathDivider", i));
+                    sender.sendMessage(format(getMessage("success.config.set"), "DeathDivider", i));
                 } catch (NumberFormatException e) {
                     sender.sendMessage(getMessage("error.argument.amount"));
                     return;
@@ -2574,7 +2574,7 @@ public interface CommandWrapper {
         }
         reloadFiles();
 
-        sender.sendMessage(String.format(getMessage("success.config.add_modifier"), type, key));
+        sender.sendMessage(format(getMessage("success.config.add_modifier"), type, key));
     }
 
     default void removeCausesModifier(CommandSender sender, String type, String key) {
@@ -2711,7 +2711,7 @@ public interface CommandWrapper {
         }
         reloadFiles();
 
-        sender.sendMessage(String.format(getMessage("success.config.remove_modifier"), type + "." + key));
+        sender.sendMessage(format(getMessage("success.config.remove_modifier"), type + "." + key));
     }
 
     default void viewCausesModifier(CommandSender sender, String type, String key) {
@@ -2741,7 +2741,7 @@ public interface CommandWrapper {
                     return;
                 }
 
-                sender.sendMessage(String.format(getMessage("success.config.view_modifier"), type + "." + key, modConfig.get("Mining." + m.name().toLowerCase())));
+                sender.sendMessage(format(getMessage("success.config.view_modifier"), type + "." + key, modConfig.get("Mining." + m.name().toLowerCase())));
                 break;
             }
             case "killing": {
@@ -2758,7 +2758,7 @@ public interface CommandWrapper {
                         return;
                     }
 
-                    sender.sendMessage(String.format(getMessage("success.config.view_modifier"), type + "." + key, modConfig.get("Killing." + t.name().toLowerCase())));
+                    sender.sendMessage(format(getMessage("success.config.view_modifier"), type + "." + key, modConfig.get("Killing." + t.name().toLowerCase())));
                 } catch (IllegalArgumentException e) {
                     sender.sendMessage(getMessage("error.argument.entity"));
                     return;
@@ -2799,7 +2799,7 @@ public interface CommandWrapper {
                     return;
                 }
 
-                sender.sendMessage(String.format(getMessage("success.config.view_modifier"), type + "." + key, modConfig.get("Fishing." + choice.name().toLowerCase())));
+                sender.sendMessage(format(getMessage("success.config.view_modifier"), type + "." + key, modConfig.get("Fishing." + choice.name().toLowerCase())));
                 break;
             }
             case "farming": {
@@ -2819,7 +2819,7 @@ public interface CommandWrapper {
                     return;
                 }
 
-                sender.sendMessage(String.format(getMessage("success.config.view_modifier"), type + "." + key, modConfig.get("Farming." + m.name().toLowerCase())));
+                sender.sendMessage(format(getMessage("success.config.view_modifier"), type + "." + key, modConfig.get("Farming." + m.name().toLowerCase())));
                 break;
             }
             case "death": {
@@ -2831,7 +2831,7 @@ public interface CommandWrapper {
                         return;
                     }
 
-                    sender.sendMessage(String.format(getMessage("success.config.view_modifier"), type + "." + key, modConfig.get("Death." + c.name().toLowerCase())));
+                    sender.sendMessage(format(getMessage("success.config.view_modifier"), type + "." + key, modConfig.get("Death." + c.name().toLowerCase())));
                 } catch (IllegalArgumentException e) {
                     sender.sendMessage(getMessage("error.argument.cause"));
                     return;
@@ -2855,7 +2855,7 @@ public interface CommandWrapper {
         NovaConfig.getConfiguration().reloadHooks();
         reloadFiles();
 
-        if (econ != null) sender.sendMessage(String.format(getMessage("success.config.set"), "VaultEconomy", econ.getName()));
+        if (econ != null) sender.sendMessage(format(getMessage("success.config.set"), "VaultEconomy", econ.getName()));
         else sender.sendMessage(getMessage("success.config.reset_default_economy"));
     }
 
@@ -2878,14 +2878,14 @@ public interface CommandWrapper {
 
     Map<String, Function<Business, List<String>>> BL_DESC = ImmutableMap.<String, Function<Business, List<String>>>builder()
             .put("ratings", b -> Arrays.asList(
-                        ChatColor.GOLD + String.format("%,.1f", b.getAverageRating()) + "⭐",
-                        ChatColor.GREEN + String.format("%,d", b.getRatings().size()) + " " + get("constants.business.ratings")
+                        ChatColor.GOLD + format("%,.1f", b.getAverageRating()) + "⭐",
+                        ChatColor.GREEN + format("%,d", b.getRatings().size()) + " " + get("constants.business.ratings")
                     ))
             .put("resources", b -> Arrays.asList(
-                        ChatColor.GOLD + String.format("%,d", b.getTotalResources())
+                        ChatColor.GOLD + format("%,d", b.getTotalResources())
                     ))
             .put("revenue", b -> Arrays.asList(
-                        ChatColor.DARK_GREEN + String.format("%,.2f", b.getTotalRevenue())
+                        ChatColor.DARK_GREEN + format("%,.2f", b.getTotalRevenue())
                     ))
             .build();
 
@@ -2980,7 +2980,7 @@ public interface CommandWrapper {
         try { config.save(configFile); } catch (IOException e) { NovaConfig.print(e); }
         reloadFiles();
 
-        sender.sendMessage(String.format(getMessage("success.config.set"), key, value));
+        sender.sendMessage(format(getMessage("success.config.set"), key, value));
     }
 
     default void corporationInfo(Player p) {
@@ -2997,7 +2997,7 @@ public interface CommandWrapper {
 
     default void createCorporation(Player p, String name, Material icon) {
         if (!p.hasPermission("novaconomy.user.corporation.manage")) {
-            p.sendMessage(ERROR_PERMISSION);
+            p.sendMessage(ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
@@ -3012,7 +3012,7 @@ public interface CommandWrapper {
         }
 
         if (name.length() > Corporation.MAX_NAME_LENGTH) {
-            p.sendMessage(String.format(getError("error.corporation.name.too_long"), ChatColor.YELLOW + "" + Corporation.MAX_NAME_LENGTH + ChatColor.RED));
+            p.sendMessage(format(getError("error.corporation.name.too_long"), ChatColor.YELLOW + "" + Corporation.MAX_NAME_LENGTH + ChatColor.RED));
             return;
         }
 
@@ -3023,15 +3023,10 @@ public interface CommandWrapper {
             return;
         }
         
-        p.sendMessage(String.format(getSuccess("success.corporation.create"), name));
+        p.sendMessage(format(getSuccess("success.corporation.create"), name));
     }
 
     default void deleteCorporation(Player p, boolean confirm) {
-        if (!p.hasPermission("novaconomy.user.corporation.manage")) {
-            p.sendMessage(ERROR_PERMISSION);
-            return;
-        }
-
         if (!Corporation.exists(p)) {
             p.sendMessage(getError("error.corporation.none"));
             return;
@@ -3046,12 +3041,17 @@ public interface CommandWrapper {
 
     default void setCorporationDescription(Player p, String desc) {
         if (!p.hasPermission("novaconomy.user.corporation.manage")) {
-            p.sendMessage(ERROR_PERMISSION);
+            p.sendMessage(ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
         if (!Corporation.exists(p)) {
             p.sendMessage(getError("error.corporation.none"));
+            return;
+        }
+
+        if (desc.length() > Corporation.MAX_DESCRIPTION_LENGTH) {
+            p.sendMessage(format(getError("error.corporation.description_too_long"), ChatColor.YELLOW + "" + Corporation.MAX_DESCRIPTION_LENGTH + ChatColor.RED));
             return;
         }
 
@@ -3062,7 +3062,7 @@ public interface CommandWrapper {
 
     default void setCorporationIcon(Player p, Material icon) {
         if (!p.hasPermission("novaconomy.user.corporation.manage")) {
-            p.sendMessage(ERROR_PERMISSION);
+            p.sendMessage(ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
@@ -3073,12 +3073,12 @@ public interface CommandWrapper {
 
         Corporation corp = Corporation.byOwner(p);
         corp.setIcon(icon);
-        p.sendMessage(String.format(getSuccess("success.corporation.icon"), ChatColor.GOLD + icon.name()));
+        p.sendMessage(format(getSuccess("success.corporation.icon"), ChatColor.GOLD + icon.name()));
     }
 
     default void setCorporationHeadquarters(Player p) {
         if (!p.hasPermission("novaconomy.user.corporation.manage")) {
-            p.sendMessage(ERROR_PERMISSION);
+            p.sendMessage(ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
@@ -3096,7 +3096,7 @@ public interface CommandWrapper {
 
         Location l = p.getLocation();
         corp.setHeadquarters(l);
-        p.sendMessage(String.format(getSuccess("success.corporation.headquarters"),
+        p.sendMessage(format(getSuccess("success.corporation.headquarters"),
                 ChatColor.GOLD + "" + l.getBlockX(),
                 ChatColor.GOLD + "" + l.getBlockY(),
                 ChatColor.GOLD + "" + l.getBlockZ())
@@ -3105,7 +3105,7 @@ public interface CommandWrapper {
 
     default void setCorporationName(Player p, String name) {
         if (!p.hasPermission("novaconomy.user.corporation.manage")) {
-            p.sendMessage(ERROR_PERMISSION);
+            p.sendMessage(ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
@@ -3116,7 +3116,7 @@ public interface CommandWrapper {
 
         Corporation corp = Corporation.byOwner(p);
         corp.setName(name);
-        p.sendMessage(String.format(getSuccess("success.corporation.name"), name));
+        p.sendMessage(format(getSuccess("success.corporation.name"), name));
     }
 
     default void corporationAchievements(Player p) {
@@ -3171,7 +3171,89 @@ public interface CommandWrapper {
         }
 
         corp.inviteBusiness(b);
-        p.sendMessage(String.format(getSuccess("success.corporation.invite.business"), ChatColor.GOLD + b.getName()));
+        p.sendMessage(format(getSuccess("success.corporation.invite.business"), ChatColor.GOLD + b.getName()));
+        NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
+    }
+
+    default void setCorporationExperience(@NotNull CommandSender sender, Corporation c, double exp) {
+        if (!sender.hasPermission("novaconomy.admin.corporation.manage_experience")) {
+            sender.sendMessage(ERROR_PERMISSION_ARGUMENT);
+            return;
+        }
+
+        if (exp < 1) {
+            sender.sendMessage(getError("error.argument.experience_too_low"));
+            return;
+        }
+
+        if (Corporation.toLevel(exp) > Corporation.MAX_LEVEL) {
+            sender.sendMessage(getError("error.argument.experience_too_high"));
+            return;
+        }
+
+        c.setExperience(exp);
+        sender.sendMessage(format(getSuccess("success.corporation.level_experience"),
+                ChatColor.GOLD + "" + c.getLevel(),
+                ChatColor.GOLD + format("%,.0f", c.getExperience())
+        ));
+        NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(sender);
+    }
+
+    default void acceptCorporationInvite(Player p, Corporation from) {
+        if (!Business.exists(p)) {
+            p.sendMessage(getMessage("error.business.none"));
+            return;
+        }
+
+        Business b = Business.byOwner(p);
+        CorporationInvite invite = b.getInvites()
+                .stream()
+                .filter(i -> i.getFrom().equals(from))
+                .findFirst()
+                .orElse(null);
+
+        if (invite == null) {
+            p.sendMessage(getError("error.corporation.invite.none"));
+            return;
+        }
+
+        try {
+            invite.accept();
+        } catch (IllegalStateException ignored) {
+            p.sendMessage(getError("error.corporation.accept_invite"));
+            return;
+        }
+
+        p.sendMessage(format(getSuccess("success.corporation.invite.accepted"), ChatColor.GOLD + from.getName()));
+        NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
+    }
+
+    default void declineCorporationInvite(Player p, Corporation from) {
+        if (!Business.exists(p)) {
+            p.sendMessage(getMessage("error.business.none"));
+            return;
+        }
+
+        Business b = Business.byOwner(p);
+        CorporationInvite invite = b.getInvites()
+                .stream()
+                .filter(i -> i.getFrom().equals(from))
+                .findFirst()
+                .orElse(null);
+
+        if (invite == null) {
+            p.sendMessage(getError("error.corporation.invite.none"));
+            return;
+        }
+
+        try {
+            invite.decline();
+        } catch (IllegalStateException ignored) {
+            p.sendMessage(getError("error.corporation.decline_invite"));
+            return;
+        }
+
+        p.sendMessage(format(getSuccess("success.corporation.invite.declined"), ChatColor.GOLD + from.getName()));
         NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
     }
 

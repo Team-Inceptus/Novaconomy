@@ -11,6 +11,7 @@ import us.teaminceptus.novaconomy.abstraction.CommandWrapper;
 import us.teaminceptus.novaconomy.abstraction.Wrapper;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.business.Business;
+import us.teaminceptus.novaconomy.api.corporation.Corporation;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 
 import java.lang.reflect.Constructor;
@@ -579,12 +580,12 @@ public final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                             return false;
                         }
 
-                        if (Business.getByName(args[1]) == null) {
+                        if (Business.byName(args[1]) == null) {
                             sender.sendMessage(getMessage("error.business.inexistent"));
                             return false;
                         }
 
-                        Business b = Business.getByName(args[1]);
+                        Business b = Business.byName(args[1]);
                         businessQuery(p, b);
                         break;
                     }
@@ -665,12 +666,12 @@ public final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                             return false;
                         }
 
-                        if (Business.getByName(args[1]) == null) {
+                        if (Business.byName(args[1]) == null) {
                             sender.sendMessage(getMessage("error.business.inexistent"));
                             return false;
                         }
 
-                        Business b = Business.getByName(args[1]);
+                        Business b = Business.byName(args[1]);
 
                         removeBusiness(sender, b, args.length < 3 && args[2].equalsIgnoreCase("confirm"));
                         break;
@@ -696,7 +697,7 @@ public final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                             return false;
                         }
 
-                        businessStatistics(p, Business.getByOwner(p));
+                        businessStatistics(p, Business.byOwner(p));
                         break;
                     }
                     case "rating": {
@@ -913,7 +914,7 @@ public final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                                     return false;
                                 }
 
-                                Business b = Business.getByName(args[2]);
+                                Business b = Business.byName(args[2]);
 
                                 if (b == null) {
                                     p.sendMessage(getMessage("error.argument.business"));
@@ -930,7 +931,7 @@ public final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                                     return false;
                                 }
 
-                                Business b = Business.getByName(args[2]);
+                                Business b = Business.byName(args[2]);
 
                                 if (b == null) {
                                     p.sendMessage(getMessage("error.argument.business"));
@@ -951,6 +952,50 @@ public final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         Player p = (Player) sender;
 
                         allBusinessRatings(p);
+                        break;
+                    }
+                    case "invite": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
+                        if (args.length < 2) {
+                            p.sendMessage(getMessage("error.argument"));
+                            return false;
+                        }
+
+                        switch (args[1].toLowerCase()) {
+                            case "accept": {
+                                if (args.length < 3) {
+                                    p.sendMessage(getMessage("error.argument.corporation"));
+                                    return false;
+                                }
+
+                                Corporation c = Corporation.byName(args[2]);
+                                if (c == null) {
+                                    p.sendMessage(getMessage("error.argument.corporation"));
+                                    return false;
+                                }
+
+                                acceptCorporationInvite(p, c);
+                                break;
+                            }
+                            case "decline": {
+                                if (args.length < 3) {
+                                    p.sendMessage(getMessage("error.argument.corporation"));
+                                    return false;
+                                }
+
+                                Corporation c = Corporation.byName(args[2]);
+                                if (c == null) {
+                                    p.sendMessage(getMessage("error.argument.corporation"));
+                                    return false;
+                                }
+
+                                declineCorporationInvite(p, c);
+                                break;
+                            }
+                        }
+
                         break;
                     }
                     default: {
@@ -1216,7 +1261,7 @@ public final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                     return false;
                 }
 
-                Business b = Business.getByName(args[0]);
+                Business b = Business.byName(args[0]);
                 String comment = args.length < 2 ? "" : String.join(" ", Arrays.copyOfRange(args, 1, args.length));
 
                 rate(p, b, comment);
@@ -1380,36 +1425,42 @@ public final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                 break;
             }
             case "corporation": {
-                if (!(sender instanceof Player)) return false;
-                Player p = (Player) sender;
-
                 if (args.length < 1) {
+                    if (!(sender instanceof Player)) return false;
+                    Player p = (Player) sender;
+
                     corporationInfo(p);
                     break;
                 }
 
                 switch (args[0]) {
                     case "info": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
                         corporationInfo(p);
                         break;
                     }
                     case "create": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
                         if (args.length < 2) {
-                            sender.sendMessage(getMessage("error.argument.name"));
+                            p.sendMessage(getMessage("error.argument.name"));
                             return false;
                         }
 
                         String name = args[1];
 
                         if (args.length < 3) {
-                            sender.sendMessage(getMessage("error.argument.icon"));
+                            p.sendMessage(getMessage("error.argument.icon"));
                             return false;
                         }
 
                         Material icon = Material.matchMaterial(args[2]);
 
                         if (icon == null) {
-                            sender.sendMessage(getMessage("error.argument.icon"));
+                            p.sendMessage(getMessage("error.argument.icon"));
                             return false;
                         }
 
@@ -1417,6 +1468,9 @@ public final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         break;
                     }
                     case "delete": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
                         String confirm = "";
                         if (args.length > 1) confirm = args[1];
                         deleteCorporation(p, confirm.equalsIgnoreCase("confirm"));
@@ -1424,6 +1478,9 @@ public final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                     }
                     case "setdescription":
                     case "setdesc": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
                         if (args.length < 2) {
                             p.sendMessage(getMessage("error.argument"));
                             return false;
@@ -1437,6 +1494,9 @@ public final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                     }
                     case "seticon":
                     case "icon": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
                         if (args.length < 2) {
                             p.sendMessage(getMessage("error.argument.icon"));
                             return false;
@@ -1455,11 +1515,17 @@ public final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                     case "sethq":
                     case "headquarters":
                     case "hq": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
                         setCorporationHeadquarters(p);
                         break;
                     }
                     case "setname":
                     case "name": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
                         if (args.length < 2) {
                             p.sendMessage(getMessage("error.argument.name"));
                             return false;
@@ -1468,21 +1534,42 @@ public final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         setCorporationName(p, args[1]);
                         break;
                     }
-                    case "achievements": corporationAchievements(p); break;
+                    case "achievements": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
+                        corporationAchievements(p);
+                        break;
+                    }
                     case "leveling":
                     case "levelinfo":
                     case "level": 
                     case "progress":
-                    case "prog": corporationLeveling(p); break;
+                    case "prog": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
+                        corporationLeveling(p);
+                        break;
+                    }
                     case "stats":
-                    case "statistics": corporationStatistics(p); break;
+                    case "statistics": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
+                        corporationStatistics(p);
+                        break;
+                    }
                     case "invite": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
                         if (args.length < 2) {
                             p.sendMessage(getMessage("error.argument.business"));
                             return false;
                         }
 
-                        Business b = Business.getByName(args[1]);
+                        Business b = Business.byName(args[1]);
 
                         if (b == null) {
                             p.sendMessage(getMessage("error.business.inexistent"));
@@ -1491,6 +1578,136 @@ public final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
 
                         inviteBusiness(p, b);
                         break;
+                    }
+                    case "setexperience":
+                    case "setexp":
+                    case "experience":
+                    case "exp": {
+                        if (args.length < 2) {
+                            sender.sendMessage(getMessage("error.argument.corporation"));
+                            return false;
+                        }
+
+                        Corporation c = Corporation.byName(args[1]);
+
+                        if (c == null) {
+                            sender.sendMessage(getMessage("error.corporation.inexistent"));
+                            return false;
+                        }
+
+                        if (args.length < 3) {
+                            sender.sendMessage(getMessage("error.argument.amount"));
+                            return false;
+                        }
+
+                        double exp;
+                        try {
+                            exp = Double.parseDouble(args[1]);
+                        } catch (NumberFormatException e) {
+                            sender.sendMessage(getMessage("error.argument.amount"));
+                            return false;
+                        }
+
+                        setCorporationExperience(sender, c, exp);
+                        break;
+                    }
+                    case "addexperience":
+                    case "addexp": {
+                        if (args.length < 2) {
+                            sender.sendMessage(getMessage("error.argument.corporation"));
+                            return false;
+                        }
+
+                        Corporation c = Corporation.byName(args[1]);
+
+                        if (c == null) {
+                            sender.sendMessage(getMessage("error.corporation.inexistent"));
+                            return false;
+                        }
+
+                        if (args.length < 3) {
+                            sender.sendMessage(getMessage("error.argument.amount"));
+                            return false;
+                        }
+
+                        double exp;
+                        try {
+                            exp = Double.parseDouble(args[1]);
+                        } catch (NumberFormatException e) {
+                            sender.sendMessage(getMessage("error.argument.amount"));
+                            return false;
+                        }
+
+                        setCorporationExperience(sender, c, c.getExperience() + exp);
+                        break;
+                    }
+                    case "removeexperience":
+                    case "removeexp": {
+                        if (args.length < 2) {
+                            sender.sendMessage(getMessage("error.argument.corporation"));
+                            return false;
+                        }
+
+                        Corporation c = Corporation.byName(args[1]);
+
+                        if (c == null) {
+                            sender.sendMessage(getMessage("error.corporation.inexistent"));
+                            return false;
+                        }
+
+                        if (args.length < 3) {
+                            sender.sendMessage(getMessage("error.argument.amount"));
+                            return false;
+                        }
+
+                        double exp;
+                        try {
+                            exp = Double.parseDouble(args[1]);
+                        } catch (NumberFormatException e) {
+                            sender.sendMessage(getMessage("error.argument.amount"));
+                            return false;
+                        }
+
+                        setCorporationExperience(sender, c, c.getExperience() - exp);
+                        break;
+                    }
+                    case "setlevel": {
+                        if (args.length < 2) {
+                            sender.sendMessage(getMessage("error.argument.corporation"));
+                            return false;
+                        }
+
+                        Corporation c = Corporation.byName(args[1]);
+
+                        if (c == null) {
+                            sender.sendMessage(getMessage("error.corporation.inexistent"));
+                            return false;
+                        }
+
+                        if (args.length < 3) {
+                            sender.sendMessage(getMessage("error.argument.integer"));
+                            return false;
+                        }
+
+                        int level;
+                        try {
+                            level = Integer.parseInt(args[1]);
+                        } catch (NumberFormatException e) {
+                            sender.sendMessage(getMessage("error.argument.integer"));
+                            return false;
+                        }
+
+                        if (level < 1 || level > Corporation.MAX_LEVEL) {
+                            sender.sendMessage(getMessage("error.argument.integer"));
+                            return false;
+                        }
+
+                        setCorporationExperience(sender, c, Corporation.toExperience(level));
+                        break;
+                    }
+                    default: {
+                        sender.sendMessage(getMessage("error.argument"));
+                        return false;
                     }
                 }
             }

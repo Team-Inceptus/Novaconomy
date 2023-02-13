@@ -21,6 +21,8 @@ import us.teaminceptus.novaconomy.abstraction.Wrapper;
 import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.business.Business;
+import us.teaminceptus.novaconomy.api.corporation.Corporation;
+import us.teaminceptus.novaconomy.api.corporation.CorporationInvite;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.util.NovaSound;
 
@@ -29,8 +31,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static us.teaminceptus.novaconomy.abstraction.Wrapper.getMessage;
-import static us.teaminceptus.novaconomy.abstraction.Wrapper.w;
+import static us.teaminceptus.novaconomy.abstraction.Wrapper.*;
+import static us.teaminceptus.novaconomy.util.NovaUtil.format;
 
 public final class CommandWrapperV2 implements CommandWrapper {
 
@@ -41,12 +43,20 @@ public final class CommandWrapperV2 implements CommandWrapper {
 
         handler = BukkitCommandHandler.create(plugin);
 
+        handler.registerParameterValidator(String.class, (value, param, actor) -> {
+            if (param.hasAnnotation(Length.class)) {
+                int length = param.getAnnotation(Length.class).value();
+                if (value.length() > length)
+                    throw new CommandErrorException(format(getError("error.argument.length"), length));
+            }
+        });
+
         handler.registerValueResolver(Economy.class, ctx -> {
-                    Economy econ = Economy.getEconomy(ctx.popForParameter());
-                    if (econ == null) throw new CommandErrorException(getMessage("error.argument.economy"));
-                    return econ;
+                Economy econ = Economy.getEconomy(ctx.popForParameter());
+                if (econ == null) throw new CommandErrorException(getMessage("error.argument.economy"));
+                return econ;
             }).registerValueResolver(Business.class, ctx -> {
-                Business b = Business.getByName(ctx.popForParameter());
+                Business b = Business.byName(ctx.popForParameter());
                 if (b == null) throw new CommandErrorException(getMessage("error.argument.business"));
                 return b;
             }).registerValueResolver(Material.class, ctx -> {
@@ -61,6 +71,10 @@ public final class CommandWrapperV2 implements CommandWrapper {
                 OfflinePlayer p = Wrapper.getPlayer(value);
                 if (p == null) throw new CommandErrorException(getMessage("error.argument.player"));
                 return p;
+            }).registerValueResolver(Corporation.class, ctx -> {
+                Corporation c = Corporation.byName(ctx.popForParameter());
+                if (c == null) throw new CommandErrorException(getError("error.argument.corporation"));
+                return c;
             });
 
         handler.getAutoCompleter()
@@ -73,18 +87,19 @@ public final class CommandWrapperV2 implements CommandWrapper {
                 .registerParameterSuggestions(Business.class, SuggestionProvider.map(Business::getBusinesses, Business::getName))
                 .registerParameterSuggestions(boolean.class, SuggestionProvider.of("true", "false"))
                 .registerParameterSuggestions(OfflinePlayer.class, SuggestionProvider.map(() -> Arrays.asList(Bukkit.getOfflinePlayers()), OfflinePlayer::getName))
+                .registerParameterSuggestions(Corporation.class, SuggestionProvider.map(Corporation::getCorporations, Corporation::getName))
 
                 // Suggestions
 
                 .registerSuggestion("event", SuggestionProvider.map(NovaConfig.getConfiguration()::getAllCustomEvents, NovaConfig.CustomTaxEvent::getIdentifier))
-                .registerSuggestion("settings", SuggestionProvider.of(Arrays.asList("business", "personal")))
+                .registerSuggestion("settings", BUSINESS_TAG, "personal", CORPORATION_TAG)
 
                 .registerSuggestion("blacklist", (args, sender, cmd) -> Business.getBusinesses().stream().filter(b -> {
                     OfflinePlayer p = ((BukkitCommandActor) sender).requirePlayer();
-                    return !b.isOwner(p) && !Business.getByOwner(p).isBlacklisted(b);
+                    return !b.isOwner(p) && !Business.byOwner(p).isBlacklisted(b);
                 }).map(Business::getName).collect(Collectors.toList()))
 
-                .registerSuggestion("blacklisted", (args, sender, cmd) -> Business.getByOwner(Wrapper.getPlayer(sender.getName())).getBlacklist().stream().map(Business::getName).collect(Collectors.toList()))
+                .registerSuggestion("blacklisted", (args, sender, cmd) -> Business.byOwner(Wrapper.getPlayer(sender.getName())).getBlacklist().stream().map(Business::getName).collect(Collectors.toList()))
                 .registerSuggestion("natural_causes",
                 "enchant_bonus", "max_increase", "kill_increase", "kill_increase_chance", "kill_increase_indirect", "fishing_increase",
                 "fishing_increase_chance", "mining_increase", "mining_increase_chance", "farming_increase", "farming_increase_chance",
@@ -161,6 +176,14 @@ public final class CommandWrapperV2 implements CommandWrapper {
                                 .collect(Collectors.toSet());
                         default: return new ArrayList<>();
                     }
+                })
+                .registerSuggestion("invites", (args, sender, cmd) -> {
+                    Business b = Business.byOwner(((BukkitCommandActor) sender).requirePlayer());
+                    return b.getInvites()
+                            .stream()
+                            .map(CorporationInvite::getFrom)
+                            .map(Corporation::getName)
+                            .collect(Collectors.toList());
                 });
 
         handler.register(this);
@@ -172,7 +195,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
         new CorporationCommands(this);
 
         handler.registerBrigadier();
-        handler.setLocale(Language.getCurrentLanguage().getLocale());
+        handler.setLocale(Language.getCurrentLocale());
 
         plugin.getLogger().info("Loaded Command Version v2 (1.13.2+)");
     }
@@ -338,7 +361,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
         public void businessRecover(Player p) { wrapper.businessRecover(p); }
 
         @Subcommand({"statistics", "stats"})
-        public void businessStatistics(Player p) { wrapper.businessStatistics(p, Business.getByOwner(p));}
+        public void businessStatistics(Player p) { wrapper.businessStatistics(p, Business.byOwner(p));}
 
         @Subcommand({"settings", "setting"})
         public void settings(Player p) { wrapper.settings(p, "business"); }
@@ -414,6 +437,14 @@ public final class CommandWrapperV2 implements CommandWrapper {
 
         @Subcommand({"allratings", "allrating", "allr", "ar"})
         public void allBusinessRatings(Player p) { wrapper.allBusinessRatings(p); }
+
+        @Subcommand("invite accept")
+        @AutoComplete("@invites *")
+        public void acceptInvite(Player p, Corporation from) { wrapper.acceptCorporationInvite(p, from); }
+
+        @Subcommand("invite decline")
+        @AutoComplete("@invites *")
+        public void declineInvite(Player p, Corporation from) { wrapper.declineCorporationInvite(p, from); }
     }
 
     @Command({"nbank", "bank", "globalbank", "gbank"})
@@ -696,7 +727,6 @@ public final class CommandWrapperV2 implements CommandWrapper {
         }
 
         @Subcommand("delete")
-        @CommandPermission("novaconomy.user.corporation.manage")
         public void deleteCorporation(Player p, @Single String confirm) {
             wrapper.deleteCorporation(p, confirm.equalsIgnoreCase("confirm"));
         }
@@ -741,6 +771,30 @@ public final class CommandWrapperV2 implements CommandWrapper {
         @Subcommand("invite")
         public void inviteBusiness(Player p, Business b) {
             wrapper.inviteBusiness(p, b);
+        }
+
+        @Subcommand({"setexperience", "experience", "setexp", "exp"})
+        @CommandPermission("novaconomy.admin.corporation.manage_experience")
+        public void setCorporationExperience(CommandSender sender, Corporation c, @Range(min = 0) double exp) {
+            wrapper.setCorporationExperience(sender, c, exp);
+        }
+
+        @Subcommand({"addexperience", "addexp"})
+        @CommandPermission("novaconomy.admin.corporation.manage_experience")
+        public void addCorporationExperience(CommandSender sender, Corporation c, @Range(min = 0) double exp) {
+            wrapper.setCorporationExperience(sender, c, c.getExperience() + exp);
+        }
+
+        @Subcommand({"removeexperience", "removeexp"})
+        @CommandPermission("novaconomy.admin.corporation.manage_experience")
+        public void removeCorporationExperience(CommandSender sender, Corporation c, @Range(min = 0) double exp) {
+            wrapper.setCorporationExperience(sender, c, c.getExperience() - exp);
+        }
+
+        @Subcommand("setlevel")
+        @CommandPermission("novaconomy.admin.corporation.manage_experience")
+        public void setCorporationLevel(CommandSender sender, Corporation c, @Range(min = 0, max = Corporation.MAX_LEVEL) int level) {
+            wrapper.setCorporationExperience(sender, c, Corporation.toExperience(level));
         }
 
     }
