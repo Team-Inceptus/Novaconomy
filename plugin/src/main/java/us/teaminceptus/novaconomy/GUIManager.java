@@ -18,6 +18,7 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.util.ChatPaginator;
 import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.abstraction.NBTWrapper;
 import us.teaminceptus.novaconomy.abstraction.NovaInventory;
@@ -37,13 +38,14 @@ import us.teaminceptus.novaconomy.api.events.player.economy.PlayerPayEvent;
 import us.teaminceptus.novaconomy.api.events.player.economy.PlayerPurchaseProductEvent;
 import us.teaminceptus.novaconomy.api.player.NovaPlayer;
 import us.teaminceptus.novaconomy.api.player.PlayerStatistics;
+import us.teaminceptus.novaconomy.api.settings.SettingDescription;
 import us.teaminceptus.novaconomy.api.settings.Settings;
 import us.teaminceptus.novaconomy.api.util.BusinessProduct;
 import us.teaminceptus.novaconomy.api.util.Price;
 import us.teaminceptus.novaconomy.api.util.Product;
-import us.teaminceptus.novaconomy.util.Items;
 import us.teaminceptus.novaconomy.util.NovaSound;
 import us.teaminceptus.novaconomy.util.NovaUtil;
+import us.teaminceptus.novaconomy.util.inventory.Items;
 
 import java.util.*;
 import java.util.function.BiConsumer;
@@ -55,8 +57,10 @@ import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.*;
 import static us.teaminceptus.novaconomy.abstraction.NBTWrapper.builder;
 import static us.teaminceptus.novaconomy.abstraction.NBTWrapper.of;
 import static us.teaminceptus.novaconomy.abstraction.Wrapper.*;
-import static us.teaminceptus.novaconomy.util.Generator.*;
-import static us.teaminceptus.novaconomy.util.Items.*;
+import static us.teaminceptus.novaconomy.util.NovaUtil.format;
+import static us.teaminceptus.novaconomy.util.inventory.Generator.*;
+import static us.teaminceptus.novaconomy.util.inventory.InventorySelector.confirm;
+import static us.teaminceptus.novaconomy.util.inventory.Items.*;
 
 @SuppressWarnings("unchecked")
 public final class GUIManager implements Listener {
@@ -66,9 +70,7 @@ public final class GUIManager implements Listener {
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
 
-	static final String SETTING_TAG = "setting";
-
-	private static double getAmount(ItemStack item) {
+    private static double getAmount(ItemStack item) {
 		return of(item).getDouble(AMOUNT_TAG);
 	}
 
@@ -79,7 +81,7 @@ public final class GUIManager implements Listener {
 
 	@Nullable
 	private static Business getBusiness(ItemStack item) {
-		return Business.getById(of(item).getUUID(BUSINESS_TAG));
+		return Business.byId(of(item).getUUID(BUSINESS_TAG));
 	}
 
     @Nullable
@@ -116,20 +118,20 @@ public final class GUIManager implements Listener {
 		Economy econ = Economy.getEconomy(of(econWheel).getString(ECON_TAG));
 
 		if (add && np.getBalance(econ) < amount) {
-			p.sendMessage(String.format(getMessage("error.economy.invalid_amount"), get("constants.deposit")));
+			p.sendMessage(format(getMessage("error.economy.invalid_amount"), get("constants.deposit")));
 			return;
 		}
 
-		String msg = String.format("%,.2f", amount) + econ.getSymbol();
+		String msg = format("%,.2f", amount) + econ.getSymbol();
 
 		if (add) {
 			np.remove(econ, amount);
 			b.addAdvertisingBalance(amount, econ);
-			p.sendMessage(String.format(getMessage("success.business.advertising_deposit"), msg, b.getName()));
+			p.sendMessage(format(getMessage("success.business.advertising_deposit"), msg, b.getName()));
 		} else {
 			np.add(econ, amount);
 			b.removeAdvertisingBalance(amount, econ);
-			p.sendMessage(String.format(getMessage("success.business.advertising_withdraw"), msg, b.getName()));
+			p.sendMessage(format(getMessage("success.business.advertising_withdraw"), msg, b.getName()));
 		}
 
 		p.closeInventory();
@@ -178,7 +180,7 @@ public final class GUIManager implements Listener {
 		double amount = i == 12 ? getAmount(item) : Math.floor(econ2.convertAmount(next, getAmount(inv.getItem(12)) * 100) / 100);
 
 		ItemStack newItem = builder(next.getIcon(),
-                meta -> meta.setLore(Collections.singletonList(ChatColor.YELLOW + String.format("%,.2f", amount) + next.getSymbol())),
+                meta -> meta.setLore(Collections.singletonList(ChatColor.YELLOW + format("%,.2f", amount) + next.getSymbol())),
                 nbt -> {
                     nbt.setID("exchange:" + (i == 14 ? "2" : "1"));
                     nbt.set(ECON_TAG, next.getUniqueId());
@@ -190,7 +192,7 @@ public final class GUIManager implements Listener {
 		if (i == 12) {
 			double oAmount = Math.floor(next.convertAmount(econ2, amount) * 100) / 100;
 			ItemStack other = builder(inv.getItem(14).clone(),
-                    meta -> meta.setLore(Collections.singletonList(ChatColor.YELLOW + String.format("%,.2f", oAmount) + next.getSymbol())),
+                    meta -> meta.setLore(Collections.singletonList(ChatColor.YELLOW + format("%,.2f", oAmount) + next.getSymbol())),
                     nbt -> {
                         nbt.setID("exchange:2");
                         nbt.set(ECON_TAG, econ2.getUniqueId());
@@ -237,14 +239,14 @@ public final class GUIManager implements Listener {
                 String name = item.hasItemMeta() && item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : WordUtils.capitalizeFully(item.getType().name().replace('_', ' '));
 
                 if (!of(item).getBoolean("product:in_stock")) {
-                    p.sendMessage(String.format(get("error.business.not_in_stock"), name));
+                    p.sendMessage(format(get("error.business.not_in_stock"), name));
                     return;
                 }
 
                 BusinessProduct pr = (BusinessProduct) getProduct(item);
 
                 if (np.getBalance(pr.getEconomy()) < pr.getPrice().getAmount()) {
-                    p.sendMessage(String.format(get("error.economy.invalid_amount"), get("constants.purchase")));
+                    p.sendMessage(format(get("error.economy.invalid_amount"), get("constants.purchase")));
                     return;
                 }
 
@@ -274,13 +276,13 @@ public final class GUIManager implements Listener {
                     }
 
                 if (np.getBalance(pr.getEconomy()) < pr.getPrice().getAmount())
-                    purchaseGUI.setItem(21, Items.invalid(get("constants.purchase")));
+                    purchaseGUI.setItem(21, invalid(get("constants.purchase")));
                 else
                     purchaseGUI.setItem(21, yes("buy_product", nbt -> nbt.set(PRODUCT_TAG, pr)));
 
                 inv.setAttribute(PRODUCT_TAG, pr);
 
-                purchaseGUI.setItem(23, Items.cancel("no_product", nbt -> nbt.set(BUSINESS_TAG, pr.getBusiness().getUniqueId())));
+                purchaseGUI.setItem(23, cancel("no_product", nbt -> nbt.set(BUSINESS_TAG, pr.getBusiness().getUniqueId())));
 
                 ItemStack amountPane = builder(item.getType(),
                         meta -> {
@@ -314,17 +316,13 @@ public final class GUIManager implements Listener {
                 BusinessProduct pr = (BusinessProduct) getProduct(item);
 
                 if (np.getBalance(pr.getEconomy()) < pr.getPrice().getAmount() * newA)
-                    inv.setItem(21, Items.invalid(get("constants.purchase")));
+                    inv.setItem(21, invalid(get("constants.purchase")));
                 else
                     inv.setItem(21, yes("buy_product", nbt -> nbt.set(PRODUCT_TAG, pr)));
 
                 inv.setAttribute(PRODUCT_TAG, pr);
 
                 p.updateInventory();
-            })
-            .put("no:close", (e, inv) -> {
-                HumanEntity en = e.getWhoClicked();
-                en.closeInventory();
             })
             .put("no:no_product", (e, inv) -> {
                 Player p = (Player) e.getWhoClicked();
@@ -377,7 +375,7 @@ public final class GUIManager implements Listener {
 
                 ItemStack display = new ItemStack(inv.getItem(13));
                 ItemMeta dMeta = display.getItemMeta();
-                dMeta.setLore(Collections.singletonList(String.format(get("constants.business.price"), of(display).getDouble(PRICE_TAG), econ.getSymbol())));
+                dMeta.setLore(Collections.singletonList(format(get("constants.business.price"), of(display).getDouble(PRICE_TAG), econ.getSymbol())));
                 display.setItemMeta(dMeta);
                 inv.setItem(13, display);
             })
@@ -408,7 +406,7 @@ public final class GUIManager implements Listener {
                 BusinessProduct bP = (BusinessProduct) getProduct(item);
 
                 if (!np.canAfford(bP)) {
-                    p.sendMessage(String.format(get("error.economy.invalid_amount"), get("constants.purchase")));
+                    p.sendMessage(format(get("error.economy.invalid_amount"), get("constants.purchase")));
                     p.closeInventory();
                     return;
                 }
@@ -421,7 +419,7 @@ public final class GUIManager implements Listener {
                 double amount = bP.getPrice().getAmount() * size;
 
                 if (np.getBalance(econ) < amount) {
-                    p.sendMessage(String.format(get("error.economy.invalid_amount"), get("constants.purchase")));
+                    p.sendMessage(format(get("error.economy.invalid_amount"), get("constants.purchase")));
                     p.closeInventory();
                     return;
                 }
@@ -456,7 +454,7 @@ public final class GUIManager implements Listener {
 
                 String material = product.hasItemMeta() && product.getItemMeta().hasDisplayName() ? product.getItemMeta().getDisplayName() : WordUtils.capitalizeFully(product.getType().name().replace('_', ' '));
 
-                p.sendMessage(String.format(get("success.business.purchase"), material, bP.getBusiness().getName()));
+                p.sendMessage(format(get("success.business.purchase"), material, bP.getBusiness().getName()));
                 p.closeInventory();
                 NovaSound.ENTITY_ARROW_HIT_PLAYER.play(p);
 
@@ -472,7 +470,7 @@ public final class GUIManager implements Listener {
                 if (owner.isOnline() && owner.hasNotifications()) {
                     String name = p.getDisplayName() == null ? p.getName() : p.getDisplayName();
                     Player bOwner = owner.getOnlinePlayer();
-                    bOwner.sendMessage(String.format(get("notification.business.purchase"), name, material));
+                    bOwner.sendMessage(format(get("notification.business.purchase"), name, material));
                     NovaSound.ENTITY_ARROW_HIT_PLAYER.play(bOwner, 1F, 2F);
                 }
 
@@ -481,7 +479,7 @@ public final class GUIManager implements Listener {
             })
             .put("business:add_product", (e, inv) -> {
                 Player p = (Player) e.getWhoClicked();
-                Business b = Business.getByOwner(p);
+                Business b = Business.byOwner(p);
                 ItemStack item = e.getCurrentItem();
                 NBTWrapper nbt = of(item);
 
@@ -495,7 +493,7 @@ public final class GUIManager implements Listener {
                 Bukkit.getPluginManager().callEvent(event);
                 if (!event.isCancelled()) {
                     String name = product.hasItemMeta() && product.getItemMeta().hasDisplayName() ? product.getItemMeta().getDisplayName() : WordUtils.capitalizeFully(product.getType().name().replace('_', ' '));
-                    p.sendMessage(String.format(getMessage("success.business.add_product"), name));
+                    p.sendMessage(format(getMessage("success.business.add_product"), name));
                     p.closeInventory();
                     Product added = new Product(pr.getItem(), pr.getPrice());
                     b.addProduct(added);
@@ -503,7 +501,7 @@ public final class GUIManager implements Listener {
             })
             .put("business:add_resource", (e, inv) -> {
                 Player p = (Player) e.getWhoClicked();
-                Business b = Business.getByOwner(p);
+                Business b = Business.byOwner(p);
                 inv.setAttribute("added", true);
 
                 List<ItemStack> res = new ArrayList<>();
@@ -530,7 +528,7 @@ public final class GUIManager implements Listener {
                     else p.getInventory().addItem(i);
                 });
 
-                p.sendMessage(String.format(getMessage("success.business.add_resource"), b.getName()));
+                p.sendMessage(format(getMessage("success.business.add_resource"), b.getName()));
                 p.closeInventory();
 
                 BusinessStockEvent event = new BusinessStockEvent(b, p, extra, resources);
@@ -538,7 +536,7 @@ public final class GUIManager implements Listener {
             })
             .put("product:remove", (e, inv) -> {
                 Player p = (Player) e.getWhoClicked();
-                Business b = Business.getByOwner(p);
+                Business b = Business.byOwner(p);
                 ItemStack item = e.getCurrentItem();
                 BusinessProduct pr = (BusinessProduct) getProduct(item);
 
@@ -552,7 +550,7 @@ public final class GUIManager implements Listener {
                 b.removeResource(stock);
                 String name = product.hasItemMeta() && product.getItemMeta().hasDisplayName() ? product.getItemMeta().getDisplayName() : WordUtils.capitalizeFully(product.getType().name().replace('_', ' '));
 
-                p.sendMessage(String.format(get("success.business.remove_product"), name, b.getName()));
+                p.sendMessage(format(get("success.business.remove_product"), name, b.getName()));
 
                 stock.forEach(i -> {
                     if (p.getInventory().firstEmpty() == -1) p.getWorld().dropItemNaturally(p.getLocation(), i);
@@ -575,14 +573,14 @@ public final class GUIManager implements Listener {
                 double take = getAmount(takeItem);
                 if (np.getBalance(takeEcon) < take) {
                     p.closeInventory();
-                    p.sendMessage(String.format(getMessage("error.economy.invalid_amount"), get("constants.convert")));
+                    p.sendMessage(format(getMessage("error.economy.invalid_amount"), get("constants.convert")));
                     NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(e.getWhoClicked());
                     return;
                 }
 
                 double max = NovaConfig.getConfiguration().getMaxConvertAmount(takeEcon);
                 if (max >= 0 && take > max) {
-                    p.sendMessage(String.format(getMessage("error.economy.transfer_max"), String.format("%,.2f", max) + takeEcon.getSymbol(), String.format("%,.2f", take) + takeEcon.getSymbol()));
+                    p.sendMessage(format(getMessage("error.economy.transfer_max"), format("%,.2f", max) + takeEcon.getSymbol(), format("%,.2f", take) + takeEcon.getSymbol()));
                     p.closeInventory();
                     return;
                 }
@@ -603,9 +601,9 @@ public final class GUIManager implements Listener {
 
                 NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
                 p.closeInventory();
-                p.sendMessage(String.format(getMessage("success.economy.convert"), String.format("%,.2f", take) + takeEcon.getSymbol(), String.format("%,.2f", give) + "" + giveEcon.getSymbol()));
+                p.sendMessage(format(getMessage("success.economy.convert"), format("%,.2f", take) + takeEcon.getSymbol(), format("%,.2f", give) + "" + giveEcon.getSymbol()));
             })
-            .put("no:close_effect", (e, inv) -> {
+            .put("no:close", (e, inv) -> {
                 e.getWhoClicked().closeInventory();
                 NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(e.getWhoClicked());
             })
@@ -644,6 +642,13 @@ public final class GUIManager implements Listener {
                 String display = cNBT.getString("display");
                 String section = cNBT.getString("section");
                 String setting = cNBT.getString(SETTING_TAG);
+
+                SettingDescription desc = Arrays.stream(Settings.values())
+                        .filter(s -> s.name().equalsIgnoreCase(setting))
+                        .findFirst()
+                        .map(Settings.NovaSetting::getDescription)
+                        .orElse(null);
+
                 String valueS = cNBT.getString("value");
                 Class<?> type = cNBT.getClass("type");
 
@@ -657,6 +662,13 @@ public final class GUIManager implements Listener {
                                 if (!value) {
                                     meta.addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1, true);
                                     meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+                                }
+
+                                if (desc != null) {
+                                    List<String> lore = new ArrayList<>();
+                                    lore.add(" ");
+                                    lore.addAll(Arrays.stream(ChatPaginator.wordWrap(get(desc.value()), 30)).map(s -> ChatColor.GRAY + s).collect(Collectors.toList()));
+                                    meta.setLore(lore);
                                 }
                             }, nbt -> {
                                 nbt.setID("setting_toggle");
@@ -672,7 +684,7 @@ public final class GUIManager implements Listener {
                 
                     switch (section.toLowerCase()) {
                         case BUSINESS_TAG: {
-                            Business b = Business.getByOwner(p);
+                            Business b = Business.byOwner(p);
                             Settings.Business sett = Settings.Business.valueOf(setting);
                             b.setSetting(sett, !value);
         
@@ -704,7 +716,16 @@ public final class GUIManager implements Listener {
                     Enum<?> next = (Enum<?>) type.getEnumConstants()[value.ordinal() + 1 >= type.getEnumConstants().length ? 0 : value.ordinal() + 1];
 
                     nItem = builder(CYAN_WOOL,
-                            meta ->meta.setDisplayName(ChatColor.YELLOW + display + ": " + ChatColor.AQUA + valueS.toUpperCase()),
+                            meta -> {
+                                meta.setDisplayName(ChatColor.YELLOW + display + ": " + ChatColor.AQUA + next.name().toUpperCase());
+
+                                if (desc != null) {
+                                    List<String> lore = new ArrayList<>();
+                                    lore.add(" ");
+                                    lore.addAll(Arrays.stream(ChatPaginator.wordWrap(get(desc.value()), 30)).map(s -> ChatColor.GRAY + s).collect(Collectors.toList()));
+                                    meta.setLore(lore);
+                                }
+                            },
                             nbt -> {
                                 nbt.setID("setting_toggle");
                                 nbt.set("display", display);
@@ -725,6 +746,8 @@ public final class GUIManager implements Listener {
                             Settings.Corporation<Enum> sett = Settings.Corporation.valueOf(setting, Enum.class);
                             c.setSetting(sett, next);
 
+                            System.out.println("Setting " + sett.name() + " to " + next.name() + " for " + c.getName());
+
                             CorporationSettingChangeEvent event = new CorporationSettingChangeEvent(c, value, next, sett);
                             Bukkit.getPluginManager().callEvent(event);
                             break;
@@ -734,8 +757,6 @@ public final class GUIManager implements Listener {
 
                 e.getView().setItem(e.getRawSlot(), nItem);
                 p.updateInventory();
-
-
             })
             .put("back:settings", (e, inv) -> {
                 Player p = (Player) e.getWhoClicked();
@@ -753,7 +774,7 @@ public final class GUIManager implements Listener {
                 }
 
                 if (!b.hasHome()) {
-                    p.sendMessage(b.isOwner(p) ? getMessage("error.business.no_home") : String.format(getMessage("error.business.no_home_user"), b.getName()));
+                    p.sendMessage(b.isOwner(p) ? getMessage("error.business.no_home") : format(getMessage("error.business.no_home_user"), b.getName()));
                     return;
                 }
 
@@ -797,7 +818,7 @@ public final class GUIManager implements Listener {
                             nbt.set("rating", newRating);
                         }
                 );
-                nItem.setType(getRatingMats()[newRating]);
+                nItem.setType(RATING_MATS[newRating]);
                 inv.setItem(e.getSlot(), nItem);
 
                 String comment = of(inv.getItem(21)).getString("comment");
@@ -827,7 +848,7 @@ public final class GUIManager implements Listener {
                 String comment = nbt.getString("comment");
 
                 Rating r = new Rating(p, businessId, rating, System.currentTimeMillis(), comment);
-                Business b = Business.getById(businessId);
+                Business b = Business.byId(businessId);
 
                 PlayerRateBusinessEvent event = new PlayerRateBusinessEvent(p, b, r);
                 Bukkit.getPluginManager().callEvent(event);
@@ -835,7 +856,7 @@ public final class GUIManager implements Listener {
                 if (!event.isCancelled()) {
                     np.setRating(event.getRating());
                     p.closeInventory();
-                    p.sendMessage(String.format(getMessage("success.business.rate"), b.getName(), rating));
+                    p.sendMessage(format(getMessage("success.business.rate"), b.getName(), rating));
                     NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
                 }
             })
@@ -869,7 +890,7 @@ public final class GUIManager implements Listener {
                 b.getProduct(pr.getItem()).setPrice(new Price(econ, price));
 
                 String display = pr.getItem().hasItemMeta() && pr.getItem().getItemMeta().hasDisplayName() ? pr.getItem().getItemMeta().getDisplayName() : WordUtils.capitalizeFully(pr.getItem().getType().name().replace('_', ' '));
-                p.sendMessage(String.format(getMessage("success.business.edit_price"), display, String.format("%,.2f", price) + econ.getSymbol()));
+                p.sendMessage(format(getMessage("success.business.edit_price"), display, format("%,.2f", price) + econ.getSymbol()));
                 p.closeInventory();
             })
             .put("player_stats", (e, inv) -> {
@@ -907,7 +928,7 @@ public final class GUIManager implements Listener {
                 inv.setItem(39, confirm);
 
                 ItemStack total = Items.builder(inv.getItem(40),
-                        meta -> meta.setDisplayName(ChatColor.GOLD + String.format("%,.0f", newAmount) + econ.getSymbol())
+                        meta -> meta.setDisplayName(ChatColor.GOLD + format("%,.0f", newAmount) + econ.getSymbol())
                 );
                 inv.setItem(40, total);
 
@@ -923,7 +944,7 @@ public final class GUIManager implements Listener {
                 double currentTotal = getAmount(confirm);
 
                 ItemStack total = Items.builder(inv.getItem(40),
-                        meta -> meta.setDisplayName(ChatColor.GOLD + String.format("%,.0f", currentTotal) + econ.getSymbol())
+                        meta -> meta.setDisplayName(ChatColor.GOLD + format("%,.0f", currentTotal) + econ.getSymbol())
                 );
                 inv.setItem(40, total);
             })
@@ -934,7 +955,7 @@ public final class GUIManager implements Listener {
                 ItemStack item = e.getCurrentItem();
 
                 Business to = getBusiness(item);
-                Business from = Business.getById(of(item).getUUID("from_business"));
+                Business from = Business.byId(of(item).getUUID("from_business"));
 
                 double add = NovaConfig.getConfiguration().getBusinessAdvertisingReward();
                 if (to.getAdvertisingBalance() < add) return;
@@ -1010,7 +1031,7 @@ public final class GUIManager implements Listener {
 
                 ItemStack head1 = inv.getItem(10).clone();
                 ItemMeta h1Meta = head1.getItemMeta();
-                h1Meta.setLore(Collections.singletonList(ChatColor.GOLD + String.format("%,.2f", np.getBalance(econ)) + econ.getSymbol()));
+                h1Meta.setLore(Collections.singletonList(ChatColor.GOLD + format("%,.2f", np.getBalance(econ)) + econ.getSymbol()));
                 head1.setItemMeta(h1Meta);
                 inv.setItem(10, head1);
 
@@ -1021,7 +1042,7 @@ public final class GUIManager implements Listener {
                 final double fAmount = amount;
 
                 ItemStack currentAmount = builder(currentAmountO,
-                        meta -> meta.setDisplayName(ChatColor.GOLD + String.format("%,.2f", fAmount) + econ.getSymbol()),
+                        meta -> meta.setDisplayName(ChatColor.GOLD + format("%,.2f", fAmount) + econ.getSymbol()),
                         nbt -> {
                             nbt.set(ECON_TAG, econ.getUniqueId());
                             nbt.set(AMOUNT_TAG, fAmount);
@@ -1062,7 +1083,7 @@ public final class GUIManager implements Listener {
                 }
 
                 ItemStack currentAmount = builder(currentAmountO,
-                        meta -> meta.setDisplayName(ChatColor.GOLD + String.format("%,.2f", newAmount) + econ.getSymbol()),
+                        meta -> meta.setDisplayName(ChatColor.GOLD + format("%,.2f", newAmount) + econ.getSymbol()),
                         nbt -> {
                             nbt.set(ECON_TAG, econ.getUniqueId());
                             nbt.set(AMOUNT_TAG, newAmount);
@@ -1112,11 +1133,11 @@ public final class GUIManager implements Listener {
 
                 nt.add(econ, amount);
 
-                String amountS = String.format("%,.2f", amount) + econ.getSymbol();
+                String amountS = format("%,.2f", amount) + econ.getSymbol();
                 String gameName = p.getDisplayName() == null ? p.getName() : p.getDisplayName();
 
-                target.sendMessage(String.format(getMessage("success.economy.receive"), amountS, gameName));
-                w.sendActionbar(target, String.format(get("success.economy.receive_actionbar"), amountS, gameName));
+                target.sendMessage(format(getMessage("success.economy.receive"), amountS, gameName));
+                w.sendActionbar(target, format(get("success.economy.receive_actionbar"), amountS, gameName));
             })
             .put("corporation:hq", (e, inv) -> {
                 Player p = (Player) e.getWhoClicked();
@@ -1253,6 +1274,66 @@ public final class GUIManager implements Listener {
                 p.openInventory(generateCorporationStatistics(c));
                 NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
             })
+            .put("business:invite", (e, inv) -> {
+                Player p = (Player) e.getWhoClicked();
+                ItemStack item = e.getCurrentItem();
+                Business b = getBusiness(item);
+                Corporation from = Corporation.byId(of(item).getUUID("from"));
+
+                switch (e.getClick()) {
+                    case RIGHT:
+                    case SHIFT_RIGHT: {
+                        confirm(p, () -> {
+                            getCommandWrapper().acceptCorporationInvite(p, from);
+                            p.closeInventory();
+                        }, () -> {
+                            p.openInventory(generateBusinessInvites(b, SortingType.CORPORATION_INVITE_CORPORATION_ASCENDING));
+                            NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
+                        });
+                        break;
+                    }
+                    case LEFT:
+                    case SHIFT_LEFT: {
+                        confirm(p, () -> {
+                            getCommandWrapper().declineCorporationInvite(p, from);
+                            p.closeInventory();
+                        }, () -> {
+                            p.openInventory(generateBusinessInvites(b, SortingType.CORPORATION_INVITE_CORPORATION_ASCENDING));
+                            NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
+                        });
+                        break;
+                    }
+                }
+            })
+            .put("business:invites", (e, inv) -> {
+                Player p = (Player) e.getWhoClicked();
+                ItemStack item = e.getCurrentItem();
+                Business b = getBusiness(item);
+
+                p.openInventory(generateBusinessInvites(b, SortingType.CORPORATION_INVITE_CORPORATION_ASCENDING));
+                NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
+            })
+            .put("corporation:settings", (e, inv) -> {
+                Player p = (Player) e.getWhoClicked();
+                getCommandWrapper().settings(p, CORPORATION_TAG);
+            })
+            .build();
+
+    static final Map<String, BiConsumer<InventoryClickEvent, NovaInventory>> CLICK_INVENTORIES = ImmutableMap.<String, BiConsumer<InventoryClickEvent, NovaInventory>>builder()
+            .put("confirm_menu", (e, inv) -> {
+                Player p = (Player) e.getWhoClicked();
+                ItemStack item = e.getCurrentItem();
+                String type = of(item).getString("type");
+
+                Runnable confirmR = inv.getAttribute("accept_action", Runnable.class);
+                Runnable cancelR = inv.getAttribute("cancel_action", Runnable.class);
+
+                switch (type) {
+                    case "accept": confirmR.run(); break;
+                    case "cancel": cancelR.run(); break;
+                    default: throw new UnsupportedOperationException("Unknown Type: " + type);
+                }
+            })
             .build();
 
     private static Product getProduct(ItemStack item) {
@@ -1274,17 +1355,12 @@ public final class GUIManager implements Listener {
 
         if (e.getCurrentItem() == null) return;
         ItemStack item = e.getCurrentItem();
-
         if (item.isSimilar(GUI_BACKGROUND)) e.setCancelled(true);
-        if (!item.hasItemMeta()) return;
-        if (!hasID(item)) return;
+
+        if (CLICK_INVENTORIES.containsKey(inv.getId())) CLICK_INVENTORIES.get(inv.getId()).accept(e, inv);
 
         String id = getID(item);
-        if (id == null || !hasID(item)) return;
-        if (!CLICK_ITEMS.containsKey(id)) return;
-
-        if (!e.isCancelled()) e.setCancelled(true);
-        CLICK_ITEMS.get(id).accept(e, inv);
+        if (CLICK_ITEMS.containsKey(id)) CLICK_ITEMS.get(id).accept(e, inv);
     }
 
     @EventHandler
@@ -1294,7 +1370,7 @@ public final class GUIManager implements Listener {
         e.setCancelled(inv.isCancelled());
 
         for (ItemStack item : e.getNewItems().values()) {
-            if (item == null) return;
+            if (item == null) continue;
             if (item.isSimilar(GUI_BACKGROUND)) e.setCancelled(true);
         }
     }
@@ -1337,7 +1413,7 @@ public final class GUIManager implements Listener {
         if (item.isSimilar(GUI_BACKGROUND)) e.setCancelled(true);
 
         String id = getID(item);
-        if (id.length() > 0 && CLICK_ITEMS.containsKey(id)) e.setCancelled(true);
+        if (CLICK_ITEMS.containsKey(id)) e.setCancelled(true);
     }
 
 }
