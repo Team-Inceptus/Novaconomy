@@ -37,6 +37,19 @@ permissions:
     children:
       novaconomy.admin: true
 
+  # Admin Corporation
+  novaconomy.admin.corporation:
+    description: All Novaconomy Corporation Admin Actions
+    default: op
+    children:
+      novaconomy.admin: true
+
+  novaconomy.admin.corporation.manage_experience:
+    description: Manage External Corporation Experience
+    default: op
+    children:
+      novaconomy.admin.corporation: true
+
   # Economy
   novaconomy.economy:
     description: Access to all Economy actions
@@ -211,7 +224,7 @@ permissions:
       novaconomy.user: true
   
   novaconomy.user.corporation.manage:
-    description: Access to Creating and Deleting one's own Corporation
+    description: Access to Creating and Managing one's own Corporation
     default: true
     children:
       novaconomy.user.corporation: true

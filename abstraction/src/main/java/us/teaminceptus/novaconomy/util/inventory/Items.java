@@ -1,4 +1,4 @@
-package us.teaminceptus.novaconomy.util;
+package us.teaminceptus.novaconomy.util.inventory;
 
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.properties.Property;
@@ -13,6 +13,7 @@ import org.jetbrains.annotations.NotNull;
 import us.teaminceptus.novaconomy.abstraction.NBTWrapper;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.SortingType;
+import us.teaminceptus.novaconomy.util.NovaUtil;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -24,6 +25,7 @@ import java.util.function.Supplier;
 import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.TYPE_TAG;
 import static us.teaminceptus.novaconomy.abstraction.Wrapper.get;
 import static us.teaminceptus.novaconomy.abstraction.Wrapper.w;
+import static us.teaminceptus.novaconomy.util.NovaUtil.format;
 
 public final class Items {
 
@@ -60,7 +62,7 @@ public final class Items {
 
     public static final ItemStack CANCEL = NBTWrapper.builder(RED_WOOL,
             meta -> meta.setDisplayName(ChatColor.RED + get("constants.cancel")),
-            nbt -> nbt.setID("no:close_effect")
+            nbt -> nbt.setID("no:close")
     );
 
     public static final ItemStack GUI_BACKGROUND = builder(
@@ -121,7 +123,7 @@ public final class Items {
 
     public static ItemStack sorter(SortingType<?> sortingType) {
         return NBTWrapper.builder(YELLOW_TERRACOTTA,
-                meta -> meta.setDisplayName(ChatColor.GREEN + String.format(get("constants.sorting_by"), ChatColor.YELLOW + NovaUtil.getDisplayName(sortingType))),
+                meta -> meta.setDisplayName(ChatColor.GREEN + NovaUtil.format(get("constants.sorting_by"), ChatColor.YELLOW + NovaUtil.getDisplayName(sortingType))),
                 nbt -> {
                     nbt.setID("sorter");
                     nbt.set(TYPE_TAG, NovaUtil.getId(sortingType));
@@ -194,7 +196,7 @@ public final class Items {
 
     public static ItemStack invalid(String arg0) {
         return builder(Material.BARRIER,
-                meta -> meta.setDisplayName(String.format(get("error.economy.invalid_amount"), arg0))
+                meta -> meta.setDisplayName(format(get("error.economy.invalid_amount"), arg0))
         );
     }
 
