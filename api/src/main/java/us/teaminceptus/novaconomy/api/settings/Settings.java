@@ -71,17 +71,27 @@ public final class Settings {
         @NotNull
         Class<T> getType();
 
+        /**
+         * Parses a value from a string.
+         * @param value String to parse
+         * @return Parsed value applicable to this setting
+         */
+        @NotNull
+        T parseValue(@NotNull String value);
+
     }
 
     /**
      * Creates an Array of all settings.
      * @return Array of all settings
      */
+    @NotNull
     public static NovaSetting<?>[] values() {
         List<NovaSetting<?>> settings = new ArrayList<>();
 
         settings.addAll(Arrays.asList(Business.values()));
         settings.addAll(Arrays.asList(Personal.values()));
+        settings.addAll(Arrays.asList(Corporation.values()));
 
         return settings.toArray(new NovaSetting[0]);
     }
@@ -147,6 +157,12 @@ public final class Settings {
 
         @Override
         public Class<Boolean> getType() { return Boolean.class; }
+
+        @NotNull
+        @Override
+        public Boolean parseValue(@NotNull String value) {
+            return Boolean.parseBoolean(value);
+        }
     }
 
     /**
@@ -227,6 +243,12 @@ public final class Settings {
 
         @Override
         public Class<Boolean> getType() { return Boolean.class; }
+
+        @NotNull
+        @Override
+        public Boolean parseValue(@NotNull String value) {
+            return Boolean.parseBoolean(value);
+        }
     }
 
     /**
@@ -235,7 +257,7 @@ public final class Settings {
     public static final class Corporation<T> implements NovaSetting<T> {
 
         /**
-         * Represents the Join Type of a Corporation.
+         * The privacy setting of a Corporation, determining how and whether businesses can join.
          */
         @SettingDescription("settings.corporation.join_type")
         public static final Corporation<JoinType> JOIN_TYPE = ofEnum("join_type", "constants.settings.name.join_type", JoinType.class, JoinType.INVITE_ONLY);        
@@ -351,6 +373,16 @@ public final class Settings {
         @Override
         public Class<T> getType() {
             return clazz;
+        }
+
+        @NotNull
+        @Override
+        public T parseValue(@NotNull String value) {
+            switch (key) {
+                case "join_type": return (T) JoinType.valueOf(value.toUpperCase());
+                default:
+                    throw new IllegalArgumentException("Unknown Corporation Setting: " + key);
+            }
         }
 
     }
