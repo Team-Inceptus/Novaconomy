@@ -2,7 +2,8 @@ package us.teaminceptus.novaconomy.util;
 
 import org.bukkit.Location;
 import org.bukkit.Sound;
-import org.bukkit.entity.Entity;
+import org.bukkit.command.CommandSender;
+import org.bukkit.entity.HumanEntity;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -44,18 +45,16 @@ public enum NovaSound {
         l.getWorld().playSound(l, find(), volume, pitch);
     }
 
-    public void play(@NotNull Entity en, float volume, float pitch) {
-        play(en.getLocation(), volume, pitch);
-    }
+    public void play(@NotNull HumanEntity en, float volume, float pitch) { play(en.getLocation(), volume, pitch); }
 
-    public void playSuccess(@NotNull Entity en) {
-        play(en, 1F, 2F);
-    }
+    public void playSuccess(@NotNull HumanEntity en) { play(en, 1F, 2F); }
 
-    public void playFailure(@NotNull Entity en) {
-        play(en, 1F, 0F);
-    }
+    public void playSuccess(@NotNull CommandSender sender) { if (sender instanceof HumanEntity) playSuccess((HumanEntity) sender); }
 
-    public void play(@NotNull Entity en) { play(en, 1F, 1F); }
+    public void playFailure(@NotNull CommandSender sender) { if (sender instanceof HumanEntity) playFailure((HumanEntity) sender); }
+
+    public void playFailure(@NotNull HumanEntity en) { play(en, 1F, 0F);}
+
+    public void play(@NotNull HumanEntity en) { play(en, 1F, 1F); }
 
 }
