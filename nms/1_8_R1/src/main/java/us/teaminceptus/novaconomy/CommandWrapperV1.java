@@ -998,6 +998,32 @@ public final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
 
                         break;
                     }
+                    case "join": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
+                        if (args.length < 2) {
+                            p.sendMessage(getMessage("error.argument.corporation"));
+                            return false;
+                        }
+
+                        Corporation c = Corporation.byName(args[1]);
+
+                        if (c == null) {
+                            p.sendMessage(getMessage("error.argument.corporation"));
+                            return false;
+                        }
+
+                        joinCorporation(p, c);
+                        break;
+                    }
+                    case "leave": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
+                        leaveCorporation(p);
+                        break;
+                    }
                     default: {
                         sender.sendMessage(getMessage("error.argument"));
                         return false;
@@ -1512,9 +1538,7 @@ public final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         break;
                     }
                     case "setheadquarters":
-                    case "sethq":
-                    case "headquarters":
-                    case "hq": {
+                    case "sethq": {
                         if (!(sender instanceof Player)) return false;
                         Player p = (Player) sender;
 
@@ -1703,6 +1727,14 @@ public final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         }
 
                         setCorporationExperience(sender, c, Corporation.toExperience(level));
+                        break;
+                    }
+                    case "headquarters":
+                    case "hq": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
+                        corporationHeadquarters(p);
                         break;
                     }
                     default: {

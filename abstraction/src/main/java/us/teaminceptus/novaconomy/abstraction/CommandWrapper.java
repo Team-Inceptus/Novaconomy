@@ -3165,8 +3165,18 @@ public interface CommandWrapper {
 
         Corporation corp = Corporation.byOwner(p);
 
-        if (!(corp.getSetting(Settings.Corporation.JOIN_TYPE) == Corporation.JoinType.INVITE_ONLY)) {
+        if (corp.getSetting(Settings.Corporation.JOIN_TYPE) != Corporation.JoinType.INVITE_ONLY) {
             p.sendMessage(getError("error.corporation.invite_only"));
+            return;
+        }
+
+        if (corp.getInvited().contains(b)) {
+            p.sendMessage(getError("error.corporation.invite.already_invited"));
+            return;
+        }
+
+        if (corp.getChildren().size() >= corp.getMaxChildren()) {
+            p.sendMessage(getError("error.corporation.max_children"));
             return;
         }
 
@@ -3217,6 +3227,11 @@ public interface CommandWrapper {
             return;
         }
 
+        if (from.getChildren().size() >= from.getMaxChildren()) {
+            p.sendMessage(getError("error.corporation.max_children"));
+            return;
+        }
+
         try {
             invite.accept();
         } catch (IllegalStateException ignored) {
@@ -3255,6 +3270,81 @@ public interface CommandWrapper {
 
         p.sendMessage(format(getSuccess("success.corporation.invite.declined"), ChatColor.GOLD + from.getName()));
         NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
+    }
+
+    default void joinCorporation(@NotNull Player p, Corporation c) {
+        if (!p.hasPermission("novaconomy.user.business.join_corporation")) {
+            p.sendMessage(ERROR_PERMISSION_ARGUMENT);
+            return;
+        }
+
+        if (!Business.exists(p)) {
+            p.sendMessage(getMessage("error.business.none"));
+            return;
+        }
+
+        Business b = Business.byOwner(p);
+
+        if (b.getParentCorporation() != null) {
+            p.sendMessage(getError("error.business.in_corporation"));
+            return;
+        }
+
+        if (c.getChildren().size() >= c.getMaxChildren()) {
+            p.sendMessage(getError("error.corporation.max_children"));
+            return;
+        }
+
+        if (c.getSetting(Settings.Corporation.JOIN_TYPE) != Corporation.JoinType.PUBLIC) {
+            p.sendMessage(getError("error.corporation.public_only"));
+            return;
+        }
+
+        c.addChild(b);
+        c.broadcastMessage(ChatColor.GREEN + format(getMessage("broadcast.corporation.join"), ChatColor.AQUA + b.getName()));
+        NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
+    }
+
+    default void leaveCorporation(@NotNull Player p) {
+        if (!Business.exists(p)) {
+            p.sendMessage(getMessage("error.business.none"));
+            return;
+        }
+
+        Business b = Business.byOwner(p);
+
+        if (b.getParentCorporation() == null) {
+            p.sendMessage(getError("error.business.not_in_corporation"));
+            return;
+        }
+
+        Corporation c = b.getParentCorporation();
+
+        if (c.getOwner().equals(p)) {
+            p.sendMessage(getError("error.corporation.owner_leave"));
+            return;
+        }
+
+        b.leaveParentCorporation();
+        c.broadcastMessage(ChatColor.GREEN + format(getMessage("broadcast.corporation.leave"), ChatColor.AQUA + b.getName()));
+        NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
+    }
+
+    default void corporationHeadquarters(@NotNull Player p) {
+        if (!Corporation.existsByMember(p)) {
+            p.sendMessage(getError("error.corporation.none.member"));
+            return;
+        }
+
+        Corporation c = Corporation.byMember(p);
+
+        if (c.getHeadquarters() == null) {
+            p.sendMessage(getError("error.corporation.no_hq"));
+            return;
+        }
+
+        p.teleport(c.getHeadquarters());
+        p.sendMessage(ChatColor.AQUA + get("constants.teleporting"));
     }
 
 }

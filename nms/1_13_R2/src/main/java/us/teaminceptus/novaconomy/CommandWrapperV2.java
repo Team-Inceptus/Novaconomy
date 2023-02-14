@@ -445,6 +445,13 @@ public final class CommandWrapperV2 implements CommandWrapper {
         @Subcommand("invite decline")
         @AutoComplete("@invites *")
         public void declineInvite(Player p, Corporation from) { wrapper.declineCorporationInvite(p, from); }
+
+        @Subcommand("join")
+        @CommandPermission("novaconomy.user.business.join_corporation")
+        public void joinCorporation(Player p, Corporation corp) { wrapper.joinCorporation(p, corp); }
+
+        @Subcommand("leave")
+        public void leaveCorporation(Player p) { wrapper.leaveCorporation(p); }
     }
 
     @Command({"nbank", "bank", "globalbank", "gbank"})
@@ -743,7 +750,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
             wrapper.setCorporationIcon(p, icon);
         }
 
-        @Subcommand({"setheadquarters", "sethq", "headquarters", "hq"})
+        @Subcommand({"setheadquarters", "sethq"})
         public void setHeadquarters(Player p) {
             wrapper.setCorporationHeadquarters(p);
         }
@@ -797,5 +804,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
             wrapper.setCorporationExperience(sender, c, Corporation.toExperience(level));
         }
 
+        @Subcommand({"hq", "headquarters"})
+        public void corporationHeadquarters(Player p) { wrapper.corporationHeadquarters(p); }
     }
 }
