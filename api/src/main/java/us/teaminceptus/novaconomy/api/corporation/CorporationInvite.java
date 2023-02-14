@@ -4,10 +4,7 @@ import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.jetbrains.annotations.NotNull;
 import us.teaminceptus.novaconomy.api.business.Business;
 
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 /**
  * Utility class for a Corporation Invite
@@ -73,6 +70,7 @@ public final class CorporationInvite implements ConfigurationSerializable {
     public void accept() throws IllegalStateException {
         if (to.getParentCorporation() != null) throw new IllegalStateException("Business already has a parent corporation");
         if (!from.isInvited(to)) throw new IllegalStateException("Business is no longer invited to this corporation");
+        if (from.getChildren().size() >= from.getMaxChildren()) throw new IllegalStateException("Corporation is full");
 
         from.removeInvite(to);
         from.addChild(to);
@@ -112,6 +110,23 @@ public final class CorporationInvite implements ConfigurationSerializable {
     }
 
     // Serialization
+
+    /**
+     * Deserializes a CorporationInvite from a Map.
+     * @param serial Serialized CorporationInvite
+     * @return Deserialized CorporationInvite
+     * @throws IllegalArgumentException if the serial map is null
+     */
+    @NotNull
+    public static CorporationInvite deserialize(@NotNull Map<String, Object> serial) throws IllegalArgumentException {
+        if (serial == null) throw new IllegalArgumentException("Serial cannot be null");
+
+        return new CorporationInvite(
+                Corporation.byId(UUID.fromString(serial.get("from").toString())),
+                Business.byId(UUID.fromString(serial.get("to").toString())),
+                new Date((long) serial.get("invitedTimestamp"))
+        );
+    }
 
     @Override
     @NotNull
