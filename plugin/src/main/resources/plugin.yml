@@ -194,6 +194,12 @@ permissions:
     children:
       novaconomy.user.business: true
 
+  novaconomy.user.business.join_corporation:
+    description: Access to joining a public parent corporation
+    default: true
+    children:
+      novaconomy.user.business: true
+
   # User Bank
   novaconomy.user.bank:
     description: Base Novaconomy Bank Permission
