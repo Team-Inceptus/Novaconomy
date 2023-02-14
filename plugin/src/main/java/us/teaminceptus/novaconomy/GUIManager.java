@@ -45,10 +45,12 @@ import us.teaminceptus.novaconomy.api.util.Price;
 import us.teaminceptus.novaconomy.api.util.Product;
 import us.teaminceptus.novaconomy.util.NovaSound;
 import us.teaminceptus.novaconomy.util.NovaUtil;
+import us.teaminceptus.novaconomy.util.inventory.InventorySelector;
 import us.teaminceptus.novaconomy.util.inventory.Items;
 
 import java.util.*;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -1283,24 +1285,24 @@ public final class GUIManager implements Listener {
                 switch (e.getClick()) {
                     case RIGHT:
                     case SHIFT_RIGHT: {
-                        confirm(p, () -> {
+                        p.openInventory(confirm(p, () -> {
                             getCommandWrapper().acceptCorporationInvite(p, from);
                             p.closeInventory();
                         }, () -> {
                             p.openInventory(generateBusinessInvites(b, SortingType.CORPORATION_INVITE_CORPORATION_ASCENDING));
                             NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
-                        });
+                        }));
                         break;
                     }
                     case LEFT:
                     case SHIFT_LEFT: {
-                        confirm(p, () -> {
+                        p.openInventory(confirm(p, () -> {
                             getCommandWrapper().declineCorporationInvite(p, from);
                             p.closeInventory();
                         }, () -> {
                             p.openInventory(generateBusinessInvites(b, SortingType.CORPORATION_INVITE_CORPORATION_ASCENDING));
                             NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
-                        });
+                        }));
                         break;
                     }
                 }
@@ -1324,6 +1326,7 @@ public final class GUIManager implements Listener {
                 Player p = (Player) e.getWhoClicked();
                 ItemStack item = e.getCurrentItem();
                 String type = of(item).getString("type");
+                if (type.isEmpty()) return;
 
                 Runnable confirmR = inv.getAttribute("accept_action", Runnable.class);
                 Runnable cancelR = inv.getAttribute("cancel_action", Runnable.class);
@@ -1332,6 +1335,40 @@ public final class GUIManager implements Listener {
                     case "accept": confirmR.run(); break;
                     case "cancel": cancelR.run(); break;
                     default: throw new UnsupportedOperationException("Unknown Type: " + type);
+                }
+            })
+            .put("select_corporation_children", (e, inv) -> {
+                Player p = (Player) e.getWhoClicked();
+                ItemStack item = e.getCurrentItem();
+                NBTWrapper nbt = of(item);
+
+                Consumer<Business> findAction = inv.getAttribute("find_action", Consumer.class);
+                SortingType<Business> sorter = inv.getAttribute("sorter", SortingType.class);
+
+                if (nbt.hasID()) switch (nbt.getID()) {
+                    case "find_child:search": {
+                        w.sendSign(p, lines -> {
+                            String name = String.join("", lines).replaceAll("\\s", "");
+                            if (name.isEmpty()) {
+                                p.openInventory(InventorySelector.selectCorporationChildren(p, sorter, "", findAction));
+                                NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
+                                return;
+                            }
+
+                            p.openInventory(InventorySelector.selectCorporationChildren(p, sorter, name, findAction));
+                            NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
+                        });
+                        break;
+                    }
+                    case "sorter":
+                        break;
+                    default:
+                        throw new UnsupportedOperationException("Unknown ID: " + nbt.getID());
+                }
+                else {
+                    Business b = getBusiness(item);
+                    findAction.accept(b);
+                    NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
                 }
             })
             .build();
@@ -1355,7 +1392,11 @@ public final class GUIManager implements Listener {
 
         if (e.getCurrentItem() == null) return;
         ItemStack item = e.getCurrentItem();
-        if (item.isSimilar(GUI_BACKGROUND)) e.setCancelled(true);
+
+        if (item.isSimilar(GUI_BACKGROUND)) {
+            e.setCancelled(true);
+            return;
+        }
 
         if (CLICK_INVENTORIES.containsKey(inv.getId())) CLICK_INVENTORIES.get(inv.getId()).accept(e, inv);
 
