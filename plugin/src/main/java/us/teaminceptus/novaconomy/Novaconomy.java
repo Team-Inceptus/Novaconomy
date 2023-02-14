@@ -947,26 +947,28 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 
     @Override
     public double getPrice(@NotNull Material m) {
-        if (prices.isEmpty()) readMarketWithCatch();
-        return prices.getOrDefault(m, 1.0);
+//        if (prices.isEmpty()) readMarketWithCatch();
+//        return prices.getOrDefault(m, 1.0);
+		throw new UnsupportedOperationException("Not implemented yet");
     }
 
     @Override
     public @NotNull Receipt buy(@NotNull OfflinePlayer buyer, @NotNull Material m, int amount, @NotNull Economy econ) throws IllegalArgumentException {
-        if (buyer == null) throw new IllegalArgumentException("Buyer cannot be null");
-        if (m == null) throw new IllegalArgumentException("Material cannot be null");
-        if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
-        NovaPlayer np = new NovaPlayer(buyer);
-
-        double price = getPrice(m, econ) * amount;
-        if (price <= 0) throw new IllegalArgumentException("Price must be positive");
-        
-        if (np.getBalance(econ) < price) throw new IllegalArgumentException("Insufficient funds");
-        np.remove(econ, price);
-        purchaseCount.put(m, purchaseCount.getOrDefault(m, 0) + amount);
-        writeMarketWithCatch();
-
-		return new Receipt(m, price, buyer);
+//        if (buyer == null) throw new IllegalArgumentException("Buyer cannot be null");
+//        if (m == null) throw new IllegalArgumentException("Material cannot be null");
+//        if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
+//        NovaPlayer np = new NovaPlayer(buyer);
+//
+//        double price = getPrice(m, econ) * amount;
+//        if (price <= 0) throw new IllegalArgumentException("Price must be positive");
+//
+//        if (np.getBalance(econ) < price) throw new IllegalArgumentException("Insufficient funds");
+//        np.remove(econ, price);
+//        purchaseCount.put(m, purchaseCount.getOrDefault(m, 0) + amount);
+//        writeMarketWithCatch();
+//
+//		return new Receipt(m, price, buyer);
+		throw new UnsupportedOperationException("Not implemented yet");
     }
 
 }

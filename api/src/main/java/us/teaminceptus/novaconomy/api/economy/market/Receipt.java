@@ -1,19 +1,21 @@
 package us.teaminceptus.novaconomy.api.economy.market;
 
+import org.bukkit.Bukkit;
+import org.bukkit.Material;
+import org.bukkit.OfflinePlayer;
+import org.jetbrains.annotations.NotNull;
+
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.util.Date;
 import java.util.UUID;
 
-import org.bukkit.Bukkit;
-import org.bukkit.Material;
-import org.bukkit.OfflinePlayer;
-import org.jetbrains.annotations.NotNull;
-
 /**
  * Utility class for keeping track of purchased items on the Market
+ * @deprecated Draft API
  */
+@Deprecated
 public final class Receipt implements Serializable {
     
     private final long timestamp;

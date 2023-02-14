@@ -4,12 +4,13 @@ import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
 import us.teaminceptus.novaconomy.api.economy.Economy;
 
 /**
  * Represents the Novaconomy Market
+ * @deprecated Draft API
  */
+@Deprecated
 public interface NovaMarket {
 
     /**
