@@ -20,7 +20,6 @@ import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.corporation.Corporation;
 import us.teaminceptus.novaconomy.api.corporation.CorporationInvite;
-import us.teaminceptus.novaconomy.api.corporation.CorporationPermission;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.events.business.BusinessCreateEvent;
 import us.teaminceptus.novaconomy.api.player.NovaPlayer;
@@ -1402,27 +1401,6 @@ public final class Business implements ConfigurationSerializable {
         );
     }
 
-    /**
-     * Fetches an immutable set of all of the Corporation Permissions this Business has.
-     * @return Set of Corporation Permissions, or empty if not in a Corporation
-     */
-    @NotNull
-    public Set<CorporationPermission> getCorporationPermissions() {
-        Corporation parent = getParentCorporation();
-        if (parent == null) return ImmutableSet.of();
-
-        return parent.getBusinessPermissions(this);
-    }
-
-    /**
-     * Whether this Business has a specific Corporation Permission.
-     * @param permission Permission to check
-     * @return true if this Business has a parent corporation and has the permission, else false
-     */
-    public boolean hasCorporationPermission(@NotNull CorporationPermission permission) {
-        return getCorporationPermissions().contains(permission);
-    }
-
     // Static Util
 
     /**
@@ -1585,6 +1563,11 @@ public final class Business implements ConfigurationSerializable {
                     null, null, null, settings, System.currentTimeMillis(), keywords, 0, new ArrayList<>());
 
             b.saveBusiness();
+
+            if (Corporation.exists(owner)) {
+                Corporation c = Corporation.byOwner(owner);
+                c.addChild(b);
+            }
 
             BusinessCreateEvent event = new BusinessCreateEvent(b);
             Bukkit.getPluginManager().callEvent(event);
