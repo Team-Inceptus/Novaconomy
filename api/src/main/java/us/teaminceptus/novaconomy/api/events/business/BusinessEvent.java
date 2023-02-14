@@ -32,7 +32,7 @@ public abstract class BusinessEvent extends Event {
      * @return Event Handlers
      * @see HandlerList
      */
-    public static HandlerList getHanderList() { return HANDLERS; }
+    public static HandlerList getHandlerList() { return HANDLERS; }
 
     /**
      * Fetches the BusinessEvent's Business

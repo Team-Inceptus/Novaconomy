@@ -136,7 +136,8 @@ public enum Language {
      * @param id ID to fetch (e.g. "es" for Spanish)
      * @return Found language, or English if not found
      */
-    public static Language getById(String id) {
+    @NotNull
+    public static Language getById(@NotNull String id) {
         if (id.equalsIgnoreCase("en")) return ENGLISH;
         for (Language l : values()) if (l.id.replace("_", "").equalsIgnoreCase(id)) return l;
 
@@ -147,8 +148,27 @@ public enum Language {
      * Fetches the current Language for Novaconomy.
      * @return Current Language
      */
+    @NotNull
     public static Language getCurrentLanguage() {
         return getById(NovaConfig.getConfiguration().getLanguage());
+    }
+
+    /**
+     * Fetches a message in the current language.
+     * @param key Key to fetch
+     * @return Message in the current language
+     */
+    public static String getCurrentMessage(@NotNull String key) {
+        return getCurrentLanguage().getMessage(key);
+    }
+
+    /**
+     * Fetches the locale for the current language.
+     * @return Current Locale
+     */
+    @NotNull
+    public static Locale getCurrentLocale() {
+        return getCurrentLanguage().getLocale();
     }
 
 }

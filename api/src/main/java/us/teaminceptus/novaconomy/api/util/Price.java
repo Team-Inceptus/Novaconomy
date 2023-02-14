@@ -3,6 +3,7 @@ package us.teaminceptus.novaconomy.api.util;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 
 import java.io.Externalizable;
@@ -18,6 +19,8 @@ import java.util.UUID;
  * Utility Class for creating a Price with an Economy
  */
 public final class Price implements ConfigurationSerializable, Comparable<Price>, Externalizable {
+
+    private static final long serialVersionUID = 9211350596474508468L;
 
     private Economy econ;
     private double amount;
@@ -178,6 +181,14 @@ public final class Price implements ConfigurationSerializable, Comparable<Price>
         return this;
     }
 
+    /**
+     * Multiplies {@linkplain #getAmount() the amount} by the economy's {@linkplain Economy#getConversionScale() conversion scale}.
+     * @return Real Amount, factoring in the economy's conversion scale
+     */
+    public double getRealAmount() {
+        return amount * econ.getConversionScale();
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -193,7 +204,7 @@ public final class Price implements ConfigurationSerializable, Comparable<Price>
 
     @Override
     public String toString() {
-        return String.format("%,.2f", amount) + econ.getSymbol();
+        return String.format(Language.getCurrentLocale(), "%,.2f", amount) + econ.getSymbol();
     }
 
     @Override
@@ -225,6 +236,6 @@ public final class Price implements ConfigurationSerializable, Comparable<Price>
 
     @Override
     public int compareTo(@NotNull Price r) {
-        return Double.compare(amount, r.amount);
+        return Double.compare(getRealAmount(), r.getRealAmount());
     }
 }

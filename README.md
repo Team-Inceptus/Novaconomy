@@ -7,6 +7,20 @@ With the freedom to have your own symbols, icons, conversion rates, and even int
 
 <h2 style="text-decoration: underline;">📓Changelog</h2>
 
+### 👔 1.7.0 Update: Cunning Corporations
+- New Features
+  - **Heavy Optimization**
+    - Economies, Businesses, and Corporations now have their own Caching system for faster reading times
+      - This should improve response times to Natural Increases and loading GUIs like /balance
+    - Optimize Business & Economy Serialization
+  - Created Corporations
+    - Corporations are parent organizations that give Businesses that join them benefits, such as profit increases
+    - Corporations have an experience and leveling system, currently the only natural way of gaining experience is through profit and Corporation Achievements
+    - You can own both a Business and a Corporation; Corporation Owners will automatically have their Business added to their Corporation
+    - Other Corporation Features
+  - Other Improvements 
+
+**Markets will be moved to v1.7.1 because of time constraints**
 ### 📊 1.6.0 Update: Supreme Stonks
 - New Features:
   - **Heavy Optimization**
@@ -33,8 +47,7 @@ With the freedom to have your own symbols, icons, conversion rates, and even int
   - Rename Business & Change Business Icon Commands
   - Setting Descriptions
   - Korean Translation
- 
-**Stock Markets are currently planned for _1.7.0_, and will be released in the next few weeks.**
+
 ### 👔 1.5.0 Update: Outstanding Organizations
 - New Features:
   - Business Rating System, allowing others to rate your business.

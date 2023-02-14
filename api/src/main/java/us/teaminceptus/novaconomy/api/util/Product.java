@@ -17,9 +17,9 @@ import java.util.Objects;
  */
 public class Product implements ConfigurationSerializable, Comparable<Product> {
 
-    private ItemStack item;
+    ItemStack item;
 
-    private Price price;
+    Price price;
 
     /**
      * Constructs a Product.
@@ -145,6 +145,14 @@ public class Product implements ConfigurationSerializable, Comparable<Product> {
     @Override
     public int hashCode() {
         return Objects.hash(item, price);
+    }
+
+    @Override
+    public String toString() {
+        return "Product{" +
+                "item=" + item +
+                ", price=" + price +
+                '}';
     }
 
     /**

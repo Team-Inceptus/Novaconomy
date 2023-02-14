@@ -97,13 +97,13 @@
         <dependency>
             <groupId>com.jeff_media</groupId>
             <artifactId>SpigotUpdateChecker</artifactId>
-            <version>3.0.0</version>
+            <version>3.0.1</version>
             <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>org.bstats</groupId>
             <artifactId>bstats-bukkit</artifactId>
-            <version>3.0.0</version>
+            <version>3.0.1</version>
             <scope>compile</scope>
         </dependency>
 
@@ -134,6 +134,12 @@
             <groupId>com.github.lokka30.treasury</groupId>
             <artifactId>treasury-api</artifactId>
             <version>1.2.1</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.github.EssentialsX.Essentials</groupId>
+            <artifactId>EssentialsX</artifactId>
+            <version>2.19.7</version>
             <scope>provided</scope>
         </dependency>
 

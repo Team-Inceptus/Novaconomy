@@ -165,7 +165,7 @@ public final class BusinessStatistics implements ConfigurationSerializable {
          */
         @Nullable
         public Business getBusiness() {
-            return Business.getById(business);
+            return Business.byId(business);
         }
 
         /**

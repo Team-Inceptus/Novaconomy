@@ -9,6 +9,7 @@ import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.api.economy.Economy;
+import us.teaminceptus.novaconomy.api.economy.market.NovaMarket;
 import us.teaminceptus.novaconomy.api.player.NovaPlayer;
 import us.teaminceptus.novaconomy.api.util.Price;
 
@@ -32,6 +33,22 @@ public interface NovaConfig  {
     }
 
     /**
+     * Fetches the Novaconomy Market.
+     * @return Novaconomy Market
+     */
+    static NovaMarket getMarket() {
+        return (NovaMarket) getPlugin();
+    }
+
+    /**
+     * Fetches the file that the Market is stored in.
+     * @return Market File
+     */
+    static File getMarketFile() {
+        return new File(getDataFolder(), "market.dat");
+    }
+
+    /**
      * Fetches the file of the main config.yml.
      * @return Configuration File
      */
@@ -51,7 +68,12 @@ public interface NovaConfig  {
      * @since 1.7.0
      */
     @NotNull
-    static File getCorporationsFolder() { return new File(getDataFolder(), "corporations"); }
+    static File getCorporationsFolder() {
+        File f = new File(getDataFolder(), "corporations");
+        if (!f.exists()) f.mkdir();
+
+        return f;
+    }
 
     /**
      * Prints a Throwable in the Plugin's Namespace and Format.
@@ -174,6 +196,16 @@ public interface NovaConfig  {
     }
 
     /**
+     * Fetches the functionality.yml Configuration.
+     * @return Functionality Configuration
+     */
+    @NotNull
+    static FileConfiguration getFunctionalityConfig() {
+        if (!getFunctionalityFile().exists()) return loadFunctionalityFile();
+        return YamlConfiguration.loadConfiguration(getFunctionalityFile());
+    }
+
+    /**
      * Loads the Functionality Configuration.
      * @return Loaded Functionality Configuration
      */
@@ -185,8 +217,21 @@ public interface NovaConfig  {
 
         if (!config.isSet("CommandVersion")) config.set("CommandVersion", "auto");
 
-        if (!config.isDouble("MaxConvertAmount")) config.set("MaxConvertAmount", -1);
+        if (!config.isDouble("MaxConvertAmount") && !config.isInt("MaxConvertAmount")) config.set("MaxConvertAmount", -1);
         if (!config.isConfigurationSection("EconomyMaxConvertAmounts")) config.createSection("EconomyMaxConvertAmounts");
+        if (!config.isSet("VaultEconomy")) config.set("VaultEconomy", -1);
+
+        if (!config.isConfigurationSection("Essentials")) config.createSection("Essentials");
+        
+        if (!config.isConfigurationSection("Essentials.NickCost")) config.createSection("Essentials.NickCost");
+        if (!config.isBoolean("Essentials.NickCost.Enabled")) config.set("Essentials.NickCost.Enabled", false);
+        if (!config.isDouble("Essentials.NickCost.Amount") && !config.isInt("Essentials.NickCost.Amount")) config.set("Essentials.NickCost.Cost", 0.0);
+        if (!config.isString("Essentials.NickCost.Economy")) config.set("Essentials.NickCost.Economy", "default");
+
+        if (!config.isConfigurationSection("Essentials.TeleportCost")) config.createSection("Essentials.TeleportCost");
+        if (!config.isBoolean("Essentials.TeleportCost.Enabled")) config.set("Essentials.TeleportCost.Enabled", false);
+        if (!config.isDouble("Essentials.TeleportCost.Amount") && !config.isInt("Essentials.TeleportCost.Amount")) config.set("Essentials.TeleportCost.Cost", 0.0);
+        if (!config.isString("Essentials.TeleportCost.Economy")) config.set("Essentials.TeleportCost.Economy", "default");
 
         try { config.save(getFunctionalityFile()); } catch (IOException e) { getPlugin().getLogger().severe(e.getMessage()); }
 
@@ -531,6 +576,12 @@ public interface NovaConfig  {
     boolean hasKillIncrease();
 
     /**
+     * Fetch if Indirect Killing (projectiles, pets) counts towards a Kill Increase.
+     * @return true if enabled, else false
+     */
+    boolean hasIndirectKillIncrease();
+
+    /**
      * Fetch if Death Decrease is enabled.
      * @return true if enabled, else false
      */
@@ -870,5 +921,29 @@ public interface NovaConfig  {
      * @throws IllegalArgumentException if language is null
      */
     void setLanguage(@NotNull Language language) throws IllegalArgumentException;
+
+    /**
+     * Whether Corporations gain experience from Product Purchases.
+     * @return true if enabled, else false
+     */
+    boolean hasProductIncrease();
+
+    /**
+     * Sets whether Corporations gain experience from Product Purchases.
+     * @param enabled true if enabled, else false
+     */
+    void setProductIncrease(boolean enabled);
+
+    /**
+     * Fetches the multiplier to the experience of how much a Corporation gains from Product Purchases.
+     * @return Experience multiplier
+     */
+    double getProductIncreaseModifier();
+
+    /**
+     * Sets the multiplier to the experience of how much a Corporation gains from Product Purchases.
+     * @param modifier Experience multiplier
+     */
+    void setProductIncreaseModifier(double modifier);
 
 }

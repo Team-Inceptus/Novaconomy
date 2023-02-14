@@ -37,6 +37,19 @@ permissions:
     children:
       novaconomy.admin: true
 
+  # Admin Corporation
+  novaconomy.admin.corporation:
+    description: All Novaconomy Corporation Admin Actions
+    default: op
+    children:
+      novaconomy.admin: true
+
+  novaconomy.admin.corporation.manage_experience:
+    description: Manage External Corporation Experience
+    default: op
+    children:
+      novaconomy.admin.corporation: true
+
   # Economy
   novaconomy.economy:
     description: Access to all Economy actions
@@ -181,6 +194,12 @@ permissions:
     children:
       novaconomy.user.business: true
 
+  novaconomy.user.business.join_corporation:
+    description: Access to joining a public parent corporation
+    default: true
+    children:
+      novaconomy.user.business: true
+
   # User Bank
   novaconomy.user.bank:
     description: Base Novaconomy Bank Permission
@@ -202,6 +221,19 @@ permissions:
     default: true
     children:
       novaconomy.user.bank: true
+
+  # User Corporation
+  novaconomy.user.corporation:
+    description: Access to all Corporation Actions and Commands
+    default: true
+    children:
+      novaconomy.user: true
+  
+  novaconomy.user.corporation.manage:
+    description: Access to Creating and Managing one's own Corporation
+    default: true
+    children:
+      novaconomy.user.corporation: true
 
   
   

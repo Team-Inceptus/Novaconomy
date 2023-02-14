@@ -87,6 +87,15 @@ public final class BusinessProduct extends Product {
     }
 
     @Override
+    public String toString() {
+        return "BusinessProduct{" +
+                "business=" + business +
+                ", item=" + item +
+                ", price=" + price +
+                '}';
+    }
+
+    @Override
     public Map<String, Object> serialize() {
         return new HashMap<String, Object>(super.serialize()) {{
             put("business", business.getUniqueId().toString());
@@ -104,7 +113,7 @@ public final class BusinessProduct extends Product {
         if (serial == null) return null;
 
         try {
-            return new BusinessProduct(Product.deserialize(serial), Business.getById(UUID.fromString((String) serial.get("business") )));
+            return new BusinessProduct(Product.deserialize(serial), Business.byId(UUID.fromString((String) serial.get("business") )));
         } catch (ClassCastException | NullPointerException | IllegalArgumentException e) {
             throw new IllegalArgumentException(e.getMessage());
         }
