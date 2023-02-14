@@ -35,6 +35,11 @@ public final class Items {
 
     public static final ItemStack COMING_SOON = builder(Material.BEDROCK, meta -> meta.setDisplayName(ChatColor.DARK_PURPLE + get("constants.coming_soon")));
 
+    public static final ItemStack COMMAND_BLOCK = checkLegacy(
+            () -> new ItemStack(Material.matchMaterial("COMMAND_BLOCK")),
+            () -> new ItemStack(Material.matchMaterial("COMMAND"))
+    );
+
     public static final ItemStack LIME_WOOL = checkLegacy(
             () -> new ItemStack(Material.matchMaterial("LIME_WOOL")),
             () -> new ItemStack(Material.matchMaterial("WOOL"), 1, (short) 5)
@@ -76,7 +81,7 @@ public final class Items {
             meta -> meta.setDisplayName(get("constants.confirm"))
     );
 
-    public static final ItemStack BACK = builder(Material.ARROW,
+    public static final ItemStack BACK = builder(head("arrow_left_gray"),
             meta -> meta.setDisplayName(ChatColor.RED + get("constants.back"))
     );
 
@@ -117,6 +122,16 @@ public final class Items {
 
     public static final ItemStack LOCKED = builder(Material.BEDROCK,
             meta -> meta.setDisplayName(ChatColor.DARK_PURPLE + get("constants.locked"))
+    );
+
+    public static final ItemStack LIME_DYE = checkLegacy(
+            () -> new ItemStack(Material.matchMaterial("LIME_DYE")),
+            () -> new ItemStack(Material.matchMaterial("INK_SACK"), 1, (short) 10)
+    );
+
+    public static final ItemStack GRAY_DYE = checkLegacy(
+            () -> new ItemStack(Material.matchMaterial("GRAY_DYE")),
+            () -> new ItemStack(Material.matchMaterial("INK_SACK"), 1, (short) 8)
     );
 
     // Static Util
