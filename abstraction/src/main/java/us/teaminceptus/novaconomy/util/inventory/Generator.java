@@ -272,23 +272,21 @@ public final class Generator {
 
         ItemStack icon = Items.builder(c.getPublicIcon(),
                 meta -> {
+                    String display = meta.getDisplayName();
+                    meta.setDisplayName(display + " (" + c.getChildren().size() + "/" + c.getMaxChildren() + ")");
+
                     List<String> lore = new ArrayList<>();
-                    String idLine = ChatColor.BLUE + "ID: " + c.getUniqueId().toString().replace("-", "");
+                    lore.add(" ");
+
                     String desc = c.getDescription();
 
-                    if (desc.isEmpty()) {
-                        lore.add(idLine);
-                        meta.setLore(lore);
-                        return;
-                    }
+                    if (desc.isEmpty()) return;
 
                     lore.addAll(Arrays.stream(ChatPaginator.wordWrap(desc, 30))
                             .map(s -> ChatColor.GOLD + s)
                             .collect(Collectors.toList())
                     );
 
-                    lore.add(" ");
-                    lore.add(idLine);
                     meta.setLore(lore);
                 }
         );
@@ -357,7 +355,7 @@ public final class Generator {
             Business b = children.get(i);
             int index = i < 7 ? 28 + i : 37 + i;
 
-            ItemStack bIcon = builder(b.getPublicIcon(),
+            ItemStack bIcon = builder(b.getIcon(),
                     nbt -> {
                         nbt.setID("business:click");
                         nbt.set(BUSINESS_TAG, b.getUniqueId());
