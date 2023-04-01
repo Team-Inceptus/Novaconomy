@@ -14,7 +14,6 @@ import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.type.Fire;
 import org.bukkit.craftbukkit.v1_13_R2.CraftWorld;
 import org.bukkit.craftbukkit.v1_13_R2.entity.CraftPlayer;
-import org.bukkit.craftbukkit.v1_13_R2.inventory.CraftItemStack;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
@@ -55,18 +54,6 @@ public final class Wrapper1_13_R2 implements Wrapper {
 
         return item;
     }
-
-    @Override
-    public ItemStack normalize(ItemStack item) {
-        net.minecraft.server.v1_13_R2.ItemStack nmsitem = CraftItemStack.asNMSCopy(item);
-        NBTTagCompound tag = nmsitem.getOrCreateTag();
-
-        tag.remove("id");
-        tag.remove("Count");
-        nmsitem.setTag(tag);
-        return CraftItemStack.asBukkitCopy(nmsitem);
-    }
-
 
     @Override
     public boolean isAgeable(Block b) {

@@ -5,7 +5,6 @@ import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.TextComponent;
 import net.minecraft.core.BlockPos;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket;
 import net.minecraft.network.protocol.game.ClientboundOpenSignEditorPacket;
 import net.minecraft.network.protocol.game.ServerboundSignUpdatePacket;
@@ -19,7 +18,6 @@ import org.bukkit.block.data.Ageable;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.type.Fire;
 import org.bukkit.craftbukkit.v1_19_R1.entity.CraftPlayer;
-import org.bukkit.craftbukkit.v1_19_R1.inventory.CraftItemStack;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
@@ -59,18 +57,6 @@ public final class Wrapper1_19_R1 implements Wrapper {
 
         return item;
     }
-
-    @Override
-    public ItemStack normalize(ItemStack item) {
-        net.minecraft.world.item.ItemStack nmsitem = CraftItemStack.asNMSCopy(item);
-        CompoundTag tag = nmsitem.getOrCreateTag();
-
-        tag.remove("id");
-        tag.remove("Count");
-        nmsitem.setTag(tag);
-        return CraftItemStack.asBukkitCopy(nmsitem);
-    }
-
 
     @Override
     public boolean isAgeable(Block b) {

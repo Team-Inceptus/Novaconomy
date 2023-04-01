@@ -6,7 +6,6 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.util.Product;
 
@@ -92,10 +91,6 @@ public abstract class NBTWrapper {
     public abstract boolean getBoolean(String key);
 
     public abstract void set(String key, boolean value);
-
-    public abstract ItemStack getItem(String key);
-
-    public abstract void set(String key, ItemStack item);
 
     public abstract Product getProduct(String key);
 

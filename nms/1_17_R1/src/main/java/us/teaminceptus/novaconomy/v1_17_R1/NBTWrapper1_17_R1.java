@@ -126,27 +126,6 @@ public class NBTWrapper1_17_R1 extends NBTWrapper {
     }
 
     @Override
-    public ItemStack getItem(String key) {
-        net.minecraft.world.item.ItemStack nmsitem = CraftItemStack.asNMSCopy(item);
-        NBTTagCompound tag = nmsitem.getOrCreateTag();
-        NBTTagCompound novaconomy = tag.getCompound(ROOT);
-
-        NBTTagCompound item = novaconomy.getCompound(key);
-        return CraftItemStack.asBukkitCopy(net.minecraft.world.item.ItemStack.a(item));
-    }
-
-    @Override
-    public void set(String key, ItemStack item) {
-        net.minecraft.world.item.ItemStack nmsitem = CraftItemStack.asNMSCopy(item);
-        NBTTagCompound tag = nmsitem.getOrCreateTag();
-        NBTTagCompound novaconomy = tag.getCompound(ROOT);
-
-        novaconomy.set(key, CraftItemStack.asNMSCopy(item).save(CraftItemStack.asNMSCopy(item).getOrCreateTag()));
-        tag.set(ROOT, novaconomy);
-        nmsitem.setTag(tag);
-    }
-
-    @Override
     public Product getProduct(String key) {
         net.minecraft.world.item.ItemStack nmsitem = CraftItemStack.asNMSCopy(item);
         NBTTagCompound tag = nmsitem.getOrCreateTag();

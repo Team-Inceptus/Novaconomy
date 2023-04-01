@@ -29,11 +29,6 @@ public final class TestWrapper implements Wrapper {
     public void sendActionbar(Player p, BaseComponent component) {}
 
     @Override
-    public ItemStack normalize(ItemStack item) {
-        return item;
-    }
-
-    @Override
     public boolean isAgeable(Block b) {
         return false;
     }

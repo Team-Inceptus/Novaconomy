@@ -66,8 +66,6 @@ public interface Wrapper {
 
     boolean isCrop(Material m);
 
-    ItemStack normalize(ItemStack item);
-
     NovaInventory createInventory(String id, String name, int size);
 
     NBTWrapper createNBTWrapper(ItemStack item);

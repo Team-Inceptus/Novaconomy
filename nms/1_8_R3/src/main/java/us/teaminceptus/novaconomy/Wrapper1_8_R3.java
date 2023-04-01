@@ -9,7 +9,6 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.block.Block;
 import org.bukkit.craftbukkit.v1_8_R3.CraftWorld;
 import org.bukkit.craftbukkit.v1_8_R3.entity.CraftPlayer;
-import org.bukkit.craftbukkit.v1_8_R3.inventory.CraftItemStack;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
@@ -53,18 +52,6 @@ public final class Wrapper1_8_R3 implements Wrapper {
 
         return item;
     }
-
-    @Override
-    public ItemStack normalize(ItemStack item) {
-        net.minecraft.server.v1_8_R3.ItemStack nmsitem = CraftItemStack.asNMSCopy(item);
-        NBTTagCompound tag = nmsitem.hasTag() ? nmsitem.getTag() : new NBTTagCompound();
-
-        tag.remove("id");
-        tag.remove("Count");
-        nmsitem.setTag(tag);
-        return CraftItemStack.asBukkitCopy(nmsitem);
-    }
-
 
     @Override
     public boolean isAgeable(Block b) {
