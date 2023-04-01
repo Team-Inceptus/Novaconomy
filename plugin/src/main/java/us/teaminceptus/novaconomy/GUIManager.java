@@ -117,7 +117,7 @@ public final class GUIManager implements Listener {
 		double amount = getAmount(item);
 
 		ItemStack econWheel = inv.getItem(31);
-		Economy econ = Economy.getEconomy(of(econWheel).getString(ECON_TAG));
+		Economy econ = getEconomy(econWheel);
 
 		if (add && np.getBalance(econ) < amount) {
 			p.sendMessage(format(getMessage("error.economy.invalid_amount"), get("constants.deposit")));
@@ -372,9 +372,6 @@ public final class GUIManager implements Listener {
                 ItemStack item = e.getCurrentItem();
                 Economy econ = getEconomy(item);
 
-                ItemStack confirm = builder(inv.getItem(23), nbt -> nbt.set(ECON_TAG, econ.getUniqueId()));
-                inv.setItem(23, confirm);
-
                 ItemStack display = new ItemStack(inv.getItem(13));
                 ItemMeta dMeta = display.getItemMeta();
                 dMeta.setLore(Collections.singletonList(format(get("constants.business.price"), of(display).getDouble(PRICE_TAG), econ.getSymbol())));
@@ -486,19 +483,21 @@ public final class GUIManager implements Listener {
                 NBTWrapper nbt = of(item);
 
                 double price = nbt.getDouble(PRICE_TAG);
-                Economy econ = Economy.getEconomy(nbt.getString(ECON_TAG));
-                ItemStack product = w.normalize(nbt.getItem("item"));
+                Economy econ = getEconomy(inv.getItem(23));
+                ItemStack product = inv.getAttribute("item", ItemStack.class);
 
                 Product pr = new Product(product, econ, price);
 
                 BusinessProductAddEvent event = new BusinessProductAddEvent(new BusinessProduct(pr, b));
                 Bukkit.getPluginManager().callEvent(event);
+
                 if (!event.isCancelled()) {
+                    Product added = new Product(pr.getItem(), pr.getPrice());
+                    b.addProduct(added);
+
                     String name = product.hasItemMeta() && product.getItemMeta().hasDisplayName() ? product.getItemMeta().getDisplayName() : WordUtils.capitalizeFully(product.getType().name().replace('_', ' '));
                     p.sendMessage(format(getMessage("success.business.add_product"), name));
                     p.closeInventory();
-                    Product added = new Product(pr.getItem(), pr.getPrice());
-                    b.addProduct(added);
                 }
             })
             .put("business:add_resource", (e, inv) -> {
@@ -748,8 +747,6 @@ public final class GUIManager implements Listener {
                             Settings.Corporation<Enum> sett = Settings.Corporation.valueOf(setting, Enum.class);
                             c.setSetting(sett, next);
 
-                            System.out.println("Setting " + sett.name() + " to " + next.name() + " for " + c.getName());
-
                             CorporationSettingChangeEvent event = new CorporationSettingChangeEvent(c, value, next, sett);
                             Bukkit.getPluginManager().callEvent(event);
                             break;
@@ -917,7 +914,7 @@ public final class GUIManager implements Listener {
                 amount = add ? amount : -amount;
 
                 ItemStack econWheel = inv.getItem(31);
-                Economy econ = Economy.getEconomy(of(econWheel).getString(ECON_TAG));
+                Economy econ = getEconomy(econWheel);
                 double currentTotal = getAmount(inv.getItem(39));
                 double newAmount = Math.max(currentTotal + amount, 0);
 
@@ -940,7 +937,7 @@ public final class GUIManager implements Listener {
                 items().get("economy:wheel").accept(e, inv);
 
                 ItemStack item = e.getCurrentItem();
-                Economy econ = Economy.getEconomy(of(item).getString(ECON_TAG));
+                Economy econ = getEconomy(item);
 
                 ItemStack confirm = inv.getItem(39);
                 double currentTotal = getAmount(confirm);

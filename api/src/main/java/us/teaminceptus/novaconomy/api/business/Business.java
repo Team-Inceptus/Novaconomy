@@ -514,6 +514,7 @@ public final class Business implements ConfigurationSerializable {
     @NotNull
     public Business addProduct(@Nullable Collection<? extends Product> products) {
         if (products == null) return this;
+
         products.forEach(p -> this.products.add(new BusinessProduct(p, this)));
         saveBusiness();
         return this;
@@ -768,6 +769,8 @@ public final class Business implements ConfigurationSerializable {
 
         seConfig.save(settings);
 
+        // Products
+
         File products = new File(folder, "products.dat");
         if (!products.exists()) products.createNewFile();
 
@@ -784,6 +787,7 @@ public final class Business implements ConfigurationSerializable {
             m.put("item", item);
             prods.add(m);
         }
+
         pOs.writeObject(prods);
         pOs.close();
 
@@ -838,12 +842,16 @@ public final class Business implements ConfigurationSerializable {
         File info = new File(folder, "information.dat");
         if (!info.exists()) throw new IllegalStateException("Business information file does not exist!");
 
+        // Info
+
         FileInputStream infoFs = new FileInputStream(info);
         ObjectInputStream infoOs = new ObjectInputStream(infoFs);
         UUID id = (UUID) infoOs.readObject();
         long creationDate = infoOs.readLong();
         OfflinePlayer owner = Bukkit.getOfflinePlayer((UUID) infoOs.readObject());
         infoOs.close();
+
+        // Other
 
         File other = new File(folder, "other.yml");
         if (!other.exists()) throw new IllegalStateException("Business \"other.yml\" file does not exist!");
@@ -856,51 +864,62 @@ public final class Business implements ConfigurationSerializable {
         double advertisingBalance = oConfig.getDouble("adverising_balance", 0);
         List<Business> blacklist = oConfig.getStringList("blacklist").stream().map(UUID::fromString).map(Business::byId).collect(Collectors.toList());
 
-        File products = new File(folder, "products.dat");
-        if (!products.exists()) throw new IllegalStateException("Business \"products.dat\" file does not exist!");
-
-        FileInputStream pFs = new FileInputStream(products);
-        ObjectInputStream pOs = new ObjectInputStream(new BufferedInputStream(pFs));
-
-        List<Map<String, Object>> prods = (List<Map<String, Object>>) pOs.readObject();
-        pOs.close();
+        // Products
 
         List<Product> product = new ArrayList<>();
+        File products = new File(folder, "products.dat");
+        if (products.exists()) {
+            FileInputStream pFs = new FileInputStream(products);
+            ObjectInputStream pOs = new ObjectInputStream(new BufferedInputStream(pFs));
 
-        for (Map<String, Object> m : prods) {
-            Map<String, Object> sProduct = new HashMap<>(m);
-            Map<String, Object> sItem = new HashMap<>((Map<String, Object>) m.get("item"));
+            List<Map<String, Object>> prods = (List<Map<String, Object>>) pOs.readObject();
+            pOs.close();
 
-            ItemMeta base = Bukkit.getItemFactory().getItemMeta(Material.valueOf((String) sItem.get("type")));
-            DelegateDeserialization deserialization = base.getClass().getAnnotation(DelegateDeserialization.class);
-            Method deserialize = deserialization.value().getDeclaredMethod("deserialize", Map.class);
-            deserialize.setAccessible(true);
+            for (Map<String, Object> m : prods) {
+                if (m == null) continue;
 
-            Map<String, Object> sMeta = (Map<String, Object>) sItem.getOrDefault("meta", base.serialize());
-            if (sMeta == null) sMeta = base.serialize();
+                Map<String, Object> sProduct = new HashMap<>(m);
+                Map<String, Object> sItem = new HashMap<>((Map<String, Object>) m.get("item"));
 
-            ItemMeta meta = (ItemMeta) deserialize.invoke(null, sMeta);
-            sItem.put("meta", meta);
-            ItemStack item = ItemStack.deserialize(sItem);
-            item.setItemMeta(meta);
+                ItemMeta base = Bukkit.getItemFactory().getItemMeta(Material.valueOf((String) sItem.get("type")));
+                if (base == null) continue;
 
-            sProduct.put("item", item);
-            product.add(Product.deserialize(sProduct));
+                DelegateDeserialization deserialization = base.getClass().getAnnotation(DelegateDeserialization.class);
+                Method deserialize = deserialization.value().getDeclaredMethod("deserialize", Map.class);
+                deserialize.setAccessible(true);
+
+                Map<String, Object> sMeta = (Map<String, Object>) sItem.getOrDefault("meta", base.serialize());
+                sItem.put("meta", sMeta == null ? base : deserialize.invoke(null, sMeta));
+                ItemStack item = ItemStack.deserialize(sItem);
+
+                sProduct.put("item", item);
+                product.add(Product.deserialize(sProduct));
+            }
         }
 
+        // Statistics
+
+        BusinessStatistics stats = null;
         File statsFile = new File(folder, "stats.yml");
-        if (!statsFile.exists()) throw new IllegalStateException("Business \"stats.yml\" file does not exist!");
+        if (statsFile.exists()) {
+            FileConfiguration sConfig = YamlConfiguration.loadConfiguration(statsFile);
+            stats = (BusinessStatistics) sConfig.get("stats");
+        }
 
-        FileConfiguration sConfig = YamlConfiguration.loadConfiguration(statsFile);
-        BusinessStatistics stats = (BusinessStatistics) sConfig.get("stats");
+        // Settings
 
-        File settings = new File(folder, "settings.yml");
-        if (!settings.exists()) throw new IllegalStateException("Business \"settings.yml\" file does not exist!");
+        Map<Settings.Business, Boolean> settings = new HashMap<>();
+        File settingsF = new File(folder, "settings.yml");
 
-        FileConfiguration seConfig = YamlConfiguration.loadConfiguration(settings);
-        Map<Settings.Business, Boolean> settings1 = seConfig.getConfigurationSection("settings").getKeys(false)
-                .stream()
-                .collect(Collectors.toMap(k -> Settings.Business.valueOf(k.toUpperCase()), v -> seConfig.getBoolean("settings." + v)));
+        if (settingsF.exists()) {
+            FileConfiguration seConfig = YamlConfiguration.loadConfiguration(settingsF);
+            settings.putAll(seConfig.getConfigurationSection("settings").getKeys(false)
+                    .stream()
+                    .collect(Collectors.toMap(k -> Settings.Business.valueOf(k.toUpperCase()), v -> seConfig.getBoolean("settings." + v)))
+            );
+        }
+
+        // Resources
 
         File sourcesF = new File(folder, "resources");
         if (!sourcesF.exists()) sourcesF.mkdir();
@@ -923,20 +942,19 @@ public final class Business implements ConfigurationSerializable {
 
             List<Map<String, Object>> res = (List<Map<String, Object>>) matOs.readObject();
             for (Map<String, Object> m : res) {
+                if (m == null) continue;
                 Map<String, Object> sItem = new HashMap<>(m);
 
                 ItemMeta base = Bukkit.getItemFactory().getItemMeta(Material.valueOf((String) m.get("type")));
+                if (base == null) continue;
+
                 DelegateDeserialization deserialization = base.getClass().getAnnotation(DelegateDeserialization.class);
                 Method deserialize = deserialization.value().getDeclaredMethod("deserialize", Map.class);
                 deserialize.setAccessible(true);
 
                 Map<String, Object> sMeta = (Map<String, Object>) sItem.getOrDefault("meta", base.serialize());
-                if (sMeta == null) sMeta = base.serialize();
-
-                ItemMeta meta = (ItemMeta) deserialize.invoke(null, sMeta);
-                sItem.put("meta", meta);
-                ItemStack i = ItemStack.deserialize(m);
-                i.setItemMeta(meta);
+                sItem.put("meta", sMeta == null ? base : deserialize.invoke(null, sMeta));
+                ItemStack i = ItemStack.deserialize(sItem);
 
                 resources.add(i);
             }
@@ -944,7 +962,7 @@ public final class Business implements ConfigurationSerializable {
             matOs.close();
         }
 
-        Business b = new Business(id, name, icon, owner, product, resources, stats, settings1, creationDate, keywords, advertisingBalance, blacklist);
+        Business b = new Business(id, name, icon, owner, product, resources, stats, settings, creationDate, keywords, advertisingBalance, blacklist);
         b.setHome(home, false);
         return b;
     }

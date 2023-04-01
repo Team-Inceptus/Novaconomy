@@ -16,6 +16,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.plugin.Plugin;
@@ -673,7 +674,9 @@ public interface CommandWrapper {
             return;
         }
 
+        PlayerInventory pInv = p.getInventory();
         Business b = Business.byOwner(p);
+
         if (b == null) {
             p.sendMessage(getMessage("error.business.not_an_owner"));
             return;
@@ -684,26 +687,18 @@ public interface CommandWrapper {
             return;
         }
 
-        if (p.getItemInHand() == null) {
+        if (pInv.getItemInHand() == null || pInv.getItemInHand().getType() == Material.AIR) {
             p.sendMessage(getMessage("error.argument.item"));
             return;
         }
 
-        if (p.getItemInHand().getType() == Material.AIR) {
-            p.sendMessage(getMessage("error.argument.item"));
-            return;
-        }
-
-        ItemStack pr = p.getItemInHand().clone();
+        ItemStack pr = pInv.getItemInHand().clone();
         pr.setAmount(1);
 
         if (b.isProduct(pr)) {
             p.sendMessage(getMessage("error.business.exists_product"));
             return;
         }
-
-        ItemStack product = p.getItemInHand().clone();
-        product.setAmount(1);
 
         Economy econ = Economy.getEconomies()
                 .stream()
@@ -713,6 +708,8 @@ public interface CommandWrapper {
 
         NovaInventory inv = genGUI(36, pr.hasItemMeta() && pr.getItemMeta().hasDisplayName() ? pr.getItemMeta().getDisplayName() : WordUtils.capitalizeFully(pr.getType().name().replace('_', ' ')));
         inv.setCancelled();
+
+        inv.setAttribute("item", pr);
 
         ItemStack economyWheel = builder(econ.getIconType(),
                 meta -> meta.setDisplayName(ChatColor.GOLD + econ.getName()),
@@ -731,7 +728,6 @@ public interface CommandWrapper {
         inv.setItem(23, builder(CONFIRM,
                 nbt -> {
                     nbt.setID("business:add_product");
-                    nbt.set("item", product);
                     nbt.set(PRICE_TAG, price);
                     nbt.set(ECON_TAG, econ.getUniqueId());
                 }
