@@ -2,7 +2,6 @@ package us.teaminceptus.novaconomy.abstraction;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.commons.lang.WordUtils;
 import org.bukkit.*;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
@@ -45,6 +44,7 @@ import us.teaminceptus.novaconomy.api.util.Price;
 import us.teaminceptus.novaconomy.api.util.Product;
 import us.teaminceptus.novaconomy.util.NovaSound;
 import us.teaminceptus.novaconomy.util.NovaUtil;
+import us.teaminceptus.novaconomy.util.NovaWord;
 import us.teaminceptus.novaconomy.util.inventory.Generator;
 import us.teaminceptus.novaconomy.util.inventory.Items;
 
@@ -289,7 +289,7 @@ public interface CommandWrapper {
         Economy e2 = economies.get(1);
 
         inv.setItem(12, builder(e1.getIcon(),
-                meta -> meta.setLore(Collections.singletonList(ChatColor.YELLOW + "" + amount + "" + e1.getSymbol())),
+                meta -> meta.setLore(Collections.singletonList(ChatColor.YELLOW + String.valueOf(amount) + e1.getSymbol())),
                 nbt -> {
                     nbt.setID("exchange:1");
                     nbt.set(ECON_TAG, e1.getUniqueId());
@@ -298,7 +298,7 @@ public interface CommandWrapper {
         );
         inv.setItem(13, Items.ARROW);
         inv.setItem(14, builder(e2.getIcon(),
-                meta -> meta.setLore(Collections.singletonList(ChatColor.YELLOW + "" + e1.convertAmount(e2, amount) + "" + e2.getSymbol())),
+                meta -> meta.setLore(Collections.singletonList(ChatColor.YELLOW + String.valueOf(e1.convertAmount(e2, amount)) + e2.getSymbol())),
                 nbt -> {
                     nbt.setID("exchange:2");
                     nbt.set(ECON_TAG, e2.getUniqueId());
@@ -518,7 +518,7 @@ public interface CommandWrapper {
         p.getInventory().addItem(Generator.createCheck(econ, amount));
         if (take) nt.remove(econ, amount);
 
-        p.sendMessage(format(getMessage("success.economy.check"), amount + "", econ.getSymbol() + ""));
+        p.sendMessage(format(getMessage("success.economy.check"), String.valueOf(amount), String.valueOf(econ.getSymbol())));
     }
 
     default void removeEconomy(CommandSender sender, Economy econ) {
@@ -706,7 +706,7 @@ public interface CommandWrapper {
                 .collect(Collectors.toList())
                 .get(0);
 
-        NovaInventory inv = genGUI(36, pr.hasItemMeta() && pr.getItemMeta().hasDisplayName() ? pr.getItemMeta().getDisplayName() : WordUtils.capitalizeFully(pr.getType().name().replace('_', ' ')));
+        NovaInventory inv = genGUI(36, pr.hasItemMeta() && pr.getItemMeta().hasDisplayName() ? pr.getItemMeta().getDisplayName() : NovaWord.capitalize(pr.getType().name().replace('_', ' ')));
         inv.setCancelled();
 
         inv.setAttribute("item", pr);
@@ -848,7 +848,7 @@ public interface CommandWrapper {
         }
 
         np.deposit(econ, amount);
-        p.sendMessage(format(getMessage("success.bank.deposit"), amount + "" + econ.getSymbol(), econ.getName()));
+        p.sendMessage(format(getMessage("success.bank.deposit"), amount + String.valueOf(econ.getSymbol()), econ.getName()));
     }
 
     default void businessHome(Player p, boolean set) {
@@ -866,7 +866,7 @@ public interface CommandWrapper {
         if (set) {
             Location loc = p.getLocation();
             b.setHome(loc);
-            p.sendMessage(format(getMessage("success.business.set_home"), ChatColor.GOLD + "" + loc.getBlockX() + ", " + loc.getBlockY() + ", " + loc.getBlockZ()));
+            p.sendMessage(format(getMessage("success.business.set_home"), ChatColor.GOLD + String.valueOf(loc.getBlockX()) + ", " + loc.getBlockY() + ", " + loc.getBlockZ()));
         } else {
             if (!b.hasHome()) {
                 p.sendMessage(getMessage("error.business.no_home"));
@@ -910,7 +910,7 @@ public interface CommandWrapper {
         }
 
         np.withdraw(econ, amount);
-        p.sendMessage(format(getMessage("success.bank.withdraw"), amount + "" + econ.getSymbol(), econ.getName()));
+        p.sendMessage(format(getMessage("success.bank.withdraw"), amount + String.valueOf(econ.getSymbol()), econ.getName()));
     }
 
     default void createBounty(Player p, OfflinePlayer target, Economy econ, double amount) {
@@ -1283,7 +1283,7 @@ public interface CommandWrapper {
 
         stats.setItem(20, Items.builder(Material.EMERALD,
                 meta -> {
-                    meta.setDisplayName(ChatColor.YELLOW + "" + ChatColor.UNDERLINE + get("constants.business.stats.global"));
+                    meta.setDisplayName(ChatColor.YELLOW + String.valueOf(ChatColor.UNDERLINE) + get("constants.business.stats.global"));
                     meta.setLore(Arrays.asList(
                             "",
                             format(get("constants.stats.global.sold"), format("%,d", statistics.getTotalSales())),
@@ -1304,9 +1304,9 @@ public interface CommandWrapper {
                     meta -> {
                         meta.setDisplayName(ChatColor.YELLOW + get("constants.business.stats.global.latest"));
 
-                        String display = prI.hasItemMeta() && prI.getItemMeta().hasDisplayName() ? prI.getItemMeta().getDisplayName() : WordUtils.capitalizeFully(prI.getType().name().replace('_', ' '));
+                        String display = prI.hasItemMeta() && prI.getItemMeta().hasDisplayName() ? prI.getItemMeta().getDisplayName() : NovaWord.capitalize(prI.getType().name().replace('_', ' '));
                         meta.setLore(Arrays.asList(
-                                ChatColor.AQUA + "" + ChatColor.UNDERLINE + (buyer.isOnline() && buyer.getPlayer().getDisplayName() != null ? buyer.getPlayer().getDisplayName() : buyer.getName()),
+                                ChatColor.AQUA + String.valueOf(ChatColor.UNDERLINE) + (buyer.isOnline() && buyer.getPlayer().getDisplayName() != null ? buyer.getPlayer().getDisplayName() : buyer.getName()),
                                 " ",
                                 ChatColor.WHITE + display + " (" + prI.getAmount() + ")" + ChatColor.GOLD + " | " + ChatColor.BLUE + format("%,.2f", pr.getAmount() * prI.getAmount()) + pr.getEconomy().getSymbol(),
                                 ChatColor.DARK_AQUA + NovaUtil.formatTimeAgo(latestT.getTimestamp().getTime())
@@ -1389,7 +1389,7 @@ public interface CommandWrapper {
 
             top = Items.builder(Material.DIAMOND,
                     meta -> {
-                        meta.setDisplayName(ChatColor.YELLOW + "" + ChatColor.UNDERLINE + get("constants.business.stats.global.top"));
+                        meta.setDisplayName(ChatColor.YELLOW + String.valueOf(ChatColor.UNDERLINE) + get("constants.business.stats.global.top"));
 
                         List<String> pLore = new ArrayList<>();
                         pLore.add(" ");
@@ -1401,7 +1401,7 @@ public interface CommandWrapper {
                             int num = j + 1;
 
                             ItemStack item = pr.getItem();
-                            String display = item.hasItemMeta() && item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : WordUtils.capitalizeFully(item.getType().name().replace('_', ' '));
+                            String display = item.hasItemMeta() && item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : NovaWord.capitalize(item.getType().name().replace('_', ' '));
 
                             pLore.add(ChatColor.YELLOW + "#" + num + ") " + ChatColor.RESET + display + ChatColor.GOLD + " - " + ChatColor.BLUE + format("%,.2f", pr.getAmount()) + pr.getEconomy().getSymbol() + ChatColor.GOLD + " | " + ChatColor.AQUA + format("%,d", sales));
                         }
@@ -1513,7 +1513,7 @@ public interface CommandWrapper {
 
         pr.setItem(14, Items.builder(RATING_MATS[rating.getRatingLevel() - 1],
                 meta -> {
-                    meta.setDisplayName(ChatColor.YELLOW + "" + rating.getRatingLevel() + "⭐");
+                    meta.setDisplayName(ChatColor.YELLOW + String.valueOf(rating.getRatingLevel()) + "⭐");
                     meta.setLore(Collections.singletonList(ChatColor.YELLOW + "\"" + (rating.getComment().isEmpty() ? get("constants.no_comment") : rating.getComment()) + "\""));
                 }
         ));
@@ -1614,7 +1614,7 @@ public interface CommandWrapper {
 
         Business b = Business.byOwner(p);
         b.setIcon(icon);
-        p.sendMessage(format(getMessage("success.business.set_icon"), WordUtils.capitalizeFully(icon.name().replace("_", " "))));
+        p.sendMessage(format(getMessage("success.business.set_icon"), NovaWord.capitalize(icon.name().replace("_", " "))));
     }
 
     default void setEconomyModel(CommandSender sender, Economy econ, int data) {
@@ -1639,7 +1639,7 @@ public interface CommandWrapper {
         }
 
         econ.setIcon(icon);
-        sender.sendMessage(format(getMessage("success.economy.set_icon"), econ.getName(), WordUtils.capitalizeFully(icon.name().replace("_", " "))));
+        sender.sendMessage(format(getMessage("success.economy.set_icon"), econ.getName(), NovaWord.capitalize(icon.name().replace("_", " "))));
     }
 
     default void setEconomyScale(CommandSender sender, Economy econ, double scale) {
@@ -1737,7 +1737,7 @@ public interface CommandWrapper {
                     for (BusinessStatistics.Transaction t : transactions) {
                         Product pr = t.getProduct();
                         ItemStack prItem = pr.getItem();
-                        String display = prItem.hasItemMeta() && prItem.getItemMeta().hasDisplayName() ? prItem.getItemMeta().getDisplayName() : WordUtils.capitalizeFully(prItem.getType().name().replace("_", " "));
+                        String display = prItem.hasItemMeta() && prItem.getItemMeta().hasDisplayName() ? prItem.getItemMeta().getDisplayName() : NovaWord.capitalize(prItem.getType().name().replace("_", " "));
                         lore.add(ChatColor.WHITE + display + " (" + prItem.getAmount() + ")"
                                 + ChatColor.GOLD + " - "
                                 + ChatColor.BLUE + pr.getPrice()
@@ -3008,7 +3008,7 @@ public interface CommandWrapper {
         }
 
         if (name.length() > Corporation.MAX_NAME_LENGTH) {
-            p.sendMessage(format(getError("error.corporation.name.too_long"), ChatColor.YELLOW + "" + Corporation.MAX_NAME_LENGTH + ChatColor.RED));
+            p.sendMessage(format(getError("error.corporation.name.too_long"), ChatColor.YELLOW + String.valueOf(Corporation.MAX_NAME_LENGTH) + ChatColor.RED));
             return;
         }
 
@@ -3047,7 +3047,7 @@ public interface CommandWrapper {
         }
 
         if (desc.length() > Corporation.MAX_DESCRIPTION_LENGTH) {
-            p.sendMessage(format(getError("error.corporation.description_too_long"), ChatColor.YELLOW + "" + Corporation.MAX_DESCRIPTION_LENGTH + ChatColor.RED));
+            p.sendMessage(format(getError("error.corporation.description_too_long"), ChatColor.YELLOW + String.valueOf(Corporation.MAX_DESCRIPTION_LENGTH) + ChatColor.RED));
             return;
         }
 
@@ -3093,9 +3093,9 @@ public interface CommandWrapper {
         Location l = p.getLocation();
         corp.setHeadquarters(l);
         p.sendMessage(format(getSuccess("success.corporation.headquarters"),
-                ChatColor.GOLD + "" + l.getBlockX(),
-                ChatColor.GOLD + "" + l.getBlockY(),
-                ChatColor.GOLD + "" + l.getBlockZ())
+                ChatColor.GOLD + String.valueOf(l.getBlockX()),
+                ChatColor.GOLD + String.valueOf(l.getBlockY()),
+                ChatColor.GOLD + String.valueOf(l.getBlockZ()))
         );
     }
 
@@ -3199,7 +3199,7 @@ public interface CommandWrapper {
 
         c.setExperience(exp);
         sender.sendMessage(format(getSuccess("success.corporation.level_experience"),
-                ChatColor.GOLD + "" + c.getLevel(),
+                ChatColor.GOLD + String.valueOf(c.getLevel()),
                 ChatColor.GOLD + format("%,.0f", c.getExperience())
         ));
         NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(sender);
