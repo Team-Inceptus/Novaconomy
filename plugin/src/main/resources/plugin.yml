@@ -1,8 +1,8 @@
-name: ${project.name}
-version: 1.7.0.1
+name: Novaconomy
+version: 1.7.1
 description: ${project.description}
 author: Team Inceptus
-website: ${project.url}
+website: "https://github.com/Team-Inceptus/Novaconomy"
 api-version: 1.13
 main: us.teaminceptus.novaconomy.Novaconomy
 softdepend: [PlaceholderAPI, Vault, Treasury, PlugMan, PlugManX]
