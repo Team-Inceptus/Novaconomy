@@ -316,9 +316,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
             handler.register(this);
         }
 
-        @Default
-        public void businessInfoDefault(Player p) { businessInfo(p); }
-
+        @DefaultFor("business")
         @Subcommand({"info", "information"})
         public void businessInfo(Player p) { wrapper.businessInfo(p); }
 
@@ -380,7 +378,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
         public void editPrice(Player p, @Range(min = 0.01) double newPrice, @Optional Economy economy) { wrapper.editPrice(p, newPrice, economy); }
 
         @Subcommand({"keyword", "keywords"})
-        @Default
+        @DefaultFor({"business keyword", "business keywords"})
         @CommandPermission("novaconomy.user.business.keywords")
         public void keywords(Player p) { keywordsList(p); }
 
@@ -400,7 +398,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
             wrapper.removeKeywords(p, keywords.split("[ ,]"));
         }
 
-        @Default
+        @DefaultFor({"business advertising", "business ads", "business advertise"})
         @Subcommand({"advertising", "ads", "advertise"})
         public void businessAdvertising(Player p) {
             wrapper.businessAdvertising(p);
@@ -423,7 +421,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
         @Subcommand({"blacklist", "blist", "bl", "blackl",
                 "blacklist list", "blist list", "bl list", "blackl list",
                 "blacklist l", "blist l", "bl l", "blackl l"})
-        @Default
+        @DefaultFor("business blacklist, business blist, business bl, business blackl")
         public void listBlacklist(Player p) { wrapper.listBlacklist(p); }
 
         @Subcommand({"blacklist add", "blist add", "bl add", "blackl add"})
@@ -718,9 +716,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
             handler.register(this);
         }
 
-        @Default
-        public void defaultCorporationInfo(Player p) { corporationInfo(p); }
-
+        @DefaultFor("corporation")
         @Subcommand("info")
         public void corporationInfo(Player p) {
             wrapper.corporationInfo(p);
