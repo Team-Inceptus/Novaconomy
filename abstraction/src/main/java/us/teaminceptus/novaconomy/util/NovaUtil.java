@@ -102,7 +102,8 @@ public final class NovaUtil {
 
     @NotNull
     public static String format(String format, Object... args) {
-        return String.format(Language.getCurrentLocale(), format, args);
+        return String.format(Language.getCurrentLocale(), format, args)
+                .replace("\u00a0", " "); // Replace non-breaking space with regular space
     }
 
     public static String formatTimeAgo(long start) {
