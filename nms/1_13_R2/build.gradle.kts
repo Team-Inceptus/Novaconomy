@@ -10,3 +10,9 @@ dependencies {
 
     compileOnly("org.spigotmc:spigot:$mcVersion-R0.1-SNAPSHOT")
 }
+
+tasks {
+    compileJava {
+        options.compilerArgs.add("-parameters")
+    }
+}
