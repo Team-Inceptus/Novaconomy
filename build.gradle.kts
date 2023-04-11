@@ -7,6 +7,7 @@ plugins {
     java
     `maven-publish`
     `java-library`
+    jacoco
 }
 
 val pGroup = "us.teaminceptus.novaconomy"
@@ -57,11 +58,17 @@ val jvmVersion = JavaVersion.VERSION_1_8
 subprojects {
     apply<JavaPlugin>()
     apply<JavaLibraryPlugin>()
+    apply<JacocoPlugin>()
     apply(plugin = "org.sonarqube")
     apply(plugin = "com.github.johnrengelman.shadow")
 
     dependencies {
         compileOnly("org.jetbrains:annotations:24.0.1")
+
+        testImplementation("org.spigotmc:spigot-api:1.8-R0.1-SNAPSHOT")
+        testImplementation("net.md-5:bungeecord-chat:1.16-R0.4")
+        testImplementation("org.mockito:mockito-core:5.2.0")
+        testImplementation("org.junit.jupiter:junit-jupiter:5.9.2")
     }
 
     java {
@@ -74,6 +81,28 @@ subprojects {
             options.encoding = "UTF-8"
             options.isWarnings = false
             options.compilerArgs.addAll(listOf("-Xlint:all", "-Xlint:-processing"))
+        }
+
+        jacocoTestReport {
+            dependsOn(test)
+
+            reports {
+                xml.required.set(false)
+                csv.required.set(false)
+
+                html.required.set(true)
+                html.outputLocation.set(layout.buildDirectory.dir("jacocoHtml"))
+            }
+        }
+
+        test {
+            useJUnitPlatform()
+            testLogging {
+                events("passed", "skipped", "failed")
+            }
+            finalizedBy(jacocoTestReport)
+
+            sourceSets["test"].allSource.srcDir("src/main/resources")
         }
 
         javadoc {
