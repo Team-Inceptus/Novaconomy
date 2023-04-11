@@ -182,10 +182,11 @@ public final class Price implements ConfigurationSerializable, Comparable<Price>
     }
 
     /**
-     * Multiplies {@linkplain #getAmount() the amount} by the economy's {@linkplain Economy#getConversionScale() conversion scale}.
+     * Multiplies {@linkplain #getAmount() the amount} by the economy's {@linkplain Economy#getConversionScale() conversion scale} (1 if economy is null).
      * @return Real Amount, factoring in the economy's conversion scale
      */
     public double getRealAmount() {
+        if (econ == null) return getAmount();
         return amount * econ.getConversionScale();
     }
 
@@ -194,12 +195,12 @@ public final class Price implements ConfigurationSerializable, Comparable<Price>
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Price price = (Price) o;
-        return Double.compare(price.amount, amount) == 0 && econ.equals(price.econ);
+        return Double.compare(price.amount, amount) == 0 && (econ == null || econ.equals(price.econ));
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(econ, amount);
+        return Objects.hash(econ , amount);
     }
 
     @Override

@@ -11,15 +11,23 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.util.io.BukkitObjectInputStream;
+import org.bukkit.util.io.BukkitObjectOutputStream;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.player.NovaPlayer;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -27,6 +35,18 @@ import java.util.stream.Collectors;
  * Represents an Economy
  */
 public final class Economy implements ConfigurationSerializable, Comparable<Economy> {
+
+    // Constants
+
+    /**
+     * The maximum length of an Economy name
+     */
+    public static final int MAX_NAME_LENGTH = 32;
+
+    /**
+     * The maximum amount of a conversion scale
+     */
+    public static final double MAX_CONVERSION_SCALE = 999;
 
     private static final String IGNORE_TAXES = "Taxes.Automatic.Ignore";
 
@@ -54,59 +74,6 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
         this.conversionScale = conversionScale;
         this.uid = id;
         this.clickableReward = clickable;
-    }
-
-    // Implementation & Recommended Implementation
-
-    /**
-     * Serialization inside a YML File
-     * @return Serialized Economy
-     */
-    @Override
-    @NotNull
-    public Map<String, Object> serialize() {
-        Map<String, Object> serial = new HashMap<>();
-        serial.put("id", this.uid.toString());
-        serial.put("name", this.name);
-        serial.put("icon", this.icon);
-        serial.put("symbol", this.symbol);
-        serial.put("increase-naturally", this.hasNaturalIncrease);
-        serial.put("conversion-scale", this.conversionScale);
-        serial.put("interest", this.interestEnabled);
-        serial.put("custom-model-data", this.customModelData);
-        serial.put("clickable", this.clickableReward);
-        return serial;
-    }
-
-    /**
-     * Serialization from a YML File
-     * <p>
-     * This method is only meant to take maps from {@link Economy#serialize()}. **Using Maps outside of this may break the plugin**.
-     * @param serial Map of serialization
-     * @throws NullPointerException if a necessary part is missing
-     * @return Economy Class
-     * @see Economy#serialize()
-     */
-    public static Economy deserialize(@Nullable Map<String, Object> serial) throws NullPointerException {
-        if (serial == null) return null;
-
-        String name = (String) serial.get("name");
-        UUID id = UUID.fromString(serial.getOrDefault("id", UUID.nameUUIDFromBytes(name.getBytes(StandardCharsets.UTF_8)).toString()).toString());
-
-        Economy econ = new Economy(
-                id,
-                name,
-                (ItemStack) serial.get("icon"),
-                serial.get("symbol").toString().charAt(0),
-                (boolean) serial.getOrDefault("increase-naturally", true),
-                (double) serial.getOrDefault("conversion-scale", 1),
-                (boolean) serial.getOrDefault("clickable", true)
-        );
-
-        econ.interestEnabled = (boolean) serial.getOrDefault("interest", true);
-        econ.customModelData = (int) serial.getOrDefault("custom-model-data", 0);
-
-        return econ;
     }
 
     // Other
@@ -172,6 +139,8 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
      */
     public void setName(@NotNull String name) {
         if (name == null) throw new NullPointerException("Name cannot be null");
+        if (name.length() > MAX_NAME_LENGTH) throw new IllegalArgumentException("Name cannot be longer than " + MAX_NAME_LENGTH + " characters");
+
         this.name = name;
         saveEconomy();
     }
@@ -229,6 +198,8 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
      */
     public void setConversionScale(double scale) throws IllegalArgumentException {
         if (scale <= 0) throw new IllegalArgumentException("Conversion Scale must be greater than 0");
+        if (scale > MAX_CONVERSION_SCALE) throw new IllegalArgumentException("Conversion Scale cannot be greater than " + MAX_CONVERSION_SCALE);
+
         this.conversionScale = scale;
         saveEconomy();
     }
@@ -270,25 +241,6 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
     }
 
     /**
-     * Saves this Economy to its file.
-     */
-    public void saveEconomy() {
-        ECONOMY_CACHE.clear();
-
-        try {
-            if (!this.file.exists()) this.file.createNewFile();
-
-            FileConfiguration config = YamlConfiguration.loadConfiguration(this.file);
-            config.set(this.uid.toString(), this);
-            config.set("last_saved_timestamp", System.currentTimeMillis());
-
-            config.save(this.file);
-        } catch (IOException e) {
-            NovaConfig.print(e);
-        }
-    }
-
-    /**
      * Remove an Economy from the Plugin
      * @param name Name of the Economy
      * @see Economy#removeEconomy(Economy)
@@ -304,15 +256,11 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
         if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
         for (OfflinePlayer p : Bukkit.getOfflinePlayers()) {
             NovaPlayer np = new NovaPlayer(p);
-            FileConfiguration pConfig = np.getPlayerConfig();
+            Map<String, Object> data = np.getPlayerData();
 
-            pConfig.set("economies." + econ.getName().toLowerCase(), null);
-
-            try {
-                pConfig.save(new File(NovaConfig.getPlugin().getDataFolder().getPath() + "/players", p.getUniqueId() + ".yml"));
-            } catch (IOException e) {
-                NovaConfig.print(e);
-            }
+            data.keySet().stream()
+                    .filter(key -> key.startsWith("economy." + econ.getName()))
+                    .forEach(data::remove);
         }
 
         econ.file.delete();
@@ -390,13 +338,28 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
         if (!ECONOMY_CACHE.isEmpty()) return ECONOMY_CACHE;
         Set<Economy> economies = new HashSet<>();
 
-        List<File> files = NovaConfig.getEconomiesFolder().listFiles() == null ? new ArrayList<>() : Arrays.asList(NovaConfig.getEconomiesFolder().listFiles());
-        if (files.isEmpty()) return economies;
-        
-        for (File f : files) {
-            if (f == null) continue;
-            UUID id = UUID.fromString(f.getName().replace(".yml", ""));
-            economies.add(getEconomy(id));
+        if (NovaConfig.getConfiguration().isDatabaseEnabled())
+            try {
+                checkTable();
+                Connection db = NovaConfig.getConfiguration().getDatabaseConnection();
+
+                PreparedStatement ps = db.prepareStatement("SELECT *, COUNT(*) FROM economies GROUP BY id");
+                ResultSet rs = ps.executeQuery();
+
+                while (rs.next()) economies.add(readDB(rs));
+                ps.close();
+            } catch (Exception e) {
+                NovaConfig.print(e);
+            }
+        else {
+            List<File> files = NovaConfig.getEconomiesFolder().listFiles() == null ? new ArrayList<>() : Arrays.asList(NovaConfig.getEconomiesFolder().listFiles());
+            if (files.isEmpty()) return economies;
+
+            for (File f : files) {
+                if (f == null) continue;
+                UUID id = UUID.fromString(f.getName().replace(".yml", ""));
+                economies.add(getEconomy(id));
+            }
         }
 
         ECONOMY_CACHE.addAll(economies);
@@ -422,6 +385,14 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
      * @return Name of this economy
      */
     public String getName() { return this.name; }
+
+    /**
+     * Fetches the economy's symbol.
+     * @return Symbol of Economy
+     */
+    public char getSymbol() {
+        return this.symbol;
+    }
 
     /**
      * Get the Icon of this Economy
@@ -456,19 +427,6 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
     @NotNull
     public UUID getUniqueId() {
         return this.uid;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Economy economy = (Economy) o;
-        return economy.name.equals(this.name) || this.uid.equals(economy.uid);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(uid);
     }
 
     /**
@@ -532,8 +490,183 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
     }
 
     @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Economy economy = (Economy) o;
+        return economy.name.equals(this.name) || this.uid.equals(economy.uid);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(uid);
+    }
+
+    @Override
     public int compareTo(@NotNull Economy o) {
         return this.getName().compareTo(o.getName());
+    }
+
+    @Override
+    public String toString() {
+        return "Economy{" +
+                "id=" + uid +
+                ", symbol=" + symbol +
+                ", name='" + name + '\'' +
+                ", icon=" + icon.getType().name() +
+                ", hasNaturalIncrease=" + hasNaturalIncrease +
+                ", conversionScale=" + conversionScale +
+                ", interestEnabled=" + interestEnabled +
+                ", customModelData=" + customModelData +
+                ", clickableReward=" + clickableReward +
+                '}';
+    }
+
+    // Serialization
+
+    private static void checkTable() throws SQLException {
+        Connection db = NovaConfig.getConfiguration().getDatabaseConnection();
+
+        db.createStatement().execute("CREATE TABLE IF NOT EXISTS economies (" +
+                "id CHAR(36) NOT NULL," +
+                "name VARCHAR(" + MAX_NAME_LENGTH + ") NOT NULL," +
+                "symbol CHAR(1) NOT NULL," +
+                "icon BLOB(65535) NOT NULL," +
+                "natural_increase BOOL NOT NULL," +
+                "conversion_scale DOUBLE(5, 2) NOT NULL," +
+                "interest BOOL NOT NULL," +
+                "custom_model_data INT NOT NULL," +
+                "clickable_reward BOOL NOT NULL," +
+                "PRIMARY KEY (id))"
+        );
+    }
+
+    /**
+     * Saves this Economy to its file.
+     */
+    public void saveEconomy() {
+        try {
+            ECONOMY_CACHE.clear();
+
+            if (NovaConfig.getConfiguration().isDatabaseEnabled()) {
+                checkTable();
+                writeDB();
+            } else {
+                if (!NovaConfig.getEconomiesFolder().exists()) NovaConfig.getEconomiesFolder().mkdir();
+                if (!this.file.exists()) this.file.createNewFile();
+
+                FileConfiguration config = YamlConfiguration.loadConfiguration(this.file);
+                config.set(this.uid.toString(), this);
+                config.set("last_saved_timestamp", System.currentTimeMillis());
+
+                config.save(this.file);
+            }
+        } catch (Exception e) {
+            NovaConfig.print(e);
+        }
+    }
+
+    private void writeDB() throws IOException, SQLException {
+        Connection db = NovaConfig.getConfiguration().getDatabaseConnection();
+
+        PreparedStatement ps = db.prepareStatement("INSERT INTO economies VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE " +
+                "id=VALUES(id), name=VALUES(name), symbol=VALUES(symbol), icon=VALUES(icon), natural_increase=VALUES(natural_increase), " +
+                "conversion_scale=VALUES(conversion_scale), interest=VALUES(interest), custom_model_data=VALUES(custom_model_data), " +
+                "clickable_reward=VALUES(clickable_reward)"
+        );
+        ps.setString(1, this.uid.toString());
+        ps.setString(2, this.name);
+        ps.setString(3, String.valueOf(this.symbol));
+
+        ByteArrayOutputStream iconOs = new ByteArrayOutputStream();
+        BukkitObjectOutputStream iconBos = new BukkitObjectOutputStream(iconOs);
+        iconBos.writeObject(this.icon);
+        iconBos.close();
+
+        ps.setBytes(4, iconOs.toByteArray());
+
+        ps.setBoolean(5, this.hasNaturalIncrease);
+        ps.setDouble(6, this.conversionScale);
+        ps.setBoolean(7, this.interestEnabled);
+        ps.setInt(8, this.customModelData);
+        ps.setBoolean(9, this.clickableReward);
+
+        ps.executeUpdate();
+        ps.close();
+    }
+
+    private static Economy readDB(ResultSet rs) throws ClassNotFoundException, IOException, SQLException {
+        UUID uid = UUID.fromString(rs.getString("id"));
+        String name = rs.getString("name");
+        char symbol = rs.getString("symbol").charAt(0);
+
+        ByteArrayInputStream iconIs = new ByteArrayInputStream(rs.getBytes("icon"));
+        BukkitObjectInputStream iconBis = new BukkitObjectInputStream(iconIs);
+        ItemStack icon = (ItemStack) iconBis.readObject();
+        iconBis.close();
+
+        boolean hasNaturalIncrease = rs.getBoolean("natural_increase");
+        double conversionScale = rs.getDouble("conversion_scale");
+        boolean interestEnabled = rs.getBoolean("interest");
+        int customModelData = rs.getInt("custom_model_data");
+        boolean clickableReward = rs.getBoolean("clickable_reward");
+
+        Economy en = new Economy(uid, name, icon, symbol, hasNaturalIncrease,  conversionScale, clickableReward);
+        en.interestEnabled = interestEnabled;
+        en.customModelData = customModelData;
+
+        return en;
+    }
+
+    /**
+     * Serialization inside a YML File
+     * @return Serialized Economy
+     */
+    @Override
+    @NotNull
+    public Map<String, Object> serialize() {
+        Map<String, Object> serial = new HashMap<>();
+        serial.put("id", this.uid.toString());
+        serial.put("name", this.name);
+        serial.put("icon", this.icon);
+        serial.put("symbol", this.symbol);
+        serial.put("increase-naturally", this.hasNaturalIncrease);
+        serial.put("conversion-scale", this.conversionScale);
+        serial.put("interest", this.interestEnabled);
+        serial.put("custom-model-data", this.customModelData);
+        serial.put("clickable", this.clickableReward);
+        return serial;
+    }
+
+    /**
+     * Serialization from a YML File
+     * <p>
+     * This method is only meant to take maps from {@link Economy#serialize()}. **Using Maps outside of this may break the plugin**.
+     * @param serial Map of serialization
+     * @throws NullPointerException if a necessary part is missing
+     * @return Economy Class
+     * @see Economy#serialize()
+     */
+    public static Economy deserialize(@Nullable Map<String, Object> serial) throws NullPointerException {
+        if (serial == null) return null;
+
+        String name = (String) serial.get("name");
+        UUID id = UUID.fromString(serial.getOrDefault("id", UUID.nameUUIDFromBytes(name.getBytes(StandardCharsets.UTF_8)).toString()).toString());
+
+        Economy econ = new Economy(
+                id,
+                name,
+                (ItemStack) serial.get("icon"),
+                serial.get("symbol").toString().charAt(0),
+                (boolean) serial.getOrDefault("increase-naturally", true),
+                (double) serial.getOrDefault("conversion-scale", 1),
+                (boolean) serial.getOrDefault("clickable", true)
+        );
+
+        econ.interestEnabled = (boolean) serial.getOrDefault("interest", true);
+        econ.customModelData = (int) serial.getOrDefault("custom-model-data", 0);
+
+        return econ;
     }
 
     /**
@@ -684,26 +817,5 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
             NovaConfig.getConfiguration().reloadHooks();
             return econ;
         }
-    }
-
-    @Override
-    public String toString() {
-        return "Economy{" +
-                "symbol=" + symbol +
-                ", id='" + uid + '\'' +
-                ", name='" + name + '\'' +
-                ", icon=" + icon +
-                ", hasNaturalIncrease=" + hasNaturalIncrease +
-                ", conversionScale=" + conversionScale +
-                ", interestEnabled=" + interestEnabled +
-                '}';
-    }
-
-    /**
-     * Fetches the economy's symbol.
-     * @return Symbol of Economy
-     */
-    public char getSymbol() {
-        return this.symbol;
     }
 }

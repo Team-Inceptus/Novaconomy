@@ -180,11 +180,12 @@ public final class BusinessStatistics implements ConfigurationSerializable {
         public Map<String, Object> serialize() {
             return new HashMap<String, Object>() {{
                 put("buyer", buyer.toString());
-                put("item", product == null ? null : product.getItem());
-                put("economy", product == null ? null : product.getEconomy().getUniqueId().toString());
-                put("amount", product == null ? null : product.getAmount());
                 put("timestamp", timestamp);
-                put("business", business == null ? null : business.toString());
+
+                if (product != null) put("item", product.getItem());
+                if (product != null && product.getEconomy() != null) put("economy", product.getEconomy().getUniqueId().toString());
+                if (product != null) put("amount", product.getAmount());
+                if (business != null) put("business", business.toString());
             }};
         }
 
@@ -211,7 +212,7 @@ public final class BusinessStatistics implements ConfigurationSerializable {
                         new Product(
                                 (ItemStack) serial.get("item"),
                                 new Price(
-                                        Economy.getEconomy(UUID.fromString((String) serial.get("economy"))),
+                                        serial.containsKey("economy") ? null : Economy.getEconomy(UUID.fromString((String) serial.get("economy"))),
                                         (double) serial.get("amount")
                                 )
                         ), num

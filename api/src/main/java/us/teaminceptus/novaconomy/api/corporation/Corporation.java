@@ -9,6 +9,8 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.util.io.BukkitObjectInputStream;
+import org.bukkit.util.io.BukkitObjectOutputStream;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.api.Language;
@@ -21,6 +23,10 @@ import us.teaminceptus.novaconomy.api.settings.Settings;
 
 import java.io.*;
 import java.nio.file.Files;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -647,14 +653,27 @@ public final class Corporation {
         if (!CORPORATION_CACHE.isEmpty()) return ImmutableSet.copyOf(CORPORATION_CACHE);
         Set<Corporation> corporations = new HashSet<>();
 
-        for (File folder : NovaConfig.getCorporationsFolder().listFiles()) {
+        if (NovaConfig.getConfiguration().isDatabaseEnabled())
+            try {
+                checkTable();
+                Connection db = NovaConfig.getConfiguration().getDatabaseConnection();
+
+                PreparedStatement ps = db.prepareStatement("SELECT *, COUNT(*) FROM corporations GROUP BY id");
+                ResultSet rs = ps.executeQuery();
+
+                while (rs.next())
+                    corporations.add(readDB(rs));
+            } catch (Exception e) {
+                NovaConfig.print(e);
+            }
+        else for (File folder : NovaConfig.getCorporationsFolder().listFiles()) {
             if (folder == null) continue;
             if (!folder.isDirectory()) continue;
 
             Corporation c;
 
             try {
-                c = readCorporation(folder.getAbsoluteFile());
+                c = readFile(folder.getAbsoluteFile());
             } catch (OptionalDataException e) {
                 NovaConfig.print(e);
                 continue;
@@ -954,22 +973,159 @@ public final class Corporation {
 
     // Reading & Writing
 
+    private static void checkTable() throws SQLException {
+        Connection db = NovaConfig.getConfiguration().getDatabaseConnection();
+
+        db.createStatement().execute("CREATE TABLE IF NOT EXISTS corporations (" +
+                "id CHAR(36) NOT NUll," +
+                "owner CHAR(36) NOT NULL," +
+                "creation_date BIGINT NOT NULL," +
+                "name VARCHAR(" + MAX_NAME_LENGTH + ") NOT NULL," +
+                "description VARCHAR(" + MAX_DESCRIPTION_LENGTH + ") NOT NULL," +
+                "icon VARCHAR(128) NOT NULL," +
+                "hq BLOB(65535)," +
+                "experience DOUBLE(255, 2) NOT NULL," +
+                "children BLOB(65535) NOT NULL," +
+                "children_joindates BLOB(65535) NOT NULL," +
+                "achievements BLOB(65535) NOT NULL," +
+                "settings BLOB(65535) NOT NULL," +
+                "invited BLOB(65535) NOT NULL," +
+                "PRIMARY KEY (id))"
+        );
+    }
+
     /**
      * <p>Saves this Corporation to its Corporation file.</p>
      * <p>This method is called automatically.</p>
      */
     public void saveCorporation() {
-        if (!folder.exists()) folder.mkdir();
-        CORPORATION_CACHE.clear();
-
         try {
-            writeCorporation();
-        } catch (IOException e) {
+            if (NovaConfig.getConfiguration().isDatabaseEnabled()) {
+                checkTable();
+                writeDB();
+            } else {
+                if (!folder.exists()) folder.mkdir();
+                CORPORATION_CACHE.clear();
+
+                writeFile();
+            }
+        } catch (Exception e) {
             NovaConfig.print(e);
         }
     }
 
-    private void writeCorporation() throws IOException {
+    private void writeDB() throws SQLException, IOException {
+        Connection db = NovaConfig.getConfiguration().getDatabaseConnection();
+
+        PreparedStatement ps = db.prepareStatement("INSERT INTO businesses VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE " +
+                "id=VALUES(id), owner=VALUES(owner), creation_date=VALUES(creation_date), name=VALUES(name), description=VALUES(description), icon=VALUES(icon), " +
+                "hq=VALUES(hq), experience=VALUES(experience), children=VALUES(children), children_joindates=VALUES(children_joindates), achievements=VALUES(achievements), " +
+                "settings=VALUES(settings), invited=VALUES(invited)");
+
+        ps.setString(1, this.id.toString());
+        ps.setString(2, this.owner.getUniqueId().toString());
+        ps.setLong(3, this.creationDate);
+        ps.setString(4, this.name);
+        ps.setString(5, this.description);
+
+        ps.setString(6, this.icon.name());
+
+        ByteArrayOutputStream hqOs = new ByteArrayOutputStream();
+        BukkitObjectOutputStream hqBos = new BukkitObjectOutputStream(hqOs);
+        hqBos.writeObject(this.headquarters);
+        hqBos.close();
+        ps.setBytes(7, hqOs.toByteArray());
+        ps.setDouble(8, this.experience);
+
+        ByteArrayOutputStream childrenOs = new ByteArrayOutputStream();
+        ObjectOutputStream childrenBos = new ObjectOutputStream(childrenOs);
+        childrenBos.writeObject(this.children.stream().filter(Objects::nonNull).map(Business::getUniqueId).collect(Collectors.toList()));
+        childrenBos.close();
+        ps.setBytes(9, childrenOs.toByteArray());
+
+        ByteArrayOutputStream childrenJoinDatesOs = new ByteArrayOutputStream();
+        ObjectOutputStream childrenJoinDatesBos = new ObjectOutputStream(childrenJoinDatesOs);
+        childrenJoinDatesBos.writeObject(this.childrenJoinDates);
+        childrenJoinDatesBos.close();
+        ps.setBytes(10, childrenJoinDatesOs.toByteArray());
+
+        ByteArrayOutputStream achievementsOs = new ByteArrayOutputStream();
+        ObjectOutputStream achievementsBos = new ObjectOutputStream(achievementsOs);
+        achievementsBos.writeObject(this.achievements);
+        achievementsBos.close();
+        ps.setBytes(11, achievementsOs.toByteArray());
+
+        ByteArrayOutputStream settingsOs = new ByteArrayOutputStream();
+        ObjectOutputStream settingsBos = new ObjectOutputStream(settingsOs);
+        settingsBos.writeObject(this.settings.entrySet().stream()
+                .map(e -> new AbstractMap.SimpleEntry<>(e.getKey().name(), e.getValue()))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
+        );
+        settingsBos.close();
+        ps.setBytes(12, settingsOs.toByteArray());
+
+        ByteArrayOutputStream invitedOs = new ByteArrayOutputStream();
+        ObjectOutputStream invitedBos = new ObjectOutputStream(invitedOs);
+        invitedBos.writeObject(this.invited);
+        invitedBos.close();
+        ps.setBytes(13, invitedOs.toByteArray());
+
+        ps.executeUpdate();
+        ps.close();
+    }
+
+    private static Corporation readDB(ResultSet rs) throws SQLException, IOException, ClassNotFoundException {
+        UUID id = UUID.fromString(rs.getString("id"));
+        OfflinePlayer owner = Bukkit.getOfflinePlayer(UUID.fromString(rs.getString("owner")));
+        long creationDate = rs.getLong("creation_date");
+
+        Corporation c = new Corporation(id, creationDate, owner);
+        c.name = rs.getString("name");
+        c.description = rs.getString("description");
+        c.icon = Material.valueOf(rs.getString("icon"));
+
+        ByteArrayInputStream hqIs = new ByteArrayInputStream(rs.getBytes("hq"));
+        BukkitObjectInputStream hqBis = new BukkitObjectInputStream(hqIs);
+        c.headquarters = (Location) hqBis.readObject();
+        hqBis.close();
+
+        c.experience = rs.getDouble("experience");
+
+        ByteArrayInputStream childrenIs = new ByteArrayInputStream(rs.getBytes("children"));
+        ObjectInputStream childrenBis = new ObjectInputStream(childrenIs);
+        c.children.addAll(
+                ((List<UUID>) childrenBis.readObject()).stream().map(Business::byId).collect(Collectors.toList())
+        );
+        childrenBis.close();
+
+        ByteArrayInputStream childrenJoinDatesIs = new ByteArrayInputStream(rs.getBytes("children_joindates"));
+        ObjectInputStream childrenJoinDatesBis = new ObjectInputStream(childrenJoinDatesIs);
+        c.childrenJoinDates.putAll((Map<UUID, Long>) childrenJoinDatesBis.readObject());
+        childrenJoinDatesBis.close();
+
+        ByteArrayInputStream achievementsIs = new ByteArrayInputStream(rs.getBytes("achievements"));
+        ObjectInputStream achievementsBis = new ObjectInputStream(achievementsIs);
+        c.achievements.putAll((Map<CorporationAchievement, Integer>) achievementsBis.readObject());
+        achievementsBis.close();
+
+        ByteArrayInputStream settingsIs = new ByteArrayInputStream(rs.getBytes("settings"));
+        ObjectInputStream settingsBis = new ObjectInputStream(settingsIs);
+        c.settings.putAll(
+                ((Map<String, Object>) settingsBis.readObject()).entrySet().stream()
+                        .map(e -> new AbstractMap.SimpleEntry<>(Settings.Corporation.valueOf(e.getKey()), e.getValue()))
+                        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
+        );
+        settingsBis.close();
+
+        ByteArrayInputStream invitedIs = new ByteArrayInputStream(rs.getBytes("invited"));
+        ObjectInputStream invitedBis = new ObjectInputStream(invitedIs);
+        c.invited.putAll((Map<UUID, Long>) invitedBis.readObject());
+        invitedBis.close();
+
+        return c;
+    }
+
+    private void writeFile() throws IOException {
         File info = new File(folder, "info.dat");
         if (!info.exists()) info.createNewFile();
 
@@ -1005,6 +1161,7 @@ public final class Corporation {
         FileConfiguration children = YamlConfiguration.loadConfiguration(childrenF);
         children.set("children", this.children
                 .stream()
+                .filter(Objects::nonNull)
                 .map(Business::getUniqueId)
                 .map(UUID::toString)
                 .collect(Collectors.toList())
@@ -1038,7 +1195,7 @@ public final class Corporation {
     }
 
     @NotNull
-    private static Corporation readCorporation(File folder) throws IOException, IllegalStateException, ReflectiveOperationException {
+    private static Corporation readFile(File folder) throws IOException, IllegalStateException, ReflectiveOperationException {
         File info = new File(folder, "info.dat");
         if (!info.exists()) throw new IllegalStateException("Could not find: info.dat");
 

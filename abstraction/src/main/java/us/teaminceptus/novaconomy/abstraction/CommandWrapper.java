@@ -969,20 +969,18 @@ public interface CommandWrapper {
         }
 
         NovaPlayer np = new NovaPlayer(p);
-        FileConfiguration config = np.getPlayerConfig();
-        File f = np.getPlayerFile();
+        Map<String, Object> data = np.getPlayerData();
         String key = "bounties." + target.getUniqueId();
 
-        if (!config.isSet(key)) {
+        if (!data.containsKey(key)) {
             p.sendMessage(getMessage("error.bounty.inexistent"));
             return;
         }
 
-        Bounty b = (Bounty) config.get(key);
+        Bounty b = (Bounty) data.get(key);
         np.add(b.getEconomy(), b.getAmount());
+        data.put(key, null);
 
-        config.set(key, null);
-        try { config.save(f); } catch (IOException e) { NovaConfig.print(e); }
         p.sendMessage(format(getMessage("success.bounty.delete"), target.getName()));
     }
 
@@ -998,9 +996,8 @@ public interface CommandWrapper {
         }
 
         NovaPlayer np = new NovaPlayer(p);
-        FileConfiguration config = np.getPlayerConfig();
 
-        if (owned && !config.isSet("bounties")) {
+        if (owned && !np.getPlayerData().keySet().stream().anyMatch(k -> k.startsWith("bounties"))) {
             p.sendMessage(getMessage("error.bounty.none"));
             return;
         }

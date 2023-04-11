@@ -16,6 +16,7 @@ import us.teaminceptus.novaconomy.api.util.Price;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.sql.Connection;
 import java.util.*;
 import java.util.logging.Logger;
 
@@ -85,6 +86,11 @@ public interface NovaConfig  {
         getLogger().severe("-----------");
         getLogger().severe(t.getMessage());
         for (StackTraceElement element : t.getStackTrace()) getLogger().severe(element.toString());
+
+        if (t.getCause() != null) {
+            getLogger().severe("Caused by:");
+            print(t.getCause());
+        }
     }
 
     /**
@@ -138,9 +144,7 @@ public interface NovaConfig  {
      * @return Economies Folder
      */
     static File getEconomiesFolder() {
-        File dir = new File(getDataFolder(), "economies");
-        if (!dir.exists()) dir.mkdir();
-        return dir;
+        return new File(getDataFolder(), "economies");
     }
 
     /**
@@ -345,6 +349,18 @@ public interface NovaConfig  {
         if (!config.isConfigurationSection("Business.Advertising")) config.createSection("Business.Advertising");
         if (!config.isBoolean("Business.Advertising.Enabled")) config.set("Business.Advertising.Enabled", true);
         if (!config.isDouble("Business.Advertising.ClickReward") && !config.isInt("Business.Advertising.ClickReward")) config.set("Business.Advertising.ClickReward", 5D);
+
+        // Database
+
+        if (!config.isConfigurationSection("Database")) config.createSection("Database");
+        if (!config.isBoolean("Database.Enabled")) config.set("Database.Enabled", false);
+        if (!config.isBoolean("Database.Convert")) config.set("Database.Convert", false);
+        if (!config.isString("Database.Service")) config.set("Database.Service", "mysql");
+        if (!config.isString("Database.Host")) config.set("Database.Host", "localhost");
+        if (!config.isInt("Database.Port")) config.set("Database.Port", 3306);
+        if (!config.isString("Database.Database")) config.set("Database.Database", "novaconomy");
+        if (!config.isString("Database.Username")) config.set("Database.Username", "");
+        if (!config.isString("Database.Password")) config.set("Database.Password", "");
 
         try { config.save(f); } catch (IOException e) { print(e); }
 
@@ -945,5 +961,40 @@ public interface NovaConfig  {
      * @param modifier Experience multiplier
      */
     void setProductIncreaseModifier(double modifier);
+
+    /**
+     * Whether the database feature is enabled.
+     * @return true if enabled, else false
+     */
+    boolean isDatabaseEnabled();
+
+    /**
+     * Sets whether the database feature is enabled.
+     * @param enabled true if enabled, else false
+     */
+    void setDatabaseEnabled(boolean enabled);
+
+    /**
+     * Fetches the Connection instance to the database.
+     * @return Connection to the MySQL database, may be null
+     */
+    @Nullable
+    Connection getDatabaseConnection();
+
+    /**
+     * <p>Whether the database conversion feature is enabled.</p>
+     * <p>When enabled, the plugin will automatically convert between information stored in a Database and information stored in files, both ways.
+     * This option ignores {@link #isDatabaseEnabled()} and requires valid database credentials in the configuration file.</p>
+     * @return true if enabled, else false
+     */
+    boolean isDatabaseConversionEnabled();
+
+    /**
+     * Sets whether the database conversion feature is enabled.
+     * @param enabled true if enabled, else false
+     * @see #isDatabaseConversionEnabled()
+     */
+    void setDatabaseConversionEnabled(boolean enabled);
+
 
 }

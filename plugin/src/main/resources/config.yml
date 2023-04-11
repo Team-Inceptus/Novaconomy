@@ -1,8 +1,32 @@
-# Novaconomy v${project.version}
+# Novaconomy Configuration File
 #
 # Created by GamerCoder215
 
 # Economies made in version v1.0.0 are no longer compatible with versions 1.1.0 and up. Please re-create them.
+
+# SQL Database Configuration Options
+Database:
+  # Please make sure this is true before entering your database information
+  Enabled: false
+
+  # Whether the plugin should automatically convert from data stored in files to data stored in the Database (and vice versa)
+  # This option ignores the Enabled option above and requires valid Database Information below
+  Convert: true
+
+  # The Database Service you are connecting to.
+  # Supported Include:
+  # - mysql (MySQL)
+  # - postgresql (PostgreSQL)
+  # - oracle (Oracle)
+  # - sqlite (SQLite)
+  Service: mysql
+
+  # Enter your Database Information Here:
+  Host: localhost
+  Port: 3306
+  Database: novaconomy # For SQLite, put the path to the database file here
+  Username: ""
+  Password: ""
 
 # Whether players should be notified of Plugin Events (e.g. Interest)
 Notifications: true

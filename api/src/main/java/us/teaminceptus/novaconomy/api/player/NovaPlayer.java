@@ -7,6 +7,8 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
+import org.bukkit.util.io.BukkitObjectInputStream;
+import org.bukkit.util.io.BukkitObjectOutputStream;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.api.NovaConfig;
@@ -20,8 +22,14 @@ import us.teaminceptus.novaconomy.api.settings.Settings;
 import us.teaminceptus.novaconomy.api.util.Price;
 import us.teaminceptus.novaconomy.api.util.Product;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -29,14 +37,14 @@ import java.util.stream.Collectors;
  * Class representing a Player used in the Plugin
  *
  */
+@SuppressWarnings("unchecked")
 public final class NovaPlayer {
 
     private static final String LBW = "last_bank_withdraw";
     private static final String LBD = "last_bank_deposit";
     private final OfflinePlayer p;
 
-    private final File pFile;
-    private final FileConfiguration pConfig;
+    private final Map<String, Object> pConfig = new HashMap<>();
 
     final PlayerStatistics stats;
 
@@ -49,44 +57,120 @@ public final class NovaPlayer {
         if (p == null) throw new IllegalArgumentException("Player is null");
         this.p = p;
 
-        if (!NovaConfig.getPlayerDirectory().exists()) NovaConfig.getPlayerDirectory().mkdir();
+        PlayerStatistics stats = new PlayerStatistics(p);
 
-        this.pFile = new File(NovaConfig.getPlayerDirectory(), p.getUniqueId() + ".yml");
+        if (NovaConfig.getConfiguration().isDatabaseEnabled())
+            try {
+                Connection db = NovaConfig.getConfiguration().getDatabaseConnection();
 
-        if (!pFile.exists()) try {
-            pFile.createNewFile();
-        } catch (IOException e) {
-            NovaConfig.print(e);
+                db.createStatement().execute("CREATE TABLE IF NOT EXISTS players (" +
+                        "id CHAR(36) NOT NULL," +
+                        "data MEDIUMBLOB NOT NULL," +
+                        "stats BLOB(65535) NOT NULL," +
+                        "PRIMARY KEY (id))"
+                );
+
+                PreparedStatement ps = db.prepareStatement("SELECT * FROM players WHERE id = ?");
+                ps.setString(1, p.getUniqueId().toString());
+                ps.execute();
+
+                ResultSet rs = ps.getResultSet();
+
+                if (NovaConfig.getPlayerDirectory().exists() && NovaConfig.getConfiguration().isDatabaseConversionEnabled()) {
+                    for (File file : NovaConfig.getPlayerDirectory().listFiles()) {
+                        if (file.isDirectory()) continue;
+
+                        FileConfiguration config = YamlConfiguration.loadConfiguration(file);
+
+                        Map<String, Object> data = config.getValues(true);
+                        this.pConfig.putAll(data);
+
+                        stats = (PlayerStatistics) data.get("stats");
+                        pConfig.remove("stats");
+                    }
+
+                    for (File child : NovaConfig.getPlayerDirectory().listFiles()) child.delete();
+                    NovaConfig.getPlayerDirectory().delete();
+
+                    NovaConfig.getLogger().info("Converted All Player Data to Database");
+                } else if (rs.next()) {
+                    ByteArrayInputStream is = new ByteArrayInputStream(rs.getBytes("data"));
+                    BukkitObjectInputStream bIs = new BukkitObjectInputStream(is);
+                    this.pConfig.putAll((Map<String, Object>) bIs.readObject());
+                    bIs.close();
+
+                    ByteArrayInputStream statsIs = new ByteArrayInputStream(rs.getBytes("stats"));
+                    BukkitObjectInputStream statsBIs = new BukkitObjectInputStream(statsIs);
+                    stats = (PlayerStatistics) statsBIs.readObject();
+                    statsBIs.close();
+                } else
+                    stats = new PlayerStatistics(p);
+
+                rs.close();
+            } catch (Exception e) {
+                NovaConfig.print(e);
+                stats = new PlayerStatistics(p);
+            }
+        else {
+            if (!NovaConfig.getPlayerDirectory().exists()) NovaConfig.getPlayerDirectory().mkdir();
+
+            File pFile = new File(NovaConfig.getPlayerDirectory(), p.getUniqueId().toString() + ".yml");
+            if (!pFile.exists()) try {
+                pFile.createNewFile();
+            } catch (IOException e) {
+                NovaConfig.print(e);
+            }
+
+            FileConfiguration config = YamlConfiguration.loadConfiguration(pFile);
+            pConfig.putAll(config.getValues(true));
+
+            if (NovaConfig.getConfiguration().isDatabaseConversionEnabled()) {
+                Connection db = NovaConfig.getConfiguration().getDatabaseConnection();
+                if (db != null) try {
+                    DatabaseMetaData meta = db.getMetaData();
+                    try (ResultSet players = meta.getTables(null, null, "players", null)) {
+                        if (players.first()) {
+                            PreparedStatement ps = db.prepareStatement("SELECT * FROM players WHERE id = ?");
+                            ps.setString(1, p.getUniqueId().toString());
+                            ps.execute();
+
+                            ResultSet rs = ps.getResultSet();
+
+                            if (rs.first()) {
+                                ByteArrayInputStream is = new ByteArrayInputStream(rs.getBytes("data"));
+                                BukkitObjectInputStream bIs = new BukkitObjectInputStream(is);
+                                this.pConfig.putAll((Map<String, Object>) bIs.readObject());
+                                bIs.close();
+
+                                ByteArrayInputStream statsIs = new ByteArrayInputStream(rs.getBytes("stats"));
+                                BukkitObjectInputStream statsBIs = new BukkitObjectInputStream(statsIs);
+                                stats = (PlayerStatistics) statsBIs.readObject();
+                                statsBIs.close();
+                            } else
+                                stats = new PlayerStatistics(p);
+
+                            rs.close();
+                        }
+                    }
+                } catch (Exception e) {
+                    NovaConfig.print(e);
+                }
+            }
+
+            stats = pConfig.containsKey("stats") ? (PlayerStatistics) pConfig.get("stats") : new PlayerStatistics(p);
         }
-
-        this.pConfig = YamlConfiguration.loadConfiguration(pFile);
-
-        PlayerStatistics stats;
-        try {
-            stats = pConfig.contains("stats") ? (PlayerStatistics) pConfig.get("stats") : new PlayerStatistics(p);
-        } catch (ClassCastException e) {
-            NovaConfig.print(e);
-            stats = new PlayerStatistics(p);
-        }
-
+        
         this.stats = stats;
     }
 
     /**
-     * Fetch the Configuration file this player's information is stored in
-     * @return {@link FileConfiguration} representing player config
+     * Fetches a mutable Map Representation of the player's data.
+     * @return Map of Player Data
      */
     @NotNull
-    public FileConfiguration getPlayerConfig() {
+    public Map<String, Object> getPlayerData() {
         return pConfig;
     }
-
-    /**
-     * Fetch the File this player's information is stored in
-     * @return {@link File} representing the file {@link #getPlayerConfig()} is stored in
-     */
-    @NotNull
-    public File getPlayerFile() { return pFile; }
 
     /**
      * Fetch the player this class belongs to
@@ -128,18 +212,7 @@ public final class NovaPlayer {
         boolean zero = false;
         String econName = econ.getName().toLowerCase();
 
-        if (!pConfig.isConfigurationSection("economies")) {
-            pConfig.createSection("economies");
-            zero = true;
-        }
-        if (!pConfig.isConfigurationSection("economies." + econName)) {
-            pConfig.getConfigurationSection("economies").createSection(econName);
-            zero = true;
-        }
-
-        if (zero) return 0;
-
-        return pConfig.getDouble("economies." + econName + ".balance", 0);
+        return (double) pConfig.getOrDefault("economies." + econName + ".balance", 0D);
     }
 
     /**
@@ -152,7 +225,7 @@ public final class NovaPlayer {
         if (newBal < 0) throw new IllegalArgumentException("Balance cannot be negative");
         if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
 
-        pConfig.set("economies." + econ.getName().toLowerCase() + ".balance", newBal);
+        pConfig.put("economies." + econ.getName().toLowerCase() + ".balance", newBal);
 
         if (newBal > stats.highestBalance) {
             stats.highestBalance = newBal;
@@ -166,11 +239,42 @@ public final class NovaPlayer {
      * <p>Information will be automatically saved with wrapper methods, so this method does not need to be called again.</p>
      */
     public void save() {
-        pConfig.set("stats", this.stats);
-
         try {
-            pConfig.save(pFile);
-        } catch (IOException e) {
+            if (NovaConfig.getConfiguration().isDatabaseEnabled()) {
+                Connection db = NovaConfig.getConfiguration().getDatabaseConnection();
+
+                PreparedStatement ps = db.prepareStatement("INSERT INTO players VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE id=VALUES(id), data=VALUES(data) stats=VALUES(stats)");
+                ps.setString(1, p.getUniqueId().toString());
+
+                ByteArrayOutputStream os = new ByteArrayOutputStream();
+                BukkitObjectOutputStream bOs = new BukkitObjectOutputStream(os);
+                bOs.writeObject(pConfig);
+                bOs.close();
+
+                ps.setBytes(2, os.toByteArray());
+                
+                ByteArrayOutputStream statsOs = new ByteArrayOutputStream();
+                BukkitObjectOutputStream statsBos = new BukkitObjectOutputStream(statsOs);
+                statsBos.writeObject(this.stats);
+                statsBos.close();
+                
+                ps.setBytes(3, statsOs.toByteArray());
+
+                ps.executeUpdate();
+                ps.close();
+            } else {
+                pConfig.put("stats", this.stats);
+                File pFile = new File(NovaConfig.getPlayerDirectory(), p.getUniqueId().toString() + ".yml");
+                if (!pFile.exists()) pFile.createNewFile();
+
+                FileConfiguration pConfig = YamlConfiguration.loadConfiguration(pFile);
+                for (Map.Entry<String, Object> entry : this.pConfig.entrySet())
+                    pConfig.set(entry.getKey(), entry.getValue());
+
+                pConfig.save(pFile);
+            }
+
+        } catch (Exception e) {
             NovaConfig.print(e);
         }
     }
@@ -245,7 +349,7 @@ public final class NovaPlayer {
      */
     @NotNull
     public PlayerWithdrawEvent getLastBankWithdraw() {
-        return new PlayerWithdrawEvent(getOnlinePlayer(), pConfig.getDouble(LBW + ".amount", 0), Economy.getEconomy(pConfig.getString(LBW + ".economy", "")), pConfig.getLong(LBW + ".timestamp", 0));
+        return new PlayerWithdrawEvent(getOnlinePlayer(), (double) pConfig.getOrDefault(LBW + ".amount", 0D), Economy.getEconomy((String) pConfig.getOrDefault(LBW + ".economy", "")), (long) pConfig.getOrDefault(LBW + ".timestamp", 0));
     }
 
     /**
@@ -254,7 +358,7 @@ public final class NovaPlayer {
      */
     @NotNull
     public PlayerDepositEvent getLastBankDeposit() {
-        return new PlayerDepositEvent(getOnlinePlayer(), pConfig.getDouble(LBD + ".amount", 0), Economy.getEconomy(pConfig.getString(LBD + ".economy", "")), pConfig.getLong(LBD + ".timestamp", 0));
+        return new PlayerDepositEvent(getOnlinePlayer(), (double) pConfig.getOrDefault(LBD + ".amount", 0D), Economy.getEconomy((String) pConfig.getOrDefault(LBD + ".economy", "")), (long) pConfig.getOrDefault(LBD + ".timestamp", 0));
     }
 
     /**
@@ -269,14 +373,14 @@ public final class NovaPlayer {
         if (amount < 0 || amount > Bank.getBalance(econ)) throw new IllegalArgumentException("Amount cannot be negative or greater than current bank balance");
 
         if (!NovaConfig.getConfiguration().canBypassWithdraw(p) && NovaConfig.getConfiguration().getMaxWithdrawAmount(econ) < amount) throw new UnsupportedOperationException("Amount exceeds max withdraw amount");
-        if (System.currentTimeMillis() - 86400000 < pConfig.getLong(LBW + ".timestamp", 0)) throw new UnsupportedOperationException("Last withdraw was less than 24 hours ago");
+        if (System.currentTimeMillis() - 86400000 < (long) pConfig.getOrDefault(LBW + ".timestamp", 0)) throw new UnsupportedOperationException("Last withdraw was less than 24 hours ago");
 
         Bank.removeBalance(econ, amount);
         add(econ, amount);
 
-        pConfig.set(LBW + ".amount", amount);
-        pConfig.set(LBW + ".economy", econ.getName());
-        pConfig.set(LBW + ".timestamp", System.currentTimeMillis());
+        pConfig.put(LBW + ".amount", amount);
+        pConfig.put(LBW + ".economy", econ.getName());
+        pConfig.put(LBW + ".timestamp", System.currentTimeMillis());
 
         stats.totalWithdrawn += amount;
         save();
@@ -302,10 +406,10 @@ public final class NovaPlayer {
         Bank.addBalance(econ, amount);
         remove(econ, amount);
 
-        pConfig.set(LBW + ".amount", amount);
-        pConfig.set(LBW + ".economy", econ.getName());
-        pConfig.set(LBW + ".timestamp", System.currentTimeMillis());
-        pConfig.set("donated." + econ.getName(), getDonatedAmount(econ) + amount);
+        pConfig.put(LBW + ".amount", amount);
+        pConfig.put(LBW + ".economy", econ.getName());
+        pConfig.put(LBW + ".timestamp", System.currentTimeMillis());
+        pConfig.put("donated." + econ.getName(), getDonatedAmount(econ) + amount);
         save();
     }
 
@@ -316,12 +420,16 @@ public final class NovaPlayer {
     @NotNull
     public Map<Economy, Double> getAllDonatedAmounts() {
         Map<Economy, Double> amounts = new HashMap<>();
-        if (!pConfig.isConfigurationSection("donated")) {
-            pConfig.createSection("donated");
-            return amounts;
+
+        for (Map.Entry<String, Object> entry : pConfig.entrySet()) {
+            if (!entry.getKey().startsWith("donated")) continue;
+
+            Economy econ = Economy.getEconomy(entry.getKey().split("\\.")[1].toLowerCase());
+            if (econ == null) continue;
+
+            amounts.put(econ, (double) entry.getValue());
         }
 
-        pConfig.getConfigurationSection("donated").getValues(false).forEach((k, v) -> amounts.put(Economy.getEconomy(k), v instanceof Double ? (double) v : 0));
         return amounts;
     }
 
@@ -380,17 +488,21 @@ public final class NovaPlayer {
 
     /**
      * Fetches all of the Bounties this player owns.
-     * @return List of Owned Bounties
+     * @return Map of Owned Bounties
      */
     @NotNull
     public Map<OfflinePlayer, Bounty> getOwnedBounties() {
         Map<OfflinePlayer, Bounty> bounties = new HashMap<>();
-        if (!pConfig.isConfigurationSection("bounties")) {
-            pConfig.createSection("bounties");
-            return bounties;
+
+        for (Map.Entry<String, Object> entry : pConfig.entrySet()) {
+            if (!entry.getKey().startsWith("bounty")) continue;
+
+            OfflinePlayer target = Bukkit.getOfflinePlayer(UUID.fromString(entry.getKey().split("\\.")[1]));
+            if (target == null) continue;
+
+            bounties.put(target, (Bounty) entry.getValue());
         }
 
-        pConfig.getConfigurationSection("bounties").getValues(false).forEach((k, v) -> bounties.put(Bukkit.getOfflinePlayer(UUID.fromString(k)), (Bounty) v));
         return bounties;
     }
 
@@ -459,7 +571,7 @@ public final class NovaPlayer {
 
     /**
      * Fetches all of the Bounties that this player is the target of.
-     * @return List of Bounties wanted by this player
+     * @return Set of Bounties wanted by this player
      */
     @NotNull
     public Set<Bounty> getSelfBounties() {
@@ -484,7 +596,7 @@ public final class NovaPlayer {
      */
     public boolean getSetting(@Nullable Settings.Personal setting) {
         if (setting == null) return false;
-        return pConfig.getBoolean("settings." + setting.name().toLowerCase(), setting.getDefaultValue());
+        return (boolean) pConfig.getOrDefault("settings." + setting.name().toLowerCase(), setting.getDefaultValue());
     }
 
     /**
@@ -495,7 +607,7 @@ public final class NovaPlayer {
      */
     public void setSetting(@NotNull Settings.Personal setting, boolean value) throws IllegalArgumentException {
         if (setting == null) throw new IllegalArgumentException("Setting cannot be null");
-        pConfig.set("settings." + setting.name().toLowerCase(), value);
+        pConfig.put("settings." + setting.name().toLowerCase(), value);
         save();
     }
 
@@ -522,9 +634,9 @@ public final class NovaPlayer {
 
         String comm = comment == null ? "" : comment;
 
-        pConfig.set("ratings." + id + ".rating", rating);
-        pConfig.set("ratings." + id + ".last_rating", System.currentTimeMillis());
-        pConfig.set("ratings." + id + ".comment", comm);
+        pConfig.put("ratings." + id + ".rating", rating);
+        pConfig.put("ratings." + id + ".last_rating", System.currentTimeMillis());
+        pConfig.put("ratings." + id + ".comment", comm);
 
         save();
     }
@@ -560,11 +672,11 @@ public final class NovaPlayer {
         if (b == null) return null;
 
         UUID id = b.getUniqueId();
-        if (!pConfig.isLong("ratings." + id + ".last_rating")) return null;
+        if (!(pConfig.get("ratings." + id + ".last_rating") instanceof Long)) return null;
 
-        long time = pConfig.getLong("ratings." + id + ".last_rating", 0);
-        int level = pConfig.getInt("ratings." + id + ".rating", 0);
-        String comment = pConfig.getString("ratings." + id + ".comment", "");
+        long time = (long) pConfig.getOrDefault("ratings." + id + ".last_rating", 0);
+        int level = (int) pConfig.getOrDefault("ratings." + id + ".rating", 0);
+        String comment = (String) pConfig.getOrDefault("ratings." + id + ".comment", "");
 
         return new Rating(p, id, level, time, comment);
     }
@@ -577,7 +689,7 @@ public final class NovaPlayer {
     @NotNull
     public Date getLastRating(@Nullable Business b) {
         if (b == null) return new Date();
-        return new Date(pConfig.getLong("ratings." + b.getUniqueId() + ".last_rating", 0));
+        return new Date((long) pConfig.getOrDefault("ratings." + b.getUniqueId() + ".last_rating", 0));
     }
 
     /**
@@ -588,7 +700,7 @@ public final class NovaPlayer {
      */
     public int getRatingLevel(@NotNull Business b) throws IllegalArgumentException {
         Preconditions.checkNotNull(b, "Business cannot be null");
-        return pConfig.getInt("ratings." + b.getUniqueId() + ".rating", 0);
+        return (int) pConfig.getOrDefault("ratings." + b.getUniqueId() + ".rating", 0);
     }
 
     /**
@@ -600,7 +712,7 @@ public final class NovaPlayer {
     @NotNull
     public String getRatingComment(@NotNull Business b) throws IllegalArgumentException {
         Preconditions.checkNotNull(b, "Business cannot be null");
-        return pConfig.getString("ratings." + b.getUniqueId() + ".comment", "");
+        return (String) pConfig.getOrDefault("ratings." + b.getUniqueId() + ".comment", "");
     }
 
     /**
