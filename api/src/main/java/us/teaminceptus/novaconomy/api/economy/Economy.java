@@ -569,11 +569,25 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
     private void writeDB() throws IOException, SQLException {
         Connection db = NovaConfig.getConfiguration().getDatabaseConnection();
 
-        PreparedStatement ps = db.prepareStatement("INSERT INTO economies VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE " +
-                "id=VALUES(id), name=VALUES(name), symbol=VALUES(symbol), icon=VALUES(icon), natural_increase=VALUES(natural_increase), " +
-                "conversion_scale=VALUES(conversion_scale), interest=VALUES(interest), custom_model_data=VALUES(custom_model_data), " +
-                "clickable_reward=VALUES(clickable_reward)"
-        );
+        String sql;
+
+        if (db.createStatement().execute("SELECT 1 FROM economies WHERE id = \"" + this.uid +"\""))
+            sql = "UPDATE economies SET" +
+                    "id = ?, " +
+                    "name = ?, " +
+                    "symbol = ?, " +
+                    "icon = ?, " +
+                    "natural_increase = ?, " +
+                    "conversion_scale = ?, " +
+                    "interest = ?, " +
+                    "custom_model_data = ?, " +
+                    "clickable_reward = ?"  +
+                    "WHERE id = \"" + this.uid + "\"";
+        else
+            sql = "INSERT INTO economies VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+        PreparedStatement ps = db.prepareStatement(sql);
+    
         ps.setString(1, this.uid.toString());
         ps.setString(2, this.name);
         ps.setString(3, String.valueOf(this.symbol));

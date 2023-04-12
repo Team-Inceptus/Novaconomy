@@ -1017,10 +1017,28 @@ public final class Corporation {
     private void writeDB() throws SQLException, IOException {
         Connection db = NovaConfig.getConfiguration().getDatabaseConnection();
 
-        PreparedStatement ps = db.prepareStatement("INSERT INTO businesses VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE " +
-                "id=VALUES(id), owner=VALUES(owner), creation_date=VALUES(creation_date), name=VALUES(name), description=VALUES(description), icon=VALUES(icon), " +
-                "hq=VALUES(hq), experience=VALUES(experience), children=VALUES(children), children_joindates=VALUES(children_joindates), achievements=VALUES(achievements), " +
-                "settings=VALUES(settings), invited=VALUES(invited)");
+        String sql;
+
+        if (db.createStatement().execute("SELECT 1 FROM corporations WHERE id = "))
+            sql = "UPDATE corporations SET" +
+                    "id = ?, " +
+                    "owner = ?, " +
+                    "creation_date = ?, " +
+                    "name = ?, " +
+                    "description = ?, " +
+                    "icon = ?, " +
+                    "hq = ?, " +
+                    "experience = ?, " +
+                    "children = ?, " +
+                    "children_joindates = ?, " +
+                    "achievements = ?, " +
+                    "settings = ?, " +
+                    "invited = ? " +
+                    "WHERE id = \"" + this.id+ "\""; 
+        else
+            sql = "INSERT INTO businesses VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+        PreparedStatement ps = db.prepareStatement(sql);
 
         ps.setString(1, this.id.toString());
         ps.setString(2, this.owner.getUniqueId().toString());

@@ -208,8 +208,6 @@ public final class NovaPlayer {
      */
     public double getBalance(@NotNull Economy econ) throws IllegalArgumentException {
         if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
-
-        boolean zero = false;
         String econName = econ.getName().toLowerCase();
 
         return (double) pConfig.getOrDefault("economies." + econName + ".balance", 0D);
@@ -243,7 +241,17 @@ public final class NovaPlayer {
             if (NovaConfig.getConfiguration().isDatabaseEnabled()) {
                 Connection db = NovaConfig.getConfiguration().getDatabaseConnection();
 
-                PreparedStatement ps = db.prepareStatement("INSERT INTO players VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE id=VALUES(id), data=VALUES(data) stats=VALUES(stats)");
+                String sql;
+                if (db.createStatement().execute("SELECT 1 FROM players WHERE id = \"" + p.getUniqueId() + "\""))
+                    sql = "UPDATE players SET " +
+                            "id = ?, " +
+                            "data = ?, " +
+                            "stats = ? " +
+                            "WHERE id = \"" + p.getUniqueId() + "\"";   
+                else
+                    sql = "INSERT INTO players VALUES (?, ?, ?)";
+                
+                PreparedStatement ps = db.prepareStatement(sql);
                 ps.setString(1, p.getUniqueId().toString());
 
                 ByteArrayOutputStream os = new ByteArrayOutputStream();

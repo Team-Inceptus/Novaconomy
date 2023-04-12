@@ -686,7 +686,6 @@ public final class Business implements ConfigurationSerializable {
      * @deprecated Entire Bukkit Serialization is no longer used; this method exists only for the purposes of converting legacy businesses
      * @return Deserialized Business
      */
-    @SuppressWarnings("unchecked")
     @Deprecated
     @Nullable
     public static Business deserialize(@Nullable Map<String, Object> serial) {
@@ -792,11 +791,26 @@ public final class Business implements ConfigurationSerializable {
     private void writeDB() throws IOException, SQLException {
         Connection db = NovaConfig.getConfiguration().getDatabaseConnection();
 
-        PreparedStatement ps = db.prepareStatement("INSERT INTO businesses VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE " +
-                "id=VALUES(id), owner=VALUES(owner), creation_date=VALUES(creation_date), name=VALUES(name), icon=VALUES(icon), home=VALUES(home), " +
-                "products=VALUES(products), resources=VALUES(resources), settings=VALUES(settings), stats=VALUES(stats), keywords=VALUES(keywords), " +
-                "adbal=VALUES(adbal), blacklist=VALUES(blacklist)"
-        );
+        String sql;
+        if (db.createStatement().execute("SELECT 1 FROM businesses WHERE id = \"" + this.id + "\""))
+            sql = "UPDATE businesses SET " +
+                    "owner = ?, " +
+                    "creation_date = ?, " +
+                    "name = ?, " +
+                    "icon = ?, " +
+                    "home = ?, " +
+                    "products = ?, " +
+                    "resources = ?, " +
+                    "settings = ?, " +
+                    "stats = ?, " +
+                    "keywords = ?, " +
+                    "adbal = ?, " +
+                    "blacklist = ? " +
+                    "WHERE id = \"" + this.id + "\"";
+        
+        else sql = "INSERT INTO businesses VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+        PreparedStatement ps = db.prepareStatement(sql);
         ps.setString(1, this.id.toString());
         ps.setString(2, this.owner.getUniqueId().toString());
         ps.setLong(3, this.creationDate);
@@ -1004,7 +1018,6 @@ public final class Business implements ConfigurationSerializable {
         oConfig.save(other);
     }
 
-    @SuppressWarnings("unchecked")
     private static Business readFile(File folder) throws IOException, ReflectiveOperationException {
         File info = new File(folder, "information.dat");
         if (!info.exists()) throw new IllegalStateException("Business information file does not exist!");
