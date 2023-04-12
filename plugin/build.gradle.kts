@@ -4,7 +4,11 @@ import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 dependencies {
     // Spigot
-    compileOnly("org.spigotmc:spigot-api:1.8-R0.1-SNAPSHOT")
+    compileOnly("org.spigotmc:spigot-api") {
+        version {
+            strictly("1.8-R0.1-SNAPSHOT")
+        }
+    }
 
     // Implementation Dependencies
     implementation("org.bstats:bstats-bukkit:3.0.1")
