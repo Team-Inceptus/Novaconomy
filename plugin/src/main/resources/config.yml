@@ -271,3 +271,37 @@ Corporation:
     # The modifier for the amount of experience gained from a Product Purchase
     # 1.0 ~ (Product Price Amount * Conversion Scale) / 2
     ProductIncreaseModifier: 1.0
+
+# Novaconomy Market Section
+Market:
+  
+  # Whether Market features are currently enabled
+  Enabled: true
+
+  # Overrides the base price of an item (requires NO economy sign)
+  # Case Insensitive Material Names, can be integer or decimal values, supports namespaces
+  BasePriceOverride: {}
+    # Example:
+    # DIAMOND: 100
+    # Cobblestone: 0.75
+    # "minecraft:dirt": 0.4
+
+  # Market Restock Options
+  Restock:
+    # Whether Automatic Market restocking is enabled
+    Enabled: true
+
+    # The base amount of items to restock by
+    Base: 1000
+
+    # Whether the total amount of money in the bank has an influence on how much
+    # will be restocked for each item
+    #
+    # If this is enabled, the plugin will perform a calculation to determine how
+    # much each restock will cost based on how much money is currently in the bank.
+    # NO MONEY WILL BE REMOVED FROM THE BANK
+    BankInfluence: true
+
+    # How often, in ticks, the Market should restock its items
+    # 20 ticks = 1 second
+    IntervalTicks: 1728000
