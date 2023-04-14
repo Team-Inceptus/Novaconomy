@@ -1,6 +1,7 @@
 package us.teaminceptus.novaconomy.api;
 
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -361,6 +362,23 @@ public interface NovaConfig  {
         if (!config.isString("Database.Database")) config.set("Database.Database", "novaconomy");
         if (!config.isString("Database.Username")) config.set("Database.Username", "");
         if (!config.isString("Database.Password")) config.set("Database.Password", "");
+
+        // Market
+
+        if (!config.isConfigurationSection("Market")) config.createSection("Market");
+        if (!config.isBoolean("Market.Enabled")) config.set("Market.Enabled", true);
+
+        if (!config.isConfigurationSection("Market.BasePriceOverride")) config.createSection("Market.BasePriceOverride");
+        for (String s : config.getConfigurationSection("Market.BasePriceOverride").getKeys(false))
+            if (Material.matchMaterial(s) == null || (!config.isDouble("Market.BasePriceOverride." + s) && !config.isInt("Market.BasePriceOverride." + s)))
+                config.set("Market.BasePriceOverride." + s, null);
+        
+
+        if (!config.isConfigurationSection("Market.Restock")) config.createSection("Market.Restock");
+        if (!config.isBoolean("Market.Restock.Enabled")) config.set("Market.Restock.Enabled", true);
+        if (!config.isInt("Market.Restock.Base") && !config.isLong("Market.Restock.Base")) config.set("Market.Restock.Base", 1000);
+        if (!config.isBoolean("Market.Restock.BankInfluence")) config.set("Market.Restock.BankInfluence", true);
+        if (!config.isInt("Market.Restock.IntervalTicks") && !config.isLong("Market.Restock.IntervalTicks")) config.set("Market.Restock.IntervalTicks", 1728000);
 
         try { config.save(f); } catch (IOException e) { print(e); }
 
@@ -883,31 +901,6 @@ public interface NovaConfig  {
     }
 
     /**
-     * Whether the Stock Market is currently enabled.
-     * @return true if enabled, else false
-     */
-    boolean isMarketEnabled();
-
-    /**
-     * Sets whether the Stock Market is currently enabled.
-     * @param enabled true if enabled, else false
-     */
-    void setMarketEnabled(boolean enabled);
-
-    /**
-     * Fetches the Market Tax percentage.
-     * @return Market Tax percentage
-     */
-    double getMarketTax();
-
-    /**
-     * Sets the Market Tax percentage.
-     * @param tax Market Tax percentage
-     * @throws IllegalArgumentException if tax is 0 or less
-     */
-    void setMarketTax(double tax) throws IllegalArgumentException;
-
-    /**
      * Fetches whether business advertising is enabled.
      * @return true if enabled, else false
      */
@@ -995,6 +988,5 @@ public interface NovaConfig  {
      * @see #isDatabaseConversionEnabled()
      */
     void setDatabaseConversionEnabled(boolean enabled);
-
 
 }

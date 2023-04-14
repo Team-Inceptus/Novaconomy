@@ -1,6 +1,7 @@
 package us.teaminceptus.novaconomy;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.jeff_media.updatechecker.UpdateCheckSource;
 import com.jeff_media.updatechecker.UpdateChecker;
 import org.bstats.bukkit.Metrics;
@@ -19,6 +20,8 @@ import org.bukkit.permissions.PermissionAttachmentInfo;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.util.io.BukkitObjectInputStream;
+import org.bukkit.util.io.BukkitObjectOutputStream;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.abstraction.CommandWrapper;
@@ -48,18 +51,20 @@ import us.teaminceptus.novaconomy.treasury.TreasuryRegistry;
 import us.teaminceptus.novaconomy.util.NovaUtil;
 import us.teaminceptus.novaconomy.vault.VaultRegistry;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.nio.file.Files;
 import java.sql.*;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static us.teaminceptus.novaconomy.abstraction.Wrapper.*;
 import static us.teaminceptus.novaconomy.util.NovaUtil.format;
@@ -423,6 +428,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 			convertToFiles();
 		}
 
+		loadMarket();
 		File globalF = new File(getDataFolder(), "global.yml");
 		if (!globalF.exists()) saveResource("global.yml", false);
 
@@ -450,7 +456,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 					FileConfiguration config = YamlConfiguration.loadConfiguration(file);
 					String id = file.getName().split("\\.")[0];
 
-					Economy e = config.getObject(id, Economy.class);
+					Economy e = (Economy) config.get(id);
 					if (e == null) continue;
 					e.saveEconomy();
 				}
@@ -656,6 +662,11 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 
 	@Override
 	public void onDisable() {
+		writeMarket();
+
+		SERIALIZABLE.forEach(ConfigurationSerialization::unregisterClass);
+		for (Player p : Bukkit.getOnlinePlayers()) w.removePacketInjector(p);
+
 		if (db != null) {
 			try {
 				db.close();
@@ -665,9 +676,6 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 			}
 			getLogger().info("Closed Database Connection...");
 		}
-
-		SERIALIZABLE.forEach(ConfigurationSerialization::unregisterClass);
-		for (Player p : Bukkit.getOnlinePlayers()) w.removePacketInjector(p);
 
 		getLogger().info("Successfully disabled Novcaonomy");
 	}
@@ -954,29 +962,6 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 	}
 
 	@Override
-	public boolean isMarketEnabled() {
-		return config.getBoolean("Business.Market.Enabled", true);
-	}
-
-	@Override
-	public void setMarketEnabled(boolean enabled) {
-		config.set("Business.Market.Enabled", enabled);
-		saveConfig();
-	}
-
-	@Override
-	public double getMarketTax() {
-		return config.getDouble("Business.Market.MarketTax", 0.05);
-	}
-
-	@Override
-	public void setMarketTax(double tax) throws IllegalArgumentException {
-		if (tax <= 0) throw new IllegalArgumentException("Tax must be greater than 0");
-		config.set("Business.Market.MarketTax", tax);
-		saveConfig();
-	}
-
-	@Override
 	public boolean isAdvertisingEnabled() {
 		return config.getBoolean("Business.Advertising.Enabled", true);
 	}
@@ -1203,63 +1188,268 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 
     // Market Impl
 
-    static final Map<Material, Double> prices = new HashMap<>();
-    static final Map<Material, Integer> purchaseCount = new HashMap<>();
+	@Override
+	public boolean isMarketEnabled() {
+		return config.getBoolean("Market.Enabled", true);
+	}
 
-    private void readMarket() throws IOException, ClassNotFoundException {
-        ObjectInputStream ois = new ObjectInputStream(Files.newInputStream(marketFile.toPath()));
-        prices.putAll((Map<Material, Double>) ois.readObject());
-        purchaseCount.putAll((Map<Material, Integer>) ois.readObject());
-        ois.close();
+	@Override
+	public void setMarketEnabled(boolean enabled) {
+		config.set("Market.Enabled", enabled);
+		saveConfig();
+	}
+
+	@Override
+	public boolean isMarketRestockEnabled() {
+		return config.getBoolean("Market.Restock.Enabled", true);
+	}
+
+	@Override
+	public void setMarketRestockEnabled(boolean enabled) {
+		config.set("Market.Restock.Enabled", enabled);
+		saveConfig();
+	}
+
+	@Override
+	public long getMarketRestockInterval() {
+		return config.getLong("Market.Restock.IntervalTicks", 1728000);
+	}
+
+	@Override
+	public void setMarketRestockInterval(long interval) {
+		config.set("Market.Restock.IntervalTicks", interval);
+		saveConfig();
+	}
+
+	@Override
+	public long getMarketRestockAmount() {
+		return config.getLong("Market.Restock.Base", 1000);
+	}
+
+	@Override
+	public void setMarketRestockAmount(long amount) {
+		config.set("Market.Restock.Base", amount);
+		saveConfig();
+	}
+
+	@Override
+	public boolean hasMarketBankInfluence() {
+		return config.getBoolean("Market.Restock.BankInfluence", true);
+	}
+
+	@Override
+	public void setMarketBankInfluence(boolean enabled) {
+		config.set("Market.Restock.BankInfluence", enabled);
+		saveConfig();
+	}
+
+	// TODO Create Base Prices
+	static final Map<String, Double> basePrices = ImmutableMap.<String, Double>builder()
+		.build();
+
+    static final List<Receipt> purchases = new ArrayList<>();
+	static final Map<Material, Long> stock = new HashMap<Material, Long>();
+
+	private void loadMarket() {
+		readMarket();
+
+		basePrices.keySet().stream().filter(m -> Material.matchMaterial(m) != null).map(Material::matchMaterial).forEach(m -> {
+			stock.putIfAbsent(m, getMarketRestockAmount());
+		});
+	}
+
+	private void writeMarket() {
+		try {
+			if (isDatabaseEnabled())
+				writeMarketDB();
+			else
+				writeMarketFile();
+		} catch (Exception e) {
+			NovaConfig.print(e);
+		} 
+	}
+
+	private void readMarket() {
+		try {
+			if (isDatabaseEnabled())
+				readMarketDB();
+			else
+				readMarketFile();
+		} catch (Exception e) {
+			NovaConfig.print(e);
+		} 
+	}
+
+	private static void writeMarketDB() throws SQLException, IOException {
+		db.createStatement().execute("CREATE TABLE IF NOT EXISTS market (" +
+				"material VARCHAR(255) NOT NULL, " +
+				"purchases LONGBLOB NOT NULL, " +
+				"stock BIGINT NOT NULL, " +
+				"PRIMARY KEY (material))"
+		);
+
+		for (Material m : basePrices.keySet().stream().map(Material::matchMaterial).filter(Objects::nonNull).collect(Collectors.toList())) {
+			String sql;
+			PreparedStatement has = db.prepareStatement("SELECT 1 FROM market WHERE material = ?");
+			has.setString(1, m.name());
+
+			if (has.execute())
+				sql = "UPDATE market SET material = ?, purchases = ?, stock = ? WHERE material = \"" + m.name() + "\"";
+			else 
+				sql = "INSERT INTO market VALUES (?, ?, ?)";
+			
+			PreparedStatement ps = db.prepareStatement(sql);
+			ps.setString(1, m.name());
+
+			ByteArrayOutputStream pOs = new ByteArrayOutputStream();
+			BukkitObjectOutputStream pBos = new BukkitObjectOutputStream(pOs);
+			pBos.writeObject(purchases.stream()
+					.filter(r -> r.getPurchased() == m)
+					.collect(Collectors.toList())
+			);
+			pBos.close();
+
+			ps.setBytes(2, pOs.toByteArray());
+			ps.setLong(3, stock.get(m));
+			
+			ps.executeUpdate();
+			ps.close();
+		}
+		
+	}
+
+	private static void readMarketDB() throws SQLException, IOException, ClassNotFoundException {
+		for (Material m : basePrices.keySet().stream().map(Material::matchMaterial).filter(Objects::nonNull).collect(Collectors.toList())) {
+			PreparedStatement ps = db.prepareStatement("SELECT 1 FROM market WHERE material = ?");
+			ps.setString(1, m.name());
+
+			ResultSet rs = ps.executeQuery();
+
+			if (!rs.next()) continue;
+			
+			ByteArrayInputStream pIs = new ByteArrayInputStream(rs.getBytes("purchases"));
+			BukkitObjectInputStream pBis = new BukkitObjectInputStream(pIs);
+			purchases.addAll((List<Receipt>) pBis.readObject());
+			pBis.close();
+
+			stock.put(m, rs.getLong("stock"));
+
+			rs.close();
+		}
+	}
+
+    private static void writeMarketFile() throws IOException {
+        File marketFile = new File(NovaConfig.getDataFolder(), "market.dat");
+		if (!marketFile.exists()) marketFile.createNewFile();
+
+		FileOutputStream fos = new FileOutputStream(marketFile);
+		BukkitObjectOutputStream bos = new BukkitObjectOutputStream(fos);
+		bos.writeObject(purchases);
+		bos.writeObject(stock);
+		bos.close();
     }
 
-    private void writeMarket() throws IOException {
-        ObjectOutputStream oos = new ObjectOutputStream(Files.newOutputStream(marketFile.toPath()));
-        oos.writeObject(prices);
-        oos.writeObject(purchaseCount);
-        oos.close();
+    private static void readMarketFile() throws IOException, ClassNotFoundException {
+		File marketFile = new File(NovaConfig.getDataFolder(), "market.dat");
+		if (!marketFile.exists()) return;
+
+		FileInputStream fis = new FileInputStream(marketFile);
+		BukkitObjectInputStream bis = new BukkitObjectInputStream(fis);
+		purchases.addAll((List<Receipt>) bis.readObject());
+		stock.putAll((Map<Material, Long>) bis.readObject());
+		bis.close();
     }
 
-    private void writeMarketWithCatch() {
-        try {
-            writeMarket();
-        } catch (IOException e) {
-            NovaConfig.print(e);    
-        }
-    }
+	@Override
+	public double getBasePrice(@NotNull Material m) throws IllegalArgumentException {
+		if (m == null) throw new IllegalArgumentException("Material cannot be null");
+		if (getBasePriceOverrides().containsKey(m)) return getBasePriceOverrides().get(m);
+		
+		double base = basePrices.getOrDefault(m, -1D);
+		if (base == -1) throw new IllegalArgumentException("Material not sold on market");
 
-    private void readMarketWithCatch() {
-        try {
-            readMarket();
-        } catch (IOException | ClassNotFoundException e) {
-            NovaConfig.print(e);
-        }
-    }
+		return base;
+	}
 
     @Override
-    public double getPrice(@NotNull Material m) {
-//        if (prices.isEmpty()) readMarketWithCatch();
-//        return prices.getOrDefault(m, 1.0);
-		throw new UnsupportedOperationException("Not implemented yet");
-    }
+    public double getPrice(@NotNull Material m) throws IllegalArgumentException {
+		double base = basePrices.getOrDefault(m, -1D);
+		if (base == -1) throw new IllegalArgumentException("Material not sold on market");
+
+		long purchasesLastRestock = purchases.stream()
+				.filter(r -> r.getPurchased() == m)
+				.filter(r -> r.getTimestamp().getTime() > System.currentTimeMillis() - (getMarketRestockInterval() * 500))
+				.count();
+
+		long stock = Novaconomy.stock.get(m);
+		double istock = stock + purchasesLastRestock;
+		
+		return base * (1 + (1 - stock / istock) + (purchasesLastRestock / istock));
+	}
+
+	@Override
+	public long getStock(@NotNull Material m) {
+		return stock.get(m);
+	}
 
     @Override
     public @NotNull Receipt buy(@NotNull OfflinePlayer buyer, @NotNull Material m, int amount, @NotNull Economy econ) throws IllegalArgumentException {
-//        if (buyer == null) throw new IllegalArgumentException("Buyer cannot be null");
-//        if (m == null) throw new IllegalArgumentException("Material cannot be null");
-//        if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
-//        NovaPlayer np = new NovaPlayer(buyer);
-//
-//        double price = getPrice(m, econ) * amount;
-//        if (price <= 0) throw new IllegalArgumentException("Price must be positive");
-//
-//        if (np.getBalance(econ) < price) throw new IllegalArgumentException("Insufficient funds");
-//        np.remove(econ, price);
-//        purchaseCount.put(m, purchaseCount.getOrDefault(m, 0) + amount);
-//        writeMarketWithCatch();
-//
-//		return new Receipt(m, price, buyer);
-		throw new UnsupportedOperationException("Not implemented yet");
+    	if (buyer == null) throw new IllegalArgumentException("Buyer cannot be null");
+        if (m == null) throw new IllegalArgumentException("Material cannot be null");
+        if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
+		if (stock.get(m) < amount) throw new IllegalArgumentException("Insufficient stock");
+	
+	    NovaPlayer np = new NovaPlayer(buyer);
+
+        double price = getPrice(m, econ) * amount;
+        if (price <= 0) throw new IllegalArgumentException("Price must be positive");
+
+        if (np.getBalance(econ) < price) throw new IllegalArgumentException("Insufficient funds");
+        np.remove(econ, price);
+
+	    Receipt r = new Receipt(m, price / amount, amount, buyer);
+	    purchases.add(r);
+	    stock.put(m, stock.get(m) - amount);
+
+	    writeMarket();
+	    return r;
     }
+
+	@Override
+	public Map<Material, Double> getBasePriceOverrides() {
+		return config.getConfigurationSection("Market.BasePriceOverride").getValues(false)
+				.entrySet().stream()
+				.map(e -> {
+					if (Material.matchMaterial(e.getKey()) == null) throw new IllegalArgumentException("Invalid Material '" + e.getKey() + "'");
+					double d = Double.parseDouble(e.getValue().toString());
+					if (d < 0) throw new IllegalArgumentException("Base price for '" + e.getKey() + "' must be positive");
+					
+					return new AbstractMap.SimpleEntry<>(Material.matchMaterial(e.getKey()), d);
+				})
+				.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+	}
+
+	@Override
+	public void setBasePriceOverrides(@NotNull Map<Material, Double> overrides) throws IllegalArgumentException {
+		if (overrides == null) throw new IllegalArgumentException("Overrides cannot be null");
+		
+		for (Material m : overrides.keySet()) {
+			if (m == null) throw new IllegalArgumentException("Overrides cannot contain null material");
+			if (overrides.get(m) == null) throw new IllegalArgumentException("Price cannot be null for '" + m + "'");
+			if (overrides.get(m) < 0) throw new IllegalArgumentException("Price must be positive for '" + m + "'");
+
+			config.set("Market.BasePriceOverride." + m.name(), overrides.get(m));
+		}
+		saveConfig();
+	}
+
+	@Override
+	public void setBasePriceOverride(@NotNull Material m, double price) throws IllegalArgumentException {
+		if (m == null) throw new IllegalArgumentException("Material cannot be null");
+		if (price < 0) throw new IllegalArgumentException("Price must be positive for '" + m + "'");
+
+		config.set("Market.BasePriceOverride." + m.name(), price);
+		saveConfig();
+	}
 
 }

@@ -1302,6 +1302,7 @@ public final class GUIManager implements Listener {
                         }));
                         break;
                     }
+                    default: break;
                 }
             })
             .put("business:invites", (e, inv) -> {
@@ -1320,7 +1321,6 @@ public final class GUIManager implements Listener {
 
     static final Map<String, BiConsumer<InventoryClickEvent, NovaInventory>> CLICK_INVENTORIES = ImmutableMap.<String, BiConsumer<InventoryClickEvent, NovaInventory>>builder()
             .put("confirm_menu", (e, inv) -> {
-                Player p = (Player) e.getWhoClicked();
                 ItemStack item = e.getCurrentItem();
                 String type = of(item).getString("type");
                 if (type.isEmpty()) return;
