@@ -50,6 +50,7 @@ import us.teaminceptus.novaconomy.util.inventory.Items;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
@@ -215,8 +216,14 @@ public interface CommandWrapper {
         NovaConfig.loadConfig();
         NovaConfig.reloadRunnables();
         NovaConfig.loadFunctionalityFile();
-        YamlConfiguration.loadConfiguration(new File(plugin.getDataFolder(), "businesses.yml"));
-        YamlConfiguration.loadConfiguration(new File(plugin.getDataFolder(), "global.yml"));
+
+        try {
+            Method loadFiles = NovaConfig.getPlugin().getClass().getDeclaredMethod("loadFiles");
+            loadFiles.setAccessible(true);
+            loadFiles.invoke(NovaConfig.getPlugin());
+        } catch (ReflectiveOperationException e) {
+            NovaConfig.print(e);
+        }
 
         Corporation.reloadCorporations();
         Business.reloadBusinesses();
