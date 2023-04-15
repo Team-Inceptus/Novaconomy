@@ -102,6 +102,7 @@ public interface CommandWrapper {
         put("novaconfig", Arrays.asList("novaconomyconfig", "nconfig", "nconf"));
         put("businessleaderboard", Arrays.asList("bleaderboard", "bboard", "businessl", "bl", "businessboard"));
         put(CORPORATION_TAG, Arrays.asList("corp", "ncorp", "c"));
+        put("corporationchat", Arrays.asList("corpchat", "cc", "ncc", "corporationc", "corpc", "cchat"));
     }};
 
     Map<String, String> COMMAND_PERMISSION = new HashMap<String, String>() {{
@@ -122,6 +123,7 @@ public interface CommandWrapper {
        put("novaconfig", "novaconomy.admin.config");
        put("businessleaderboard", "novaconomy.user.leaderboard");
        put(CORPORATION_TAG, "novaconomy.user.corporation");
+       put("corporationchat", "novaconomy.user.corporation");
     }};
 
     Map<String, String> COMMAND_DESCRIPTION = new HashMap<String, String>() {{
@@ -144,6 +146,7 @@ public interface CommandWrapper {
        put("novaconfig", "View or edit the Novaconomy Configuration");
        put("businessleaderboard", "View the top 10 businesses in various categories");
        put(CORPORATION_TAG, "Manage your Novaconomy Corporation");
+       put("corporationchat", "Chat with your Novaconomy Corporation");
     }};
 
     Map<String, String> COMMAND_USAGE = new HashMap<String, String>() {{
@@ -166,6 +169,7 @@ public interface CommandWrapper {
        put("novaconfig", "/novaconfig <naturalcauses|reload|rl|...> <args...>");
        put("businessleaderboard", "/businessleaderboard");
        put(CORPORATION_TAG, "/nc <create|delete|edit|...> <args...>");
+       put("corporationchat", "/cc <message>");
     }};
 
     // Command Methods
@@ -3345,6 +3349,26 @@ public interface CommandWrapper {
 
         p.teleport(c.getHeadquarters());
         p.sendMessage(ChatColor.AQUA + get("constants.teleporting"));
+    }
+
+    default void corporationChat(@NotNull Player p, String message) {
+        if (!Corporation.existsByMember(p)) {
+            p.sendMessage(getError("error.corporation.none.member"));
+            return;
+        }
+
+        Corporation c = Corporation.byMember(p);
+
+        if (!c.getSetting(Settings.Corporation.CHAT)) {
+            p.sendMessage(getError("error.corporation.chat_disabled"));
+            return;
+        }
+
+        for (Player m : c.getMembers().stream().filter(OfflinePlayer::isOnline).map(OfflinePlayer::getPlayer).collect(Collectors.toList()))
+            m.sendMessage(ChatColor.GOLD + "[" + c.getName() + "] " +
+                    ChatColor.GRAY + (p.getDisplayName() == null ? p.getName() : p.getDisplayName()) + ChatColor.DARK_GRAY + " > " +
+                    ChatColor.WHITE + ChatColor.translateAlternateColorCodes('&', message)
+            );
     }
 
 }

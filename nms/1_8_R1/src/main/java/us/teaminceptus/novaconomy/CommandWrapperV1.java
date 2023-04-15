@@ -1737,11 +1737,47 @@ public final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         corporationHeadquarters(p);
                         break;
                     }
+                    case "chat": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
+                        StringBuilder msg = new StringBuilder();
+                        for (int i = 1; i < args.length; i++)
+                            msg.append(args[i]).append(" ");
+
+                        corporationChat(p, msg.toString());
+                        break;
+                    }
+                    case "setting":
+                    case "settings": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
+                        settings(p, CORPORATION_TAG);
+                        break;
+                    }
                     default: {
                         sender.sendMessage(getMessage("error.argument"));
                         return false;
                     }
                 }
+            }
+            case "corporationchat":
+            case "corpchat":
+            case "cc":
+            case "ncc":
+            case "corporationc":
+            case "corpc":
+            case "cchat": {
+                if (!(sender instanceof Player)) return false;
+                Player p = (Player) sender;
+
+                StringBuilder msg = new StringBuilder();
+                for (int i = 1; i < args.length; i++)
+                    msg.append(args[i]).append(" ");
+
+                corporationChat(p, msg.toString());
+                break;
             }
             default: {
                 sender.sendMessage(getMessage("error.argument"));

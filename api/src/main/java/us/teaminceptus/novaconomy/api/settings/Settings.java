@@ -260,7 +260,13 @@ public final class Settings {
          * The privacy setting of a Corporation, determining how and whether businesses can join.
          */
         @SettingDescription("settings.corporation.join_type")
-        public static final Corporation<JoinType> JOIN_TYPE = ofEnum("join_type", "constants.settings.name.join_type", JoinType.class, JoinType.INVITE_ONLY);        
+        public static final Corporation<JoinType> JOIN_TYPE = ofEnum("join_type", "constants.settings.name.join_type", JoinType.class, JoinType.INVITE_ONLY);
+
+        /**
+         * Whether the Corporation has enabled corporation-only chat.
+         */
+        @SettingDescription("settings.corporation.chat")
+        public static final Corporation<Boolean> CHAT = ofBoolean("chat", "constants.settings.name.chat", true);
 
         private final String key;
         private final T defaultValue;
@@ -278,6 +284,10 @@ public final class Settings {
 
         private static <T extends Enum<T>> Corporation<T> ofEnum(String key, String dKey, Class<T> clazz, T defaultValue) {
             return new Corporation<>(key, dKey, clazz, defaultValue, ImmutableSet.copyOf(defaultValue.getDeclaringClass().getEnumConstants()));
+        }
+
+        private static Corporation<Boolean> ofBoolean(String key, String dKey, boolean defaultValue) {
+            return new Corporation<>(key, dKey, Boolean.class, defaultValue, ImmutableSet.of(true, false));
         }
 
         @Override
@@ -349,7 +359,6 @@ public final class Settings {
                     .filter(c -> c.name().equalsIgnoreCase(name))
                     .findFirst()
                     .orElse(null);
-
         }
 
         /**
@@ -364,7 +373,7 @@ public final class Settings {
 
             return Arrays.stream(values())
                     .filter(c -> c.name().equalsIgnoreCase(name))
-                    .filter(c -> clazz.isAssignableFrom(c.getType()))
+                    .filter(c -> clazz == null || clazz.isAssignableFrom(c.getType()))
                     .map(c -> (Corporation<T>) c)
                     .findFirst()
                     .orElse(null);
@@ -380,6 +389,7 @@ public final class Settings {
         public T parseValue(@NotNull String value) {
             switch (key) {
                 case "join_type": return (T) JoinType.valueOf(value.toUpperCase());
+                case "chat": return (T) Boolean.valueOf(value);
                 default:
                     throw new IllegalArgumentException("Unknown Corporation Setting: " + key);
             }

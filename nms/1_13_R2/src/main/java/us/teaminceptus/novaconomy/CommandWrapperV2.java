@@ -808,5 +808,24 @@ public final class CommandWrapperV2 implements CommandWrapper {
 
         @Subcommand({"hq", "headquarters"})
         public void corporationHeadquarters(Player p) { wrapper.corporationHeadquarters(p); }
+
+        @Subcommand("chat")
+        public void corporationChat(Player p, String message) {
+            wrapper.corporationChat(p, message);
+        }
+
+        @Subcommand({"setting", "settings"})
+        public void corporationSettings(Player p) {
+            wrapper.settings(p, CORPORATION_TAG);
+        }
+    }
+
+    @Override
+    @Command({"corporationchat", "corpchat", "cc", "ncc", "corporationc", "corpc", "cchat"})
+    @Usage("/cc <message>")
+    @Description("Chat with your Novaconomy Corporation")
+    @CommandPermission("novaconomy.user.corporation")
+    public void corporationChat(Player p, String message) {
+        CommandWrapper.super.corporationChat(p, message);
     }
 }

@@ -474,6 +474,8 @@ public final class Corporation {
      */
     @Nullable
     public <T> T getSetting(@NotNull Settings.Corporation<T> setting) {
+        if (setting.getType().isPrimitive()) return getSetting(setting, setting.getDefaultValue());
+
         return getSetting(setting, null);
     }
 
@@ -1020,14 +1022,14 @@ public final class Corporation {
      * <p>This method is called automatically.</p>
      */
     public void saveCorporation() {
+        CORPORATION_CACHE.clear();
+
         try {
             if (NovaConfig.getConfiguration().isDatabaseEnabled()) {
                 checkTable();
                 writeDB();
             } else {
                 if (!folder.exists()) folder.mkdir();
-                CORPORATION_CACHE.clear();
-
                 writeFile();
             }
         } catch (Exception e) {
@@ -1228,7 +1230,12 @@ public final class Corporation {
 
         this.settings.entrySet()
                 .stream()
-                .map(e -> new AbstractMap.SimpleEntry<>(e.getKey().name().toLowerCase(), e.getValue().toString()))
+                .map(e -> {
+                    Object value = e.getValue();
+                    if (value instanceof Enum<?>) value = value.toString();
+
+                    return new AbstractMap.SimpleEntry<>(e.getKey().name().toLowerCase(), value);
+                })
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
                 .forEach(settingsSection::set);
 
