@@ -303,7 +303,7 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
     /**
      * Whether an Economy with this symbol exists.
      * @param c Symbol of the economy
-     * @return true if economy exists, else false
+     * @return true if economy exists, else false`
      */
     public static boolean exists(char c) {
         return getEconomy(c) != null;
@@ -347,14 +347,13 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
                 ResultSet rs = ps.executeQuery();
 
                 while (rs.next()) economies.add(readDB(rs));
+
                 ps.close();
             } catch (Exception e) {
                 NovaConfig.print(e);
             }
         else {
             List<File> files = NovaConfig.getEconomiesFolder().listFiles() == null ? new ArrayList<>() : Arrays.asList(NovaConfig.getEconomiesFolder().listFiles());
-            if (files.isEmpty()) return economies;
-
             for (File f : files) {
                 if (f == null) continue;
                 UUID id = UUID.fromString(f.getName().replace(".yml", ""));
@@ -455,11 +454,30 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
     public static Economy getEconomy(@Nullable UUID uid) {
         if (uid == null) return null;
 
-        File f = new File(NovaConfig.getEconomiesFolder(), uid + ".yml");
-        if (!f.exists()) return null;
+        Economy econ = null;
 
-        FileConfiguration config = YamlConfiguration.loadConfiguration(f);
-        return (Economy) config.get(uid.toString());
+        try {
+            if (NovaConfig.getConfiguration().isDatabaseEnabled()) {
+                Connection db = NovaConfig.getConfiguration().getDatabaseConnection();
+
+                PreparedStatement ps = db.prepareStatement("SELECT * FROM economies WHERE id = ?");
+                ps.setString(1, uid.toString());
+
+                ResultSet rs = ps.executeQuery();
+                if (rs.next()) econ = readDB(rs);
+                ps.close();
+            } else {
+                File f = new File(NovaConfig.getEconomiesFolder(), uid + ".yml");
+                if (!f.exists()) return null;
+
+                FileConfiguration config = YamlConfiguration.loadConfiguration(f);
+                econ = (Economy) config.get(uid.toString());
+            }
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+
+        return econ;
     }
 
     /**
@@ -533,7 +551,7 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
                 "symbol CHAR(1) NOT NULL," +
                 "icon BLOB(65535) NOT NULL," +
                 "natural_increase BOOL NOT NULL," +
-                "conversion_scale DOUBLE(5, 2) NOT NULL," +
+                "conversion_scale DOUBLE NOT NULL," +
                 "interest BOOL NOT NULL," +
                 "custom_model_data INT NOT NULL," +
                 "clickable_reward BOOL NOT NULL," +
@@ -571,20 +589,22 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
 
         String sql;
 
-        if (db.createStatement().execute("SELECT 1 FROM economies WHERE id = \"" + this.uid +"\""))
-            sql = "UPDATE economies SET" +
-                    "id = ?, " +
-                    "name = ?, " +
-                    "symbol = ?, " +
-                    "icon = ?, " +
-                    "natural_increase = ?, " +
-                    "conversion_scale = ?, " +
-                    "interest = ?, " +
-                    "custom_model_data = ?, " +
-                    "clickable_reward = ?"  +
-                    "WHERE id = \"" + this.uid + "\"";
-        else
-            sql = "INSERT INTO economies VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        try (ResultSet rs = db.createStatement().executeQuery("SELECT * FROM economies WHERE id = \"" + this.uid +"\"")) {
+            if (rs.next())
+                sql = "UPDATE economies SET " +
+                        "id = ?, " +
+                        "name = ?, " +
+                        "symbol = ?, " +
+                        "icon = ?, " +
+                        "natural_increase = ?, " +
+                        "conversion_scale = ?, " +
+                        "interest = ?, " +
+                        "custom_model_data = ?, " +
+                        "clickable_reward = ? " +
+                        "WHERE id = \"" + this.uid + "\"";
+            else
+                sql = "INSERT INTO economies VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        }
 
         PreparedStatement ps = db.prepareStatement(sql);
     

@@ -72,8 +72,6 @@ public interface NovaConfig  {
     @NotNull
     static File getCorporationsFolder() {
         File f = new File(getDataFolder(), "corporations");
-        if (!f.exists()) f.mkdir();
-
         return f;
     }
 
@@ -144,9 +142,7 @@ public interface NovaConfig  {
      * Fetches the folder that all Economies are stored in.
      * @return Economies Folder
      */
-    static File getEconomiesFolder() {
-        return new File(getDataFolder(), "economies");
-    }
+    static File getEconomiesFolder() { return new File(getDataFolder(), "economies"); }
 
     /**
      * Reloads the Interest and Taxes Runnables with new values from the configuration.

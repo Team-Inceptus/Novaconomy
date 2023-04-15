@@ -202,26 +202,23 @@ public final class BusinessStatistics implements ConfigurationSerializable {
             long num = serial.get("timestamp") instanceof Integer ? (int) serial.get("timestamp") : (long) serial.get("timestamp");
 
             Object buyerO = serial.get("buyer");
-            OfflinePlayer buyer = buyerO instanceof OfflinePlayer ? (OfflinePlayer) buyerO : Bukkit.getOfflinePlayer(UUID.fromString((String) buyerO));
+            OfflinePlayer buyer = buyerO == null ? null : buyerO instanceof OfflinePlayer ? (OfflinePlayer) buyerO : Bukkit.getOfflinePlayer(UUID.fromString((String) buyerO));
 
             Object businessO = serial.get("business");
             UUID business = businessO == null ? null : UUID.fromString(businessO.toString());
 
-            try {
-                Transaction t = new Transaction(buyer, null,
-                        new Product(
-                                (ItemStack) serial.get("item"),
-                                new Price(
-                                        serial.containsKey("economy") ? null : Economy.getEconomy(UUID.fromString((String) serial.get("economy"))),
-                                        (double) serial.get("amount")
-                                )
-                        ), num
-                );
-                t.business = business;
-                return t;
-            } catch (NullPointerException | ClassCastException e) {
-                throw new IllegalArgumentException(e);
-            }
+            Transaction t = new Transaction(buyer, null,
+                    new Product(
+                            (ItemStack) serial.get("item"),
+                            new Price(
+                                    serial.containsKey("economy") ? Economy.getEconomy(UUID.fromString((String) serial.get("economy"))) : null,
+                                    (double) serial.get("amount")
+                            )
+                    ), num
+            );
+
+            t.business = business;
+            return t;
         }
     }
 
@@ -268,7 +265,7 @@ public final class BusinessStatistics implements ConfigurationSerializable {
      * @return true if a transaction was made, else false
      */
     public boolean hasLatestTransaction() {
-        return lastTransaction != null;
+        return lastTransaction != null && lastTransaction.getBuyer() != null && lastTransaction.getProduct() != null && lastTransaction.getBusiness() != null;
     }
 
     /**
@@ -347,13 +344,12 @@ public final class BusinessStatistics implements ConfigurationSerializable {
     public Map<String, Object> serialize() {
         return new HashMap<String, Object>() {{
             put("business_id", businessId.toString());
-            put("data", new HashMap<String, Object>() {{
-                put("total_sales", totalSales);
-                put("total_resources", totalResources);
-                put("last_transaction", lastTransaction);
-                put("product_sales", productSales);
-                put("views", views);
-            }});
+            put("total_sales", totalSales);
+            put("total_resources", totalResources);
+            put("product_sales", productSales);
+            put("views", views);
+
+            if (lastTransaction != null) put("last_transaction", lastTransaction);
         }};
     }
 
@@ -370,18 +366,13 @@ public final class BusinessStatistics implements ConfigurationSerializable {
         if (serial == null) return null;
 
         BusinessStatistics s = new BusinessStatistics(UUID.fromString((String) serial.get("business_id")));
+        Map<String, Object> data = serial.containsKey("data") ? (Map<String, Object>) serial.get("data") : serial;
 
-        try {
-            Map<String, Object> data = (Map<String, Object>) serial.get("data");
-
-            s.totalResources = (int) data.get("total_resources");
-            s.totalSales = (int) data.get("total_sales");
-            s.lastTransaction = (Transaction) data.get("last_transaction");
-            s.productSales.putAll((Map<Product, Integer>) data.getOrDefault("product_sales", new HashMap<>()));
-            s.views = (int) data.getOrDefault("views", 0);
-        } catch (ClassCastException e) {
-            throw new IllegalArgumentException(e);
-        } catch (NullPointerException ignored) {}
+        s.totalResources = (int) data.getOrDefault("total_resources", 0);
+        s.totalSales = (int) data.getOrDefault("total_sales", 0);
+        s.lastTransaction = (Transaction) data.get("last_transaction");
+        s.productSales.putAll((Map<Product, Integer>) data.getOrDefault("product_sales", new HashMap<>()));
+        s.views = (int) data.getOrDefault("views", 0);
 
         return s;
     }

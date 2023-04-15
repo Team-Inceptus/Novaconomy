@@ -27,9 +27,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.sql.Connection;
-import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -48,6 +48,17 @@ public final class NovaPlayer {
 
     final PlayerStatistics stats;
 
+    private static void checkTable() throws SQLException {
+        Connection db = NovaConfig.getConfiguration().getDatabaseConnection();
+
+        db.createStatement().execute("CREATE TABLE IF NOT EXISTS players (" +
+                "id CHAR(36) NOT NULL," +
+                "data MEDIUMBLOB NOT NULL," +
+                "stats BLOB(65535) NOT NULL," +
+                "PRIMARY KEY (id))"
+        );
+    }
+
     /**
      * Creates a new NovaPlayer.
      * @param p OfflinePlayer to use
@@ -61,39 +72,15 @@ public final class NovaPlayer {
 
         if (NovaConfig.getConfiguration().isDatabaseEnabled())
             try {
+                checkTable();
                 Connection db = NovaConfig.getConfiguration().getDatabaseConnection();
-
-                db.createStatement().execute("CREATE TABLE IF NOT EXISTS players (" +
-                        "id CHAR(36) NOT NULL," +
-                        "data MEDIUMBLOB NOT NULL," +
-                        "stats BLOB(65535) NOT NULL," +
-                        "PRIMARY KEY (id))"
-                );
 
                 PreparedStatement ps = db.prepareStatement("SELECT * FROM players WHERE id = ?");
                 ps.setString(1, p.getUniqueId().toString());
                 ps.execute();
-
                 ResultSet rs = ps.getResultSet();
 
-                if (NovaConfig.getPlayerDirectory().exists() && NovaConfig.getConfiguration().isDatabaseConversionEnabled()) {
-                    for (File file : NovaConfig.getPlayerDirectory().listFiles()) {
-                        if (file.isDirectory()) continue;
-
-                        FileConfiguration config = YamlConfiguration.loadConfiguration(file);
-
-                        Map<String, Object> data = config.getValues(true);
-                        this.pConfig.putAll(data);
-
-                        stats = (PlayerStatistics) data.get("stats");
-                        pConfig.remove("stats");
-                    }
-
-                    for (File child : NovaConfig.getPlayerDirectory().listFiles()) child.delete();
-                    NovaConfig.getPlayerDirectory().delete();
-
-                    NovaConfig.getLogger().info("Converted All Player Data to Database");
-                } else if (rs.next()) {
+                if (rs.next()) {
                     ByteArrayInputStream is = new ByteArrayInputStream(rs.getBytes("data"));
                     BukkitObjectInputStream bIs = new BukkitObjectInputStream(is);
                     this.pConfig.putAll((Map<String, Object>) bIs.readObject());
@@ -123,39 +110,6 @@ public final class NovaPlayer {
 
             FileConfiguration config = YamlConfiguration.loadConfiguration(pFile);
             pConfig.putAll(config.getValues(true));
-
-            if (NovaConfig.getConfiguration().isDatabaseConversionEnabled()) {
-                Connection db = NovaConfig.getConfiguration().getDatabaseConnection();
-                if (db != null) try {
-                    DatabaseMetaData meta = db.getMetaData();
-                    try (ResultSet players = meta.getTables(null, null, "players", null)) {
-                        if (players.first()) {
-                            PreparedStatement ps = db.prepareStatement("SELECT * FROM players WHERE id = ?");
-                            ps.setString(1, p.getUniqueId().toString());
-                            ps.execute();
-
-                            ResultSet rs = ps.getResultSet();
-
-                            if (rs.first()) {
-                                ByteArrayInputStream is = new ByteArrayInputStream(rs.getBytes("data"));
-                                BukkitObjectInputStream bIs = new BukkitObjectInputStream(is);
-                                this.pConfig.putAll((Map<String, Object>) bIs.readObject());
-                                bIs.close();
-
-                                ByteArrayInputStream statsIs = new ByteArrayInputStream(rs.getBytes("stats"));
-                                BukkitObjectInputStream statsBIs = new BukkitObjectInputStream(statsIs);
-                                stats = (PlayerStatistics) statsBIs.readObject();
-                                statsBIs.close();
-                            } else
-                                stats = new PlayerStatistics(p);
-
-                            rs.close();
-                        }
-                    }
-                } catch (Exception e) {
-                    NovaConfig.print(e);
-                }
-            }
 
             stats = pConfig.containsKey("stats") ? (PlayerStatistics) pConfig.get("stats") : new PlayerStatistics(p);
         }
@@ -242,14 +196,16 @@ public final class NovaPlayer {
                 Connection db = NovaConfig.getConfiguration().getDatabaseConnection();
 
                 String sql;
-                if (db.createStatement().execute("SELECT 1 FROM players WHERE id = \"" + p.getUniqueId() + "\""))
-                    sql = "UPDATE players SET " +
-                            "id = ?, " +
-                            "data = ?, " +
-                            "stats = ? " +
-                            "WHERE id = \"" + p.getUniqueId() + "\"";   
-                else
-                    sql = "INSERT INTO players VALUES (?, ?, ?)";
+                try (ResultSet rs = db.createStatement().executeQuery("SELECT * FROM players WHERE id = \"" + p.getUniqueId() + "\"")) {
+                    if (rs.next())
+                        sql = "UPDATE players SET " +
+                                "id = ?, " +
+                                "data = ?, " +
+                                "stats = ? " +
+                                "WHERE id = \"" + p.getUniqueId() + "\"";
+                    else
+                        sql = "INSERT INTO players VALUES (?, ?, ?)";
+                }
                 
                 PreparedStatement ps = db.prepareStatement(sql);
                 ps.setString(1, p.getUniqueId().toString());

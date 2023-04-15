@@ -666,22 +666,25 @@ public final class Corporation {
             } catch (Exception e) {
                 NovaConfig.print(e);
             }
-        else for (File folder : NovaConfig.getCorporationsFolder().listFiles()) {
-            if (folder == null) continue;
-            if (!folder.isDirectory()) continue;
+        else {
+            List<File> files = NovaConfig.getCorporationsFolder().listFiles() == null ? new ArrayList<>() : Arrays.asList(NovaConfig.getCorporationsFolder().listFiles());
+            for (File folder : files) {
+                if (folder == null) continue;
+                if (!folder.isDirectory()) continue;
 
-            Corporation c;
+                Corporation c;
 
-            try {
-                c = readFile(folder.getAbsoluteFile());
-            } catch (OptionalDataException e) {
-                NovaConfig.print(e);
-                continue;
-            } catch (IOException | ReflectiveOperationException e) {
-                throw new IllegalStateException(e);
+                try {
+                    c = readFile(folder.getAbsoluteFile());
+                } catch (OptionalDataException e) {
+                    NovaConfig.print(e);
+                    continue;
+                } catch (IOException | ReflectiveOperationException e) {
+                    throw new IllegalStateException(e);
+                }
+
+                corporations.add(c);
             }
-
-            corporations.add(c);
         }
 
         CORPORATION_CACHE.addAll(corporations);
@@ -710,10 +713,28 @@ public final class Corporation {
     @Nullable
     public static Corporation byId(@Nullable UUID id) {
         if (id == null) return null;
-        return getCorporations().stream()
-                .filter(c -> c.getUniqueId().equals(id))
-                .findFirst()
-                .orElse(null);
+
+        Corporation c = null;
+
+        try {
+            if (NovaConfig.getConfiguration().isDatabaseEnabled()) {
+                Connection db = NovaConfig.getConfiguration().getDatabaseConnection();
+                PreparedStatement ps = db.prepareStatement("SELECT * FROM corporations WHERE id = ?");
+                ps.setString(1, id.toString());
+
+                ResultSet rs = ps.executeQuery();
+                if (rs.next()) c = readDB(rs);
+                ps.close();
+            } else {
+                File f = new File(NovaConfig.getCorporationsFolder(), id.toString());
+                if (!f.exists()) return null;
+                c = readFile(f);
+            }
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+
+        return c;
     }
 
     /**
@@ -984,7 +1005,7 @@ public final class Corporation {
                 "description VARCHAR(" + MAX_DESCRIPTION_LENGTH + ") NOT NULL," +
                 "icon VARCHAR(128) NOT NULL," +
                 "hq BLOB(65535)," +
-                "experience DOUBLE(255, 2) NOT NULL," +
+                "experience DOUBLE NOT NULL," +
                 "children BLOB(65535) NOT NULL," +
                 "children_joindates BLOB(65535) NOT NULL," +
                 "achievements BLOB(65535) NOT NULL," +
@@ -1019,24 +1040,26 @@ public final class Corporation {
 
         String sql;
 
-        if (db.createStatement().execute("SELECT 1 FROM corporations WHERE id = "))
-            sql = "UPDATE corporations SET" +
-                    "id = ?, " +
-                    "owner = ?, " +
-                    "creation_date = ?, " +
-                    "name = ?, " +
-                    "description = ?, " +
-                    "icon = ?, " +
-                    "hq = ?, " +
-                    "experience = ?, " +
-                    "children = ?, " +
-                    "children_joindates = ?, " +
-                    "achievements = ?, " +
-                    "settings = ?, " +
-                    "invited = ? " +
-                    "WHERE id = \"" + this.id+ "\""; 
-        else
-            sql = "INSERT INTO businesses VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        try (ResultSet rs = db.createStatement().executeQuery("SELECT * FROM corporations WHERE id = \"" + this.id + "\"")) {
+            if (rs.next())
+                sql = "UPDATE corporations SET " +
+                        "id = ?, " +
+                        "owner = ?, " +
+                        "creation_date = ?, " +
+                        "name = ?, " +
+                        "description = ?, " +
+                        "icon = ?, " +
+                        "hq = ?, " +
+                        "experience = ?, " +
+                        "children = ?, " +
+                        "children_joindates = ?, " +
+                        "achievements = ?, " +
+                        "settings = ?, " +
+                        "invited = ? " +
+                        "WHERE id = \"" + this.id + "\"";
+            else
+                sql = "INSERT INTO corporations VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        }
 
         PreparedStatement ps = db.prepareStatement(sql);
 

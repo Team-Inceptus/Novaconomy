@@ -30,9 +30,9 @@ import us.teaminceptus.novaconomy.api.util.BusinessProduct;
 import us.teaminceptus.novaconomy.api.util.Price;
 import us.teaminceptus.novaconomy.api.util.Product;
 
-import javax.sql.rowset.serial.SerialBlob;
 import java.io.*;
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -72,38 +72,28 @@ public final class Business implements ConfigurationSerializable {
     private static final SecureRandom r = new SecureRandom();
 
     private final UUID id;
-
-    private String name;
-
     private final OfflinePlayer owner;
-
     private final File folder;
-
-    private Material icon;
-
     private final long creationDate;
 
+    private String name;
+    private Material icon;
     private Location home = null;
+    private double advertisingBalance;
 
     final BusinessStatistics stats;
 
     private final List<Product> products = new ArrayList<>();
-
     private final Map<Settings.Business, Boolean> settings = new HashMap<>();
-
     private final List<ItemStack> resources = new ArrayList<>();
-
     private final List<String> keywords = new ArrayList<>();
-
-    private double advertisingBalance;
-
     private final List<UUID> blacklist = new ArrayList<>();
 
-    private Business(UUID uid, String name, Material icon, OfflinePlayer owner, Collection<Product> products, Collection<ItemStack> resources,
+    private Business(UUID uid, @NotNull String name, Material icon, OfflinePlayer owner, Collection<Product> products, Collection<ItemStack> resources,
                      BusinessStatistics stats, Map<Settings.Business, Boolean> settings, long creationDate, List<String> keywords,
                      double advertisingBalance, List<UUID> blacklist) {
         this.id = uid;
-        this.name = name.length() > 48 ? name.substring(0, 48) : name;
+        this.name = name.length() > MAX_NAME_LENGTH ? name.substring(0, MAX_NAME_LENGTH) : name;
         this.icon = icon;
         this.owner = owner;
 
@@ -762,9 +752,9 @@ public final class Business implements ConfigurationSerializable {
                 "products LONGBLOB NOT NULL," +
                 "resources LONGBLOB NOT NULL," +
                 "settings BLOB(65535) NOT NULL," +
-                "stats BLOB(65535) NOT NULL," +
-                "keywords TINYTEXT NOT NULL," +
-                "adbal DOUBLE(255, 2) NOT NULL," +
+                "stats MEDIUMBLOB NOT NULL," +
+                "keywords BLOB(65535) NOT NULL," +
+                "adbalance DOUBLE NOT NULL," +
                 "blacklist BLOB(65535) NOT NULL," +
                 "PRIMARY KEY (id))"
         );
@@ -792,23 +782,27 @@ public final class Business implements ConfigurationSerializable {
         Connection db = NovaConfig.getConfiguration().getDatabaseConnection();
 
         String sql;
-        if (db.createStatement().execute("SELECT 1 FROM businesses WHERE id = \"" + this.id + "\""))
-            sql = "UPDATE businesses SET " +
-                    "owner = ?, " +
-                    "creation_date = ?, " +
-                    "name = ?, " +
-                    "icon = ?, " +
-                    "home = ?, " +
-                    "products = ?, " +
-                    "resources = ?, " +
-                    "settings = ?, " +
-                    "stats = ?, " +
-                    "keywords = ?, " +
-                    "adbal = ?, " +
-                    "blacklist = ? " +
-                    "WHERE id = \"" + this.id + "\"";
-        
-        else sql = "INSERT INTO businesses VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+        try (ResultSet rs = db.createStatement().executeQuery("SELECT * FROM businesses WHERE id = \"" + this.id + "\"")) {
+            if (rs.next())
+                sql = "UPDATE businesses SET " +
+                        "id = ?, " +
+                        "owner = ?, " +
+                        "creation_date = ?, " +
+                        "name = ?, " +
+                        "icon = ?, " +
+                        "home = ?, " +
+                        "products = ?, " +
+                        "resources = ?, " +
+                        "settings = ?, " +
+                        "stats = ?, " +
+                        "keywords = ?, " +
+                        "adbalance = ?, " +
+                        "blacklist = ? " +
+                        "WHERE id = \"" + this.id + "\"";
+            else
+                sql = "INSERT INTO businesses VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        }
 
         PreparedStatement ps = db.prepareStatement(sql);
         ps.setString(1, this.id.toString());
@@ -823,51 +817,60 @@ public final class Business implements ConfigurationSerializable {
             BukkitObjectOutputStream homeBos = new BukkitObjectOutputStream(homeOs);
             homeBos.writeObject(this.home);
             homeBos.close();
-            ps.setBlob(6, new SerialBlob(homeOs.toByteArray()));
+            ps.setBytes(6, homeOs.toByteArray());
         }
 
-        ByteArrayOutputStream productsOs = new ByteArrayOutputStream();
-        BukkitObjectOutputStream productsBos = new BukkitObjectOutputStream(productsOs);
-        productsBos.writeObject(this.products.stream()
-                .map(p -> new Product(p.getItem(), p.getEconomy(), p.getAmount()))
-                .collect(Collectors.toList())
-        );
-        productsBos.close();
-        ps.setBlob(7, new SerialBlob(productsOs.toByteArray()));
+        ByteArrayOutputStream pOs = new ByteArrayOutputStream();
+        BukkitObjectOutputStream pBos = new BukkitObjectOutputStream(new BufferedOutputStream(pOs));
+
+        List<Map<String, Object>> prods = new ArrayList<>();
+        for (Product p : this.products) {
+            Map<String, Object> m = new HashMap<>(p.serialize());
+            Map<String, Object> item = new HashMap<>(p.getItem().serialize());
+
+            if (p.getItem().hasItemMeta()) item.put("meta", p.getItem().getItemMeta().serialize());
+
+            m.put("item", item);
+            prods.add(m);
+        }
+
+        pBos.writeObject(prods);
+        pBos.close();
+        ps.setBytes(7, pOs.toByteArray());
 
         ByteArrayOutputStream resourcesOs = new ByteArrayOutputStream();
         BukkitObjectOutputStream resourcesBos = new BukkitObjectOutputStream(resourcesOs);
         resourcesBos.writeObject(this.resources);
         resourcesBos.close();
-        ps.setBlob(8, new SerialBlob(resourcesOs.toByteArray()));
+        ps.setBytes(8, resourcesOs.toByteArray());
 
         ByteArrayOutputStream settingsOs = new ByteArrayOutputStream();
         ObjectOutputStream settingsBos = new ObjectOutputStream(settingsOs);
         settingsBos.writeObject(this.settings);
         settingsBos.close();
-        ps.setBlob(9, new SerialBlob(settingsOs.toByteArray()));
+        ps.setBytes(9, settingsOs.toByteArray());
 
         ByteArrayOutputStream statsOs = new ByteArrayOutputStream();
         BukkitObjectOutputStream statsBos = new BukkitObjectOutputStream(statsOs);
         statsBos.writeObject(this.stats == null ? new BusinessStatistics(this) : this.stats);
         statsBos.close();
-        ps.setBlob(10, new SerialBlob(statsOs.toByteArray()));
+        ps.setBytes(10, statsOs.toByteArray());
 
-        String keywords = String.join(",", this.keywords);
-        ps.setString(11, keywords);
+        byte[] keywords = String.join(",", this.keywords).getBytes(StandardCharsets.UTF_8);
+        ps.setBytes(11, keywords);
         ps.setDouble(12, this.advertisingBalance);
 
         ByteArrayOutputStream blacklistOs = new ByteArrayOutputStream();
         BukkitObjectOutputStream blacklistBos = new BukkitObjectOutputStream(blacklistOs);
         blacklistBos.writeObject(this.blacklist);
         blacklistBos.close();
-        ps.setBlob(13, new SerialBlob(blacklistOs.toByteArray()));
+        ps.setBytes(13, blacklistOs.toByteArray());
 
         ps.executeUpdate();
         ps.close();
     }
 
-    private static Business readDB(ResultSet rs) throws IOException, ClassNotFoundException, SQLException {
+    private static Business readDB(ResultSet rs) throws IOException, ReflectiveOperationException, SQLException {
         UUID id = UUID.fromString(rs.getString("id"));
         OfflinePlayer owner = Bukkit.getOfflinePlayer(UUID.fromString(rs.getString("owner")));
         long creationDate = rs.getLong("creation_date");
@@ -882,10 +885,32 @@ public final class Business implements ConfigurationSerializable {
             homeBis.close();
         }
 
-        ByteArrayInputStream productsIs = new ByteArrayInputStream(rs.getBytes("products"));
-        BukkitObjectInputStream productsBis = new BukkitObjectInputStream(productsIs);
-        List<Product> products = (List<Product>) productsBis.readObject();
-        productsBis.close();
+        List<Product> products = new ArrayList<>();
+        ByteArrayInputStream pIs = new ByteArrayInputStream(rs.getBytes("products"));
+        BukkitObjectInputStream pBis = new BukkitObjectInputStream(new BufferedInputStream(pIs));
+
+        List<Map<String, Object>> prods = (List<Map<String, Object>>) pBis.readObject();
+        pBis.close();
+        for (Map<String, Object> m : prods) {
+            if (m == null) continue;
+
+            Map<String, Object> sProduct = new HashMap<>(m);
+            Map<String, Object> sItem = new HashMap<>((Map<String, Object>) m.get("item"));
+
+            ItemMeta base = Bukkit.getItemFactory().getItemMeta(Material.valueOf((String) sItem.get("type")));
+            if (base == null) continue;
+
+            DelegateDeserialization deserialization = base.getClass().getAnnotation(DelegateDeserialization.class);
+            Method deserialize = deserialization.value().getDeclaredMethod("deserialize", Map.class);
+            deserialize.setAccessible(true);
+
+            Map<String, Object> sMeta = (Map<String, Object>) sItem.getOrDefault("meta", base.serialize());
+            sItem.put("meta", sMeta == null ? base : deserialize.invoke(null, sMeta));
+            ItemStack item = ItemStack.deserialize(sItem);
+
+            sProduct.put("item", item);
+            products.add(Product.deserialize(sProduct));
+        }
 
         ByteArrayInputStream resourcesIs = new ByteArrayInputStream(rs.getBytes("resources"));
         BukkitObjectInputStream resourcesBis = new BukkitObjectInputStream(resourcesIs);
@@ -902,8 +927,8 @@ public final class Business implements ConfigurationSerializable {
         BusinessStatistics stats = (BusinessStatistics) statsBis.readObject();
         statsBis.close();
 
-        List<String> keywords = Arrays.asList(rs.getString("keywords").split(","));
-        double adBal = rs.getDouble("adbal");
+        List<String> keywords = Arrays.asList(new String(rs.getBytes("keywords")).split(","));
+        double adBal = rs.getDouble("adbalance");
 
         ByteArrayInputStream blacklistIs = new ByteArrayInputStream(rs.getBytes("blacklist"));
         BukkitObjectInputStream blacklistBis = new BukkitObjectInputStream(blacklistIs);
@@ -1166,7 +1191,7 @@ public final class Business implements ConfigurationSerializable {
     public static Set<Business> getBusinesses() throws IllegalStateException {
         if (!BUSINESS_CACHE.isEmpty()) return ImmutableSet.copyOf(BUSINESS_CACHE);
 
-        List<Business> businesses = new ArrayList<>();
+        Set<Business> businesses = new HashSet<>();
         if (NovaConfig.getConfiguration().isDatabaseEnabled())
             try {
                 checkTable();
@@ -1180,8 +1205,9 @@ public final class Business implements ConfigurationSerializable {
             } catch (Exception e) {
                 NovaConfig.print(e);
             }
-        else
-            for (File f : NovaConfig.getBusinessesFolder().listFiles()) {
+        else {
+            List<File> files = NovaConfig.getBusinessesFolder().listFiles() == null ? new ArrayList<>() : Arrays.asList(NovaConfig.getBusinessesFolder().listFiles());
+            for (File f : files) {
                 if (!f.isDirectory()) continue;
 
                 Business b;
@@ -1197,6 +1223,7 @@ public final class Business implements ConfigurationSerializable {
 
                 businesses.add(b);
             }
+        }
 
         BUSINESS_CACHE.addAll(businesses);
 
@@ -1213,14 +1240,24 @@ public final class Business implements ConfigurationSerializable {
     public static Business byId(@Nullable UUID uid) throws IllegalStateException {
         if (uid == null) return null;
 
-        File f = new File(NovaConfig.getBusinessesFolder(), uid.toString());
-        if (!f.exists()) return null;
-
         Business b = null;
 
         try {
-            b = readFile(f);
-        } catch (IOException | ReflectiveOperationException e) {
+            if (NovaConfig.getConfiguration().isDatabaseEnabled()) {
+                Connection db = NovaConfig.getConfiguration().getDatabaseConnection();
+
+                PreparedStatement ps = db.prepareStatement("SELECT * FROM businesses WHERE id = ?");
+                ps.setString(1, uid.toString());
+
+                ResultSet rs = ps.executeQuery();
+                if (rs.next()) b = readDB(rs);
+                ps.close();
+            } else {
+                File f = new File(NovaConfig.getBusinessesFolder(), uid.toString());
+                if (!f.exists()) return null;
+                b = readFile(f);
+            }
+        } catch (Exception e) {
             throw new IllegalStateException(e);
         }
 

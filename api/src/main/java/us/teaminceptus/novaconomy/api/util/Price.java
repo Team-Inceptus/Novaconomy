@@ -200,19 +200,19 @@ public final class Price implements ConfigurationSerializable, Comparable<Price>
 
     @Override
     public int hashCode() {
-        return Objects.hash(econ , amount);
+        return Objects.hash(econ, amount);
     }
 
     @Override
     public String toString() {
-        return String.format(Language.getCurrentLocale(), "%,.2f", amount) + econ.getSymbol();
+        return String.format(Language.getCurrentLocale(), "%,.2f", amount) + (econ == null ? "" : econ.getSymbol());
     }
 
     @Override
     public Map<String, Object> serialize() {
         return new HashMap<String, Object>() {{
             put("amount", amount);
-            if (econ != null) put("economy", econ.getName().toLowerCase());
+            if (econ != null) put("economy", econ.getUniqueId().toString());
         }};
     }
 
@@ -225,14 +225,11 @@ public final class Price implements ConfigurationSerializable, Comparable<Price>
     @Nullable
     public static Price deserialize(@Nullable Map<String, Object> serial) throws IllegalArgumentException {
         if (serial == null) return null;
+        if (!serial.containsKey("economy")) return new Price((double) serial.get("amount"));
 
-        Economy econ = serial.containsKey("economy") ? Economy.getEconomy((String) serial.get("economy")) : null;
-
-        try {
-            return new Price(econ, (double) serial.get("amount"));
-        } catch (ClassCastException | NullPointerException e) {
-            throw new IllegalArgumentException(e);
-        }
+        String econInfo = (String) serial.get("economy");
+        if (econInfo.length() == 36) return new Price(Economy.getEconomy(UUID.fromString(econInfo)), (double) serial.get("amount"));
+        else return new Price(Economy.getEconomy(econInfo), (double) serial.get("amount"));
     }
 
     @Override

@@ -6,11 +6,16 @@
 
 # SQL Database Configuration Options
 Database:
-  # Please make sure this is true before entering your database information
+  # Please make sure this is true before entering your database information.
   Enabled: false
 
   # Whether the plugin should automatically convert from data stored in files to data stored in the Database (and vice versa)
   # This option ignores the Enabled option above and requires valid Database Information below
+
+  # When Converting from Files to Database, the plugin will delete the files from the file system and upload the data to the SQL Database Service.
+  # Any present data on the SQL Database Service will be overridden.
+
+  # When Converting from Database to Files, the plugin WILL NOT delete the data from the SQL Database Service. It will only download the data and store it in the files.
   Convert: true
 
   # The Database Service you are connecting to.

@@ -10,6 +10,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.abstraction.NBTWrapper;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.SortingType;
@@ -238,12 +239,14 @@ public final class Items {
         return builder(m, 1, metaC);
     }
 
-    public static ItemStack createPlayerHead(OfflinePlayer p) {
+    public static ItemStack createPlayerHead(@Nullable OfflinePlayer p) {
         return NBTWrapper.builder(w.isLegacy() ? Material.matchMaterial("SKULL_ITEM") : Material.matchMaterial("PLAYER_HEAD"),
-                meta -> ((SkullMeta) meta).setOwner(p.getName()),
+                meta -> ((SkullMeta) meta).setOwner(p == null ? "" : p.getName()),
                 nbt -> {
-                    nbt.setID("player_stats");
-                    nbt.set("player", p.getUniqueId());
+                    if (p != null) {
+                        nbt.setID("player_stats");
+                        nbt.set("player", p.getUniqueId());
+                    }
                 }
         );
     }

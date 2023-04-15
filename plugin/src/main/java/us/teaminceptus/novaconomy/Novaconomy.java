@@ -51,12 +51,7 @@ import us.teaminceptus.novaconomy.treasury.TreasuryRegistry;
 import us.teaminceptus.novaconomy.util.NovaUtil;
 import us.teaminceptus.novaconomy.vault.VaultRegistry;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.sql.*;
@@ -339,93 +334,124 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 
 	static Connection db;
 
-	private void loadFiles() {
-		if (isDatabaseEnabled()) {
-			getLogger().info("Database found! Connecting...");
+	private void connectDB(boolean validate) {
+		boolean invalid = false;
 
-			boolean invalid = false;
+		String host = config.getString("Database.Host");
+		int port = config.getInt("Database.Port", 3306);
+		String database = config.getString("Database.Database");
+		String username = config.getString("Database.Username");
+		String password = config.getString("Database.Password");
+		String service = config.getString("Database.Service", "mysql");
 
-			String host = config.getString("Database.Host");
-			int port = config.getInt("Database.Port", 3306);
-			String database = config.getString("Database.Database");
-			String username = config.getString("Database.Username");
-			String password = config.getString("Database.Password");
-			String service = config.getString("Database.Service", "mysql");
-
-			if (host == null) { getLogger().severe("Database Host is not set!"); invalid = true; }
-			if (port == 0 || port > 65535) { getLogger().severe("Database Port is not set or invalid!"); invalid = true; }
-			if (database == null) { getLogger().severe("Database Database is not set!"); invalid = true; }
-			if (username == null) { getLogger().severe("Database Username is not set!"); invalid = true; }
-			if (password == null) { getLogger().severe("Database Password is not set!"); invalid = true; }
-			if (service == null) { getLogger().severe("Database Service is not set!"); invalid = true; }
-
-			if (invalid)
-				throw new RuntimeException("Invalid Database Configuration");
-
-			String url;
-
-			try {
-				switch (service) {
-					case "oracle": {
-						Class.forName("oracle.jdbc.driver.OracleDriver");
-						url = "jdbc:oracle:thin@//" + host + ":" + port + "/" + database;
-						break;
-					}
-					case "postgresql": {
-						Class.forName("org.postgresql.Driver");
-						url = "jdbc:postgresql://" + host + ":" + port + "/" + database;
-						break;
-					}
-					case "mysql": {
-						Class.forName("com.mysql.cj.jdbc.Driver").getConstructor().newInstance();
-						url = "jdbc:mysql://" + host + ":" + port + "/" + database;
-						break;
-					}
-					case "sqlite": {
-						Class.forName("org.sqlite.JDBC");
-						url = "jdbc:sqlite:" + database;
-						break;
-					}
-					default:
-						throw new RuntimeException("Unsupported Database Service \"" + service + "\"");
-				}
-			} catch (Exception e) {
-				throw new RuntimeException(e);
+		if (validate) {
+			if (host == null) {
+				getLogger().severe("Database Host is not set!");
+				invalid = true;
 			}
+			if (port == 0 || port > 65535) {
+				getLogger().severe("Database Port is not set or invalid!");
+				invalid = true;
+			}
+			if (database == null) {
+				getLogger().severe("Database Database is not set!");
+				invalid = true;
+			}
+			if (username == null) {
+				getLogger().severe("Database Username is not set!");
+				invalid = true;
+			}
+			if (password == null) {
+				getLogger().severe("Database Password is not set!");
+				invalid = true;
+			}
+			if (service == null) {
+				getLogger().severe("Database Service is not set!");
+				invalid = true;
+			}
+		}
 
-			try {
-				db = DriverManager.getConnection(url, username, password);
-				if (db == null) {
-					getLogger().severe("Failed to connect to database!");
-					throw new RuntimeException("Failed to connect to database");
+		if (invalid && validate)
+			throw new RuntimeException("Invalid Database Configuration");
+
+		String url = null;
+
+		try {
+			switch (service) {
+				case "oracle": {
+					Class.forName("oracle.jdbc.driver.OracleDriver");
+					url = "jdbc:oracle:thin@//" + host + ":" + port + "/" + database;
+					break;
 				}
-			} catch (SQLException e) {
+				case "postgresql": {
+					Class.forName("org.postgresql.Driver");
+					url = "jdbc:postgresql://" + host + ":" + port + "/" + database;
+					break;
+				}
+				case "mysql": {
+					Class.forName("com.mysql.cj.jdbc.Driver").getConstructor().newInstance();
+					url = "jdbc:mysql://" + host + ":" + port + "/" + database;
+					break;
+				}
+				case "sqlite": {
+					Class.forName("org.sqlite.JDBC");
+					url = "jdbc:sqlite:" + database;
+					break;
+				}
+				default:
+					if (validate) throw new RuntimeException("Unsupported Database Service \"" + service + "\"");
+			}
+		} catch (ReflectiveOperationException e) {
+			if (validate) throw new RuntimeException(e);
+		}
+
+		try {
+			db = DriverManager.getConnection(url, username, password);
+			if (db == null) {
+				getLogger().severe("Failed to connect to database!");
+				throw new RuntimeException("Failed to connect to database");
+			}
+		} catch (SQLException e) {
+			if (validate) {
 				getLogger().severe("Failed to connect to database!");
 				throw new RuntimeException(e);
 			}
+		}
+	}
 
+	private void loadFiles() {
+		loadLegacyEconomies();
+		loadLegacyBusinesses();
+
+		if (isDatabaseEnabled()) {
+			if (db != null) {
+				convertToDatabase();
+				return;
+			}
+
+			getLogger().info("Database found! Connecting...");
+
+			connectDB(true);
 			PING_DB_RUNNABLE.runTaskTimerAsynchronously(this, 60 * 20, 60 * 20);
 
 			getLogger().info("Connection Successful!");
 			convertToDatabase();
 		} else {
 			getLogger().info("Database is disabled! Loading Files...");
+			convertToFiles();
 
 			File economiesDir = new File(getDataFolder(), "economies");
 			if (!economiesDir.exists()) economiesDir.mkdir();
-			loadLegacyEconomies();
 
 			File businessesDir = new File(getDataFolder(), "businesses");
 			if (!businessesDir.exists()) businessesDir.mkdir();
-			loadLegacyBusinesses();
+
+			File corporationsDir = new File(getDataFolder(), "corporations");
+			if (!corporationsDir.exists()) corporationsDir.mkdir();
 
 			playerDir = new File(getDataFolder(), "players");
-
 			marketFile = new File(getDataFolder(), "market.dat");
-			if (!marketFile.exists())
-				try { marketFile.createNewFile(); } catch (IOException e) { NovaConfig.print(e); }
-
-			convertToFiles();
+			if (!marketFile.exists()) try { marketFile.createNewFile(); } catch (IOException e) { NovaConfig.print(e); }
 		}
 
 		loadMarket();
@@ -443,12 +469,14 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 		File businessesDir = NovaConfig.getBusinessesFolder();
 		File economiesDir = NovaConfig.getEconomiesFolder();
 		File corporationDir = NovaConfig.getCorporationsFolder();
+		File playerDir = NovaConfig.getPlayerDirectory();
+		File marketFile = NovaConfig.getMarketFile();
 
 		if (!NovaConfig.getConfiguration().isDatabaseConversionEnabled()) return;
 
 		try {
 			if (economiesDir.exists()) {
-				getLogger().info("Converting Economies to Database Storage...");
+				getLogger().warning("Converting Economies to Database Storage...");
 
 				for (File file : economiesDir.listFiles()) {
 					if (file.isDirectory()) continue;
@@ -462,11 +490,12 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 				}
 
 				deleteDir(economiesDir);
+				Economy.getEconomies();
 				getLogger().info("Economy Migration Complete!");
 			}
 
 			if (businessesDir.exists()) {
-				getLogger().info("Converting Businesses to Database Storage...");
+				getLogger().warning("Converting Businesses to Database Storage...");
 
 				for (File file : businessesDir.listFiles()) {
 					if (!file.isDirectory()) continue;
@@ -480,11 +509,12 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 				}
 
 				deleteDir(businessesDir);
+				Business.getBusinesses();
 				getLogger().info("Business Migration Complete!");
 			}
 
 			if (corporationDir.exists()) {
-				getLogger().info("Converting Corporations to Database Storage...");
+				getLogger().warning("Converting Corporations to Database Storage...");
 
 				for (File file : corporationDir.listFiles()) {
 					if (!file.isDirectory()) continue;
@@ -498,43 +528,88 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 				}
 
 				deleteDir(corporationDir);
+				Corporation.getCorporations();
 				getLogger().info("Corporation Migration Complete!");
 			}
-		} catch (ReflectiveOperationException e) {
+
+			if (playerDir.exists()) {
+				getLogger().warning("Converting Players to Database Storage...");
+
+				Method checkTable = NovaPlayer.class.getDeclaredMethod("checkTable");
+				checkTable.setAccessible(true);
+				checkTable.invoke(null);
+
+				for (File file : playerDir.listFiles()) {
+					if (file.isDirectory()) continue;
+					if (!file.getName().endsWith(".yml")) continue;
+					UUID id = UUID.fromString(file.getName().split("\\.")[0]);
+
+					FileConfiguration config = YamlConfiguration.loadConfiguration(file);
+					Map<String, Object> data = toMap(config.getValues(true));
+
+					PlayerStatistics stats = (PlayerStatistics) data.get("stats");
+					data.remove("stats");
+
+					ByteArrayOutputStream os = new ByteArrayOutputStream();
+					BukkitObjectOutputStream bOs = new BukkitObjectOutputStream(os);
+					bOs.writeObject(data);
+					bOs.close();
+
+					ByteArrayOutputStream statsOs = new ByteArrayOutputStream();
+					BukkitObjectOutputStream statsBOs = new BukkitObjectOutputStream(statsOs);
+					statsBOs.writeObject(stats);
+					statsBOs.close();
+
+					String sql;
+					try (ResultSet rs = db.createStatement().executeQuery("SELECT * FROM players WHERE id = \"" + id + "\"")) {
+						if (rs.next())
+							sql = "UPDATE players SET " +
+									"id = ?, " +
+									"data = ?, " +
+									"stats = ? " +
+									"WHERE id = \"" + id + "\"";
+						else
+							sql = "INSERT INTO players VALUES (?, ?, ?)";
+					}
+					PreparedStatement ps = db.prepareStatement(sql);
+
+					ps.setString(1, id.toString());
+					ps.setBytes(2, os.toByteArray());
+					ps.setBytes(3, statsOs.toByteArray());
+					ps.executeUpdate();
+				}
+
+				deleteDir(playerDir);
+
+				getLogger().info("Player Migration Complete!");
+			}
+
+			if (marketFile.exists()) {
+				getLogger().warning("Converting Market to Database Storage...");
+
+				readMarketFile();
+				writeMarketDB();
+				marketFile.delete();
+
+				getLogger().info("Market Migration Complete!");
+			}
+		} catch (Exception e) {
 			NovaConfig.print(e);
 		}
 	}
 
 	private void convertToFiles() {
 		if (!NovaConfig.getConfiguration().isDatabaseConversionEnabled()) return;
+		connectDB(false);
 
 		try {
-			Connection db = NovaConfig.getConfiguration().getDatabaseConnection();
 			if (db == null) return;
-
 			DatabaseMetaData meta = db.getMetaData();
 
-			try (ResultSet businesses = meta.getTables(null, null, "businesses", null)) {
-				if (businesses.first()) {
-					getLogger().info("Converting Businesses to File Storage...");
-
-					PreparedStatement ps = db.prepareStatement("SELECT * FROM businesses");
-					ResultSet result = ps.executeQuery();
-
-					while (result.next()) {
-						Method read = Business.class.getDeclaredMethod("readDB", ResultSet.class);
-						read.setAccessible(true);
-
-						Business b = (Business) read.invoke(null, result);
-						if (b == null) continue;
-						b.saveBusiness();
-					}
-				}
-			}
-
 			try (ResultSet economies = meta.getTables(null, null, "economies", null)) {
-				if (economies.first()) {
-					getLogger().info("Converting Economies to File Storage...");
+				if (!NovaConfig.getEconomiesFolder().exists() && economies.first()) {
+					NovaConfig.getEconomiesFolder().mkdir();
+					getLogger().warning("Converting Economies to File Storage...");
 
 					PreparedStatement ps = db.prepareStatement("SELECT * FROM economies");
 					ResultSet result = ps.executeQuery();
@@ -547,24 +622,96 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 						if (e == null) continue;
 						e.saveEconomy();
 					}
+
+					Economy.getEconomies();
+					getLogger().info("Economy Migration Complete!");
+				}
+			}
+
+			try (ResultSet businesses = meta.getTables(null, null, "businesses", null)) {
+				if (!NovaConfig.getBusinessesFolder().exists() && businesses.first()) {
+					NovaConfig.getBusinessesFolder().mkdir();
+					getLogger().warning("Converting Businesses to File Storage...");
+
+					PreparedStatement ps = db.prepareStatement("SELECT * FROM businesses");
+					ResultSet result = ps.executeQuery();
+
+					while (result.next()) {
+						Method read = Business.class.getDeclaredMethod("readDB", ResultSet.class);
+						read.setAccessible(true);
+
+						Business b = (Business) read.invoke(null, result);
+						if (b == null) continue;
+						b.saveBusiness();
+					}
+
+					Business.getBusinesses();
+					getLogger().info("Business Migration Complete!");
 				}
 			}
 
 			try (ResultSet corporations = meta.getTables(null, null, "corporations", null)) {
-				if (corporations.first()) {
-					getLogger().info("Converting Corporations to File Storage...");
+				if (!NovaConfig.getCorporationsFolder().exists() && corporations.first()) {
+					NovaConfig.getCorporationsFolder().mkdir();
+					getLogger().warning("Converting Corporations to File Storage...");
 
 					PreparedStatement ps = db.prepareStatement("SELECT * FROM corporations");
-					ResultSet result = ps.executeQuery();
+					ResultSet rs = ps.executeQuery();
 
-					while (result.next()) {
+					while (rs.next()) {
 						Method read = Corporation.class.getDeclaredMethod("readDB", ResultSet.class);
 						read.setAccessible(true);
 
-						Corporation c = (Corporation) read.invoke(null, result);
+						Corporation c = (Corporation) read.invoke(null, rs);
 						if (c == null) continue;
 						c.saveCorporation();
 					}
+
+					Corporation.getCorporations();
+					getLogger().info("Corporation Migration Complete!");
+				}
+			}
+
+			try (ResultSet players = meta.getTables(null, null, "players", null)) {
+				if (!NovaConfig.getPlayerDirectory().exists() && players.first()) {
+					NovaConfig.getPlayerDirectory().mkdir();
+					getLogger().warning("Converting Players to File Storage...");
+
+					PreparedStatement ps = db.prepareStatement("SELECT * FROM players");
+					ResultSet rs = ps.executeQuery();
+
+					while (rs.next()) {
+						File pFile = new File(NovaConfig.getPlayerDirectory(), rs.getString("id") + ".yml");
+						if (!pFile.exists()) pFile.createNewFile();
+
+						FileConfiguration config = YamlConfiguration.loadConfiguration(pFile);
+
+						ByteArrayInputStream is = new ByteArrayInputStream(rs.getBytes("data"));
+						BukkitObjectInputStream bIs = new BukkitObjectInputStream(is);
+						Map<String, Object> pConfig = (Map<String, Object>) bIs.readObject();
+						for (Map.Entry<String, Object> entry : pConfig.entrySet())
+							config.set(entry.getKey(), entry.getValue());
+
+						bIs.close();
+
+						ByteArrayInputStream statsIs = new ByteArrayInputStream(rs.getBytes("stats"));
+						BukkitObjectInputStream statsBIs = new BukkitObjectInputStream(statsIs);
+						config.set("stats", statsBIs.readObject());
+						statsBIs.close();
+
+						config.save(pFile);
+					}
+
+					getLogger().info("Player Migration Complete!");
+				}
+			}
+
+			try (ResultSet market = meta.getTables(null, null, "market", null)) {
+				if (!NovaConfig.getMarketFile().exists() && market.first()) {
+					getLogger().warning("Converting Market to File Storage...");
+					readMarketDB();
+					writeMarketFile();
+					getLogger().info("Market Migration Complete!");
 				}
 			}
 		} catch (Exception e) {
@@ -577,6 +724,14 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 			for (File child : dir.listFiles()) deleteDir(child);
 
 		dir.delete();
+	}
+
+	private static Map<String, Object> toMap(Map<String, Object> serial) {
+		for (Map.Entry<String, Object> entry : serial.entrySet())
+			if (entry.getValue() instanceof ConfigurationSection)
+				serial.put(entry.getKey(), toMap(((ConfigurationSection) entry.getValue()).getValues(true)));
+
+		return serial;
 	}
 
 	/**
@@ -1248,14 +1403,13 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 		.build();
 
     static final List<Receipt> purchases = new ArrayList<>();
-	static final Map<Material, Long> stock = new HashMap<Material, Long>();
+	static final Map<Material, Long> stock = new HashMap<>();
 
 	private void loadMarket() {
 		readMarket();
 
-		basePrices.keySet().stream().filter(m -> Material.matchMaterial(m) != null).map(Material::matchMaterial).forEach(m -> {
-			stock.putIfAbsent(m, getMarketRestockAmount());
-		});
+		basePrices.keySet().stream().filter(m -> Material.matchMaterial(m) != null).map(Material::matchMaterial)
+				.forEach(m -> stock.putIfAbsent(m, getMarketRestockAmount()));
 	}
 
 	private void writeMarket() {
@@ -1290,7 +1444,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 
 		for (Material m : basePrices.keySet().stream().map(Material::matchMaterial).filter(Objects::nonNull).collect(Collectors.toList())) {
 			String sql;
-			PreparedStatement has = db.prepareStatement("SELECT 1 FROM market WHERE material = ?");
+			PreparedStatement has = db.prepareStatement("SELECT * FROM market WHERE material = ?");
 			has.setString(1, m.name());
 
 			if (has.execute())
@@ -1320,7 +1474,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 
 	private static void readMarketDB() throws SQLException, IOException, ClassNotFoundException {
 		for (Material m : basePrices.keySet().stream().map(Material::matchMaterial).filter(Objects::nonNull).collect(Collectors.toList())) {
-			PreparedStatement ps = db.prepareStatement("SELECT 1 FROM market WHERE material = ?");
+			PreparedStatement ps = db.prepareStatement("SELECT * FROM market WHERE material = ?");
 			ps.setString(1, m.name());
 
 			ResultSet rs = ps.executeQuery();
@@ -1353,19 +1507,21 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 		File marketFile = new File(NovaConfig.getDataFolder(), "market.dat");
 		if (!marketFile.exists()) return;
 
-		FileInputStream fis = new FileInputStream(marketFile);
-		BukkitObjectInputStream bis = new BukkitObjectInputStream(fis);
-		purchases.addAll((List<Receipt>) bis.readObject());
-		stock.putAll((Map<Material, Long>) bis.readObject());
-		bis.close();
-    }
+		try {
+			FileInputStream fis = new FileInputStream(marketFile);
+			BukkitObjectInputStream bis = new BukkitObjectInputStream(fis);
+			purchases.addAll((List<Receipt>) bis.readObject());
+			stock.putAll((Map<Material, Long>) bis.readObject());
+			bis.close();
+		} catch (EOFException ignored) {} // File is empty
+	}
 
 	@Override
 	public double getBasePrice(@NotNull Material m) throws IllegalArgumentException {
 		if (m == null) throw new IllegalArgumentException("Material cannot be null");
 		if (getBasePriceOverrides().containsKey(m)) return getBasePriceOverrides().get(m);
 		
-		double base = basePrices.getOrDefault(m, -1D);
+		double base = basePrices.getOrDefault(m.name().toLowerCase(), -1D);
 		if (base == -1) throw new IllegalArgumentException("Material not sold on market");
 
 		return base;
@@ -1373,7 +1529,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 
     @Override
     public double getPrice(@NotNull Material m) throws IllegalArgumentException {
-		double base = basePrices.getOrDefault(m, -1D);
+		double base = basePrices.getOrDefault(m.name().toLowerCase(), -1D);
 		if (base == -1) throw new IllegalArgumentException("Material not sold on market");
 
 		long purchasesLastRestock = purchases.stream()
