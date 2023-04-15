@@ -419,6 +419,17 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 		}
 	}
 
+	private void disconnectDB() {
+		try {
+			if (db != null && !db.isClosed()) {
+				db.close();
+				db = null;
+			}
+		} catch (SQLException e) {
+			NovaConfig.print(e);
+		}
+	}
+
 	private void loadFiles() {
 		loadLegacyEconomies();
 		loadLegacyBusinesses();
@@ -717,6 +728,8 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 		} catch (Exception e) {
 			NovaConfig.print(e);
 		}
+
+		disconnectDB();
 	}
 
 	private static void deleteDir(File dir) {
@@ -800,11 +813,13 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 		metrics.addCustomChart(new SimplePie("command_version", () -> String.valueOf(w.getCommandVersion())));
 		metrics.addCustomChart(new SingleLineChart("economy_count", () -> Economy.getEconomies().size()));
 		metrics.addCustomChart(new SingleLineChart("business_count", () -> Business.getBusinesses().size()));
+		metrics.addCustomChart(new SingleLineChart("corporation_count", () -> Corporation.getCorporations().size()));
 		metrics.addCustomChart(new SingleLineChart("bounty_count", () -> {
 			AtomicInteger count = new AtomicInteger();
 			for (OfflinePlayer p : Bukkit.getOfflinePlayers()) count.addAndGet(new NovaPlayer(p).getOwnedBounties().size());
 			return count.get();
 		}));
+		metrics.addCustomChart(new SimplePie("mysql_enabled", () -> String.valueOf(NovaConfig.getConfiguration().isDatabaseEnabled())));
 
 		getLogger().info("Loaded Dependencies...");
 
@@ -823,12 +838,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 		for (Player p : Bukkit.getOnlinePlayers()) w.removePacketInjector(p);
 
 		if (db != null) {
-			try {
-				db.close();
-			} catch (SQLException e) {
-				getLogger().severe("Failed to close database connection:");
-				NovaConfig.print(e);
-			}
+			disconnectDB();
 			getLogger().info("Closed Database Connection...");
 		}
 
