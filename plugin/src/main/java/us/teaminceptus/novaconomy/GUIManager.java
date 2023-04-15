@@ -656,7 +656,7 @@ public final class GUIManager implements Listener {
                 ItemStack nItem;
                 if (Boolean.class.isAssignableFrom(type)) {
                     boolean value = Boolean.parseBoolean(valueS);
-                    
+
                     nItem = builder(value ? RED_WOOL : LIME_WOOL,
                             meta -> {
                                 meta.setDisplayName(ChatColor.YELLOW + display + ": " + (value ? ChatColor.RED + get("constants.off") : ChatColor.GREEN + get("constants.on")));
@@ -677,7 +677,7 @@ public final class GUIManager implements Listener {
                                 nbt.set("section", section);
                                 nbt.set(SETTING_TAG, setting);
                                 nbt.set("type", type);
-                                nbt.set("value", !value);
+                                nbt.set("value", String.valueOf(!value));
                             }
                     );
 
