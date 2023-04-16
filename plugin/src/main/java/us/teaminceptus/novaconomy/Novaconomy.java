@@ -1408,9 +1408,195 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 		saveConfig();
 	}
 
-	// TODO Create Base Prices
+	//<editor-fold desc="Base Prices" defaultstate="collapsed">
 	static final Map<String, Double> basePrices = ImmutableMap.<String, Double>builder()
-		.build();
+			// Miscellaneous
+			.put("bowl", 2.65)
+			.put("book", 5.3)
+			.put("paper", 3.85)
+
+			// Tools
+			.put("arrow", 14.0)
+			.put("brush", 29.4)
+			.put("shears", 30.25)
+			.put("flint_and_steel", 24.35)
+			.put("bucket", 56.32)
+			.put("milk_bucket", 57.31)
+			.put("compass", 23.25)
+			.put("clock", 13.25)
+			.put("recovery_compass", 107.8)
+			.put("glowstone_dust", 10.9)
+
+			// Building Blocks
+			.put("oak_planks", 14.0)
+			.put("birch_planks", 14.0)
+			.put("spruce_planks", 14.0)
+			.put("jungle_planks", 14.0)
+			.put("acacia_planks", 14.0)
+			.put("dark_oak_planks", 14.0)
+			.put("warped_planks", 15.0)
+			.put("crimson_planks", 15.0)
+			.put("cherry_planks", 14.25)
+
+			// Crafting Items & Loot
+			.put("stick", 3.3)
+			.put("flint", 17.6)
+			.put("feather", 5.3)
+			.put("rotten_flesh", 3.3)
+			.put("string", 4.35)
+			.put("bone", 8.15)
+			.put("slime_ball", 7.15)
+			.put("spider_eye", 12.45)
+			.put("ghast_tear", 23.67)
+			.put("blaze_rod", 35.55)
+			.put("blaze_powder", 17.45)
+			.put("ender_pearl", 19.35)
+			.put("egg", 4.5)
+			.put("leather", 15.0)
+			.put("prismarine_shard", 10.15)
+			.put("prismarine_crystals", 15.3)
+			.put("sponge", 25.17)
+			.put("ender_eye", 37.85)
+			.put("eye_of_ender", 37.85)
+			.put("ink_sac", 2.45)
+			.put("ink_sack", 2.45)
+			.put("end_crystal", 92.34)
+			.put("gunpowder", 10.6)
+			.put("goat_horn", 29.77)
+			.put("nautilus_shell", 37.15)
+			.put("scute", 60.95)
+
+			// Furniture
+			.put("furnace", 22.4)
+			.put("chest", 68.34)
+			.put("ender_chest", 145.4)
+			.put("note_block", 58.12)
+			.put("jukebox", 58.12)
+			.put("workbench", 22.4)
+			.put("crafting_table", 22.4)
+			.put("grindstone", 57.95)
+			.put("loom", 46.25)
+			.put("smithing_table", 37.75)
+			.put("fletching_table", 23.45)
+			.put("lectern", 35.65)
+			.put("lodestone", 1300.65)
+			.put("barrel", 68.34)
+
+			// Ores
+			.put("coal", 15.55)
+			.put("iron_nugget", 3.35)
+			.put("iron_ingot", 30.15)
+			.put("gold_nugget", 9.22)
+			.put("gold_ingot", 82.98)
+			.put("redstone", 64.55)
+			.put("diamond", 119.35)
+			.put("emerald", 186.90)
+			.put("quartz", 27.65)
+			.put("copper_ingot", 27.5)
+			.put("lapis_lazuli", 31.45)
+			.put("netherite_scrap", 269.2)
+			.put("netherite_ingot", 1412.84)
+
+			// Food
+			.put("pumpkin", 19.55)
+			.put("carrot", 9.1)
+			.put("potato", 9.0)
+			.put("apple", 11.2)
+			.put("bread", 16.7)
+			.put("wheat", 5.4)
+			.put("seeds", 3.15)
+			.put("glow_berries", 17.54)
+			.put("raw_beef", 8.91)
+			.put("beef", 8.91)
+			.put("porkchop", 7.65)
+			.put("chicken", 6.3)
+			.put("raw_chicken", 6.3)
+			.put("mutton", 8.2)
+			.put("sweet_berries", 5.45)
+
+			// Plants / Decor
+			.put("grass", 2.1)
+			.put("tall_grass", 3.4)
+			.put("fern", 2.1)
+			.put("large_fern", 3.4)
+			.put("dead_bush", 3.4)
+			.put("vine", 4.1)
+			.put("sugar_cane", 7.8)
+			.put("cactus", 12.34)
+			.put("lily_pad", 8.1)
+			.put("glow_lichen", 8.1)
+			.put("kelp", 4.4)
+			.put("peony", 5.2)
+			.put("sunflower", 6.7)
+			.put("poppy", 5.2)
+			.put("sea_pickle", 4.6)
+			.put("shroomlight", 25.55)
+			.put("mycelium", 13.65)
+			.put("podzol", 3.45)
+			.put("dripleaf", 8.35)
+			.put("small_dripleaf", 4.23)
+
+			.put("torch", 19.46)
+			.put("glass", 5.6)
+			.put("glass_pane", 5.1)
+			.put("lantern", 48.91)
+			.put("soul_lantern", 58.21)
+			.put("campfire", 34.5)
+			.put("candle", 10.35)
+			.put("soul_campfire", 41.45)
+
+			.put("ice", 21.1)
+			.put("snow", 19.4)
+			.put("packed_ice", 86.14)
+			.put("prismarine", 37.8)
+			.put("sea_lantern", 48.91)
+			.put("dark_prismarine", 39.95)
+
+			// Common Blocks & Minerals
+			.put("dirt", 2.2)
+			.put("coarse_dirt", 2.25)
+			.put("mud", 2.8)
+			.put("gravel", 2.3)
+			.put("sand", 3.2)
+			.put("red_sand", 3.2)
+			.put("stone", 2.55)
+			.put("cobblestone", 2.55)
+			.put("diorite", 2.6)
+			.put("granite", 2.6)
+			.put("andesite", 2.6)
+			.put("deepslate", 4.65)
+			.put("cobbled_deepslate", 4.65)
+			.put("calcite", 18.75)
+			.put("concrete", 13.4)
+			.put("hardened_clay", 14.0)
+			.put("terracotta", 14.0)
+			.put("powdered_concrete", 13.2)
+			.put("obsidian", 29.33)
+			.put("tuff", 21.4)
+
+			.put("netherrack", 0.7)
+			.put("glowstone", 9.1)
+			.put("soul_sand", 8.7)
+			.put("soul_soil", 8.6)
+			.put("blackstone", 7.95)
+			.put("basalt", 10.25)
+
+			.put("ender_stone", 2.3)
+			.put("end_stone", 2.3)
+
+			// Rarities
+			.put("golden_apple", 159.2)
+			.put("enchanted_golden_apple", 2790.55)
+			.put("golden_carrot", 82.1)
+			.put("creeper_head", 365.4)
+			.put("creeper_banner_pattern", 375.65)
+			.put("skull_banner_pattern", 475.0)
+			.put("wither_skeleton_skull", 468.4)
+			.put("skeleton_skull", 234.55)
+			.put("globe_banner_pattern", 835.75)
+			.put("piglin_banner_pattern", 865.75)
+			.build();
+	//</editor-fold>
 
     static final List<Receipt> purchases = new ArrayList<>();
 	static final Map<Material, Long> stock = new HashMap<>();
@@ -1418,7 +1604,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 	private void loadMarket() {
 		readMarket();
 
-		basePrices.keySet().stream().filter(m -> Material.matchMaterial(m) != null).map(Material::matchMaterial)
+		basePrices.keySet().stream().filter(m -> Material.matchMaterial(m) != null).map(Material::matchMaterial).filter(w::isItem)
 				.forEach(m -> stock.putIfAbsent(m, getMarketRestockAmount()));
 	}
 
@@ -1452,7 +1638,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 				"PRIMARY KEY (material))"
 		);
 
-		for (Material m : basePrices.keySet().stream().map(Material::matchMaterial).filter(Objects::nonNull).collect(Collectors.toList())) {
+		for (Material m : basePrices.keySet().stream().map(Material::matchMaterial).filter(Objects::nonNull).filter(w::isItem).collect(Collectors.toList())) {
 			String sql;
 			PreparedStatement has = db.prepareStatement("SELECT * FROM market WHERE material = ?");
 			has.setString(1, m.name());
@@ -1483,7 +1669,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 	}
 
 	private static void readMarketDB() throws SQLException, IOException, ClassNotFoundException {
-		for (Material m : basePrices.keySet().stream().map(Material::matchMaterial).filter(Objects::nonNull).collect(Collectors.toList())) {
+		for (Material m : basePrices.keySet().stream().map(Material::matchMaterial).filter(Objects::nonNull).filter(w::isItem).collect(Collectors.toList())) {
 			PreparedStatement ps = db.prepareStatement("SELECT * FROM market WHERE material = ?");
 			ps.setString(1, m.name());
 
@@ -1528,7 +1714,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 
 	@Override
 	public double getBasePrice(@NotNull Material m) throws IllegalArgumentException {
-		if (m == null) throw new IllegalArgumentException("Material cannot be null");
+		if (m == null || !w.isItem(m)) throw new IllegalArgumentException("Material must be valid item");
 		if (getBasePriceOverrides().containsKey(m)) return getBasePriceOverrides().get(m);
 		
 		double base = basePrices.getOrDefault(m.name().toLowerCase(), -1D);
@@ -1539,8 +1725,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 
     @Override
     public double getPrice(@NotNull Material m) throws IllegalArgumentException {
-		double base = basePrices.getOrDefault(m.name().toLowerCase(), -1D);
-		if (base == -1) throw new IllegalArgumentException("Material not sold on market");
+		double base = getBasePrice(m);
 
 		long purchasesLastRestock = purchases.stream()
 				.filter(r -> r.getPurchased() == m)
@@ -1615,6 +1800,50 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 		if (price < 0) throw new IllegalArgumentException("Price must be positive for '" + m + "'");
 
 		config.set("Market.BasePriceOverride." + m.name(), price);
+		saveConfig();
+	}
+
+	@Override
+	public boolean isDepositEnabled() {
+		return config.getBoolean("Market.Deposit", true);
+	}
+
+	@Override
+	public void setDepositEnabled(boolean enabled) {
+		config.set("Market.Deposit", enabled);
+		saveConfig();
+	}
+
+	@Override
+	public long getMaxPurchases() {
+		return config.getLong("Market.MaxPurchases", -1);
+	}
+
+	@Override
+	public void setMaxPurchases(long maxPurchases) {
+		config.set("Market.MaxPurchases", maxPurchases);
+		saveConfig();
+	}
+
+	@Override
+	public boolean isMarketMembershipEnabled() {
+		return config.getBoolean("Market.Membership.Enabled", false);
+	}
+
+	@Override
+	public void setMarketMembershipEnabled(boolean enabled) {
+		config.set("Market.Membership.Enabled", enabled);
+		saveConfig();
+	}
+
+	@Override
+	public double getMarketMembershipCost() {
+		return config.getDouble("Market.Membership.Amount", 10000.0);
+	}
+
+	@Override
+	public void setMarketMembershipCost(double cost) {
+		config.set("Market.Membership.Amount", cost);
 		saveConfig();
 	}
 

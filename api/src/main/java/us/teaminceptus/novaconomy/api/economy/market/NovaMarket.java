@@ -1,12 +1,12 @@
 package us.teaminceptus.novaconomy.api.economy.market;
 
-import java.util.Map;
-
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.api.economy.Economy;
+
+import java.util.Map;
 
 /**
  * Represents the Novaconomy Market
@@ -175,4 +175,73 @@ public interface NovaMarket {
      * @throws IllegalArgumentException if material is null or price is negative
      */
     void setBasePriceOverride(@NotNull Material m, double price) throws IllegalArgumentException;
+
+    /**
+     * Whether money made from the Novaconomy Market is deposited into the Novaconomy Bank.
+     * @return true if enabled, else false
+     */
+    boolean isDepositEnabled();
+
+    /**
+     * Sets whether money made from the Novaconomy Market is deposited into the Novaconomy Bank.
+     * @param enabled true if enabled, else false
+     */
+    void setDepositEnabled(boolean enabled);
+
+    /**
+     * Fetches the maximum amount of purchases a player can make in a single day (20 minutes).
+     * @return Maximum amount of purchases, or -1 if unlimited
+     */
+    long getMaxPurchases();
+
+    /**
+     * Sets the maximum amount of purchases a player can make in a single day (20 minutes).
+     * @param maxPurchases Maximum amount of Purchases (-1 for unlimited)
+     */
+    void setMaxPurchases(long maxPurchases);
+
+    /**
+     * <p>Whether the Market Membership feature is enabled.</p>
+     * <p>If enabled, players will have to pay a {@linkplain #getMarketMembershipCost() one-time fee} to gain access to the Novaconomy Market.</p>
+     * @return
+     */
+    boolean isMarketMembershipEnabled();
+
+    /**
+     * Sets whether the Market Membership feature is enabled.
+     * @param enabled true if enabled, else false
+     * @see #isMarketMembershipEnabled()
+     */
+    void setMarketMembershipEnabled(boolean enabled);
+
+    /**
+     * Fetches the one-time fee a player must pay to gain access to the Novaconomy Market. Default is {@code 10000.0}.
+     * @return Market Membership Cost
+     */
+    double getMarketMembershipCost();
+
+    /**
+     * Fetches the one-time fee a player must pay to gain access to the Novaconomy Market, factoring an Economy's {@linkplain Economy#getConversionScale conversion scale}.
+     * @param scale Scale to use
+     * @return Market Membership Cost
+     */
+    default double getMarketMembershipCost(double scale) {
+        return getMarketMembershipCost() * scale;
+    }
+
+    /**
+     * Fetches the one-time fee a player must pay to gain access to the Novaconomy Market, factoring an Economy's {@linkplain Economy#getConversionScale conversion scale}.
+     * @param econ Economy to use
+     * @return
+     */
+    default double getMarketMembershipCost(@Nullable Economy econ) {
+        return getMarketMembershipCost(econ == null ? 1 : econ.getConversionScale());
+    }
+
+    /**
+     * Sets the base one-time fee a player must pay to gain access to the Novaconomy Market.
+     * @param cost Market Membership Cost
+     */
+    void setMarketMembershipCost(double cost);
+
 }

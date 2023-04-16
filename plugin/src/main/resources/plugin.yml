@@ -50,6 +50,19 @@ permissions:
     children:
       novaconomy.admin.corporation: true
 
+  # Admin Market
+  novaconomy.admin.market:
+    description: All Novaconomy Market Admin Permissions
+    default: op
+    children:
+      novaconomy.admin: true
+
+  novaconomy.admin.market.bypass_limit:
+    description: Bypass the Market Purchase Limit
+    default: op
+    children:
+      novaconomy.admin.market: true
+
   # Economy
   novaconomy.economy:
     description: Access to all Economy actions

@@ -291,6 +291,15 @@ Market:
     # Cobblestone: 0.75
     # "minecraft:dirt": 0.4
 
+  # Whether money made from the Market should deposit into the Bank
+  Deposit: true
+
+  # The Maximum Amount of Purchases a player can make every 20 minutes (1 MC Day).
+  # -1 = Unlimited
+  #
+  # Those with the "novaconomy.admin.market.bypass_limit" permission will be exempt from this setting.
+  MaxPurchases: -1
+
   # Market Restock Options
   Restock:
     # Whether Automatic Market restocking is enabled
@@ -310,3 +319,14 @@ Market:
     # How often, in ticks, the Market should restock its items
     # 20 ticks = 1 second
     IntervalTicks: 1728000
+
+  # Market Membership Options
+  Membership:
+
+    # Whether Market Membership is enabled
+    #
+    # If enabled, players will have to pay a one-time specific amount to gain access to the Novaconomy Market
+    Enabled: true
+
+    # The base amount of money required to gain access to the Market
+    Amount: 10000.0

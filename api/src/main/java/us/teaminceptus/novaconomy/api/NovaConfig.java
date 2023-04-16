@@ -360,6 +360,8 @@ public interface NovaConfig  {
 
         if (!config.isConfigurationSection("Market")) config.createSection("Market");
         if (!config.isBoolean("Market.Enabled")) config.set("Market.Enabled", true);
+        if (!config.isBoolean("Market.Deposit")) config.set("Market.Deposit", true);
+        if (!config.isInt("Market.MaxPurchases") && !config.isLong("Market.MaxPurchases")) config.set("Market.MaxPurchases", -1);
 
         if (!config.isConfigurationSection("Market.BasePriceOverride")) config.createSection("Market.BasePriceOverride");
         for (String s : config.getConfigurationSection("Market.BasePriceOverride").getKeys(false))
@@ -372,6 +374,10 @@ public interface NovaConfig  {
         if (!config.isInt("Market.Restock.Base") && !config.isLong("Market.Restock.Base")) config.set("Market.Restock.Base", 1000);
         if (!config.isBoolean("Market.Restock.BankInfluence")) config.set("Market.Restock.BankInfluence", true);
         if (!config.isInt("Market.Restock.IntervalTicks") && !config.isLong("Market.Restock.IntervalTicks")) config.set("Market.Restock.IntervalTicks", 1728000);
+
+        if (!config.isConfigurationSection("Market.Membership")) config.createSection("Market.Membership");
+        if (!config.isBoolean("Market.Membership.Enabled")) config.set("Market.Membership.Enabled", true);
+        if (!config.isInt("Market.Membership.Amount") && !config.isDouble("Market.Membership.Amount")) config.set("Market.Membership.Amount", 10000.0);
 
         try { config.save(f); } catch (IOException e) { print(e); }
 
