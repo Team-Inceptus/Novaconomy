@@ -4,8 +4,10 @@ import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 
+import java.io.File;
 import java.util.Map;
 
 /**
@@ -13,6 +15,14 @@ import java.util.Map;
  * @since 1.7.1
  */
 public interface NovaMarket {
+
+    /**
+     * Fetches the file that the Novaconomy Market information is stored in.
+     * @return Market File
+     */
+    static File getMarketFile() {
+        return new File(NovaConfig.getDataFolder(), "market.dat");
+    }
 
     /**
      * Fetches the uninflated base price of a Material on the Market.

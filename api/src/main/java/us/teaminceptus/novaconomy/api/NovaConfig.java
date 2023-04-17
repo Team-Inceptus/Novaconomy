@@ -43,14 +43,6 @@ public interface NovaConfig  {
     }
 
     /**
-     * Fetches the file that the Market is stored in.
-     * @return Market File
-     */
-    static File getMarketFile() {
-        return new File(getDataFolder(), "market.dat");
-    }
-
-    /**
      * Fetches the file of the main config.yml.
      * @return Configuration File
      */

@@ -481,7 +481,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 		File economiesDir = NovaConfig.getEconomiesFolder();
 		File corporationDir = NovaConfig.getCorporationsFolder();
 		File playerDir = NovaConfig.getPlayerDirectory();
-		File marketFile = NovaConfig.getMarketFile();
+		File marketFile = NovaMarket.getMarketFile();
 
 		if (!NovaConfig.getConfiguration().isDatabaseConversionEnabled()) return;
 
@@ -718,7 +718,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 			}
 
 			try (ResultSet market = meta.getTables(null, null, "market", null)) {
-				if (!NovaConfig.getMarketFile().exists() && market.first()) {
+				if (!NovaMarket.getMarketFile().exists() && market.first()) {
 					getLogger().warning("Converting Market to File Storage...");
 					readMarketDB();
 					writeMarketFile();
