@@ -1,6 +1,5 @@
 package us.teaminceptus.novaconomy.api.economy;
 
-import org.apache.commons.lang.Validate;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -275,9 +274,12 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
      */
     @Nullable
     public static Economy getEconomy(@NotNull String name) throws IllegalArgumentException {
-        Validate.notNull(name, "Name is null");
-        for (Economy econ : getEconomies()) if (econ.getName().equalsIgnoreCase(name)) return econ;
-        return null;
+        if (name == null) throw new IllegalArgumentException("Name cannot be null");
+
+        return Economy.getEconomies().stream()
+                .filter(e -> e.getName().equalsIgnoreCase(name))
+                .findFirst()
+                .orElse(null);
     }
 
     /**
@@ -348,6 +350,7 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
 
                 while (rs.next()) economies.add(readDB(rs));
 
+                rs.close();
                 ps.close();
             } catch (Exception e) {
                 NovaConfig.print(e);
@@ -465,6 +468,8 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
 
                 ResultSet rs = ps.executeQuery();
                 if (rs.next()) econ = readDB(rs);
+
+                rs.close();
                 ps.close();
             } else {
                 File f = new File(NovaConfig.getEconomiesFolder(), uid + ".yml");

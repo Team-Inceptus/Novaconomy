@@ -665,6 +665,9 @@ public final class Corporation {
 
                 while (rs.next())
                     corporations.add(readDB(rs));
+
+                rs.close();
+                ps.close();
             } catch (Exception e) {
                 NovaConfig.print(e);
             }
@@ -726,6 +729,8 @@ public final class Corporation {
 
                 ResultSet rs = ps.executeQuery();
                 if (rs.next()) c = readDB(rs);
+
+                rs.close();
                 ps.close();
             } else {
                 File f = new File(NovaConfig.getCorporationsFolder(), id.toString());

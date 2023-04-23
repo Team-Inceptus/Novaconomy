@@ -1201,6 +1201,8 @@ public final class Business implements ConfigurationSerializable {
                 ResultSet rs = ps.executeQuery();
 
                 while (rs.next()) businesses.add(readDB(rs));
+
+                rs.close();
                 ps.close();
             } catch (Exception e) {
                 NovaConfig.print(e);
@@ -1251,6 +1253,8 @@ public final class Business implements ConfigurationSerializable {
 
                 ResultSet rs = ps.executeQuery();
                 if (rs.next()) b = readDB(rs);
+
+                rs.close();
                 ps.close();
             } else {
                 File f = new File(NovaConfig.getBusinessesFolder(), uid.toString());

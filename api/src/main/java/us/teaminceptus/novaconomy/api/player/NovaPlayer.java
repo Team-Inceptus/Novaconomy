@@ -16,6 +16,7 @@ import us.teaminceptus.novaconomy.api.bank.Bank;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.business.Rating;
 import us.teaminceptus.novaconomy.api.economy.Economy;
+import us.teaminceptus.novaconomy.api.economy.market.NovaMarket;
 import us.teaminceptus.novaconomy.api.events.player.economy.PlayerDepositEvent;
 import us.teaminceptus.novaconomy.api.events.player.economy.PlayerWithdrawEvent;
 import us.teaminceptus.novaconomy.api.settings.Settings;
@@ -35,7 +36,6 @@ import java.util.stream.Collectors;
 
 /**
  * Class representing a Player used in the Plugin
- *
  */
 @SuppressWarnings("unchecked")
 public final class NovaPlayer {
@@ -113,7 +113,7 @@ public final class NovaPlayer {
 
             stats = pConfig.containsKey("stats") ? (PlayerStatistics) pConfig.get("stats") : new PlayerStatistics(p);
         }
-        
+
         this.stats = stats;
     }
 
@@ -206,7 +206,7 @@ public final class NovaPlayer {
                     else
                         sql = "INSERT INTO players VALUES (?, ?, ?)";
                 }
-                
+
                 PreparedStatement ps = db.prepareStatement(sql);
                 ps.setString(1, p.getUniqueId().toString());
 
@@ -216,12 +216,12 @@ public final class NovaPlayer {
                 bOs.close();
 
                 ps.setBytes(2, os.toByteArray());
-                
+
                 ByteArrayOutputStream statsOs = new ByteArrayOutputStream();
                 BukkitObjectOutputStream statsBos = new BukkitObjectOutputStream(statsOs);
                 statsBos.writeObject(this.stats);
                 statsBos.close();
-                
+
                 ps.setBytes(3, statsOs.toByteArray());
 
                 ps.executeUpdate();
@@ -334,10 +334,13 @@ public final class NovaPlayer {
      */
     public void withdraw(@NotNull Economy econ, double amount) throws IllegalArgumentException, UnsupportedOperationException {
         if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
-        if (amount < 0 || amount > Bank.getBalance(econ)) throw new IllegalArgumentException("Amount cannot be negative or greater than current bank balance");
+        if (amount < 0 || amount > Bank.getBalance(econ))
+            throw new IllegalArgumentException("Amount cannot be negative or greater than current bank balance");
 
-        if (!NovaConfig.getConfiguration().canBypassWithdraw(p) && NovaConfig.getConfiguration().getMaxWithdrawAmount(econ) < amount) throw new UnsupportedOperationException("Amount exceeds max withdraw amount");
-        if (System.currentTimeMillis() - 86400000 < (long) pConfig.getOrDefault(LBW + ".timestamp", 0)) throw new UnsupportedOperationException("Last withdraw was less than 24 hours ago");
+        if (!NovaConfig.getConfiguration().canBypassWithdraw(p) && NovaConfig.getConfiguration().getMaxWithdrawAmount(econ) < amount)
+            throw new UnsupportedOperationException("Amount exceeds max withdraw amount");
+        if (System.currentTimeMillis() - 86400000 < (long) pConfig.getOrDefault(LBW + ".timestamp", 0))
+            throw new UnsupportedOperationException("Last withdraw was less than 24 hours ago");
 
         Bank.removeBalance(econ, amount);
         add(econ, amount);
@@ -386,7 +389,7 @@ public final class NovaPlayer {
         Map<Economy, Double> amounts = new HashMap<>();
 
         for (Map.Entry<String, Object> entry : pConfig.entrySet()) {
-            if (!entry.getKey().startsWith("donated")) continue;
+            if (!entry.getKey().startsWith("donated.")) continue;
 
             Economy econ = Economy.getEconomy(entry.getKey().split("\\.")[1].toLowerCase());
             if (econ == null) continue;
@@ -459,7 +462,7 @@ public final class NovaPlayer {
         Map<OfflinePlayer, Bounty> bounties = new HashMap<>();
 
         for (Map.Entry<String, Object> entry : pConfig.entrySet()) {
-            if (!entry.getKey().startsWith("bounty")) continue;
+            if (!entry.getKey().startsWith("bounty.")) continue;
 
             OfflinePlayer target = Bukkit.getOfflinePlayer(UUID.fromString(entry.getKey().split("\\.")[1]));
             if (target == null) continue;
@@ -687,5 +690,31 @@ public final class NovaPlayer {
     public boolean hasRating(@Nullable Business b) {
         if (b == null) return false;
         return getRatingLevel(b) != 0;
+    }
+
+    /**
+     * <p>Whether this player can access the Novaconomy Market.</p>
+     * <p>If {@link NovaMarket#isMarketMembershipEnabled()} returns false or Player has {@code novaconomy.admin.market.bypass_limit}, this method will always return true.</p>
+     * @return true if this player can access the market, else false
+     */
+    public boolean hasMarketAccess() {
+        if (!NovaConfig.getMarket().isMarketMembershipEnabled()) return true;
+        if (p.isOp() || (p.isOnline() && p.getPlayer().hasPermission("novaconomy.admin.market.bypass_limit")))
+            return true;
+
+        return (Boolean) pConfig.getOrDefault("market.membership", false);
+    }
+
+    /**
+     * <p>Sets whether this player can access the Novaconomy Market.</p>
+     * <p>If {@link NovaMarket#isMarketMembershipEnabled()} returns false or Player has {@code novaconomy.admin.market.bypass_limit}, this method will do nothing.</p>
+     * @param value true if this player can access the market, else false
+     */
+    public void setMarketAccess(boolean value) {
+        if (!NovaConfig.getMarket().isMarketMembershipEnabled()) return;
+        if (p.isOp() || (p.isOnline() && p.getPlayer().hasPermission("novaconomy.admin.market.bypass_limit"))) return;
+
+        pConfig.put("market.membership", value);
+        save();
     }
 }

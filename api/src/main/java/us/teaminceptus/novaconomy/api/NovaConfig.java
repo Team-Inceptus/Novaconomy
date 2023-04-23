@@ -229,11 +229,25 @@ public interface NovaConfig  {
     }
 
     /**
-     * Loads the global storage configuration.
-     * @return Global Storage Configuration
+     * Fetches the global storage configuration.
+     * @return Global Storage Configuration, or null if file doesn't exist
+     */
+    @Nullable
+    static FileConfiguration getGlobalStorage() {
+        File f = getGlobalFile();
+        if (!f.exists()) return null;
+
+        return YamlConfiguration.loadConfiguration(f);
+    }
+
+    /**
+     * Fetches the file instance of the Global Storage.
+     * @return Global Storage File Instance
      */
     @NotNull
-    static FileConfiguration getGlobalStorage() { return YamlConfiguration.loadConfiguration(new File(getDataFolder(), "global.yml")); }
+    static File getGlobalFile() {
+        return new File(getDataFolder(), "global.yml");
+    }
 
     /**
      * Fetches the Configuration without checking its values.
