@@ -9,6 +9,7 @@ import us.teaminceptus.novaconomy.api.economy.Economy;
 
 import java.io.File;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Represents the Novaconomy Market
@@ -253,5 +254,11 @@ public interface NovaMarket {
      * @param cost Market Membership Cost
      */
     void setMarketMembershipCost(double cost);
+
+    /**
+     * Fetches an immutable copy of all of the purchases ever on the Novaconomy Market.
+     * @return Set of Receipts
+     */
+    Set<Receipt> getAllPurchases();
 
 }

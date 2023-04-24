@@ -66,96 +66,96 @@ import static us.teaminceptus.novaconomy.util.inventory.Items.*;
 
 @SuppressWarnings("unchecked")
 public final class GUIManager implements Listener {
-    
+
     public GUIManager(Novaconomy plugin) {
         // this.plugin = plugin;
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
 
     private static double getAmount(ItemStack item) {
-		return of(item).getDouble(AMOUNT_TAG);
-	}
+        return of(item).getDouble(AMOUNT_TAG);
+    }
 
-	@Nullable
-	private static Economy getEconomy(ItemStack item) {
-		return Economy.getEconomy(of(item).getUUID(ECON_TAG));
-	}
+    @Nullable
+    private static Economy getEconomy(ItemStack item) {
+        return Economy.getEconomy(of(item).getUUID(ECON_TAG));
+    }
 
-	@Nullable
-	private static Business getBusiness(ItemStack item) {
-		return Business.byId(of(item).getUUID(BUSINESS_TAG));
-	}
+    @Nullable
+    private static Business getBusiness(ItemStack item) {
+        return Business.byId(of(item).getUUID(BUSINESS_TAG));
+    }
 
     @Nullable
     private static Corporation getCorporation(ItemStack item) {
         return Corporation.byId(of(item).getUUID(CORPORATION_TAG));
     }
 
-	@FunctionalInterface
-	private interface TriConsumer<T, U, L> {
-		void accept(T t, U u, L l);
-	}
+    @FunctionalInterface
+    private interface TriConsumer<T, U, L> {
+        void accept(T t, U u, L l);
+    }
 
-	static final TriConsumer<InventoryClickEvent, Integer, List<NovaInventory>> CHANGE_PAGE_TRICONSUMER = (e, i, l) -> {
-		HumanEntity p = e.getWhoClicked();
-		ItemStack item = e.getCurrentItem();
-		int nextPage = of(item).getInt("page") + i;
-		Inventory nextInv = nextPage >= l.size() ? l.get(0) : l.get(nextPage);
+    static final TriConsumer<InventoryClickEvent, Integer, List<NovaInventory>> CHANGE_PAGE_TRICONSUMER = (e, i, l) -> {
+        HumanEntity p = e.getWhoClicked();
+        ItemStack item = e.getCurrentItem();
+        int nextPage = of(item).getInt("page") + i;
+        Inventory nextInv = nextPage >= l.size() ? l.get(0) : l.get(nextPage);
 
-		p.openInventory(nextInv);
-		NovaSound.ITEM_BOOK_PAGE_TURN.playSuccess(p);
-	};
+        p.openInventory(nextInv);
+        NovaSound.ITEM_BOOK_PAGE_TURN.playSuccess(p);
+    };
 
-	static final BiConsumer<InventoryClickEvent, Boolean> BUSINESS_ADVERTISING_BICONSUMER = (e, add) -> {
-		Player p = (Player) e.getWhoClicked();
-		NovaPlayer np = new NovaPlayer(p);
+    static final BiConsumer<InventoryClickEvent, Boolean> BUSINESS_ADVERTISING_BICONSUMER = (e, add) -> {
+        Player p = (Player) e.getWhoClicked();
+        NovaPlayer np = new NovaPlayer(p);
 
-		ItemStack item = e.getCurrentItem();
-		Inventory inv = e.getView().getTopInventory();
+        ItemStack item = e.getCurrentItem();
+        Inventory inv = e.getView().getTopInventory();
 
-		Business b = getBusiness(item);
-		double amount = getAmount(item);
+        Business b = getBusiness(item);
+        double amount = getAmount(item);
 
-		ItemStack econWheel = inv.getItem(31);
-		Economy econ = getEconomy(econWheel);
+        ItemStack econWheel = inv.getItem(31);
+        Economy econ = getEconomy(econWheel);
 
-		if (add && np.getBalance(econ) < amount) {
-			p.sendMessage(format(getMessage("error.economy.invalid_amount"), get("constants.deposit")));
-			return;
-		}
+        if (add && np.getBalance(econ) < amount) {
+            p.sendMessage(format(getMessage("error.economy.invalid_amount"), get("constants.deposit")));
+            return;
+        }
 
-		String msg = format("%,.2f", amount) + econ.getSymbol();
+        String msg = format("%,.2f", amount) + econ.getSymbol();
 
-		if (add) {
-			np.remove(econ, amount);
-			b.addAdvertisingBalance(amount, econ);
-			p.sendMessage(format(getMessage("success.business.advertising_deposit"), msg, b.getName()));
-		} else {
-			np.add(econ, amount);
-			b.removeAdvertisingBalance(amount, econ);
-			p.sendMessage(format(getMessage("success.business.advertising_withdraw"), msg, b.getName()));
-		}
+        if (add) {
+            np.remove(econ, amount);
+            b.addAdvertisingBalance(amount, econ);
+            p.sendMessage(format(getMessage("success.business.advertising_deposit"), msg, b.getName()));
+        } else {
+            np.add(econ, amount);
+            b.removeAdvertisingBalance(amount, econ);
+            p.sendMessage(format(getMessage("success.business.advertising_withdraw"), msg, b.getName()));
+        }
 
-		p.closeInventory();
-		NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
-	};
+        p.closeInventory();
+        NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
+    };
 
-	static final BiConsumer<InventoryClickEvent, Integer> EXCHANGE_BICONSUMER = (e, i) -> {
-		Player p = (Player) e.getWhoClicked();
-		ItemStack item = e.getCurrentItem();
-		Inventory inv = e.getView().getTopInventory();
-		Economy econ = getEconomy(item);
-		int oIndex = i == 14 ? 12 : 14;
-		Economy econ2 = getEconomy(inv.getItem(oIndex));
+    static final BiConsumer<InventoryClickEvent, Integer> EXCHANGE_BICONSUMER = (e, i) -> {
+        Player p = (Player) e.getWhoClicked();
+        ItemStack item = e.getCurrentItem();
+        Inventory inv = e.getView().getTopInventory();
+        Economy econ = getEconomy(item);
+        int oIndex = i == 14 ? 12 : 14;
+        Economy econ2 = getEconomy(inv.getItem(oIndex));
 
-		List<Economy> economies = Economy.getEconomies().stream()
-				.filter(economy -> !economy.equals(econ2))
-				.sorted(Comparator.comparing(Economy::getName))
-				.collect(Collectors.toList());
+        List<Economy> economies = Economy.getEconomies().stream()
+                .filter(economy -> !economy.equals(econ2))
+                .sorted(Comparator.comparing(Economy::getName))
+                .collect(Collectors.toList());
 
-		if (economies.size() == 1) {
-			ItemStack ec1 = inv.getItem(12);
-			ItemStack first = builder(ec1.clone(),
+        if (economies.size() == 1) {
+            ItemStack ec1 = inv.getItem(12);
+            ItemStack first = builder(ec1.clone(),
                     nbt -> {
                         nbt.setID("exchange:2");
                         nbt.set(ECON_TAG, of(ec1).getUUID(ECON_TAG));
@@ -163,7 +163,7 @@ public final class GUIManager implements Listener {
                     }
             );
 
-			ItemStack ec2 = inv.getItem(14);
+            ItemStack ec2 = inv.getItem(14);
             ItemStack second = builder(ec1.clone(),
                     nbt -> {
                         nbt.setID("exchange:2");
@@ -172,16 +172,16 @@ public final class GUIManager implements Listener {
                     }
             );
 
-			inv.setItem(14, first);
-			inv.setItem(12, second);
-			NovaSound.BLOCK_NOTE_BLOCK_PLING.playSuccess(p);
-			return;
-		}
+            inv.setItem(14, first);
+            inv.setItem(12, second);
+            NovaSound.BLOCK_NOTE_BLOCK_PLING.playSuccess(p);
+            return;
+        }
 
-		Economy next = economies.get(economies.indexOf(econ) + 1 >= economies.size() ? 0 : economies.indexOf(econ) + 1);
-		double amount = i == 12 ? getAmount(item) : Math.floor(econ2.convertAmount(next, getAmount(inv.getItem(12)) * 100) / 100);
+        Economy next = economies.get(economies.indexOf(econ) + 1 >= economies.size() ? 0 : economies.indexOf(econ) + 1);
+        double amount = i == 12 ? getAmount(item) : Math.floor(econ2.convertAmount(next, getAmount(inv.getItem(12)) * 100) / 100);
 
-		ItemStack newItem = builder(next.getIcon(),
+        ItemStack newItem = builder(next.getIcon(),
                 meta -> meta.setLore(Collections.singletonList(ChatColor.YELLOW + format("%,.2f", amount) + next.getSymbol())),
                 nbt -> {
                     nbt.setID("exchange:" + (i == 14 ? "2" : "1"));
@@ -189,11 +189,11 @@ public final class GUIManager implements Listener {
                     nbt.set(AMOUNT_TAG, amount);
                 });
 
-		inv.setItem(e.getSlot(), newItem);
+        inv.setItem(e.getSlot(), newItem);
 
-		if (i == 12) {
-			double oAmount = Math.floor(next.convertAmount(econ2, amount) * 100) / 100;
-			ItemStack other = builder(inv.getItem(14).clone(),
+        if (i == 12) {
+            double oAmount = Math.floor(next.convertAmount(econ2, amount) * 100) / 100;
+            ItemStack other = builder(inv.getItem(14).clone(),
                     meta -> meta.setLore(Collections.singletonList(ChatColor.YELLOW + format("%,.2f", oAmount) + next.getSymbol())),
                     nbt -> {
                         nbt.setID("exchange:2");
@@ -201,11 +201,11 @@ public final class GUIManager implements Listener {
                         nbt.set(AMOUNT_TAG, oAmount);
                     }
             );
-			inv.setItem(14, other);
-		}
+            inv.setItem(14, other);
+        }
 
-		NovaSound.BLOCK_NOTE_BLOCK_PLING.playSuccess(p);
-	};
+        NovaSound.BLOCK_NOTE_BLOCK_PLING.playSuccess(p);
+    };
 
     static final TriConsumer<InventoryClickEvent, NovaInventory, Integer> CORPORATION_LEVELING_TRICONSUMER = (e, inv, l) -> {
         Player p = (Player) e.getWhoClicked();
@@ -223,7 +223,7 @@ public final class GUIManager implements Listener {
         return CLICK_ITEMS;
     }
 
-	static final Map<String, BiConsumer<InventoryClickEvent, NovaInventory>> CLICK_ITEMS = ImmutableMap.<String, BiConsumer<InventoryClickEvent, NovaInventory>>builder()
+    static final Map<String, BiConsumer<InventoryClickEvent, NovaInventory>> CLICK_ITEMS = ImmutableMap.<String, BiConsumer<InventoryClickEvent, NovaInventory>>builder()
             .put("economy_scroll", (e, inv) -> {
                 ItemStack item = e.getCurrentItem();
                 List<Economy> economies = Economy.getEconomies().stream().sorted().collect(Collectors.toList());
@@ -274,7 +274,7 @@ public final class GUIManager implements Listener {
                                 }
                         );
 
-                        purchaseGUI.setItem(add ? 13 + (i + 1): 13 - (i + 1), amountI);
+                        purchaseGUI.setItem(add ? 13 + (i + 1) : 13 - (i + 1), amountI);
                     }
 
                 if (np.getBalance(pr.getEconomy()) < pr.getPrice().getAmount())
@@ -352,7 +352,7 @@ public final class GUIManager implements Listener {
                 sortedList.sort(String.CASE_INSENSITIVE_ORDER);
 
                 Economy econ = getEconomy(item);
-                int nextI = sortedList.indexOf(econ.getName()) + 1;
+                int nextI = sortedList.indexOf(econ.getName()) + (e.getClick().isRightClick() ? -1 : 1);
                 Economy next = sortedList.size() == 1 ? econ : Economy.getEconomy(sortedList.get(nextI == sortedList.size() ? 0 : nextI));
 
                 item.setType(next.getIconType());
@@ -681,14 +681,15 @@ public final class GUIManager implements Listener {
                             }
                     );
 
-                    if (value) NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p); else NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
-                
+                    if (value) NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
+                    else NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
+
                     switch (section.toLowerCase()) {
                         case BUSINESS_TAG: {
                             Business b = Business.byOwner(p);
                             Settings.Business sett = Settings.Business.valueOf(setting);
                             b.setSetting(sett, !value);
-        
+
                             BusinessSettingChangeEvent event = new BusinessSettingChangeEvent(b, value, !value, sett);
                             Bukkit.getPluginManager().callEvent(event);
                             break;
@@ -706,7 +707,7 @@ public final class GUIManager implements Listener {
                             NovaPlayer np = new NovaPlayer(p);
                             Settings.Personal sett = Settings.Personal.valueOf(setting);
                             np.setSetting(sett, !value);
-        
+
                             PlayerSettingChangeEvent event = new PlayerSettingChangeEvent(p, value, !value, sett);
                             Bukkit.getPluginManager().callEvent(event);
                             break;
@@ -1302,7 +1303,8 @@ public final class GUIManager implements Listener {
                         }));
                         break;
                     }
-                    default: break;
+                    default:
+                        break;
                 }
             })
             .put("business:invites", (e, inv) -> {
@@ -1317,6 +1319,20 @@ public final class GUIManager implements Listener {
                 Player p = (Player) e.getWhoClicked();
                 getCommandWrapper().settings(p, CORPORATION_TAG);
             })
+            .put("economy:wheel:market_access", (e, inv) -> {
+                items().get("economy:wheel").accept(e, inv);
+
+                Player p = (Player) e.getWhoClicked();
+                Economy econ = getEconomy(inv.getItem(13));
+
+                ItemStack display = inv.getItem(15).clone();
+                ItemMeta meta = display.getItemMeta();
+                meta.setLore(Arrays.asList(
+                        ChatColor.GOLD + String.format(get("constants.price"), NovaConfig.getMarket().getMarketMembershipCost(econ) + String.valueOf(econ.getSymbol()))
+                ));
+                display.setItemMeta(meta);
+                inv.setItem(15, display);
+            })
             .build();
 
     static final Map<String, BiConsumer<InventoryClickEvent, NovaInventory>> CLICK_INVENTORIES = ImmutableMap.<String, BiConsumer<InventoryClickEvent, NovaInventory>>builder()
@@ -1329,9 +1345,14 @@ public final class GUIManager implements Listener {
                 Runnable cancelR = inv.getAttribute("cancel_action", Runnable.class);
 
                 switch (type) {
-                    case "accept": confirmR.run(); break;
-                    case "cancel": cancelR.run(); break;
-                    default: throw new UnsupportedOperationException("Unknown Type: " + type);
+                    case "accept":
+                        confirmR.run();
+                        break;
+                    case "cancel":
+                        cancelR.run();
+                        break;
+                    default:
+                        throw new UnsupportedOperationException("Unknown Type: " + type);
                 }
             })
             .put("select_corporation_children", (e, inv) -> {
@@ -1435,7 +1456,8 @@ public final class GUIManager implements Listener {
                 }
                 break;
             }
-            default: break;
+            default:
+                break;
         }
     }
 

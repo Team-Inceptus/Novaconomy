@@ -2,6 +2,7 @@ package us.teaminceptus.novaconomy;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.jeff_media.updatechecker.UpdateCheckSource;
 import com.jeff_media.updatechecker.UpdateChecker;
 import org.bstats.bukkit.Metrics;
@@ -1708,7 +1709,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
             .build();
     //</editor-fold>
 
-    static final List<Receipt> purchases = new ArrayList<>();
+    static final Set<Receipt> purchases = new HashSet<>();
     static final Map<Material, Long> stock = new HashMap<>();
 
     private void loadMarket() {
@@ -1958,6 +1959,11 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
     public void setMarketMembershipCost(double cost) {
         config.set("Market.Membership.Amount", cost);
         saveConfig();
+    }
+
+    @Override
+    public Set<Receipt> getAllPurchases() {
+        return ImmutableSet.copyOf(purchases);
     }
 
 }
