@@ -1,5 +1,6 @@
 package us.teaminceptus.novaconomy.api;
 
+import org.bukkit.Material;
 import org.jetbrains.annotations.NotNull;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.corporation.CorporationInvite;
@@ -116,6 +117,22 @@ public interface SortingType<T> extends Comparator<T> {
      */
     SortingType<CorporationInvite> CORPORATION_INVITE_CORPORATION_DESCENDING = CORPORATION_INVITE_CORPORATION_ASCENDING.reversed();
 
+    // Material
+
+    SortingType<Material> MATERIAL_NAME_ASCENDING = Material::compareTo;
+
+    SortingType<Material> MATERIAL_NAME_DESCENDING = MATERIAL_NAME_ASCENDING.reversed();
+
+    SortingType<Material> MATERIAL_MAX_STACK_SIZE_ASCENDING = (m1, m2) -> Integer.compare(m1.getMaxStackSize(), m2.getMaxStackSize());
+
+    SortingType<Material> MATERIAL_MAX_STACK_SIZE_DESCENDING = MATERIAL_MAX_STACK_SIZE_ASCENDING.reversed();
+
+    SortingType<Material> MATERIAL_BLOCKS = (m1, m2) -> Boolean.compare(m1.isBlock(), m2.isBlock());
+
+    SortingType<Material> MATERIAL_NONBLOCKS = MATERIAL_BLOCKS.reversed();
+
+    SortingType<Material> MATERIAL_EDIBLES = (m1, m2) -> Boolean.compare(m1.isEdible(), m2.isEdible());
+
     @Override
     default SortingType<T> reversed() {
         return (o1, o2) -> compare(o2, o1);
@@ -158,8 +175,8 @@ public interface SortingType<T> extends Comparator<T> {
     /**
      * Fetches all SortingType values of a specific type.
      * @param clazz Type of SortingType
-     * @return SortingType values
      * @param <T> Type of SortingType
+     * @return SortingType values
      */
     @NotNull
     @SuppressWarnings("unchecked")
