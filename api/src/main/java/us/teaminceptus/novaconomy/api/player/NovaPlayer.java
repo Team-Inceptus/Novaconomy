@@ -1,8 +1,10 @@
 package us.teaminceptus.novaconomy.api.player;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.AtomicDouble;
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -17,6 +19,7 @@ import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.business.Rating;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.economy.market.NovaMarket;
+import us.teaminceptus.novaconomy.api.economy.market.Receipt;
 import us.teaminceptus.novaconomy.api.events.player.economy.PlayerDepositEvent;
 import us.teaminceptus.novaconomy.api.events.player.economy.PlayerWithdrawEvent;
 import us.teaminceptus.novaconomy.api.settings.Settings;
@@ -694,12 +697,12 @@ public final class NovaPlayer {
 
     /**
      * <p>Whether this player can access the Novaconomy Market.</p>
-     * <p>If {@link NovaMarket#isMarketMembershipEnabled()} returns false or Player has {@code novaconomy.admin.market.bypass_limit}, this method will always return true.</p>
+     * <p>If {@link NovaMarket#isMarketMembershipEnabled()} returns false or Player has {@code novaconomy.admin.market.bypass_membership}, this method will always return true.</p>
      * @return true if this player can access the market, else false
      */
     public boolean hasMarketAccess() {
         if (!NovaConfig.getMarket().isMarketMembershipEnabled()) return true;
-        if (p.isOp() || (p.isOnline() && p.getPlayer().hasPermission("novaconomy.admin.market.bypass_limit")))
+        if (p.isOp() || (p.isOnline() && p.getPlayer().hasPermission("novaconomy.admin.market.bypass_membership")))
             return true;
 
         return (Boolean) pConfig.getOrDefault("market.membership", false);
@@ -707,14 +710,40 @@ public final class NovaPlayer {
 
     /**
      * <p>Sets whether this player can access the Novaconomy Market.</p>
-     * <p>If {@link NovaMarket#isMarketMembershipEnabled()} returns false or Player has {@code novaconomy.admin.market.bypass_limit}, this method will do nothing.</p>
+     * <p>If {@link NovaMarket#isMarketMembershipEnabled()} returns false or Player has {@code novaconomy.admin.market.bypass_membership}, this method will do nothing.</p>
      * @param value true if this player can access the market, else false
      */
     public void setMarketAccess(boolean value) {
         if (!NovaConfig.getMarket().isMarketMembershipEnabled()) return;
-        if (p.isOp() || (p.isOnline() && p.getPlayer().hasPermission("novaconomy.admin.market.bypass_limit"))) return;
+        if (p.isOp() || (p.isOnline() && p.getPlayer().hasPermission("novaconomy.admin.market.bypass_membership")))
+            return;
 
         pConfig.put("market.membership", value);
         save();
+    }
+
+    /**
+     * Fetches an immutable copy of all of the purchases this player has made.
+     * @return All Purchases
+     */
+    @NotNull
+    public Set<Receipt> getPurchases() {
+        return ImmutableSet.copyOf(NovaConfig.getMarket().getAllPurchases().stream()
+                .filter(r -> r.getPurchaser().equals(p))
+                .collect(Collectors.toList())
+        );
+    }
+
+    /**
+     * Fetches an immutable copy of all of the purchases this player has made for a specific Material.
+     * @param m Material to search for
+     * @return All Purchases for this Material
+     */
+    @NotNull
+    public Set<Receipt> getPurchases(@NotNull Material m) {
+        return ImmutableSet.copyOf(getPurchases().stream()
+                .filter(r -> r.getPurchased() == m)
+                .collect(Collectors.toList())
+        );
     }
 }
