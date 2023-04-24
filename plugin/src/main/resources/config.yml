@@ -107,9 +107,9 @@ NaturalCauses:
     # Tags are case insensitive
     #
     # **Tags are only available in 1.13 and up**
-    Mining: {} # Remove this when adding
+    Mining: { } # Remove this when adding
       # DIAMOND_ORE: 120$
-      # fences: 5D
+    # fences: 5D
 
     # For all Entity Types: https://hub.spigotmc.org/javadocs/spigot/org/bukkit/entity/EntityType.html
     #
@@ -118,29 +118,29 @@ NaturalCauses:
     #
     # **Categories are only available in 1.17 and up**
     #
-    Killing: {} # Remove this when adding
+    Killing: { } # Remove this when adding
       # zombie: [D100, 150$]
-      # undead: 50$
+    # undead: 50$
 
     # Fishing Modifiers look at the entity or item you caught.
     # For all Entity Types: https://hub.spigotmc.org/javadocs/spigot/org/bukkit/entity/EntityType.html
     # For all Materials: https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Material.html
-    Fishing: {} # Remove this when adding
-      # cod: [E30, 50$]
+    Fishing: { } # Remove this when adding
+    # cod: [E30, 50$]
 
     # Farming Modifiers look at whatever you mined, similar to the Mining Modifiers.
-    Farming: {} # Remove this when adding
-      # wheat: [F10, 20$]
+    Farming: { } # Remove this when adding
+    # wheat: [F10, 20$]
 
     # Specifies special dividers based on the death cause
     # For all Causes: https://hub.spigotmc.org/javadocs/spigot/org/bukkit/event/entity/EntityDamageEvent.DamageCause.html
     # Causes are case insensitive
-    Death: {}
+    Death: { }
       # fall: 3 - Divide By 3
-      # LAVA: 5 - Divide By 5
+    # LAVA: 5 - Divide By 5
 
   # List of case insensitive Materials, Entity Types, Death Causes, Permissions, Player Names or Vault Groups that will not be affected by Natural Causes
-  Ignore: []
+  Ignore: [ ]
 
 
 # Interest Section
@@ -181,7 +181,7 @@ Taxes:
     #
     # Selectors like "my.plugin.permission.*" and RegEx are supported.
     Bypass:
-        - OPS
+      - OPS
       # - richguy55
       # - my.plugin.withdraw.unlimited
       # - VaultUnlimitedWithdraw
@@ -195,7 +195,7 @@ Taxes:
   #
   # Selectors like "my.plugin.permission.*" and RegEx are supported.
   Ignore:
-      - OPS
+    - OPS
     # - cooldude124
     # - my.plugin.taxes.none
     # - MyVaultGroup
@@ -212,15 +212,15 @@ Taxes:
     Enabled: false
 
     # List of Economies that will not be taxed
-    Ignore: []
+    Ignore: [ ]
       # MyEconomy1
-      # SecondEconomy2
+    # SecondEconomy2
 
   # Minimum Amount that can be taken/donated
   Minimums:
     # All Economies default to this number if one is not specified
     Global: 0
-      # Coins: 100
+    # Coins: 100
 
   # Players need the permission "novaconomy.admin.tax.call" to call any of these, but you can also specify other permissions to call specific events.
   #
@@ -285,11 +285,11 @@ Market:
 
   # Overrides the base price of an item (requires NO economy sign)
   # Case Insensitive Material Names, can be integer or decimal values, supports namespaces
-  BasePriceOverride: {}
+  BasePriceOverride: { }
     # Example:
     # DIAMOND: 100
     # Cobblestone: 0.75
-    # "minecraft:dirt": 0.4
+  # "minecraft:dirt": 0.4
 
   # Whether money made from the Market should deposit into the Bank
   Deposit: true
@@ -326,6 +326,7 @@ Market:
     # Whether Market Membership is enabled
     #
     # If enabled, players will have to pay a one-time specific amount to gain access to the Novaconomy Market
+    # This will be exempt from OPs and players with "novaconomy.admin.market.bypass_membership" permission
     Enabled: true
 
     # The base amount of money required to gain access to the Market
