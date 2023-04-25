@@ -24,20 +24,28 @@ tasks {
     register("sourcesJar", Jar::class.java) {
         dependsOn("classes")
 
-        archiveFileName.set("Novaconomy-API-${project.version}-sources.jar")
+        archiveClassifier.set("sources")
         from(sourceSets["main"].allSource)
     }
 
     register("javadocJar", Jar::class.java) {
         dependsOn("javadoc")
 
-        archiveFileName.set("Novaconomy-API-${project.version}-javadoc.jar")
+        archiveClassifier.set("javadoc")
         from(javadoc.get().destinationDir)
     }
 
     withType<ShadowJar> {
         dependsOn("sourcesJar", "javadocJar")
-        archiveFileName.set("Novaconomy-API-${project.version}.jar")
+    }
+}
+
+publishing {
+    publications {
+        getByName<MavenPublication>("maven") {
+            artifact(tasks["sourcesJar"])
+            artifact(tasks["javadocJar"])
+        }
     }
 }
 

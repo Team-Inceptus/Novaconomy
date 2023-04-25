@@ -52,8 +52,8 @@ dependencies {
 tasks {
     register("sourcesJar", Jar::class.java) {
         dependsOn("classes")
+        archiveClassifier.set("sources")
 
-        archiveFileName.set("Novaconomy-${project.version}-sources.jar")
         from(sourceSets["main"].allSource)
     }
 
@@ -61,7 +61,7 @@ tasks {
         listOf(
             "1_18_R1",
             "1_18_R2",
-            "1_19_R1",
+            "1_19_R1",  
             "1_19_R2",
             "1_19_R3"
         ).forEach { dependsOn(":novaconomy-$it:remap") }
@@ -74,7 +74,15 @@ tasks {
     }
 
     withType<ShadowJar> {
-        archiveFileName.set("Novaconomy-${project.version}.jar")
+        dependsOn("sourcesJar")
+    }
+}   
+
+publishing {
+    publications {
+        getByName<MavenPublication>("maven") {
+            artifact(tasks["sourcesJar"])
+        }
     }
 }
 

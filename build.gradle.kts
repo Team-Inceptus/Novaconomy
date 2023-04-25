@@ -22,18 +22,14 @@ sonarqube {
     }
 }
 
-publishing {
-    publications {
-        create<MavenPublication>("maven") {
-            from(components["java"])
-        }
-    }
-}
-
 allprojects {
     group = pGroup
     version = pVersion
     description = "Multi-Economy and Business Plugin made for Spigot 1.8+"
+
+    apply(plugin = "maven-publish")
+    apply<JavaPlugin>()
+    apply<JavaLibraryPlugin>()
 
     repositories {
         mavenCentral()
@@ -51,13 +47,46 @@ allprojects {
         maven("https://libraries.minecraft.net/")
         maven("https://repo.extendedclip.com/content/repositories/placeholderapi/")
     }
+
+    publishing {
+        publications {
+            create<MavenPublication>("maven") {
+                groupId = pGroup
+                artifactId = project.name
+                version = pVersion
+
+                pom {
+                    description.set(project.description)
+                    licenses {
+                        license {
+                            name.set("GPL-3.0")
+                            url.set("https://github.com/Team-Inceptus/Novaconomy/blob/master/LICENSE")
+                        }
+                    }
+                    scm {
+                        connection.set("scm:git:git://Team-Inceptus/Novaconomy.git")
+                        developerConnection.set("scm:git:ssh://Team-Inceptus/Novaconomy.git")
+                        url.set("https://github.com/Team-Inceptus/Novaconomy")
+                    }
+                }
+
+                from(components["java"])
+            }
+        }
+
+        repositories {
+            maven {
+                val releases = "https://repo.codemc.io/repository/maven-releases/"
+                val snapshots = "https://repo.codemc.io/repository/maven-snapshots/"
+                url = uri(if (version.toString().endsWith("SNAPSHOT")) snapshots else releases)
+            }
+        }
+    }
 }
 
 val jvmVersion = JavaVersion.VERSION_1_8
 
 subprojects {
-    apply<JavaPlugin>()
-    apply<JavaLibraryPlugin>()
     apply<JacocoPlugin>()
     apply(plugin = "org.sonarqube")
     apply(plugin = "com.github.johnrengelman.shadow")
@@ -74,6 +103,14 @@ subprojects {
     java {
         sourceCompatibility = jvmVersion
         targetCompatibility = jvmVersion
+    }
+
+    publishing {
+        publications {
+            getByName<MavenPublication>("maven") {
+                artifact(tasks["shadowJar"])
+            }
+        }
     }
 
     tasks {
@@ -130,7 +167,7 @@ subprojects {
             relocate("org.bstats", "us.teaminceptus.shaded.bstats")
             relocate("com.jeff_media.updatechecker", "us.teaminceptus.shaded.updatechecker")
 
-            archiveFileName.set("${project.name}-${project.version}.jar")
+            archiveClassifier.set("")
         }
     }
 }
