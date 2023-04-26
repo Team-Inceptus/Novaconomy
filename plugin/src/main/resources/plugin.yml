@@ -69,6 +69,12 @@ permissions:
     children:
       novaconomy.admin.market: true
 
+  novaconomy.admin.market.manage_membership:
+    description: Access to granting or revoking market membership
+    default: op
+    children:
+      novaconomy.admin.market: true
+
   # Economy
   novaconomy.economy:
     description: Access to all Economy actions
@@ -243,7 +249,7 @@ permissions:
 
   # User Corporation
   novaconomy.user.corporation:
-    description: Access to all Corporation Actions and Commands
+    description: Access to all User Corporation Actions and Commands
     default: true
     children:
       novaconomy.user: true
@@ -253,6 +259,13 @@ permissions:
     default: true
     children:
       novaconomy.user.corporation: true
+
+  # User Market
+  novaconomy.user.market:
+    description: Access to all Novaconomy Market User Actions and Commands
+    default: true
+    children:
+      novaconomy.user: true
 
   
   

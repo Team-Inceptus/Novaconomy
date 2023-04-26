@@ -90,6 +90,32 @@ public interface NovaMarket {
     long getStock(@NotNull Material m);
 
     /**
+     * Sets the amount of stock of a Material on the Market.
+     * @param m Material to set
+     * @param stock Stock to set
+     * @throws IllegalArgumentException if stock is negative
+     */
+    void setStock(@NotNull Material m, long stock) throws IllegalArgumentException;
+
+    /**
+     * Adds stock to a Material on the Market.
+     * @param m Material to add
+     * @param add Stock to add
+     */
+    default void addStock(@NotNull Material m, long add) {
+        setStock(m, getStock(m) + add);
+    }
+
+    /**
+     * Removes stock from a Material on the Market.
+     * @param m Material to remove
+     * @param remove Stock to remove
+     */
+    default void removeStock(@NotNull Material m, long remove) {
+        setStock(m, getStock(m) - remove);
+    }
+
+    /**
      * Buys a Material from the Market. This method does not add the material to their inventory, only makes a receipt.
      * @param buyer Player buying the Material
      * @param m Material to buy
@@ -214,7 +240,7 @@ public interface NovaMarket {
     /**
      * <p>Whether the Market Membership feature is enabled.</p>
      * <p>If enabled, players will have to pay a {@linkplain #getMarketMembershipCost() one-time fee} to gain access to the Novaconomy Market.</p>
-     * @return
+     * @return true if enabled, else false
      */
     boolean isMarketMembershipEnabled();
 
@@ -243,7 +269,7 @@ public interface NovaMarket {
     /**
      * Fetches the one-time fee a player must pay to gain access to the Novaconomy Market, factoring an Economy's {@linkplain Economy#getConversionScale conversion scale}.
      * @param econ Economy to use
-     * @return
+     * @return Market Membership Cost
      */
     default double getMarketMembershipCost(@Nullable Economy econ) {
         return getMarketMembershipCost(econ == null ? 1 : econ.getConversionScale());
@@ -259,6 +285,33 @@ public interface NovaMarket {
      * Fetches an immutable copy of all of the purchases ever on the Novaconomy Market.
      * @return Set of Receipts
      */
+    @NotNull
     Set<Receipt> getAllPurchases();
 
+    /**
+     * Fetches the number that is multiplied by the {@linkplain #getPrice(Material) market price} to get the money back from selling the material of the same type.
+     * @return Sell Percentage
+     */
+    double getSellPercentage();
+
+    /**
+     * Sets the sell percentage.
+     * @param percentage Sell Percentage
+     * @throws IllegalArgumentException if percentage is not positive
+     * @see #getSellPercentage()
+     */
+    void setSellPercentage(double percentage) throws IllegalArgumentException;
+
+    /**
+     * Fetches whether items players sell on the Novaconomy Market will be added to that item's stock.
+     * @return true if enabled, else false
+     */
+    boolean isSellStockEnabled();
+
+    /**
+     * Sets whether sell stock is enabled.
+     * @param enabled true if enabled, else false
+     * @see #isSellStockEnabled()
+     */
+    void setSellStockEnabled(boolean enabled);
 }

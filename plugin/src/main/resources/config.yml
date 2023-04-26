@@ -294,6 +294,17 @@ Market:
   # Whether money made from the Market should deposit into the Bank
   Deposit: true
 
+  # What is multiplied towards the buy price when selling an item of the same type.
+  # Must be a positive number greater than 0.
+  # Example:
+  # DIRT_BLOCK
+  # Buy Price: $2.00
+  # Sell Price: $2.00 * 0.75 = $1.50
+  SellPercentage: 0.75
+
+  # Whether items players sell on the market will be added to that item's stock.
+  SellStock: true
+
   # The Maximum Amount of Purchases a player can make every 20 minutes (1 MC Day).
   # -1 = Unlimited
   #
