@@ -105,6 +105,7 @@ public interface CommandWrapper {
         put("businessleaderboard", Arrays.asList("bleaderboard", "bboard", "businessl", "bl", "businessboard"));
         put(CORPORATION_TAG, Arrays.asList("corp", "ncorp", "c"));
         put("corporationchat", Arrays.asList("corpchat", "cc", "ncc", "corporationc", "corpc", "cchat"));
+        put("market", Arrays.asList("novamarket", "novam", "m"));
     }};
 
     Map<String, String> COMMAND_PERMISSION = new HashMap<String, String>() {{
@@ -126,6 +127,7 @@ public interface CommandWrapper {
         put("businessleaderboard", "novaconomy.user.leaderboard");
         put(CORPORATION_TAG, "novaconomy.user.corporation");
         put("corporationchat", "novaconomy.user.corporation");
+        put("market", "novaconomy.user.market");
     }};
 
     Map<String, String> COMMAND_DESCRIPTION = new HashMap<String, String>() {{
@@ -149,6 +151,7 @@ public interface CommandWrapper {
         put("businessleaderboard", "View the top 10 businesses in various categories");
         put(CORPORATION_TAG, "Manage your Novaconomy Corporation");
         put("corporationchat", "Chat with your Novaconomy Corporation");
+        put("market", "View and Manage the Novaconomy Market");
     }};
 
     Map<String, String> COMMAND_USAGE = new HashMap<String, String>() {{
@@ -172,6 +175,7 @@ public interface CommandWrapper {
         put("businessleaderboard", "/businessleaderboard");
         put(CORPORATION_TAG, "/nc <create|delete|edit|...> <args...>");
         put("corporationchat", "/cc <message>");
+        put("market", "/market <open|sell|...>");
     }};
 
     // Command Methods
@@ -589,14 +593,8 @@ public interface CommandWrapper {
         ));
 
         inv.setItem(12, Items.ARROW);
+        inv.setItem(13, Items.economyWheel("pay", econ));
         inv.setItem(14, Items.ARROW);
-
-        inv.setItem(13, builder(econ.getIcon().clone(),
-                nbt -> {
-                    nbt.setID("economy:wheel:pay");
-                    nbt.set(ECON_TAG, econ.getUniqueId());
-                })
-        );
 
         for (int i = 0; i < 2; i++)
             for (int j = 0; j < 7; j++) {
@@ -727,15 +725,7 @@ public interface CommandWrapper {
         inv.setCancelled();
 
         inv.setAttribute("item", pr);
-
-        ItemStack economyWheel = builder(econ.getIconType(),
-                meta -> meta.setDisplayName(ChatColor.GOLD + econ.getName()),
-                nbt -> {
-                    nbt.set(ECON_TAG, econ.getUniqueId());
-                    nbt.setID("economy:wheel:add_product");
-                });
-        modelData(economyWheel, econ.getCustomModelData());
-        inv.setItem(22, economyWheel);
+        inv.setItem(22, Items.economyWheel("add_product"));
 
         inv.setItem(13, builder(pr,
                 meta -> meta.setLore(Collections.singletonList(format(get("constants.business.price"), price, econ.getSymbol()))),
@@ -1975,13 +1965,6 @@ public interface CommandWrapper {
             return;
         }
 
-        List<Economy> economies = Economy.getEconomies().stream().sorted(Comparator.comparing(Economy::getName)).collect(Collectors.toList());
-        if (economies.isEmpty()) {
-            p.sendMessage(getMessage("error.economy.none"));
-            return;
-        }
-
-        Economy first = economies.stream().findFirst().get();
         Business b = Business.byOwner(p);
 
         NovaInventory inv = genGUI(45, get("constants.business.advertising_" + (deposit ? "deposit" : "withdraw")));
@@ -2005,12 +1988,7 @@ public interface CommandWrapper {
                 inv.setItem((j * 9) + i + 9, change);
             }
 
-        inv.setItem(31, builder(first.getIcon(),
-                nbt -> {
-                    nbt.setID("economy:wheel:change_advertising");
-                    nbt.set(ECON_TAG, first.getUniqueId());
-                }
-        ));
+        inv.setItem(31, Items.economyWheel("change_advertising"));
 
         inv.setItem(39, builder(CONFIRM,
                 nbt -> {
@@ -2020,6 +1998,7 @@ public interface CommandWrapper {
                 }
         ));
 
+        Economy first = Economy.getEconomies().stream().sorted(Economy::compareTo).collect(Collectors.toList()).get(0);
         inv.setItem(40, Items.builder(Material.GOLD_INGOT,
                 meta -> meta.setDisplayName(ChatColor.GOLD + "0" + first.getSymbol())
         ));
@@ -3412,13 +3391,7 @@ public interface CommandWrapper {
             inv.setCancelled();
             for (int i = 0; i < 7; i++) inv.setItem(10 + i, GUI_BACKGROUND);
 
-            inv.setItem(13, NBTWrapper.builder(econ.getIcon(),
-                    meta -> meta.setDisplayName(ChatColor.GOLD + econ.getName()),
-                    nbt -> {
-                        nbt.setID("economy:wheel:market_access");
-                        nbt.set(ECON_TAG, econ.getUniqueId());
-                    })
-            );
+            inv.setItem(13, Items.economyWheel("market_access", econ));
 
             inv.setItem(15, NBTWrapper.builder(Material.DIAMOND_BLOCK,
                     meta -> {
@@ -3427,7 +3400,7 @@ public interface CommandWrapper {
                                 ChatColor.GOLD + String.format(get("constants.price"), NovaConfig.getMarket().getMarketMembershipCost(econ) + String.valueOf(econ.getSymbol()))
                         ));
                     }, nbt -> {
-                        nbt.setID("economy:buy_access");
+                        nbt.setID("market:buy_access");
                         nbt.set(ECON_TAG, econ.getUniqueId());
                     })
             );
@@ -3435,6 +3408,33 @@ public interface CommandWrapper {
             inv = Generator.generateMarket(p, MarketCategory.UTILITIES, SortingType.MATERIAL_NAME_ASCENDING, econ, 0);
 
         p.openInventory(inv);
+    }
+
+    default void setMarketAccess(@NotNull CommandSender sender, @NotNull OfflinePlayer target, boolean access) {
+        if (!sender.hasPermission("novaconomy.admin.market.manage_membership")) {
+            sender.sendMessage(ERROR_PERMISSION_ARGUMENT);
+            return;
+        }
+
+        NovaPlayer nt = new NovaPlayer(target);
+        nt.setMarketAccess(access);
+
+        sender.sendMessage(format(getSuccess("success.market." + (access ? "enable" : "disable") + "_access"), ChatColor.GOLD + target.getName()));
+        NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(sender);
+    }
+
+    default void openSellMarket(@NotNull Player p) {
+        NovaInventory inv = w.createInventory("", get("constants.market.sell_inventory"), 54);
+
+        inv.setItem(48, builder(Items.NEXT,
+                meta -> meta.setDisplayName(ChatColor.BLUE + get("constants.market.sell_items")),
+                nbt -> nbt.setID("market:sell_items")
+        ));
+
+        inv.setItem(50, Items.economyWheel());
+
+        p.openInventory(inv);
+        NovaSound.BLOCK_CHEST_OPEN.play(p);
     }
 
 }

@@ -52,7 +52,16 @@ public final class CommandWrapperV2 implements CommandWrapper {
         });
 
         handler.registerValueResolver(Economy.class, ctx -> {
-                Economy econ = Economy.getEconomy(ctx.popForParameter());
+                String s = ctx.popForParameter();
+                Economy econ;
+
+                if (s.isEmpty() || s == null) econ = Economy.getEconomies()
+                        .stream()
+                        .sorted(Economy::compareTo)
+                        .collect(Collectors.toList())
+                        .get(0);
+                else econ = Economy.getEconomy(s);
+
                 if (econ == null) throw new CommandErrorException(getMessage("error.argument.economy"));
                 return econ;
             }).registerValueResolver(Business.class, ctx -> {
@@ -193,6 +202,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
         new BountyCommands(this);
         new NovaConfigCommands(this);
         new CorporationCommands(this);
+        new MarketCommands(this);
 
         handler.registerBrigadier();
         handler.setLocale(Language.getCurrentLocale());
@@ -827,5 +837,35 @@ public final class CommandWrapperV2 implements CommandWrapper {
     @CommandPermission("novaconomy.user.corporation")
     public void corporationChat(Player p, String message) {
         CommandWrapper.super.corporationChat(p, message);
+    }
+
+    @Command({"market", "novamarket", "novam", "m"})
+    @Usage("/market <open|sell|...>")
+    @Description("View and Manage the Novaconomy Market")
+    @CommandPermission("novaconomy.user.market")
+    private static final class MarketCommands {
+
+        private final CommandWrapperV2 wrapper;
+
+        MarketCommands(CommandWrapperV2 wrapper) {
+            this.wrapper = wrapper;
+            handler.register(this);
+        }
+
+        @Subcommand("open")
+        public void openMarket(Player p, @Optional Economy econ) {
+            wrapper.openMarket(p, econ);
+        }
+
+        @Subcommand("sell")
+        public void openSellMarket(Player p) {
+            wrapper.openSellMarket(p);
+        }
+
+        @Subcommand({"setplayeraccess", "setaccess"})
+        public void setMarketAccess(CommandSender sender, OfflinePlayer target, boolean access) {
+            wrapper.setMarketAccess(sender, target, access);
+        }
+
     }
 }

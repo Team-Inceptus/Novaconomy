@@ -3,6 +3,7 @@ package us.teaminceptus.novaconomy;
 import com.google.common.collect.ImmutableMap;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.HumanEntity;
@@ -28,6 +29,7 @@ import us.teaminceptus.novaconomy.api.business.BusinessStatistics;
 import us.teaminceptus.novaconomy.api.business.Rating;
 import us.teaminceptus.novaconomy.api.corporation.Corporation;
 import us.teaminceptus.novaconomy.api.economy.Economy;
+import us.teaminceptus.novaconomy.api.economy.market.MarketCategory;
 import us.teaminceptus.novaconomy.api.events.business.*;
 import us.teaminceptus.novaconomy.api.events.corporation.CorporationSettingChangeEvent;
 import us.teaminceptus.novaconomy.api.events.player.PlayerRateBusinessEvent;
@@ -1322,7 +1324,6 @@ public final class GUIManager implements Listener {
             .put("economy:wheel:market_access", (e, inv) -> {
                 items().get("economy:wheel").accept(e, inv);
 
-                Player p = (Player) e.getWhoClicked();
                 Economy econ = getEconomy(inv.getItem(13));
 
                 ItemStack display = inv.getItem(15).clone();
@@ -1332,6 +1333,215 @@ public final class GUIManager implements Listener {
                 ));
                 display.setItemMeta(meta);
                 inv.setItem(15, display);
+            })
+            .put("market:category", (e, inv) -> {
+                Player p = (Player) e.getWhoClicked();
+                ItemStack item = e.getCurrentItem();
+                MarketCategory category = MarketCategory.valueOf(of(item).getString("category"));
+
+                SortingType<Material> sorter = inv.getAttribute("sorter", SortingType.class);
+                Economy econ = getEconomy(inv.getItem(3));
+                int page = inv.getAttribute("page", Integer.class);
+
+                p.openInventory(generateMarket(p, category, sorter, econ, page));
+                NovaSound.ENTITY_ARROW_HIT_PLAYER.play(p, 1F, 1.5F);
+            })
+            .put("market:scroll", (e, inv) -> {
+                Player p = (Player) e.getWhoClicked();
+                ItemStack item = e.getCurrentItem();
+                
+                NBTWrapper nbt = of(item);
+                MarketCategory category = MarketCategory.valueOf(nbt.getString("category"));
+                boolean add = nbt.getBoolean("operation");
+
+                SortingType<Material> sorter = inv.getAttribute("sorter", SortingType.class);
+                Economy econ = getEconomy(inv.getItem(3));
+                int page = inv.getAttribute("page", Integer.class);
+
+                MarketCategory next = MarketCategory.values()[category.ordinal() + (add ? 1 : -1)];
+                p.openInventory(generateMarket(p, next, sorter, econ, page));
+                if (add) NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p); else NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
+            })
+            .put("market:page", (e, inv) -> {
+                Player p = (Player) e.getWhoClicked();
+                ItemStack item = e.getCurrentItem();
+
+                NBTWrapper nbt = of(item);
+                MarketCategory category = MarketCategory.valueOf(nbt.getString("category"));
+                int next = nbt.getInt("page");
+                boolean add = nbt.getBoolean("operation");
+
+                SortingType<Material> sorter = inv.getAttribute("sorter", SortingType.class);
+                Economy econ = getEconomy(inv.getItem(3));
+
+                p.openInventory(generateMarket(p, category, sorter, econ, next));
+                if (add) NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p); else NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
+            })
+            .put("market:buy_product", (e, inv) -> {
+                Player p = (Player) e.getWhoClicked();
+                ItemStack item = e.getCurrentItem();
+                
+                NBTWrapper nbt = of(item);
+                Economy econ = getEconomy(item);
+                Material product = Material.valueOf(nbt.getString(PRODUCT_TAG));
+
+                if (NovaConfig.getMarket().getStock(product) <= 0) {
+                    p.sendMessage(getError("error.market.out_of_stock"));
+                    NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
+                    return;
+                }
+
+                NovaInventory confirm = genGUI(27, get("constants.market.buy_product"));
+                confirm.setCancelled();
+
+                confirm.setAttribute(ECON_TAG, econ.getUniqueId());
+
+                confirm.setItem(12, new ItemStack(product));
+                confirm.setItem(14, builder(Items.OAK_SIGN,
+                        meta -> meta.setDisplayName(ChatColor.YELLOW + get("constants.set_amount")),
+                        n -> {
+                            n.setID("market:product_amount");
+                            n.set(PRODUCT_TAG, product.name());
+                        }
+                ));
+
+                confirm.setItem(21, Items.CANCEL);
+                confirm.setItem(23, Items.yes("buy_market_product"));
+
+                p.openInventory(confirm);
+                NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
+            })
+            .put("market:product_amount", (e, inv) -> {
+                Player p = (Player) e.getWhoClicked();
+                ItemStack item = e.getCurrentItem();
+                Material product = Material.valueOf(of(item).getString(PRODUCT_TAG));
+
+                w.sendSign(p, lines -> {
+                    String amountS = String.join("", lines);
+
+                    if (amountS.isEmpty()) {
+                        NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
+                        return;
+                    }
+
+                    try {
+                        int amount = Integer.parseInt(amountS);
+
+                        if (NovaConfig.getMarket().getStock(product) < amount) {
+                            p.sendMessage(getError("error.market.not_enough_stock"));
+                            NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
+                            return;
+                        }
+
+                        ItemStack newItem = inv.getItem(12).clone();
+
+                        if (amount <= 0 || amount > newItem.getMaxStackSize()) {
+                            NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
+                            return;
+                        }
+
+                        newItem.setAmount(amount);
+                        inv.setItem(12, newItem);
+                        p.updateInventory();
+                    } catch (NumberFormatException ex) {
+                        NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
+                        return;
+                    }
+                });
+            })
+            .put("yes:buy_market_product", (e, inv) -> {
+                Player p = (Player) e.getWhoClicked();
+                NovaPlayer np = new NovaPlayer(p);
+                
+                Economy econ = Economy.getEconomy(inv.getAttribute(ECON_TAG, UUID.class));
+
+                ItemStack productI = inv.getItem(12).clone();
+                Material product = productI.getType();
+                int amount = productI.getAmount();
+
+                if (np.getBalance(econ) < NovaConfig.getMarket().getPrice(product, econ) * amount) {
+                    p.sendMessage(getError("error.market.not_enough_money"));
+                    p.closeInventory();
+                    NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
+                    return;
+                }
+
+                NovaConfig.getMarket().buy(p, product, amount, econ);
+
+                if (p.getInventory().firstEmpty() == -1)
+                    p.getWorld().dropItemNaturally(p.getLocation(), new ItemStack(product, amount));
+                else
+                    p.getInventory().addItem(new ItemStack(product, amount));
+                    
+                p.closeInventory();
+                NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
+            })
+            .put("market:buy_access", (e, inv) -> {
+                Player p = (Player) e.getWhoClicked();
+                NovaPlayer np = new NovaPlayer(p);
+
+                ItemStack item = e.getCurrentItem();
+                Economy econ = getEconomy(item);
+
+                double price = NovaConfig.getMarket().getMarketMembershipCost(econ);
+                if (np.getBalance(econ) < price) {
+                    p.sendMessage(getError("error.market.membership_cost"));
+                    p.closeInventory();
+                    NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
+                    return;
+                }
+
+                np.remove(econ, price);
+                np.setMarketAccess(true);
+
+                p.sendMessage(getSuccess("success.market.membership"));
+                NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
+                getCommandWrapper().openMarket(p, econ);
+            })
+            .put("market:sell_items", (e, inv) -> {
+                Player p = (Player) e.getWhoClicked();
+                NovaPlayer np = new NovaPlayer(p);
+
+                Economy econ = getEconomy(inv.getItem(50));
+
+                List<ItemStack> items = Arrays.stream(inv.getContents())
+                        .filter(Objects::nonNull)
+                        .filter(i -> !of(i).hasID())
+                        .collect(Collectors.toList());
+
+                double profit = items.stream()
+                        .mapToDouble(i -> NovaConfig.getMarket().getPrice(i.getType(), econ) * i.getAmount())
+                        .sum() * NovaConfig.getMarket().getSellPercentage();
+                
+                NovaInventory confirm = confirm(p, () -> {
+                    np.add(econ, profit);
+
+                    if (NovaConfig.getMarket().isSellStockEnabled())
+                        items.forEach(i -> {
+                            NovaConfig.getMarket().addStock(i.getType(), i.getAmount());
+                        });
+                    
+                    p.sendMessage(getSuccess("success.market.sell_items"));
+                    p.closeInventory();
+                    NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
+                }, () -> {
+                    items.forEach(i -> {
+                        if (p.getInventory().firstEmpty() == -1)
+                            p.getWorld().dropItemNaturally(p.getLocation(), i);
+                        else
+                            p.getInventory().addItem(i);
+                    });
+
+                    p.closeInventory();
+                    NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
+                });
+
+                confirm.setItem(13, Items.builder(econ.getIconType(),
+                        meta -> meta.setDisplayName(format(get("constants.profit"), format("%,.2f", profit) + econ.getSymbol()))
+                ));
+
+                p.openInventory(confirm);
+                NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
             })
             .build();
 
@@ -1431,6 +1641,7 @@ public final class GUIManager implements Listener {
         for (ItemStack item : e.getNewItems().values()) {
             if (item == null) continue;
             if (item.isSimilar(GUI_BACKGROUND)) e.setCancelled(true);
+            if (CLICK_ITEMS.containsKey(getID(item))) e.setCancelled(true);
         }
     }
 
