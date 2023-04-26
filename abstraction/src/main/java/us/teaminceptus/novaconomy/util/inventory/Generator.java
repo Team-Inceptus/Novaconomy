@@ -900,9 +900,11 @@ public final class Generator {
         NovaInventory inv = genGUI(54, get("constants.market"));
         inv.setCancelled();
 
+        inv.setItem(3, Items.economyWheel("market_access", econ));
+
         NovaPlayer np = new NovaPlayer(p);
         long purchasesLeft = NovaConfig.getMarket().getMaxPurchases() - np.getPurchases().size();
-        inv.setItem(3, Items.builder(Items.createPlayerHead(p),
+        inv.setItem(4, Items.builder(Items.createPlayerHead(p),
                 meta -> {
                     if (NovaConfig.getMarket().getMaxPurchases() > 0 && !p.hasPermission("novaconomy.admin.market.bypass_limit")) {
                         meta.setLore(Arrays.asList(
@@ -911,15 +913,9 @@ public final class Generator {
                     }
                 }
         ));
-
-        inv.setItem(4, builder(econ.getIcon(),
-                meta -> meta.setDisplayName(ChatColor.AQUA + econ.getName()),
-                nbt -> {
-                    nbt.setID("economy:wheel:market");
-                    nbt.set(ECON_TAG, econ.getUniqueId());
-                })
-        );
+    
         inv.setItem(5, Items.sorter(sorter));
+        inv.setAttribute("sorter", sorter);
         inv.setAttribute("sorting_function", (Function<SortingType<Material>, NovaInventory>) s -> generateMarket(p, category, s, econ, page));
 
         MarketCategory[] categories = Arrays.stream(MarketCategory.values())
@@ -965,6 +961,32 @@ public final class Generator {
                 .sorted(sorter)
                 .collect(Collectors.toList());
 
+        inv.setAttribute("page", page);
+
+        int pages = (category.getItems().size() / 32) + 1;
+
+        if (pages > 1 && page > 0)
+            inv.setItem(46, builder(Items.head("arrow_left_gray"),
+                    meta -> meta.setDisplayName(ChatColor.AQUA + get("constants.prev")),
+                    nbt -> {
+                        nbt.setID("market:page");
+                        nbt.set("category", category.name());
+                        nbt.set("page", page - 1);
+                        nbt.set("operation", false);
+                    }
+            ));
+        
+        if (pages > 1 && page < pages)
+            inv.setItem(52, builder(Items.head("arrow_right_gray"),
+                    meta -> meta.setDisplayName(ChatColor.AQUA + get("constants.next")),
+                    nbt -> {
+                        nbt.setID("market:page");
+                        nbt.set("category", category.name());
+                        nbt.set("page", page + 1);
+                        nbt.set("operation", true);
+                    }
+            ));
+
         for (int i = 0; i < 32; i++) {
             Material m = products.get(i);
             int index = 10 + i + (i / 8);
@@ -992,8 +1014,8 @@ public final class Generator {
                     },
                     nbt -> {
                         nbt.setID("market:buy_product");
-                        nbt.set("category", category.name());
-                        nbt.set("product", m.name());
+                        nbt.set(PRODUCT_TAG, m.name());
+                        nbt.set(ECON_TAG, econ.getUniqueId());
                     }
             ));
         }
