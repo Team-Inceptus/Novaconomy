@@ -119,18 +119,39 @@ public interface SortingType<T> extends Comparator<T> {
 
     // Material
 
+    /**
+     * Sorts a material by its name in ascending order.
+     */
     SortingType<Material> MATERIAL_NAME_ASCENDING = Material::compareTo;
 
+    /**
+     * Sorts a material by its name in descending order.
+     */
     SortingType<Material> MATERIAL_NAME_DESCENDING = MATERIAL_NAME_ASCENDING.reversed();
 
+    /**
+     * Sorts a material by its maximum stack size in ascending order.
+     */
     SortingType<Material> MATERIAL_MAX_STACK_SIZE_ASCENDING = (m1, m2) -> Integer.compare(m1.getMaxStackSize(), m2.getMaxStackSize());
 
+    /**
+     * Sorts a material by its maximum stack size in descending order.
+     */
     SortingType<Material> MATERIAL_MAX_STACK_SIZE_DESCENDING = MATERIAL_MAX_STACK_SIZE_ASCENDING.reversed();
 
+    /**
+     * Sorts a material by whether it is a block.
+     */
     SortingType<Material> MATERIAL_BLOCKS = (m1, m2) -> Boolean.compare(m1.isBlock(), m2.isBlock());
 
+    /**
+     * Sorts a material by whether it is not a block.
+     */
     SortingType<Material> MATERIAL_NONBLOCKS = MATERIAL_BLOCKS.reversed();
 
+    /**
+     * Sorts a material by whether it is edible.
+     */
     SortingType<Material> MATERIAL_EDIBLES = (m1, m2) -> Boolean.compare(m1.isEdible(), m2.isEdible());
 
     @Override

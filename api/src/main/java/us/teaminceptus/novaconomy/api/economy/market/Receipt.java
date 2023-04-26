@@ -32,6 +32,7 @@ public final class Receipt implements ConfigurationSerializable, Serializable {
      * Constructs a new Market Receipt.
      * @param purchased Material purchased
      * @param purchasePrice Price of the Material
+     * @param purchaseAmount Amount of the Material purchased
      * @param player Player who purchased the Material
      */
     public Receipt(@NotNull Material purchased, double purchasePrice, int purchaseAmount, @NotNull OfflinePlayer player) {
@@ -42,6 +43,7 @@ public final class Receipt implements ConfigurationSerializable, Serializable {
      * Constructs a new Market Receipt.
      * @param purchased Material purchased
      * @param purchasePrice Price of the Material
+     * @param purchaseAmount Amount of the Material purchased
      * @param player Player who purchased the Material
      * @param timestamp Timestamp of the purchase
      */

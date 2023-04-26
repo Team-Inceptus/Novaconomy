@@ -1427,9 +1427,6 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 
         try {
             if (INTEREST_RUNNABLE.getTaskId() != -1) INTEREST_RUNNABLE.cancel();
-        } catch (IllegalStateException ignored) {
-        }
-        try {
             if (TAXES_RUNNABLE.getTaskId() != -1) TAXES_RUNNABLE.cancel();
         } catch (IllegalStateException ignored) {
         }
@@ -1715,7 +1712,11 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
     private void loadMarket() {
         readMarket();
 
-        basePrices.keySet().stream().filter(m -> Material.matchMaterial(m) != null).map(Material::matchMaterial).filter(w::isItem)
+        basePrices.keySet()
+                .stream()
+                .filter(m -> Material.matchMaterial(m) != null)
+                .map(Material::matchMaterial)
+                .filter(w::isItem)
                 .forEach(m -> stock.putIfAbsent(m, getMarketRestockAmount()));
     }
 
@@ -1856,6 +1857,12 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
     }
 
     @Override
+    public void setStock(@NotNull Material m, long stock) throws IllegalArgumentException {
+        Novaconomy.stock.put(m, stock);
+        writeMarket();
+    }
+
+    @Override
     public @NotNull Receipt buy(@NotNull OfflinePlayer buyer, @NotNull Material m, int amount, @NotNull Economy econ) throws IllegalArgumentException {
         if (buyer == null) throw new IllegalArgumentException("Buyer cannot be null");
         if (m == null) throw new IllegalArgumentException("Material cannot be null");
@@ -1964,6 +1971,30 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
     @Override
     public Set<Receipt> getAllPurchases() {
         return ImmutableSet.copyOf(purchases);
+    }
+
+    @Override
+    public double getSellPercentage() {
+        return config.getDouble("Market.SellPercentage", 0.75);
+    }
+
+    @Override
+    public void setSellPercentage(double percentage) throws IllegalArgumentException {
+        if (percentage <= 0) throw new IllegalArgumentException("Percentage must be positive");
+        
+        config.set("Market.SellPercentage", percentage);
+        saveConfig();
+    }
+
+    @Override
+    public boolean isSellStockEnabled() {
+        return config.getBoolean("Market.SellStock", true);
+    }
+
+    @Override
+    public void setSellStockEnabled(boolean enabled) {
+        config.set("Market.SellStock", enabled);
+        saveConfig();
     }
 
 }

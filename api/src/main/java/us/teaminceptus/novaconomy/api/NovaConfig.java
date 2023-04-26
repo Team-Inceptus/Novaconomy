@@ -368,6 +368,9 @@ public interface NovaConfig  {
         if (!config.isBoolean("Market.Enabled")) config.set("Market.Enabled", true);
         if (!config.isBoolean("Market.Deposit")) config.set("Market.Deposit", true);
         if (!config.isInt("Market.MaxPurchases") && !config.isLong("Market.MaxPurchases")) config.set("Market.MaxPurchases", -1);
+        if (!config.isInt("Market.SellPercentage") && !config.isDouble("Market.SellPercentage")) config.set("Market.SellPercentage", 0.75);
+        if (config.getDouble("SellPercentage", 0.75) <= 0) config.set("SellPercentage", 0.75);
+        if (!config.isBoolean("Market.SellStock")) config.set("Market.SellStock", true);
 
         if (!config.isConfigurationSection("Market.BasePriceOverride")) config.createSection("Market.BasePriceOverride");
         for (String s : config.getConfigurationSection("Market.BasePriceOverride").getKeys(false))
