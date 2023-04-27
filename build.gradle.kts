@@ -76,6 +76,11 @@ allprojects {
 
         repositories {
             maven {
+                credentials {
+                    username = System.getenv("JENKINS_USERNAME")
+                    password = System.getenv("JENKINS_PASSWORD")
+                }
+
                 val releases = "https://repo.codemc.io/repository/maven-releases/"
                 val snapshots = "https://repo.codemc.io/repository/maven-snapshots/"
                 url = uri(if (version.toString().endsWith("SNAPSHOT")) snapshots else releases)
