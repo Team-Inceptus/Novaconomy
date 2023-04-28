@@ -6,6 +6,8 @@ import com.google.common.util.concurrent.AtomicDouble;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.configuration.Configuration;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -20,6 +22,7 @@ import us.teaminceptus.novaconomy.api.business.Rating;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.economy.market.NovaMarket;
 import us.teaminceptus.novaconomy.api.economy.market.Receipt;
+import us.teaminceptus.novaconomy.api.events.market.player.PlayerMembershipChangeEvent;
 import us.teaminceptus.novaconomy.api.events.player.economy.PlayerDepositEvent;
 import us.teaminceptus.novaconomy.api.events.player.economy.PlayerWithdrawEvent;
 import us.teaminceptus.novaconomy.api.settings.Settings;
@@ -112,12 +115,24 @@ public final class NovaPlayer {
             }
 
             FileConfiguration config = YamlConfiguration.loadConfiguration(pFile);
-            pConfig.putAll(config.getValues(true));
+            pConfig.putAll(toMap(config));
 
             stats = pConfig.containsKey("stats") ? (PlayerStatistics) pConfig.get("stats") : new PlayerStatistics(p);
         }
 
         this.stats = stats;
+    }
+
+    private static Map<String, Object> toMap(Configuration config) {
+        Map<String, Object> map = new HashMap<>();
+
+        for (String key : config.getKeys(true)) {
+            Object o = config.get(key);
+            if (o instanceof ConfigurationSection) continue;
+            map.put(key, o);
+        }
+
+        return map;
     }
 
     /**
@@ -165,9 +180,8 @@ public final class NovaPlayer {
      */
     public double getBalance(@NotNull Economy econ) throws IllegalArgumentException {
         if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
-        String econName = econ.getName().toLowerCase();
 
-        return (double) pConfig.getOrDefault("economies." + econName + ".balance", 0D);
+        return (double) pConfig.getOrDefault("economies." + econ.getName().toLowerCase() + ".balance", 0D);
     }
 
     /**
@@ -718,8 +732,16 @@ public final class NovaPlayer {
         if (p.isOp() || (p.isOnline() && p.getPlayer().hasPermission("novaconomy.admin.market.bypass_membership")))
             return;
 
-        pConfig.put("market.membership", value);
-        save();
+        boolean old = hasMarketAccess();
+        if (old == value) return;
+
+        PlayerMembershipChangeEvent event = new PlayerMembershipChangeEvent(p, old, value);
+        Bukkit.getPluginManager().callEvent(event);
+
+        if (!event.isCancelled()) {
+            pConfig.put("market.membership", event.getNewStatus());
+            save();
+        }
     }
 
     /**
