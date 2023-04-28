@@ -332,6 +332,14 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
     private static final Set<Economy> ECONOMY_CACHE = new HashSet<>();
 
     /**
+     * Reloads the Economy Cache.
+     */
+    public static void reloadEconomies() {
+        ECONOMY_CACHE.clear();
+        getEconomies();
+    }
+
+    /**
      * Fetch a set of all economies registered on the Plugin
      * @return Set of Registered Economies
      */
