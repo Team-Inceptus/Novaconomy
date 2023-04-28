@@ -1,6 +1,7 @@
 package us.teaminceptus.novaconomy.api;
 
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -16,6 +17,7 @@ import us.teaminceptus.novaconomy.api.util.Price;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.sql.Connection;
 import java.util.*;
 import java.util.logging.Logger;
 
@@ -41,14 +43,6 @@ public interface NovaConfig  {
     }
 
     /**
-     * Fetches the file that the Market is stored in.
-     * @return Market File
-     */
-    static File getMarketFile() {
-        return new File(getDataFolder(), "market.dat");
-    }
-
-    /**
      * Fetches the file of the main config.yml.
      * @return Configuration File
      */
@@ -68,12 +62,7 @@ public interface NovaConfig  {
      * @since 1.7.0
      */
     @NotNull
-    static File getCorporationsFolder() {
-        File f = new File(getDataFolder(), "corporations");
-        if (!f.exists()) f.mkdir();
-
-        return f;
-    }
+    static File getCorporationsFolder() { return new File(getDataFolder(), "corporations"); }
 
     /**
      * Prints a Throwable in the Plugin's Namespace and Format.
@@ -85,6 +74,11 @@ public interface NovaConfig  {
         getLogger().severe("-----------");
         getLogger().severe(t.getMessage());
         for (StackTraceElement element : t.getStackTrace()) getLogger().severe(element.toString());
+
+        if (t.getCause() != null) {
+            getLogger().severe("Caused by:");
+            print(t.getCause());
+        }
     }
 
     /**
@@ -137,11 +131,7 @@ public interface NovaConfig  {
      * Fetches the folder that all Economies are stored in.
      * @return Economies Folder
      */
-    static File getEconomiesFolder() {
-        File dir = new File(getDataFolder(), "economies");
-        if (!dir.exists()) dir.mkdir();
-        return dir;
-    }
+    static File getEconomiesFolder() { return new File(getDataFolder(), "economies"); }
 
     /**
      * Reloads the Interest and Taxes Runnables with new values from the configuration.
@@ -239,11 +229,25 @@ public interface NovaConfig  {
     }
 
     /**
-     * Loads the global storage configuration.
-     * @return Global Storage Configuration
+     * Fetches the global storage configuration.
+     * @return Global Storage Configuration, or null if file doesn't exist
+     */
+    @Nullable
+    static FileConfiguration getGlobalStorage() {
+        File f = getGlobalFile();
+        if (!f.exists()) return null;
+
+        return YamlConfiguration.loadConfiguration(f);
+    }
+
+    /**
+     * Fetches the file instance of the Global Storage.
+     * @return Global Storage File Instance
      */
     @NotNull
-    static FileConfiguration getGlobalStorage() { return YamlConfiguration.loadConfiguration(new File(getDataFolder(), "global.yml")); }
+    static File getGlobalFile() {
+        return new File(getDataFolder(), "global.yml");
+    }
 
     /**
      * Fetches the Configuration without checking its values.
@@ -345,6 +349,43 @@ public interface NovaConfig  {
         if (!config.isConfigurationSection("Business.Advertising")) config.createSection("Business.Advertising");
         if (!config.isBoolean("Business.Advertising.Enabled")) config.set("Business.Advertising.Enabled", true);
         if (!config.isDouble("Business.Advertising.ClickReward") && !config.isInt("Business.Advertising.ClickReward")) config.set("Business.Advertising.ClickReward", 5D);
+
+        // Database
+
+        if (!config.isConfigurationSection("Database")) config.createSection("Database");
+        if (!config.isBoolean("Database.Enabled")) config.set("Database.Enabled", false);
+        if (!config.isBoolean("Database.Convert")) config.set("Database.Convert", false);
+        if (!config.isString("Database.Service")) config.set("Database.Service", "mysql");
+        if (!config.isString("Database.Host")) config.set("Database.Host", "localhost");
+        if (!config.isInt("Database.Port")) config.set("Database.Port", 3306);
+        if (!config.isString("Database.Database")) config.set("Database.Database", "novaconomy");
+        if (!config.isString("Database.Username")) config.set("Database.Username", "");
+        if (!config.isString("Database.Password")) config.set("Database.Password", "");
+
+        // Market
+
+        if (!config.isConfigurationSection("Market")) config.createSection("Market");
+        if (!config.isBoolean("Market.Enabled")) config.set("Market.Enabled", true);
+        if (!config.isBoolean("Market.Deposit")) config.set("Market.Deposit", true);
+        if (!config.isInt("Market.MaxPurchases") && !config.isLong("Market.MaxPurchases")) config.set("Market.MaxPurchases", -1);
+        if (!config.isInt("Market.SellPercentage") && !config.isDouble("Market.SellPercentage")) config.set("Market.SellPercentage", 0.75);
+        if (config.getDouble("SellPercentage", 0.75) <= 0) config.set("SellPercentage", 0.75);
+        if (!config.isBoolean("Market.SellStock")) config.set("Market.SellStock", true);
+
+        if (!config.isConfigurationSection("Market.PriceOverride")) config.createSection("Market.PriceOverride");
+        for (String s : config.getConfigurationSection("Market.PriceOverride").getKeys(false))
+            if (Material.matchMaterial(s) == null || (!config.isDouble("Market.PriceOverride." + s) && !config.isInt("Market.PriceOverride." + s)))
+                config.set("Market.PriceOverride." + s, null);
+        
+
+        if (!config.isConfigurationSection("Market.Restock")) config.createSection("Market.Restock");
+        if (!config.isBoolean("Market.Restock.Enabled")) config.set("Market.Restock.Enabled", true);
+        if (!config.isInt("Market.Restock.Amount") && !config.isLong("Market.Restock.Amount")) config.set("Market.Restock.Amount", 1000);
+        if (!config.isInt("Market.Restock.IntervalTicks") && !config.isLong("Market.Restock.IntervalTicks")) config.set("Market.Restock.IntervalTicks", 1728000);
+
+        if (!config.isConfigurationSection("Market.Membership")) config.createSection("Market.Membership");
+        if (!config.isBoolean("Market.Membership.Enabled")) config.set("Market.Membership.Enabled", true);
+        if (!config.isInt("Market.Membership.Amount") && !config.isDouble("Market.Membership.Amount")) config.set("Market.Membership.Amount", 10000.0);
 
         try { config.save(f); } catch (IOException e) { print(e); }
 
@@ -867,31 +908,6 @@ public interface NovaConfig  {
     }
 
     /**
-     * Whether the Stock Market is currently enabled.
-     * @return true if enabled, else false
-     */
-    boolean isMarketEnabled();
-
-    /**
-     * Sets whether the Stock Market is currently enabled.
-     * @param enabled true if enabled, else false
-     */
-    void setMarketEnabled(boolean enabled);
-
-    /**
-     * Fetches the Market Tax percentage.
-     * @return Market Tax percentage
-     */
-    double getMarketTax();
-
-    /**
-     * Sets the Market Tax percentage.
-     * @param tax Market Tax percentage
-     * @throws IllegalArgumentException if tax is 0 or less
-     */
-    void setMarketTax(double tax) throws IllegalArgumentException;
-
-    /**
      * Fetches whether business advertising is enabled.
      * @return true if enabled, else false
      */
@@ -945,5 +961,39 @@ public interface NovaConfig  {
      * @param modifier Experience multiplier
      */
     void setProductIncreaseModifier(double modifier);
+
+    /**
+     * Whether the database feature is enabled.
+     * @return true if enabled, else false
+     */
+    boolean isDatabaseEnabled();
+
+    /**
+     * Sets whether the database feature is enabled.
+     * @param enabled true if enabled, else false
+     */
+    void setDatabaseEnabled(boolean enabled);
+
+    /**
+     * Fetches the Connection instance to the database.
+     * @return Connection to the MySQL database, may be null
+     */
+    @Nullable
+    Connection getDatabaseConnection();
+
+    /**
+     * <p>Whether the database conversion feature is enabled.</p>
+     * <p>When enabled, the plugin will automatically convert between information stored in a Database and information stored in files, both ways.
+     * This option ignores {@link #isDatabaseEnabled()} and requires valid database credentials in the configuration file.</p>
+     * @return true if enabled, else false
+     */
+    boolean isDatabaseConversionEnabled();
+
+    /**
+     * Sets whether the database conversion feature is enabled.
+     * @param enabled true if enabled, else false
+     * @see #isDatabaseConversionEnabled()
+     */
+    void setDatabaseConversionEnabled(boolean enabled);
 
 }

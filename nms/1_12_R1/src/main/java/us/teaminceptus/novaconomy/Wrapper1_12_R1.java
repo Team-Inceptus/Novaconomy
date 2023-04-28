@@ -47,7 +47,7 @@ public final class Wrapper1_12_R1 implements Wrapper {
     public ItemStack createSkull(OfflinePlayer p) {
         ItemStack item = new ItemStack(Material.SKULL_ITEM, 1, (short) 3);
         SkullMeta meta = (SkullMeta) item.getItemMeta();
-        meta.setOwner(p.getName());
+        meta.setOwningPlayer(p);
         item.setItemMeta(meta);
 
         return item;

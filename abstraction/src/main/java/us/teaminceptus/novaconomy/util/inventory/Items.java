@@ -10,9 +10,13 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+import us.teaminceptus.novaconomy.abstraction.CommandWrapper;
 import us.teaminceptus.novaconomy.abstraction.NBTWrapper;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.SortingType;
+import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.util.NovaUtil;
 
 import java.io.IOException;
@@ -21,6 +25,7 @@ import java.util.Properties;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.TYPE_TAG;
 import static us.teaminceptus.novaconomy.abstraction.Wrapper.get;
@@ -63,6 +68,11 @@ public final class Items {
     public static final ItemStack YELLOW_STAINED_GLASS_PANE = checkLegacy(
             () -> new ItemStack(Material.matchMaterial("YELLOW_STAINED_GLASS_PANE")),
             () -> new ItemStack(Material.matchMaterial("STAINED_GLASS_PANE"), 1, (short) 4)
+    );
+
+    public static final ItemStack CLOCK = checkLegacy(
+            () -> new ItemStack(Material.matchMaterial("CLOCK")),
+            () -> new ItemStack(Material.matchMaterial("WATCH"))
     );
 
     public static final ItemStack CANCEL = NBTWrapper.builder(RED_WOOL,
@@ -215,9 +225,34 @@ public final class Items {
         );
     }
 
-
     public static ItemStack checkLegacy(Supplier<ItemStack> contemporary, Supplier<ItemStack> legacy) {
         return w.isLegacy() ? legacy.get() : contemporary.get();
+    }
+
+    public static ItemStack economyWheel() {
+        return economyWheel(null);
+    }
+
+    public static ItemStack economyWheel(String suffix) {
+        Economy econ = Economy.getEconomies()
+                .stream()
+                .sorted(Economy::compareTo)
+                .collect(Collectors.toList())
+                .get(0);
+                
+        return economyWheel(suffix, econ);
+    }
+
+    public static ItemStack economyWheel(String suffix, Economy econ) {
+        ItemStack economyWheel = NBTWrapper.builder(econ.getIconType(),
+        meta -> meta.setDisplayName(ChatColor.GOLD + econ.getName()),
+        nbt -> {
+                nbt.set(CommandWrapper.ECON_TAG, econ.getUniqueId());
+                nbt.setID("economy:wheel" + (suffix == null ? "" : ":" + suffix));
+        });
+        
+        Generator.modelData(economyWheel, econ.getCustomModelData());
+        return economyWheel;
     }
 
     @NotNull
@@ -238,12 +273,14 @@ public final class Items {
         return builder(m, 1, metaC);
     }
 
-    public static ItemStack createPlayerHead(OfflinePlayer p) {
+    public static ItemStack createPlayerHead(@Nullable OfflinePlayer p) {
         return NBTWrapper.builder(w.isLegacy() ? Material.matchMaterial("SKULL_ITEM") : Material.matchMaterial("PLAYER_HEAD"),
-                meta -> ((SkullMeta) meta).setOwner(p.getName()),
+                meta -> ((SkullMeta) meta).setOwner(p == null ? "" : p.getName()),
                 nbt -> {
-                    nbt.setID("player_stats");
-                    nbt.set("player", p.getUniqueId());
+                    if (p != null) {
+                        nbt.setID("player_stats");
+                        nbt.set("player", p.getUniqueId());
+                    }
                 }
         );
     }

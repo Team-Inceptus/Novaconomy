@@ -15,6 +15,13 @@ public class CorporationSettingChangeEvent extends CorporationEvent {
     private final Object newValue;
     private final Settings.Corporation<?> setting;
 
+    /**
+     * Creates a new CorporationSettingChangeEvent.
+     * @param c Corporation involved
+     * @param oldValue Old value of Setting
+     * @param newValue New value of Setting
+     * @param setting Setting that was changed
+     */
     public CorporationSettingChangeEvent(@NotNull Corporation c, @Nullable Object oldValue, @Nullable Object newValue, @NotNull Settings.Corporation<?> setting) {
         super(c);
         this.setting = setting;

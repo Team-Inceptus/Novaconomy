@@ -2,15 +2,11 @@ package us.teaminceptus.novaconomy.api.player;
 
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
-import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -109,15 +105,9 @@ public final class Bounty implements ConfigurationSerializable, Comparable<Bount
     private void save() {
         String key = "bounties." + target.getUniqueId();
         NovaPlayer owner = new NovaPlayer(this.owner);
-        FileConfiguration config = owner.getPlayerConfig();
-        File f = owner.getPlayerFile();
+        Map<String, Object> data = owner.getPlayerData();
 
-        if (config.getConfigurationSection("bounties") == null) config.createSection("bounties");
-        if (!config.isSet(key)) return;
-        config.set(key, this);
-        try { config.save(f); } catch (IOException e) {
-            NovaConfig.print(e);
-        }
+        data.put(key, this);
     }
 
     /**
@@ -223,17 +213,13 @@ public final class Bounty implements ConfigurationSerializable, Comparable<Bount
             if (amount <= 0) throw new IllegalArgumentException("Amount must be positive");
 
             String key = "bounties." + target.getUniqueId();
-            FileConfiguration config = owner.getPlayerConfig();
-            File f = owner.getPlayerFile();
+            Map<String, Object> data = owner.getPlayerData();
 
-            if (config.isSet(key)) throw new UnsupportedOperationException("Bounty already exists");
+            if (data.containsKey(key)) throw new UnsupportedOperationException("Bounty already exists");
             Bounty b = new Bounty(owner.getPlayer(), econ, amount, target);
 
             owner.stats.totalBountiesCreated++;
-
-            if (config.getConfigurationSection("bounties") == null) config.createSection("bounties");
-            config.set(key, b);
-            try { config.save(f); } catch (IOException e) { NovaConfig.print(e); }
+            data.put(key, b);
 
             NovaPlayer targetN = new NovaPlayer(target);
             targetN.stats.totalBountiesHad++;

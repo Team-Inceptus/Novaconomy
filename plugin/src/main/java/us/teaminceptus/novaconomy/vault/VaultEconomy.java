@@ -42,7 +42,7 @@ class VaultEconomy extends AbstractEconomy {
 
     @Override
     public String format(double amount) {
-        return amount + "" + econ.getSymbol();
+        return amount + String.valueOf(econ.getSymbol());
     }
 
     private static String fromPlural(String str) {

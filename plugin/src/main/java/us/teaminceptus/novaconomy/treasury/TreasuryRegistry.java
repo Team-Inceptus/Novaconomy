@@ -20,6 +20,7 @@ import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.player.NovaPlayer;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -37,6 +38,8 @@ public final class TreasuryRegistry implements EconomyProvider {
         // this.plugin = plugin;
 
         ConfigurationSerialization.registerClass(TreasuryAccount.class);
+
+        if (!NovaConfig.getGlobalFile().exists()) try { NovaConfig.getGlobalFile().createNewFile(); } catch (IOException e) { NovaConfig.print(e); }
         TreasuryAccount.global = NovaConfig.getGlobalStorage();
         TreasuryAccount.treasuryAccounts = TreasuryAccount.global.isConfigurationSection(TREASURY_ACCOUNTS) ? TreasuryAccount.global.getConfigurationSection(TREASURY_ACCOUNTS) : TreasuryAccount.global.createSection(TREASURY_ACCOUNTS);
 

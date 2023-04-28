@@ -18,9 +18,22 @@ With the freedom to have your own symbols, icons, conversion rates, and even int
     - Corporations have an experience and leveling system, currently the only natural way of gaining experience is through profit and Corporation Achievements
     - You can own both a Business and a Corporation; Corporation Owners will automatically have their Business added to their Corporation
     - Other Corporation Features
-  - Other Improvements 
+  - Other Improvements
 
-**Markets will be moved to v1.7.1 because of time constraints**
+- v1.7.1
+  - **Convert to Gradle**
+  - Novaconomy Markets have **finally** been implemented!
+    - Sell and Buy Items from the Novaconomy Market.
+  - New Features
+    - **SQL Database Support**
+      - You can now use a SQL Driver to store your data instead of the default YAML files.
+      - Novaconomy has a built-in conversion feature that will convert your existing data to SQL and vice versa.
+      - More information is available on the wiki.
+    - Corporation-Only Chat 
+  - Other Improvements
+    - Fixed Various Language & Data Storage Issues 
+   
+
 ### 📊 1.6.0 Update: Supreme Stonks
 - New Features:
   - **Heavy Optimization**
@@ -102,8 +115,10 @@ unlimited stock and set the prices to whatever you want!
 - [x] Custom Tax Events
 - [x] Player/Business Settings
 - [x] Business Advertising
+- [x] Novaconomy Market
 - [ ] Business Investing
-- [ ] Novaconomy Stock Market
+- [ ] Loan System
+- [ ] Auction House
 
 -----
 ## 💻 Novaconomy API

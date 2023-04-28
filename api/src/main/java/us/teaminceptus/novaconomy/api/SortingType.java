@@ -1,5 +1,6 @@
 package us.teaminceptus.novaconomy.api;
 
+import org.bukkit.Material;
 import org.jetbrains.annotations.NotNull;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.corporation.CorporationInvite;
@@ -116,6 +117,53 @@ public interface SortingType<T> extends Comparator<T> {
      */
     SortingType<CorporationInvite> CORPORATION_INVITE_CORPORATION_DESCENDING = CORPORATION_INVITE_CORPORATION_ASCENDING.reversed();
 
+    // Material
+
+    /**
+     * Sorts a material by its type in ascending order.
+     */
+    SortingType<Material> MATERIAL_TYPE_ASCENDING = Material::compareTo;
+
+    /**
+     * Sorts a material by its type in descending order.
+     */
+    SortingType<Material> MATERIAL_TYPE_DESCENDING = MATERIAL_TYPE_ASCENDING.reversed();
+
+    /**
+     * Sorts a material by its name in ascending order.
+     */
+    SortingType<Material> MATERIAL_NAME_ASCENDING = (m1, m2) -> m1.name().compareTo(m2.name());
+
+    /**
+     * Sorts a material by its name in descending order.
+     */
+    SortingType<Material> MATERIAL_NAME_DESCENDING = MATERIAL_NAME_ASCENDING.reversed();
+
+    /**
+     * Sorts a material by its maximum stack size in ascending order.
+     */
+    SortingType<Material> MATERIAL_MAX_STACK_SIZE_ASCENDING = (m1, m2) -> Integer.compare(m1.getMaxStackSize(), m2.getMaxStackSize());
+
+    /**
+     * Sorts a material by its maximum stack size in descending order.
+     */
+    SortingType<Material> MATERIAL_MAX_STACK_SIZE_DESCENDING = MATERIAL_MAX_STACK_SIZE_ASCENDING.reversed();
+
+    /**
+     * Sorts a material by whether it is a block.
+     */
+    SortingType<Material> MATERIAL_BLOCKS = (m1, m2) -> Boolean.compare(m1.isBlock(), m2.isBlock());
+
+    /**
+     * Sorts a material by whether it is not a block.
+     */
+    SortingType<Material> MATERIAL_NONBLOCKS = MATERIAL_BLOCKS.reversed();
+
+    /**
+     * Sorts a material by whether it is edible.
+     */
+    SortingType<Material> MATERIAL_EDIBLES = (m1, m2) -> Boolean.compare(m1.isEdible(), m2.isEdible());
+
     @Override
     default SortingType<T> reversed() {
         return (o1, o2) -> compare(o2, o1);
@@ -158,8 +206,8 @@ public interface SortingType<T> extends Comparator<T> {
     /**
      * Fetches all SortingType values of a specific type.
      * @param clazz Type of SortingType
-     * @return SortingType values
      * @param <T> Type of SortingType
+     * @return SortingType values
      */
     @NotNull
     @SuppressWarnings("unchecked")

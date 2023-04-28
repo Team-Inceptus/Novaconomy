@@ -52,7 +52,16 @@ public final class CommandWrapperV2 implements CommandWrapper {
         });
 
         handler.registerValueResolver(Economy.class, ctx -> {
-                Economy econ = Economy.getEconomy(ctx.popForParameter());
+                String s = ctx.popForParameter();
+                Economy econ;
+
+                if (s.isEmpty() || s == null) econ = Economy.getEconomies()
+                        .stream()
+                        .sorted(Economy::compareTo)
+                        .collect(Collectors.toList())
+                        .get(0);
+                else econ = Economy.getEconomy(s);
+
                 if (econ == null) throw new CommandErrorException(getMessage("error.argument.economy"));
                 return econ;
             }).registerValueResolver(Business.class, ctx -> {
@@ -193,6 +202,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
         new BountyCommands(this);
         new NovaConfigCommands(this);
         new CorporationCommands(this);
+        new MarketCommands(this);
 
         handler.registerBrigadier();
         handler.setLocale(Language.getCurrentLocale());
@@ -316,9 +326,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
             handler.register(this);
         }
 
-        @Default
-        public void businessInfoDefault(Player p) { businessInfo(p); }
-
+        @DefaultFor({"business", "b", "nbusiness", "nb"})
         @Subcommand({"info", "information"})
         public void businessInfo(Player p) { wrapper.businessInfo(p); }
 
@@ -349,7 +357,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
         public void setHome(Player p) { wrapper.businessHome(p, true); }
 
         @Subcommand({"setname", "name"})
-        public void setName(Player p, @Single String name) { wrapper.setBusinessName(p, name); }
+        public void setName(Player p, @Length(Business.MAX_NAME_LENGTH) @Single String name) { wrapper.setBusinessName(p, name); }
 
         @Subcommand({"seticon", "icon"})
         public void setIcon(Player p, Material icon) { wrapper.setBusinessIcon(p, icon); }
@@ -380,7 +388,10 @@ public final class CommandWrapperV2 implements CommandWrapper {
         public void editPrice(Player p, @Range(min = 0.01) double newPrice, @Optional Economy economy) { wrapper.editPrice(p, newPrice, economy); }
 
         @Subcommand({"keyword", "keywords"})
-        @Default
+        @DefaultFor({"business keyword", "business keywords",
+        "b keyword", "b keywords",
+        "nb keyword", "nb keywords",
+        "nbusiness keyword", "nbusiness keywords"})
         @CommandPermission("novaconomy.user.business.keywords")
         public void keywords(Player p) { keywordsList(p); }
 
@@ -400,7 +411,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
             wrapper.removeKeywords(p, keywords.split("[ ,]"));
         }
 
-        @Default
+        @DefaultFor({"business advertising", "business ads", "business advertise"})
         @Subcommand({"advertising", "ads", "advertise"})
         public void businessAdvertising(Player p) {
             wrapper.businessAdvertising(p);
@@ -423,7 +434,10 @@ public final class CommandWrapperV2 implements CommandWrapper {
         @Subcommand({"blacklist", "blist", "bl", "blackl",
                 "blacklist list", "blist list", "bl list", "blackl list",
                 "blacklist l", "blist l", "bl l", "blackl l"})
-        @Default
+        @DefaultFor({"business blacklist, business blist, business bl, business blackl",
+        "b blacklist, b blist, b bl, b blackl",
+        "nb blacklist, nb blist, nb bl, nb blackl",
+        "nbusiness blacklist, nbusiness blist, nbusiness bl, nbusiness blackl"})
         public void listBlacklist(Player p) { wrapper.listBlacklist(p); }
 
         @Subcommand({"blacklist add", "blist add", "bl add", "blackl add"})
@@ -498,7 +512,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
         @Subcommand({"create", "make"})
         @AutoComplete("* @symbol *")
         @CommandPermission("novaconomy.economy.create")
-        public void createEconomy(CommandSender sender, String name, String symbol, Material icon, @Default("1") @Range(min = 0.01, max = Integer.MAX_VALUE) double scale, @Named("natural-increase") @Default("true") boolean naturalIncrease, @Named("clickable-reward") @Default("true") boolean clickableReward) {
+        public void createEconomy(CommandSender sender, String name, String symbol, Material icon, @Optional(def = "1") @Range(min = 0.01, max = Integer.MAX_VALUE) double scale, @Named("natural-increase") @Default("true") boolean naturalIncrease, @Named("clickable-reward") @Default("true") boolean clickableReward) {
             wrapper.createEconomy(sender, name, symbol.startsWith("\"") || symbol.startsWith("'") ? symbol.charAt(1) : symbol.charAt(0), icon, scale, naturalIncrease, clickableReward);
         }
 
@@ -563,7 +577,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
 
         @Subcommand({"setname", "name"})
         @CommandPermission("novaconomy.economy.create")
-        public void setName(CommandSender sender, Economy economy, @Single String name) { wrapper.setEconomyName(sender, economy, name); }
+        public void setName(CommandSender sender, Economy economy, @Length(Economy.MAX_NAME_LENGTH)  @Single String name) { wrapper.setEconomyName(sender, economy, name); }
 
         @Subcommand({"setclickablereward", "clickablereward", "setclickable", "clickable"})
         @CommandPermission("novaconomy.economy.create")
@@ -718,9 +732,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
             handler.register(this);
         }
 
-        @Default
-        public void defaultCorporationInfo(Player p) { corporationInfo(p); }
-
+        @DefaultFor({"corporation", "corp", "ncorp", "c", "nc"})
         @Subcommand("info")
         public void corporationInfo(Player p) {
             wrapper.corporationInfo(p);
@@ -729,7 +741,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
 
         @Subcommand("create")
         @CommandPermission("novaconomy.user.corporation.manage")
-        public void createCorporation(Player p, String name, Material icon) {
+        public void createCorporation(Player p, @Length(Corporation.MAX_NAME_LENGTH) String name, Material icon) {
             wrapper.createCorporation(p, name, icon);
         }
 
@@ -740,7 +752,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
 
         @Subcommand({"setdescription", "setdesc"})
         @CommandPermission("novaconomy.user.corporation.manage")
-        public void setDescription(Player p, String description) {
+        public void setDescription(Player p, @Length(Corporation.MAX_DESCRIPTION_LENGTH) String description) {
             wrapper.setCorporationDescription(p, description);
         }
 
@@ -756,7 +768,7 @@ public final class CommandWrapperV2 implements CommandWrapper {
         }
 
         @Subcommand({"setname", "name"})
-        public void setName(Player p, @Single String name) {
+        public void setName(Player p, @Length(Corporation.MAX_NAME_LENGTH) @Single String name) {
             wrapper.setCorporationName(p, name);
         }
 
@@ -806,5 +818,54 @@ public final class CommandWrapperV2 implements CommandWrapper {
 
         @Subcommand({"hq", "headquarters"})
         public void corporationHeadquarters(Player p) { wrapper.corporationHeadquarters(p); }
+
+        @Subcommand("chat")
+        public void corporationChat(Player p, String message) {
+            wrapper.corporationChat(p, message);
+        }
+
+        @Subcommand({"setting", "settings"})
+        public void corporationSettings(Player p) {
+            wrapper.settings(p, CORPORATION_TAG);
+        }
+    }
+
+    @Override
+    @Command({"corporationchat", "corpchat", "cc", "ncc", "corporationc", "corpc", "cchat"})
+    @Usage("/cc <message>")
+    @Description("Chat with your Novaconomy Corporation")
+    @CommandPermission("novaconomy.user.corporation")
+    public void corporationChat(Player p, String message) {
+        CommandWrapper.super.corporationChat(p, message);
+    }
+
+    @Command({"market", "novamarket", "novam", "m"})
+    @Usage("/market <open|sell|...>")
+    @Description("View and Manage the Novaconomy Market")
+    @CommandPermission("novaconomy.user.market")
+    private static final class MarketCommands {
+
+        private final CommandWrapperV2 wrapper;
+
+        MarketCommands(CommandWrapperV2 wrapper) {
+            this.wrapper = wrapper;
+            handler.register(this);
+        }
+
+        @Subcommand("open")
+        public void openMarket(Player p, @Optional Economy econ) {
+            wrapper.openMarket(p, econ);
+        }
+
+        @Subcommand("sell")
+        public void openSellMarket(Player p) {
+            wrapper.openSellMarket(p);
+        }
+
+        @Subcommand({"setplayeraccess", "setaccess"})
+        public void setMarketAccess(CommandSender sender, OfflinePlayer target, boolean access) {
+            wrapper.setMarketAccess(sender, target, access);
+        }
+
     }
 }

@@ -1737,6 +1737,98 @@ public final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         corporationHeadquarters(p);
                         break;
                     }
+                    case "chat": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
+                        StringBuilder msg = new StringBuilder();
+                        for (int i = 1; i < args.length; i++)
+                            msg.append(args[i]).append(" ");
+
+                        corporationChat(p, msg.toString());
+                        break;
+                    }
+                    case "setting":
+                    case "settings": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
+                        settings(p, CORPORATION_TAG);
+                        break;
+                    }
+                    default: {
+                        sender.sendMessage(getMessage("error.argument"));
+                        return false;
+                    }
+                }
+            }
+            case "corporationchat":
+            case "corpchat":
+            case "cc":
+            case "ncc":
+            case "corporationc":
+            case "corpc":
+            case "cchat": {
+                if (!(sender instanceof Player)) return false;
+                Player p = (Player) sender;
+
+                StringBuilder msg = new StringBuilder();
+                for (int i = 1; i < args.length; i++)
+                    msg.append(args[i]).append(" ");
+
+                corporationChat(p, msg.toString());
+                break;
+            }
+            case "market": {
+                if (args.length < 1) {
+                    sender.sendMessage(getMessage("error.argument"));
+                    return false;
+                }
+
+                switch (args[0].toLowerCase()) {
+                    case "open": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
+                        Economy econ;
+                        if (args.length < 2)
+                            econ = Economy.getEconomies().stream().findFirst().orElse(null);
+                        else
+                            econ = Economy.getEconomy(args[1]);
+                
+                        openMarket(p, econ);
+                        break;
+                    }
+                    case "setplayeraccess":
+                    case "setaccess": {
+                        if (args.length < 2) {
+                            sender.sendMessage(getMessage("error.argument.player"));
+                            return false;
+                        }
+
+                        OfflinePlayer target = Wrapper.getPlayer(args[1]);
+                        if (target == null) {
+                            sender.sendMessage(getMessage("error.argument.player"));
+                            return false;
+                        }
+
+                        if (args.length < 3) {
+                            sender.sendMessage(getMessage("error.argument.boolean"));
+                            return false;
+                        }
+
+                        boolean access = Boolean.parseBoolean(args[2]);
+
+                        setMarketAccess(sender, target, access);
+                        break;
+                    }
+                    case "sell": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
+                        openSellMarket(p);
+                        break;
+                    }
                     default: {
                         sender.sendMessage(getMessage("error.argument"));
                         return false;

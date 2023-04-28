@@ -1,12 +1,18 @@
 package us.teaminceptus.novaconomy.api.player;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.AtomicDouble;
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.configuration.Configuration;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
+import org.bukkit.util.io.BukkitObjectInputStream;
+import org.bukkit.util.io.BukkitObjectOutputStream;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.api.NovaConfig;
@@ -14,31 +20,50 @@ import us.teaminceptus.novaconomy.api.bank.Bank;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.business.Rating;
 import us.teaminceptus.novaconomy.api.economy.Economy;
+import us.teaminceptus.novaconomy.api.economy.market.NovaMarket;
+import us.teaminceptus.novaconomy.api.economy.market.Receipt;
+import us.teaminceptus.novaconomy.api.events.market.player.PlayerMembershipChangeEvent;
 import us.teaminceptus.novaconomy.api.events.player.economy.PlayerDepositEvent;
 import us.teaminceptus.novaconomy.api.events.player.economy.PlayerWithdrawEvent;
 import us.teaminceptus.novaconomy.api.settings.Settings;
 import us.teaminceptus.novaconomy.api.util.Price;
 import us.teaminceptus.novaconomy.api.util.Product;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.stream.Collectors;
 
 /**
  * Class representing a Player used in the Plugin
- *
  */
+@SuppressWarnings("unchecked")
 public final class NovaPlayer {
 
     private static final String LBW = "last_bank_withdraw";
     private static final String LBD = "last_bank_deposit";
     private final OfflinePlayer p;
 
-    private final File pFile;
-    private final FileConfiguration pConfig;
+    private final Map<String, Object> pConfig = new HashMap<>();
 
     final PlayerStatistics stats;
+
+    private static void checkTable() throws SQLException {
+        Connection db = NovaConfig.getConfiguration().getDatabaseConnection();
+
+        db.createStatement().execute("CREATE TABLE IF NOT EXISTS players (" +
+                "id CHAR(36) NOT NULL," +
+                "data MEDIUMBLOB NOT NULL," +
+                "stats BLOB(65535) NOT NULL," +
+                "PRIMARY KEY (id))"
+        );
+    }
 
     /**
      * Creates a new NovaPlayer.
@@ -49,44 +74,75 @@ public final class NovaPlayer {
         if (p == null) throw new IllegalArgumentException("Player is null");
         this.p = p;
 
-        if (!NovaConfig.getPlayerDirectory().exists()) NovaConfig.getPlayerDirectory().mkdir();
+        PlayerStatistics stats = new PlayerStatistics(p);
 
-        this.pFile = new File(NovaConfig.getPlayerDirectory(), p.getUniqueId() + ".yml");
+        if (NovaConfig.getConfiguration().isDatabaseEnabled())
+            try {
+                checkTable();
+                Connection db = NovaConfig.getConfiguration().getDatabaseConnection();
 
-        if (!pFile.exists()) try {
-            pFile.createNewFile();
-        } catch (IOException e) {
-            NovaConfig.print(e);
-        }
+                PreparedStatement ps = db.prepareStatement("SELECT * FROM players WHERE id = ?");
+                ps.setString(1, p.getUniqueId().toString());
+                ps.execute();
+                ResultSet rs = ps.getResultSet();
 
-        this.pConfig = YamlConfiguration.loadConfiguration(pFile);
+                if (rs.next()) {
+                    ByteArrayInputStream is = new ByteArrayInputStream(rs.getBytes("data"));
+                    BukkitObjectInputStream bIs = new BukkitObjectInputStream(is);
+                    this.pConfig.putAll((Map<String, Object>) bIs.readObject());
+                    bIs.close();
 
-        PlayerStatistics stats;
-        try {
-            stats = pConfig.contains("stats") ? (PlayerStatistics) pConfig.get("stats") : new PlayerStatistics(p);
-        } catch (ClassCastException e) {
-            NovaConfig.print(e);
-            stats = new PlayerStatistics(p);
+                    ByteArrayInputStream statsIs = new ByteArrayInputStream(rs.getBytes("stats"));
+                    BukkitObjectInputStream statsBIs = new BukkitObjectInputStream(statsIs);
+                    stats = (PlayerStatistics) statsBIs.readObject();
+                    statsBIs.close();
+                } else
+                    stats = new PlayerStatistics(p);
+
+                rs.close();
+            } catch (Exception e) {
+                NovaConfig.print(e);
+                stats = new PlayerStatistics(p);
+            }
+        else {
+            if (!NovaConfig.getPlayerDirectory().exists()) NovaConfig.getPlayerDirectory().mkdir();
+
+            File pFile = new File(NovaConfig.getPlayerDirectory(), p.getUniqueId().toString() + ".yml");
+            if (!pFile.exists()) try {
+                pFile.createNewFile();
+            } catch (IOException e) {
+                NovaConfig.print(e);
+            }
+
+            FileConfiguration config = YamlConfiguration.loadConfiguration(pFile);
+            pConfig.putAll(toMap(config));
+
+            stats = pConfig.containsKey("stats") ? (PlayerStatistics) pConfig.get("stats") : new PlayerStatistics(p);
         }
 
         this.stats = stats;
     }
 
-    /**
-     * Fetch the Configuration file this player's information is stored in
-     * @return {@link FileConfiguration} representing player config
-     */
-    @NotNull
-    public FileConfiguration getPlayerConfig() {
-        return pConfig;
+    private static Map<String, Object> toMap(Configuration config) {
+        Map<String, Object> map = new HashMap<>();
+
+        for (String key : config.getKeys(true)) {
+            Object o = config.get(key);
+            if (o instanceof ConfigurationSection) continue;
+            map.put(key, o);
+        }
+
+        return map;
     }
 
     /**
-     * Fetch the File this player's information is stored in
-     * @return {@link File} representing the file {@link #getPlayerConfig()} is stored in
+     * Fetches a mutable Map Representation of the player's data.
+     * @return Map of Player Data
      */
     @NotNull
-    public File getPlayerFile() { return pFile; }
+    public Map<String, Object> getPlayerData() {
+        return pConfig;
+    }
 
     /**
      * Fetch the player this class belongs to
@@ -125,21 +181,7 @@ public final class NovaPlayer {
     public double getBalance(@NotNull Economy econ) throws IllegalArgumentException {
         if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
 
-        boolean zero = false;
-        String econName = econ.getName().toLowerCase();
-
-        if (!pConfig.isConfigurationSection("economies")) {
-            pConfig.createSection("economies");
-            zero = true;
-        }
-        if (!pConfig.isConfigurationSection("economies." + econName)) {
-            pConfig.getConfigurationSection("economies").createSection(econName);
-            zero = true;
-        }
-
-        if (zero) return 0;
-
-        return pConfig.getDouble("economies." + econName + ".balance", 0);
+        return (double) pConfig.getOrDefault("economies." + econ.getName().toLowerCase() + ".balance", 0D);
     }
 
     /**
@@ -152,7 +194,7 @@ public final class NovaPlayer {
         if (newBal < 0) throw new IllegalArgumentException("Balance cannot be negative");
         if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
 
-        pConfig.set("economies." + econ.getName().toLowerCase() + ".balance", newBal);
+        pConfig.put("economies." + econ.getName().toLowerCase() + ".balance", newBal);
 
         if (newBal > stats.highestBalance) {
             stats.highestBalance = newBal;
@@ -166,11 +208,54 @@ public final class NovaPlayer {
      * <p>Information will be automatically saved with wrapper methods, so this method does not need to be called again.</p>
      */
     public void save() {
-        pConfig.set("stats", this.stats);
-
         try {
-            pConfig.save(pFile);
-        } catch (IOException e) {
+            if (NovaConfig.getConfiguration().isDatabaseEnabled()) {
+                Connection db = NovaConfig.getConfiguration().getDatabaseConnection();
+
+                String sql;
+                try (ResultSet rs = db.createStatement().executeQuery("SELECT * FROM players WHERE id = \"" + p.getUniqueId() + "\"")) {
+                    if (rs.next())
+                        sql = "UPDATE players SET " +
+                                "id = ?, " +
+                                "data = ?, " +
+                                "stats = ? " +
+                                "WHERE id = \"" + p.getUniqueId() + "\"";
+                    else
+                        sql = "INSERT INTO players VALUES (?, ?, ?)";
+                }
+
+                PreparedStatement ps = db.prepareStatement(sql);
+                ps.setString(1, p.getUniqueId().toString());
+
+                ByteArrayOutputStream os = new ByteArrayOutputStream();
+                BukkitObjectOutputStream bOs = new BukkitObjectOutputStream(os);
+                bOs.writeObject(pConfig);
+                bOs.close();
+
+                ps.setBytes(2, os.toByteArray());
+
+                ByteArrayOutputStream statsOs = new ByteArrayOutputStream();
+                BukkitObjectOutputStream statsBos = new BukkitObjectOutputStream(statsOs);
+                statsBos.writeObject(this.stats);
+                statsBos.close();
+
+                ps.setBytes(3, statsOs.toByteArray());
+
+                ps.executeUpdate();
+                ps.close();
+            } else {
+                pConfig.put("stats", this.stats);
+                File pFile = new File(NovaConfig.getPlayerDirectory(), p.getUniqueId().toString() + ".yml");
+                if (!pFile.exists()) pFile.createNewFile();
+
+                FileConfiguration pConfig = YamlConfiguration.loadConfiguration(pFile);
+                for (Map.Entry<String, Object> entry : this.pConfig.entrySet())
+                    pConfig.set(entry.getKey(), entry.getValue());
+
+                pConfig.save(pFile);
+            }
+
+        } catch (Exception e) {
             NovaConfig.print(e);
         }
     }
@@ -245,7 +330,7 @@ public final class NovaPlayer {
      */
     @NotNull
     public PlayerWithdrawEvent getLastBankWithdraw() {
-        return new PlayerWithdrawEvent(getOnlinePlayer(), pConfig.getDouble(LBW + ".amount", 0), Economy.getEconomy(pConfig.getString(LBW + ".economy", "")), pConfig.getLong(LBW + ".timestamp", 0));
+        return new PlayerWithdrawEvent(getOnlinePlayer(), (double) pConfig.getOrDefault(LBW + ".amount", 0D), Economy.getEconomy((String) pConfig.getOrDefault(LBW + ".economy", "")), (long) pConfig.getOrDefault(LBW + ".timestamp", 0));
     }
 
     /**
@@ -254,7 +339,7 @@ public final class NovaPlayer {
      */
     @NotNull
     public PlayerDepositEvent getLastBankDeposit() {
-        return new PlayerDepositEvent(getOnlinePlayer(), pConfig.getDouble(LBD + ".amount", 0), Economy.getEconomy(pConfig.getString(LBD + ".economy", "")), pConfig.getLong(LBD + ".timestamp", 0));
+        return new PlayerDepositEvent(getOnlinePlayer(), (double) pConfig.getOrDefault(LBD + ".amount", 0D), Economy.getEconomy((String) pConfig.getOrDefault(LBD + ".economy", "")), (long) pConfig.getOrDefault(LBD + ".timestamp", 0));
     }
 
     /**
@@ -266,17 +351,20 @@ public final class NovaPlayer {
      */
     public void withdraw(@NotNull Economy econ, double amount) throws IllegalArgumentException, UnsupportedOperationException {
         if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
-        if (amount < 0 || amount > Bank.getBalance(econ)) throw new IllegalArgumentException("Amount cannot be negative or greater than current bank balance");
+        if (amount < 0 || amount > Bank.getBalance(econ))
+            throw new IllegalArgumentException("Amount cannot be negative or greater than current bank balance");
 
-        if (!NovaConfig.getConfiguration().canBypassWithdraw(p) && NovaConfig.getConfiguration().getMaxWithdrawAmount(econ) < amount) throw new UnsupportedOperationException("Amount exceeds max withdraw amount");
-        if (System.currentTimeMillis() - 86400000 < pConfig.getLong(LBW + ".timestamp", 0)) throw new UnsupportedOperationException("Last withdraw was less than 24 hours ago");
+        if (!NovaConfig.getConfiguration().canBypassWithdraw(p) && NovaConfig.getConfiguration().getMaxWithdrawAmount(econ) < amount)
+            throw new UnsupportedOperationException("Amount exceeds max withdraw amount");
+        if (System.currentTimeMillis() - 86400000 < (long) pConfig.getOrDefault(LBW + ".timestamp", 0))
+            throw new UnsupportedOperationException("Last withdraw was less than 24 hours ago");
 
         Bank.removeBalance(econ, amount);
         add(econ, amount);
 
-        pConfig.set(LBW + ".amount", amount);
-        pConfig.set(LBW + ".economy", econ.getName());
-        pConfig.set(LBW + ".timestamp", System.currentTimeMillis());
+        pConfig.put(LBW + ".amount", amount);
+        pConfig.put(LBW + ".economy", econ.getName());
+        pConfig.put(LBW + ".timestamp", System.currentTimeMillis());
 
         stats.totalWithdrawn += amount;
         save();
@@ -302,10 +390,10 @@ public final class NovaPlayer {
         Bank.addBalance(econ, amount);
         remove(econ, amount);
 
-        pConfig.set(LBW + ".amount", amount);
-        pConfig.set(LBW + ".economy", econ.getName());
-        pConfig.set(LBW + ".timestamp", System.currentTimeMillis());
-        pConfig.set("donated." + econ.getName(), getDonatedAmount(econ) + amount);
+        pConfig.put(LBW + ".amount", amount);
+        pConfig.put(LBW + ".economy", econ.getName());
+        pConfig.put(LBW + ".timestamp", System.currentTimeMillis());
+        pConfig.put("donated." + econ.getName(), getDonatedAmount(econ) + amount);
         save();
     }
 
@@ -316,12 +404,16 @@ public final class NovaPlayer {
     @NotNull
     public Map<Economy, Double> getAllDonatedAmounts() {
         Map<Economy, Double> amounts = new HashMap<>();
-        if (!pConfig.isConfigurationSection("donated")) {
-            pConfig.createSection("donated");
-            return amounts;
+
+        for (Map.Entry<String, Object> entry : pConfig.entrySet()) {
+            if (!entry.getKey().startsWith("donated.")) continue;
+
+            Economy econ = Economy.getEconomy(entry.getKey().split("\\.")[1].toLowerCase());
+            if (econ == null) continue;
+
+            amounts.put(econ, (double) entry.getValue());
         }
 
-        pConfig.getConfigurationSection("donated").getValues(false).forEach((k, v) -> amounts.put(Economy.getEconomy(k), v instanceof Double ? (double) v : 0));
         return amounts;
     }
 
@@ -380,17 +472,21 @@ public final class NovaPlayer {
 
     /**
      * Fetches all of the Bounties this player owns.
-     * @return List of Owned Bounties
+     * @return Map of Owned Bounties
      */
     @NotNull
     public Map<OfflinePlayer, Bounty> getOwnedBounties() {
         Map<OfflinePlayer, Bounty> bounties = new HashMap<>();
-        if (!pConfig.isConfigurationSection("bounties")) {
-            pConfig.createSection("bounties");
-            return bounties;
+
+        for (Map.Entry<String, Object> entry : pConfig.entrySet()) {
+            if (!entry.getKey().startsWith("bounty.")) continue;
+
+            OfflinePlayer target = Bukkit.getOfflinePlayer(UUID.fromString(entry.getKey().split("\\.")[1]));
+            if (target == null) continue;
+
+            bounties.put(target, (Bounty) entry.getValue());
         }
 
-        pConfig.getConfigurationSection("bounties").getValues(false).forEach((k, v) -> bounties.put(Bukkit.getOfflinePlayer(UUID.fromString(k)), (Bounty) v));
         return bounties;
     }
 
@@ -459,7 +555,7 @@ public final class NovaPlayer {
 
     /**
      * Fetches all of the Bounties that this player is the target of.
-     * @return List of Bounties wanted by this player
+     * @return Set of Bounties wanted by this player
      */
     @NotNull
     public Set<Bounty> getSelfBounties() {
@@ -484,7 +580,7 @@ public final class NovaPlayer {
      */
     public boolean getSetting(@Nullable Settings.Personal setting) {
         if (setting == null) return false;
-        return pConfig.getBoolean("settings." + setting.name().toLowerCase(), setting.getDefaultValue());
+        return (boolean) pConfig.getOrDefault("settings." + setting.name().toLowerCase(), setting.getDefaultValue());
     }
 
     /**
@@ -495,7 +591,7 @@ public final class NovaPlayer {
      */
     public void setSetting(@NotNull Settings.Personal setting, boolean value) throws IllegalArgumentException {
         if (setting == null) throw new IllegalArgumentException("Setting cannot be null");
-        pConfig.set("settings." + setting.name().toLowerCase(), value);
+        pConfig.put("settings." + setting.name().toLowerCase(), value);
         save();
     }
 
@@ -522,9 +618,9 @@ public final class NovaPlayer {
 
         String comm = comment == null ? "" : comment;
 
-        pConfig.set("ratings." + id + ".rating", rating);
-        pConfig.set("ratings." + id + ".last_rating", System.currentTimeMillis());
-        pConfig.set("ratings." + id + ".comment", comm);
+        pConfig.put("ratings." + id + ".rating", rating);
+        pConfig.put("ratings." + id + ".last_rating", System.currentTimeMillis());
+        pConfig.put("ratings." + id + ".comment", comm);
 
         save();
     }
@@ -560,11 +656,11 @@ public final class NovaPlayer {
         if (b == null) return null;
 
         UUID id = b.getUniqueId();
-        if (!pConfig.isLong("ratings." + id + ".last_rating")) return null;
+        if (!(pConfig.get("ratings." + id + ".last_rating") instanceof Long)) return null;
 
-        long time = pConfig.getLong("ratings." + id + ".last_rating", 0);
-        int level = pConfig.getInt("ratings." + id + ".rating", 0);
-        String comment = pConfig.getString("ratings." + id + ".comment", "");
+        long time = (long) pConfig.getOrDefault("ratings." + id + ".last_rating", 0);
+        int level = (int) pConfig.getOrDefault("ratings." + id + ".rating", 0);
+        String comment = (String) pConfig.getOrDefault("ratings." + id + ".comment", "");
 
         return new Rating(p, id, level, time, comment);
     }
@@ -577,7 +673,7 @@ public final class NovaPlayer {
     @NotNull
     public Date getLastRating(@Nullable Business b) {
         if (b == null) return new Date();
-        return new Date(pConfig.getLong("ratings." + b.getUniqueId() + ".last_rating", 0));
+        return new Date((long) pConfig.getOrDefault("ratings." + b.getUniqueId() + ".last_rating", 0));
     }
 
     /**
@@ -588,7 +684,7 @@ public final class NovaPlayer {
      */
     public int getRatingLevel(@NotNull Business b) throws IllegalArgumentException {
         Preconditions.checkNotNull(b, "Business cannot be null");
-        return pConfig.getInt("ratings." + b.getUniqueId() + ".rating", 0);
+        return (int) pConfig.getOrDefault("ratings." + b.getUniqueId() + ".rating", 0);
     }
 
     /**
@@ -600,7 +696,7 @@ public final class NovaPlayer {
     @NotNull
     public String getRatingComment(@NotNull Business b) throws IllegalArgumentException {
         Preconditions.checkNotNull(b, "Business cannot be null");
-        return pConfig.getString("ratings." + b.getUniqueId() + ".comment", "");
+        return (String) pConfig.getOrDefault("ratings." + b.getUniqueId() + ".comment", "");
     }
 
     /**
@@ -611,5 +707,65 @@ public final class NovaPlayer {
     public boolean hasRating(@Nullable Business b) {
         if (b == null) return false;
         return getRatingLevel(b) != 0;
+    }
+
+    /**
+     * <p>Whether this player can access the Novaconomy Market.</p>
+     * <p>If {@link NovaMarket#isMarketMembershipEnabled()} returns false or Player has {@code novaconomy.admin.market.bypass_membership}, this method will always return true.</p>
+     * @return true if this player can access the market, else false
+     */
+    public boolean hasMarketAccess() {
+        if (!NovaConfig.getMarket().isMarketMembershipEnabled()) return true;
+        if (p.isOp() || (p.isOnline() && p.getPlayer().hasPermission("novaconomy.admin.market.bypass_membership")))
+            return true;
+
+        return (Boolean) pConfig.getOrDefault("market.membership", false);
+    }
+
+    /**
+     * <p>Sets whether this player can access the Novaconomy Market.</p>
+     * <p>If {@link NovaMarket#isMarketMembershipEnabled()} returns false or Player has {@code novaconomy.admin.market.bypass_membership}, this method will do nothing.</p>
+     * @param value true if this player can access the market, else false
+     */
+    public void setMarketAccess(boolean value) {
+        if (!NovaConfig.getMarket().isMarketMembershipEnabled()) return;
+        if (p.isOp() || (p.isOnline() && p.getPlayer().hasPermission("novaconomy.admin.market.bypass_membership")))
+            return;
+
+        boolean old = hasMarketAccess();
+        if (old == value) return;
+
+        PlayerMembershipChangeEvent event = new PlayerMembershipChangeEvent(p, old, value);
+        Bukkit.getPluginManager().callEvent(event);
+
+        if (!event.isCancelled()) {
+            pConfig.put("market.membership", event.getNewStatus());
+            save();
+        }
+    }
+
+    /**
+     * Fetches an immutable copy of all of the purchases this player has made.
+     * @return All Purchases
+     */
+    @NotNull
+    public Set<Receipt> getPurchases() {
+        return ImmutableSet.copyOf(NovaConfig.getMarket().getAllPurchases().stream()
+                .filter(r -> r.getPurchaser().equals(p))
+                .collect(Collectors.toList())
+        );
+    }
+
+    /**
+     * Fetches an immutable copy of all of the purchases this player has made for a specific Material.
+     * @param m Material to search for
+     * @return All Purchases for this Material
+     */
+    @NotNull
+    public Set<Receipt> getPurchases(@NotNull Material m) {
+        return ImmutableSet.copyOf(getPurchases().stream()
+                .filter(r -> r.getPurchased() == m)
+                .collect(Collectors.toList())
+        );
     }
 }

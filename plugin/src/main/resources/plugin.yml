@@ -1,11 +1,11 @@
-name: ${project.name}
-version: 1.7.0.1
+name: Novaconomy
+version: 1.7.1
 description: ${project.description}
 author: Team Inceptus
-website: ${project.url}
+website: "https://github.com/Team-Inceptus/Novaconomy"
 api-version: 1.13
 main: us.teaminceptus.novaconomy.Novaconomy
-softdepend: [PlaceholderAPI, Vault, Treasury, PlugMan, PlugManX]
+softdepend: [ PlaceholderAPI, Vault, Treasury, PlugMan, PlugManX ]
 permissions:
   novaconomy.*:
     description: Access to all Novaconomy Actions
@@ -49,6 +49,31 @@ permissions:
     default: op
     children:
       novaconomy.admin.corporation: true
+
+  # Admin Market
+  novaconomy.admin.market:
+    description: All Novaconomy Market Admin Permissions
+    default: op
+    children:
+      novaconomy.admin: true
+
+  novaconomy.admin.market.bypass_limit:
+    description: Bypass the Market Purchase Limit
+    default: op
+    children:
+      novaconomy.admin.market: true
+
+  novaconomy.admin.market.bypass_membership:
+    description: Bypass the Market Membership Requirement
+    default: op
+    children:
+      novaconomy.admin.market: true
+
+  novaconomy.admin.market.manage_membership:
+    description: Access to granting or revoking market membership
+    default: op
+    children:
+      novaconomy.admin.market: true
 
   # Economy
   novaconomy.economy:
@@ -224,7 +249,7 @@ permissions:
 
   # User Corporation
   novaconomy.user.corporation:
-    description: Access to all Corporation Actions and Commands
+    description: Access to all User Corporation Actions and Commands
     default: true
     children:
       novaconomy.user: true
@@ -234,6 +259,13 @@ permissions:
     default: true
     children:
       novaconomy.user.corporation: true
+
+  # User Market
+  novaconomy.user.market:
+    description: Access to all Novaconomy Market User Actions and Commands
+    default: true
+    children:
+      novaconomy.user: true
 
   
   
