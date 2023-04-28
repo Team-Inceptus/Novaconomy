@@ -8,11 +8,11 @@ import us.teaminceptus.novaconomy.api.economy.market.MarketCategory;
 public class TestNovaconomy {
     
     @Test
-    @DisplayName("Test Market#basePrices")
+    @DisplayName("Test Novaconomy#prices")
     public void testMarketPrices() {
          for (MarketCategory c : MarketCategory.values())
              for (String s : c.getItemNames())
-                Assertions.assertTrue(Novaconomy.basePrices.containsKey(s), "Missing items in " + c.name() + ": Missing '" + s + "'");
+                Assertions.assertTrue(Novaconomy.prices.containsKey(s), "Missing items in " + c.name() + ": Missing '" + s + "'");
     }
 
 }

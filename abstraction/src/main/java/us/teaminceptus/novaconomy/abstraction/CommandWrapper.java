@@ -236,6 +236,7 @@ public interface CommandWrapper {
             NovaConfig.print(e);
         }
 
+        Economy.reloadEconomies();
         Corporation.reloadCorporations();
         Business.reloadBusinesses();
     }
@@ -728,7 +729,7 @@ public interface CommandWrapper {
         inv.setItem(22, Items.economyWheel("add_product"));
 
         inv.setItem(13, builder(pr,
-                meta -> meta.setLore(Collections.singletonList(format(get("constants.business.price"), price, econ.getSymbol()))),
+                meta -> meta.setLore(Collections.singletonList(format(get("constants.price"), price, econ.getSymbol()))),
                 nbt -> nbt.set(PRICE_TAG, price)
         ));
 
@@ -3378,10 +3379,19 @@ public interface CommandWrapper {
     // Market Commands
 
     default void openMarket(@NotNull Player p, @NotNull Economy econ) {
-        if (econ == null) {
-            p.sendMessage(getError("error.economy.none"));
+        if (!p.hasPermission("novaconomy.user.market")) {
+            p.sendMessage(ERROR_PERMISSION_ARGUMENT);
             return;
         }
+
+        Economy econ0;
+        if (econ == null)
+            econ0 = Economy.getEconomies()
+                    .stream()
+                    .sorted(Economy::compareTo)
+                    .collect(Collectors.toList())
+                    .get(0);
+        else econ0 = econ;
 
         NovaPlayer np = new NovaPlayer(p);
 
@@ -3391,23 +3401,24 @@ public interface CommandWrapper {
             inv.setCancelled();
             for (int i = 0; i < 7; i++) inv.setItem(10 + i, GUI_BACKGROUND);
 
-            inv.setItem(13, Items.economyWheel("market_access", econ));
+            inv.setItem(12, Items.economyWheel("market_access", econ0));
 
-            inv.setItem(15, NBTWrapper.builder(Material.DIAMOND_BLOCK,
+            inv.setItem(14, NBTWrapper.builder(Material.DIAMOND_BLOCK,
                     meta -> {
-                        meta.setDisplayName(ChatColor.GREEN + get("constants.market.buy_access.item"));
+                        meta.setDisplayName(ChatColor.GREEN + get("constants.market.buy_access"));
                         meta.setLore(Arrays.asList(
-                                ChatColor.GOLD + String.format(get("constants.price"), NovaConfig.getMarket().getMarketMembershipCost(econ) + String.valueOf(econ.getSymbol()))
+                                ChatColor.GOLD + format(get("constants.price"), format("%,.2f", NovaConfig.getMarket().getMarketMembershipCost(econ0)), String.valueOf(econ0.getSymbol()))
                         ));
                     }, nbt -> {
                         nbt.setID("market:buy_access");
-                        nbt.set(ECON_TAG, econ.getUniqueId());
+                        nbt.set(ECON_TAG, econ0.getUniqueId());
                     })
             );
         } else
-            inv = Generator.generateMarket(p, MarketCategory.UTILITIES, SortingType.MATERIAL_NAME_ASCENDING, econ, 0);
+            inv = Generator.generateMarket(p, MarketCategory.MINERALS, SortingType.MATERIAL_TYPE_ASCENDING, econ0, 0);
 
         p.openInventory(inv);
+        NovaSound.BLOCK_ENDER_CHEST_OPEN.play(p);
     }
 
     default void setMarketAccess(@NotNull CommandSender sender, @NotNull OfflinePlayer target, boolean access) {
@@ -3424,7 +3435,12 @@ public interface CommandWrapper {
     }
 
     default void openSellMarket(@NotNull Player p) {
-        NovaInventory inv = w.createInventory("", get("constants.market.sell_inventory"), 54);
+        if (!p.hasPermission("novaconomy.user.market")) {
+            p.sendMessage(ERROR_PERMISSION_ARGUMENT);
+            return;
+        }
+
+        NovaInventory inv = w.createInventory("", get("constants.market.sell_items"), 54);
 
         inv.setItem(48, builder(Items.NEXT,
                 meta -> meta.setDisplayName(ChatColor.BLUE + get("constants.market.sell_items")),
@@ -3434,7 +3450,7 @@ public interface CommandWrapper {
         inv.setItem(50, Items.economyWheel());
 
         p.openInventory(inv);
-        NovaSound.BLOCK_CHEST_OPEN.play(p);
+        NovaSound.BLOCK_ENDER_CHEST_OPEN.play(p);
     }
 
 }

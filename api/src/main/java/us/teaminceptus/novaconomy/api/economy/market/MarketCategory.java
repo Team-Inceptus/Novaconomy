@@ -33,7 +33,7 @@ public enum MarketCategory {
      */
     MINERALS(DIRT, GRAVEL, SAND, FLINT, STONE, COBBLESTONE, NETHERRACK, GLOWSTONE, SOUL_SAND,
             "red_sand", "coarse_dirt", "diorite", "granite", "andesite", "deepslate", "cobbled_deepslate",
-            "calcite", "ender_stone", "end_stone", "mud", "soul_soil", "blackstone", "basalt", "obsidian",
+            "calcite", "ender_stone:end_stone", "mud", "soul_soil", "blackstone", "basalt", "obsidian",
             "tuff"
     ),
 
@@ -48,11 +48,12 @@ public enum MarketCategory {
      * Consists of common outdoor decoration items and food
      */
     DECORATIONS_FOOD(GRASS, DEAD_BUSH, VINE, SUGAR_CANE, PUMPKIN, TORCH, GLASS, CARROT,
-            POTATO, APPLE, BREAD, WHEAT, SEEDS, CACTUS, ICE, SNOW, PACKED_ICE, PRISMARINE, SEA_LANTERN,
+            POTATO, APPLE, BREAD, WHEAT, CACTUS, ICE, SNOW, PACKED_ICE, PRISMARINE, SEA_LANTERN,
             "tall_grass", "fern", "lily_pad", "large_fern", "lantern", "glass_pane", "glow_berries",
             "glow_lichen", "raw_beef:beef", "porkchop", "chicken:raw_chicken", "mutton", "campfire",
             "kelp", "peony", "sunflower", "poppy", "sea_pickle", "candle", "dark_prismarine", "shroomlight",
-            "mycelium", "podzol", "dripleaf", "small_dripleaf", "soul_lantern", "sweet_berries", "soul_campfire"
+            "mycelium", "podzol", "dripleaf", "small_dripleaf", "soul_lantern", "sweet_berries", "soul_campfire",
+            "seeds:wheat_seeds"
     ),
 
     /**
@@ -83,7 +84,6 @@ public enum MarketCategory {
     );
 
     private final String[] itemNames;
-    private final Material[] items;
 
     MarketCategory(Object... objs) {
         this.itemNames = Arrays.stream(objs)
@@ -92,31 +92,20 @@ public enum MarketCategory {
                 .flatMap(Arrays::stream)
                 .map(String::toLowerCase)
                 .toArray(String[]::new);
-
-        Set<Material> items = new HashSet<>();
-        for (Object o : objs)
-            if (o instanceof Material)
-                items.add((Material) o);
-            else if (o instanceof String) {
-                String s = o.toString();
-                if (s.contains(":"))
-                    for (String str : s.split(":"))
-                        if (Material.matchMaterial(str) != null)
-                            items.add(Material.matchMaterial(str));
-                        else if (Material.matchMaterial(o.toString()) != null)
-                            items.add(Material.matchMaterial(o.toString()));
-            } else
-                throw new IllegalArgumentException("Invalid item type: " + o.getClass().getName());
-
-        this.items = items.toArray(new Material[0]);
     }
 
     /**
-     * Fetches an immutable list of all of the resolvable items in this MarketCategory
-     * @return Immutable List of all resolved items in this Category
+     * Fetches an immutable set of all of the resolvable items in this MarketCategory
+     * @return Immutable Set of all resolved items in this Category
      */
     @NotNull
     public Set<Material> getItems() {
+        Set<Material> items = new HashSet<>();
+
+        for (String s : itemNames)
+            if (Material.matchMaterial(s) != null)
+                items.add(Material.matchMaterial(s));
+
         return ImmutableSet.copyOf(items);
     }
 
@@ -138,7 +127,7 @@ public enum MarketCategory {
      */
     @NotNull
     public String getLocalizedName() {
-        return Language.getCurrentMessage("market.category." + name().toLowerCase());
+        return Language.getCurrentMessage("constants.market.category." + name().toLowerCase());
     }
 
 }

@@ -40,6 +40,8 @@ import us.teaminceptus.novaconomy.api.economy.market.NovaMarket;
 import us.teaminceptus.novaconomy.api.economy.market.Receipt;
 import us.teaminceptus.novaconomy.api.events.AutomaticTaxEvent;
 import us.teaminceptus.novaconomy.api.events.InterestEvent;
+import us.teaminceptus.novaconomy.api.events.market.AsyncMarketRestockEvent;
+import us.teaminceptus.novaconomy.api.events.market.player.PlayerMarketPurchaseEvent;
 import us.teaminceptus.novaconomy.api.events.player.PlayerMissTaxEvent;
 import us.teaminceptus.novaconomy.api.player.Bounty;
 import us.teaminceptus.novaconomy.api.player.NovaPlayer;
@@ -58,8 +60,11 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.sql.*;
 import java.util.*;
+import java.util.Date;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -192,35 +197,63 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
     private static BukkitRunnable INTEREST_RUNNABLE = new BukkitRunnable() {
         @Override
         public void run() {
-            if (!NovaConfig.getConfiguration().isInterestEnabled()) {
-                cancel();
-                return;
-            }
+            if (!NovaConfig.getConfiguration().isInterestEnabled()) return;
             runInterest();
         }
     };
 
-    private static BukkitRunnable PING_DB_RUNNABLE = new BukkitRunnable() {
+    private static void pingDB() {
+        try {
+            if (db == null) {
+                NovaConfig.getLogger().severe("Database has been disconnected!");
+                Bukkit.getPluginManager().disablePlugin(NovaConfig.getPlugin());
+                return;
+            }
+
+            db.createStatement().execute("SELECT 1");
+        } catch (SQLException e) {
+            NovaConfig.getLogger().severe("Failed to Ping Database:");
+            NovaConfig.print(e);
+        }
+    }
+
+    private static final BukkitRunnable PING_DB_RUNNABLE = new BukkitRunnable() {
         @Override
         public void run() {
-            try {
-                if (!NovaConfig.getConfiguration().isDatabaseEnabled()) {
-                    cancel();
-                    return;
-                }
+            if (!NovaConfig.getConfiguration().isDatabaseEnabled()) return;
+            pingDB();
+        }
+    };
 
-                if (db == null) {
-                    NovaConfig.getLogger().severe("Database has been disconnected!");
-                    Bukkit.getPluginManager().disablePlugin(NovaConfig.getPlugin());
-                    cancel();
-                    return;
-                }
+    private static void runRestock() {
+        if (!NovaConfig.getMarket().isMarketEnabled() || !NovaConfig.getMarket().isMarketRestockEnabled()) return;
 
-                db.createStatement().execute("SELECT 1");
-            } catch (SQLException e) {
-                NovaConfig.getLogger().severe("Failed to Ping Database:");
-                NovaConfig.print(e);
-            }
+        Map<Material, Long> oldStock = new HashMap<>();
+        Map<Material, Long> newStock = new HashMap<>();
+
+        long add = NovaConfig.getMarket().getMarketRestockAmount();
+        for (Material m : NovaConfig.getMarket().getAllSold()) {
+            long old = stock.getOrDefault(m, 0L);
+            oldStock.put(m, old);
+            newStock.put(m, old + add);
+        }
+
+        AsyncMarketRestockEvent event = new AsyncMarketRestockEvent(oldStock, newStock);
+        Bukkit.getPluginManager().callEvent(event);
+
+        if (!event.isCancelled()) {
+            lastRestockTimestamp.set(System.currentTimeMillis());
+
+            event.getNewStock().forEach((m, l) -> stock.put(m, Math.max(l, 0)));
+            ((Novaconomy) NovaConfig.getPlugin()).writeMarket();
+        }
+    }
+
+    private static BukkitRunnable RESTOCK_RUNNABLE = new BukkitRunnable() {
+        @Override
+        public void run() {
+            if (!NovaConfig.getMarket().isMarketEnabled() || !NovaConfig.getMarket().isMarketRestockEnabled()) return;
+            runRestock();
         }
     };
 
@@ -300,6 +333,59 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
             runTaxes();
         }
     };
+
+    @SuppressWarnings("unused")
+    private static void updateRunnables() {
+        Novaconomy plugin = getPlugin(Novaconomy.class);
+
+        config = plugin.getConfig();
+        interest = config.getConfigurationSection("Interest");
+        ncauses = config.getConfigurationSection("NaturalCauses");
+
+        try {
+            if (INTEREST_RUNNABLE.getTaskId() != -1) INTEREST_RUNNABLE.cancel();
+            if (TAXES_RUNNABLE.getTaskId() != -1) TAXES_RUNNABLE.cancel();
+            if (RESTOCK_RUNNABLE.getTaskId() != -1) RESTOCK_RUNNABLE.cancel();
+        } catch (IllegalStateException ignored) {}
+
+        INTEREST_RUNNABLE = new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (!(NovaConfig.getConfiguration().isInterestEnabled())) {
+                    cancel();
+                    return;
+                }
+                runInterest();
+            }
+        };
+
+        TAXES_RUNNABLE = new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (!(NovaConfig.getConfiguration().hasAutomaticTaxes())) {
+                    cancel();
+                    return;
+                }
+                runTaxes();
+            }
+        };
+
+        RESTOCK_RUNNABLE = new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (!NovaConfig.getMarket().isMarketEnabled() || !NovaConfig.getMarket().isMarketRestockEnabled()) return;
+                runRestock();
+            }
+        };
+
+        NovaUtil.sync(() -> {
+            try {
+                INTEREST_RUNNABLE.runTaskTimer(plugin, plugin.getInterestTicks(), plugin.getInterestTicks());
+                TAXES_RUNNABLE.runTaskTimer(plugin, plugin.getTaxesTicks(), plugin.getTaxesTicks());
+                RESTOCK_RUNNABLE.runTaskTimer(plugin, plugin.getMarketRestockInterval(), plugin.getMarketRestockInterval());
+            } catch (IllegalStateException ignored) {}
+        });
+    }
 
     private static FileConfiguration funcConfig;
 
@@ -1417,48 +1503,6 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
         return ncauses.getDouble("DeathDivider");
     }
 
-    @SuppressWarnings("unused")
-    private static void updateRunnables() {
-        Novaconomy plugin = getPlugin(Novaconomy.class);
-
-        config = plugin.getConfig();
-        interest = config.getConfigurationSection("Interest");
-        ncauses = config.getConfigurationSection("NaturalCauses");
-
-        try {
-            if (INTEREST_RUNNABLE.getTaskId() != -1) INTEREST_RUNNABLE.cancel();
-            if (TAXES_RUNNABLE.getTaskId() != -1) TAXES_RUNNABLE.cancel();
-        } catch (IllegalStateException ignored) {
-        }
-
-        INTEREST_RUNNABLE = new BukkitRunnable() {
-            @Override
-            public void run() {
-                if (!(NovaConfig.getConfiguration().isInterestEnabled())) {
-                    cancel();
-                    return;
-                }
-                runInterest();
-            }
-        };
-
-        TAXES_RUNNABLE = new BukkitRunnable() {
-            @Override
-            public void run() {
-                if (!(NovaConfig.getConfiguration().hasAutomaticTaxes())) {
-                    cancel();
-                    return;
-                }
-                runTaxes();
-            }
-        };
-
-        NovaUtil.sync(() -> {
-            INTEREST_RUNNABLE.runTaskTimer(plugin, plugin.getInterestTicks(), plugin.getInterestTicks());
-            TAXES_RUNNABLE.runTaskTimer(plugin, plugin.getTaxesTicks(), plugin.getTaxesTicks());
-        });
-    }
-
     // Market Impl
 
     @Override
@@ -1496,28 +1540,17 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 
     @Override
     public long getMarketRestockAmount() {
-        return config.getLong("Market.Restock.Base", 1000);
+        return config.getLong("Market.Restock.Amount", 1000);
     }
 
     @Override
     public void setMarketRestockAmount(long amount) {
-        config.set("Market.Restock.Base", amount);
+        config.set("Market.Restock.Amount", amount);
         saveConfig();
     }
 
-    @Override
-    public boolean hasMarketBankInfluence() {
-        return config.getBoolean("Market.Restock.BankInfluence", true);
-    }
-
-    @Override
-    public void setMarketBankInfluence(boolean enabled) {
-        config.set("Market.Restock.BankInfluence", enabled);
-        saveConfig();
-    }
-
-    //<editor-fold desc="Base Prices" defaultstate="collapsed">
-    static final Map<String, Double> basePrices = ImmutableMap.<String, Double>builder()
+    //<editor-fold desc="Prices" defaultstate="collapsed">
+    static final Map<String, Double> prices = ImmutableMap.<String, Double>builder()
             // Miscellaneous
             .put("bowl", 2.65)
             .put("book", 5.3)
@@ -1612,6 +1645,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
             .put("apple", 11.2)
             .put("bread", 16.7)
             .put("wheat", 5.4)
+            .put("wheat_seeds", 3.15)
             .put("seeds", 3.15)
             .put("glow_berries", 17.54)
             .put("raw_beef", 8.91)
@@ -1708,16 +1742,26 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 
     static final Set<Receipt> purchases = new HashSet<>();
     static final Map<Material, Long> stock = new HashMap<>();
+    static AtomicLong lastRestockTimestamp = new AtomicLong(0);
 
     private void loadMarket() {
         readMarket();
 
-        basePrices.keySet()
+        prices.keySet()
                 .stream()
                 .filter(m -> Material.matchMaterial(m) != null)
                 .map(Material::matchMaterial)
                 .filter(w::isItem)
                 .forEach(m -> stock.putIfAbsent(m, getMarketRestockAmount()));
+
+        boolean scheduled = false;
+        try {
+            RESTOCK_RUNNABLE.getTaskId();
+            scheduled = true;
+        } catch (IllegalStateException ignored) {}
+
+        if (isMarketEnabled() && isMarketRestockEnabled() && !scheduled)
+            RESTOCK_RUNNABLE.runTaskTimerAsynchronously(this, getMarketRestockInterval(), getMarketRestockInterval());
     }
 
     private void writeMarket() {
@@ -1750,7 +1794,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
                 "PRIMARY KEY (material))"
         );
 
-        for (Material m : basePrices.keySet().stream().map(Material::matchMaterial).filter(Objects::nonNull).filter(w::isItem).collect(Collectors.toList())) {
+        for (Material m : NovaConfig.getMarket().getAllSold()) {
             String sql;
             PreparedStatement has = db.prepareStatement("SELECT * FROM market WHERE material = ?");
             has.setString(1, m.name());
@@ -1781,7 +1825,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
     }
 
     private static void readMarketDB() throws SQLException, IOException, ClassNotFoundException {
-        for (Material m : basePrices.keySet().stream().map(Material::matchMaterial).filter(Objects::nonNull).filter(w::isItem).collect(Collectors.toList())) {
+        for (Material m : NovaConfig.getMarket().getAllSold()) {
             PreparedStatement ps = db.prepareStatement("SELECT * FROM market WHERE material = ?");
             ps.setString(1, m.name());
 
@@ -1818,7 +1862,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
         try {
             FileInputStream fis = new FileInputStream(marketFile);
             BukkitObjectInputStream bis = new BukkitObjectInputStream(fis);
-            purchases.addAll((List<Receipt>) bis.readObject());
+            purchases.addAll((Collection<Receipt>) bis.readObject());
             stock.putAll((Map<Material, Long>) bis.readObject());
             bis.close();
         } catch (EOFException ignored) {
@@ -1826,29 +1870,26 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
     }
 
     @Override
-    public double getBasePrice(@NotNull Material m) throws IllegalArgumentException {
+    public double getPrice(@NotNull Material m) throws IllegalArgumentException {
         if (m == null || !w.isItem(m)) throw new IllegalArgumentException("Material must be valid item");
-        if (getBasePriceOverrides().containsKey(m)) return getBasePriceOverrides().get(m);
+        if (getPriceOverrides().containsKey(m)) return getPriceOverrides().get(m);
 
-        double base = basePrices.getOrDefault(m.name().toLowerCase(), -1D);
+        double base = prices.getOrDefault(m.name().toLowerCase(), -1D);
         if (base == -1) throw new IllegalArgumentException("Material not sold on market");
 
         return base;
     }
 
     @Override
-    public double getPrice(@NotNull Material m) throws IllegalArgumentException {
-        double base = getBasePrice(m);
-
-        long purchasesLastRestock = purchases.stream()
-                .filter(r -> r.getPurchased() == m)
-                .filter(r -> r.getTimestamp().getTime() > System.currentTimeMillis() - (getMarketRestockInterval() * 500))
-                .count();
-
-        long stock = Novaconomy.stock.get(m);
-        double istock = stock + purchasesLastRestock;
-
-        return base * (1 + (1 - stock / istock) + (purchasesLastRestock / istock));
+    @NotNull
+    public Set<Material> getAllSold() {
+        return ImmutableSet.copyOf(prices.keySet()
+                .stream()
+                .map(Material::matchMaterial)
+                .filter(Objects::nonNull)
+                .filter(w::isItem)
+                .collect(Collectors.toList())
+        );
     }
 
     @Override
@@ -1863,7 +1904,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
     }
 
     @Override
-    public @NotNull Receipt buy(@NotNull OfflinePlayer buyer, @NotNull Material m, int amount, @NotNull Economy econ) throws IllegalArgumentException {
+    public @NotNull Receipt buy(@NotNull OfflinePlayer buyer, @NotNull Material m, int amount, @NotNull Economy econ) throws IllegalArgumentException, CancellationException {
         if (buyer == null) throw new IllegalArgumentException("Buyer cannot be null");
         if (m == null) throw new IllegalArgumentException("Material cannot be null");
         if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
@@ -1873,11 +1914,16 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 
         double price = getPrice(m, econ) * amount;
         if (price <= 0) throw new IllegalArgumentException("Price must be positive");
-
         if (np.getBalance(econ) < price) throw new IllegalArgumentException("Insufficient funds");
-        np.remove(econ, price);
 
         Receipt r = new Receipt(m, price / amount, amount, buyer);
+        PlayerMarketPurchaseEvent event = new PlayerMarketPurchaseEvent(buyer, r);
+
+        if (event.isCancelled()) throw new CancellationException("Purchase cancelled by event");
+
+        np.remove(econ, price);
+        if (isDepositEnabled()) Bank.addBalance(econ, price);
+
         purchases.add(r);
         stock.put(m, stock.get(m) - amount);
 
@@ -1886,15 +1932,15 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
     }
 
     @Override
-    public Map<Material, Double> getBasePriceOverrides() {
-        return config.getConfigurationSection("Market.BasePriceOverride").getValues(false)
+    public Map<Material, Double> getPriceOverrides() {
+        return config.getConfigurationSection("Market.PriceOverride").getValues(false)
                 .entrySet().stream()
                 .map(e -> {
                     if (Material.matchMaterial(e.getKey()) == null)
                         throw new IllegalArgumentException("Invalid Material '" + e.getKey() + "'");
                     double d = Double.parseDouble(e.getValue().toString());
                     if (d < 0)
-                        throw new IllegalArgumentException("Base price for '" + e.getKey() + "' must be positive");
+                        throw new IllegalArgumentException("Price for '" + e.getKey() + "' must be positive");
 
                     return new AbstractMap.SimpleEntry<>(Material.matchMaterial(e.getKey()), d);
                 })
@@ -1902,7 +1948,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
     }
 
     @Override
-    public void setBasePriceOverrides(@NotNull Map<Material, Double> overrides) throws IllegalArgumentException {
+    public void setPriceOverrides(@NotNull Map<Material, Double> overrides) throws IllegalArgumentException {
         if (overrides == null) throw new IllegalArgumentException("Overrides cannot be null");
 
         for (Material m : overrides.keySet()) {
@@ -1910,17 +1956,17 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
             if (overrides.get(m) == null) throw new IllegalArgumentException("Price cannot be null for '" + m + "'");
             if (overrides.get(m) < 0) throw new IllegalArgumentException("Price must be positive for '" + m + "'");
 
-            config.set("Market.BasePriceOverride." + m.name(), overrides.get(m));
+            config.set("Market.PriceOverride." + m.name(), overrides.get(m));
         }
         saveConfig();
     }
 
     @Override
-    public void setBasePriceOverride(@NotNull Material m, double price) throws IllegalArgumentException {
+    public void setPriceOverrides(@NotNull Material m, double price) throws IllegalArgumentException {
         if (m == null) throw new IllegalArgumentException("Material cannot be null");
         if (price < 0) throw new IllegalArgumentException("Price must be positive for '" + m + "'");
 
-        config.set("Market.BasePriceOverride." + m.name(), price);
+        config.set("Market.PriceOverride." + m.name(), price);
         saveConfig();
     }
 
@@ -1995,6 +2041,12 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
     public void setSellStockEnabled(boolean enabled) {
         config.set("Market.SellStock", enabled);
         saveConfig();
+    }
+
+    @Override
+    public @Nullable Date getLastRestockTimestamp() {
+        if (lastRestockTimestamp.get() == 0) return null;
+        return new Date(lastRestockTimestamp.get());
     }
 
 }
