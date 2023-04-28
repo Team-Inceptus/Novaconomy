@@ -372,16 +372,15 @@ public interface NovaConfig  {
         if (config.getDouble("SellPercentage", 0.75) <= 0) config.set("SellPercentage", 0.75);
         if (!config.isBoolean("Market.SellStock")) config.set("Market.SellStock", true);
 
-        if (!config.isConfigurationSection("Market.BasePriceOverride")) config.createSection("Market.BasePriceOverride");
-        for (String s : config.getConfigurationSection("Market.BasePriceOverride").getKeys(false))
-            if (Material.matchMaterial(s) == null || (!config.isDouble("Market.BasePriceOverride." + s) && !config.isInt("Market.BasePriceOverride." + s)))
-                config.set("Market.BasePriceOverride." + s, null);
+        if (!config.isConfigurationSection("Market.PriceOverride")) config.createSection("Market.PriceOverride");
+        for (String s : config.getConfigurationSection("Market.PriceOverride").getKeys(false))
+            if (Material.matchMaterial(s) == null || (!config.isDouble("Market.PriceOverride." + s) && !config.isInt("Market.PriceOverride." + s)))
+                config.set("Market.PriceOverride." + s, null);
         
 
         if (!config.isConfigurationSection("Market.Restock")) config.createSection("Market.Restock");
         if (!config.isBoolean("Market.Restock.Enabled")) config.set("Market.Restock.Enabled", true);
-        if (!config.isInt("Market.Restock.Base") && !config.isLong("Market.Restock.Base")) config.set("Market.Restock.Base", 1000);
-        if (!config.isBoolean("Market.Restock.BankInfluence")) config.set("Market.Restock.BankInfluence", true);
+        if (!config.isInt("Market.Restock.Amount") && !config.isLong("Market.Restock.Amount")) config.set("Market.Restock.Amount", 1000);
         if (!config.isInt("Market.Restock.IntervalTicks") && !config.isLong("Market.Restock.IntervalTicks")) config.set("Market.Restock.IntervalTicks", 1728000);
 
         if (!config.isConfigurationSection("Market.Membership")) config.createSection("Market.Membership");
