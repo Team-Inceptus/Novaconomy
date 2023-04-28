@@ -70,6 +70,11 @@ public final class Items {
             () -> new ItemStack(Material.matchMaterial("STAINED_GLASS_PANE"), 1, (short) 4)
     );
 
+    public static final ItemStack CLOCK = checkLegacy(
+            () -> new ItemStack(Material.matchMaterial("CLOCK")),
+            () -> new ItemStack(Material.matchMaterial("WATCH"))
+    );
+
     public static final ItemStack CANCEL = NBTWrapper.builder(RED_WOOL,
             meta -> meta.setDisplayName(ChatColor.RED + get("constants.cancel")),
             nbt -> nbt.setID("no:close")
