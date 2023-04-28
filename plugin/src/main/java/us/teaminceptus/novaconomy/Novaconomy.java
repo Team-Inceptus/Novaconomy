@@ -560,6 +560,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
                 if (!globalF.exists()) globalF.createNewFile();
 
                 FileConfiguration global = YamlConfiguration.loadConfiguration(globalF);
+                if (!global.isConfigurationSection("Bank")) global.createSection("Bank");
                 for (Economy econ : Economy.getEconomies())
                     if (!global.isSet("Bank." + econ.getName())) global.set("Bank." + econ.getName(), 0);
 
