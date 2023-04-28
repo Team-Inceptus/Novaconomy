@@ -120,9 +120,19 @@ public interface SortingType<T> extends Comparator<T> {
     // Material
 
     /**
+     * Sorts a material by its type in ascending order.
+     */
+    SortingType<Material> MATERIAL_TYPE_ASCENDING = Material::compareTo;
+
+    /**
+     * Sorts a material by its type in descending order.
+     */
+    SortingType<Material> MATERIAL_TYPE_DESCENDING = MATERIAL_TYPE_ASCENDING.reversed();
+
+    /**
      * Sorts a material by its name in ascending order.
      */
-    SortingType<Material> MATERIAL_NAME_ASCENDING = Material::compareTo;
+    SortingType<Material> MATERIAL_NAME_ASCENDING = (m1, m2) -> m1.name().compareTo(m2.name());
 
     /**
      * Sorts a material by its name in descending order.
