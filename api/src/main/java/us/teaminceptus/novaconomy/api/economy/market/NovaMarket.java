@@ -1,15 +1,20 @@
 package us.teaminceptus.novaconomy.api.economy.market;
 
+import com.google.common.collect.ImmutableSet;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.economy.Economy;
+import us.teaminceptus.novaconomy.api.events.market.player.PlayerMarketPurchaseEvent;
 
 import java.io.File;
+import java.util.Date;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CancellationException;
+import java.util.stream.Collectors;
 
 /**
  * Represents the Novaconomy Market
@@ -26,50 +31,22 @@ public interface NovaMarket {
     }
 
     /**
-     * Fetches the uninflated base price of a Material on the Market.
-     * @param m Material to fetch
-     * @return Base Price of the Material
-     * @throws IllegalArgumentException if the Material is not on the Market
-     */
-    double getBasePrice(@NotNull Material m) throws IllegalArgumentException;
-
-    /**
-     * Fetches the uninflated base price of a Material on the Market, factoring an Economy's {@linkplain Economy#getConversionScale conversion scale}.
-     * @param m Material to fetch
-     * @param scale Economy Conversion Scale fto use
-     * @return Base Price of the Material for the Economy
-     * @throws IllegalArgumentException if the Material is not on the Market
-     */
-    default double getBasePrice(@NotNull Material m, double scale) throws IllegalArgumentException {
-        return getBasePrice(m) * scale;
-    }
-
-    /**
-     * Fetches the uninflated base price of a Material on the Market, factoring an Economy's {@linkplain Economy#getConversionScale conversion scale}.
-     * @param m Material to fetch
-     * @param econ Economy to use
-     * @return Base Price of the Material for the Economy
-     * @throws IllegalArgumentException if the Material is not on the Market
-     */
-    default double getBasePrice(@NotNull Material m, @Nullable Economy econ) throws IllegalArgumentException {
-        return getBasePrice(m) * (econ == null ? 1 : econ.getConversionScale());
-    }
-
-    /**
      * Fetches the price of a Material on the Market.
      * @param m Material to fetch
-     * @return Base Price of the Material
+     * @return Price of the Material
+     * @throws IllegalArgumentException if the Material is not on the Market
      */
-    double getPrice(@NotNull Material m);
+    double getPrice(@NotNull Material m) throws IllegalArgumentException;
 
     /**
      * Fetches the price of a Material on the Market, factoring an Economy's {@linkplain Economy#getConversionScale conversion scale}.
      * @param m Material to fetch
      * @param econ Economy to use
      * @return Price of the Material for the Economy
+     * @throws IllegalArgumentException if the Material is not on the Market
      */
-    default double getPrice(@NotNull Material m, @Nullable Economy econ) {
-        return getPrice(m) * (econ == null ? 1 : econ.getConversionScale());
+    default double getPrice(@NotNull Material m, @Nullable Economy econ) throws IllegalArgumentException {
+        return getPrice(m, (econ == null ? 1 : econ.getConversionScale()));
     }
 
     /**
@@ -77,10 +54,32 @@ public interface NovaMarket {
      * @param m Material to fetch
      * @param scale Scale to use
      * @return Price of the Material for the Economy
+     * @throws IllegalArgumentException if the Material is not on the Market
      */
-    default double getPrice(@NotNull Material m, double scale) {
-        return getPrice(m) * scale;
+    default double getPrice(@NotNull Material m, double scale) throws IllegalArgumentException {
+        return getPrice(m) / scale;
     }
+
+    /**
+     * Fetches whether a material is currently sold on the Novaconomy Market.
+     * @param m Material to check
+     * @return true if sold, else false
+     */
+    default boolean isSold(@NotNull Material m) {
+        try {
+            getPrice(m);
+            return true;
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
+    }
+
+    /**
+     * Fetches an immutable set of all of the items sold on the Novaconomy Market.
+     * @return Set of all sold items
+     */
+    @NotNull
+    Set<Material> getAllSold();
 
     /**
      * Fetches the amount of stock of a Material on the Market that is available to purchase.
@@ -123,9 +122,10 @@ public interface NovaMarket {
      * @param econ Economy to buy with
      * @return Receipt of the Transaction
      * @throws IllegalArgumentException if amount is not positive, not enough stock, or player does not have enough money
+     * @throws CancellationException if {@link PlayerMarketPurchaseEvent} was cancelled
      */
     @NotNull
-    Receipt buy(@NotNull OfflinePlayer buyer, @NotNull Material m, int amount, @NotNull Economy econ) throws IllegalArgumentException;
+    Receipt buy(@NotNull OfflinePlayer buyer, @NotNull Material m, int amount, @NotNull Economy econ) throws IllegalArgumentException, CancellationException;
 
     // Configuration
 
@@ -178,40 +178,26 @@ public interface NovaMarket {
     void setMarketRestockAmount(long amount);
 
     /**
-     * <p>Whether the Market's restock amount is influenced by how much money is currently in the Novaconomy Bank.</p>
-     * <strong>No actual money will be taken or given to the Bank.</strong>
-     * @return true if enabled, else false
-     */
-    boolean hasMarketBankInfluence();
-
-    /**
-     * Sets whether the Market's restock amount is influenced by how much money is currently in the Novaconomy Bank.
-     * @param enabled true if enabled, else false
-     * @see #hasMarketBankInfluence()
-     */
-    void setMarketBankInfluence(boolean enabled);
-
-    /**
-     * Fetches an unmodifiable configuration-set base price of all of the Materials.
-     * @return Map of Material to Base Price
+     * Fetches an unmodifiable configuration-set price of all of the Materials.
+     * @return Map of Material to Price
      */
     @NotNull
-    Map<Material, Double> getBasePriceOverrides();
+    Map<Material, Double> getPriceOverrides();
 
     /**
-     * Sets the configuration-set base price of all of the Materials.
-     * @param overrides Map of Material to Base Price
+     * Sets the configuration-set price of all of the Materials.
+     * @param overrides Map of Material to Price
      * @throws IllegalArgumentException if map is null, materials are null, or prices are negative
      */
-    void setBasePriceOverrides(@NotNull Map<Material, Double> overrides) throws IllegalArgumentException;
+    void setPriceOverrides(@NotNull Map<Material, Double> overrides) throws IllegalArgumentException;
 
     /**
-     * Sets the configuration-set base price of a Material.
+     * Sets the configuration-set price of a Material.
      * @param m Material to set
-     * @param price Base Price
+     * @param price Price
      * @throws IllegalArgumentException if material is null or price is negative
      */
-    void setBasePriceOverride(@NotNull Material m, double price) throws IllegalArgumentException;
+    void setPriceOverrides(@NotNull Material m, double price) throws IllegalArgumentException;
 
     /**
      * Whether money made from the Novaconomy Market is deposited into the Novaconomy Bank.
@@ -263,7 +249,7 @@ public interface NovaMarket {
      * @return Market Membership Cost
      */
     default double getMarketMembershipCost(double scale) {
-        return getMarketMembershipCost() * scale;
+        return getMarketMembershipCost() / scale;
     }
 
     /**
@@ -287,6 +273,17 @@ public interface NovaMarket {
      */
     @NotNull
     Set<Receipt> getAllPurchases();
+
+    /**
+     * Fetches an immutable set of all of the {@linkplain Receipt#isRecent() recent purchases}.
+     * @return Set of Receipts
+     */
+    @NotNull
+    default Set<Receipt> getRecentPurchases() {
+        return ImmutableSet.copyOf(getAllPurchases().stream()
+                .filter(Receipt::isRecent)
+                .collect(Collectors.toList()));
+    }
 
     /**
      * Fetches the number that is multiplied by the {@linkplain #getPrice(Material) market price} to get the money back from selling the material of the same type.
@@ -314,4 +311,11 @@ public interface NovaMarket {
      * @see #isSellStockEnabled()
      */
     void setSellStockEnabled(boolean enabled);
+
+    /**
+     * Fetches the timestamp for when the last restock event occured.
+     * @return Last Restock Timestamp, or null if hasn't restocked yet
+     */
+    @Nullable
+    Date getLastRestockTimestamp();
 }
