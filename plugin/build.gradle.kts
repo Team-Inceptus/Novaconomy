@@ -12,7 +12,7 @@ dependencies {
 
     // Implementation Dependencies
     implementation("org.bstats:bstats-bukkit:3.0.1")
-    implementation("com.jeff_media:SpigotUpdateChecker:3.0.1")
+    implementation("com.jeff_media:SpigotUpdateChecker:3.0.2")
 
     // Soft Dependencies
     compileOnly("me.clip:placeholderapi:2.11.3")
