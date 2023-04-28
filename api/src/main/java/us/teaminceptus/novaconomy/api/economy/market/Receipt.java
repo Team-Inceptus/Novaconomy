@@ -5,6 +5,7 @@ import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.jetbrains.annotations.NotNull;
+import us.teaminceptus.novaconomy.api.NovaConfig;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -19,7 +20,9 @@ import java.util.UUID;
  * @since 1.7.1
  */
 public final class Receipt implements ConfigurationSerializable, Serializable {
-    
+
+    private static final long serialVersionUID = 7255336827661231956L;
+
     private final long timestamp;
     private final Material purchased;
     private final int purchaseAmount;
@@ -105,6 +108,15 @@ public final class Receipt implements ConfigurationSerializable, Serializable {
     @NotNull
     public Date getTimestamp() {
         return new Date(timestamp);
+    }
+
+    /**
+     * <p>Checks if the purchase was recent.</p>
+     * <p>The definition of a "recent purchase" means that the purchase was made before the next restock event.</p>
+     * @return true if the purchase was recent, false otherwise
+     */
+    public boolean isRecent() {
+        return getTimestamp().getTime() > System.currentTimeMillis() - (NovaConfig.getMarket().getMarketRestockInterval() * 500);
     }
 
     // Serialization
