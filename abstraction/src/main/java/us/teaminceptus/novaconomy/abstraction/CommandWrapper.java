@@ -750,13 +750,21 @@ public interface CommandWrapper {
             return;
         }
 
+        if (Business.exists(name)) {
+            p.sendMessage(getMessage("error.business.exists_name"));
+            return;
+        }
+
+        if (Business.exists(p)) {
+            p.sendMessage(getMessage("error.business.exists"));
+            return;
+        }
+
         try {
             Business.builder().setOwner(p).setName(name).setIcon(icon).build();
             p.sendMessage(format(getMessage("success.business.create"), name));
         } catch (IllegalArgumentException e) {
             p.sendMessage(getMessage("error.argument"));
-        } catch (UnsupportedOperationException e) {
-            p.sendMessage(getMessage("error.business.exists_name"));
         }
     }
 

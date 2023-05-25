@@ -1809,7 +1809,7 @@ public final class Business implements ConfigurationSerializable {
          * Builds a Novaconomy Business.
          * @return Built Novaconomy Business
          * @throws IllegalArgumentException if a part is missing or is null
-         * @throws UnsupportedOperationException if Business exists
+         * @throws UnsupportedOperationException if Business exists via name or owner
          */
         @NotNull
         public Business build() throws IllegalArgumentException, UnsupportedOperationException {
@@ -1819,6 +1819,7 @@ public final class Business implements ConfigurationSerializable {
             Validate.notNull(icon, "Icon cannot be null");
 
             if (Business.exists(name)) throw new UnsupportedOperationException("Business already exists");
+            if (Business.exists(owner)) throw new UnsupportedOperationException("Owner already has a business");
 
             BUSINESS_CACHE.clear();
 
