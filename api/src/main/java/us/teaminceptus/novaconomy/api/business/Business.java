@@ -1453,6 +1453,24 @@ public final class Business implements ConfigurationSerializable {
     }
 
     /**
+     * Shortcut method to {@link BusinessStatistics#getProductSales()}.
+     * @return Product Sales
+     */
+    @NotNull
+    public Map<Product, Integer> getProductSales() {
+        return this.stats.getProductSales();
+    }
+
+    /**
+     * Shortcut method to {@link BusinessStatistics#getPurchaseCount(Product)}.
+     * @param p Product to check
+     * @return Purchase Count, or 0 if none
+     */
+    public int getPurchaseCount(@NotNull Product p) {
+        return this.stats.getPurchaseCount(p);
+    }
+
+    /**
      * Fetches the Business's Creation Date.
      * @return Business Creation Date, or May 17, 2009 (MC's Birth Date) if not set / created before this was tracked
      */

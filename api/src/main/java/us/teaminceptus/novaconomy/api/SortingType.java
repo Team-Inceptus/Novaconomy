@@ -95,6 +95,21 @@ public interface SortingType<T> extends Comparator<T> {
      */
     SortingType<BusinessProduct> PRODUCT_STOCK_DESCENDING = PRODUCT_STOCK_ASCENDING.reversed();
 
+    // TODO Translate
+    /**
+     * Sorts a business product by its purchase popularity in ascending order.
+     */
+    SortingType<BusinessProduct> PRODUCT_POPULARITY_ASCENDING = (p1, p2) -> {
+        Business b = p1.getBusiness();
+        return Integer.compare(b.getPurchaseCount(p1), b.getPurchaseCount(p2));
+    };
+
+    // TODO Translate
+    /**
+     * Sorts a business product by its purchase popularity in descending order.
+     */
+    SortingType<BusinessProduct> PRODUCT_POPULARITY_DESCENDING = PRODUCT_POPULARITY_ASCENDING.reversed();
+
     // Corporation Invites
 
     /**
