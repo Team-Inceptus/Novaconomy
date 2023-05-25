@@ -11,7 +11,7 @@ plugins {
 }
 
 val pGroup = "us.teaminceptus.novaconomy"
-val pVersion = "1.7.1-SNAPSHOT"
+val pVersion = "1.7.2-SNAPSHOT"
 val pAuthor = "Team-Inceptus"
 
 sonarqube {
