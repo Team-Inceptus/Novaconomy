@@ -71,7 +71,7 @@ import static us.teaminceptus.novaconomy.util.inventory.InventorySelector.confir
 import static us.teaminceptus.novaconomy.util.inventory.Items.*;
 
 @SuppressWarnings("unchecked")
-public final class GUIManager implements Listener {
+final class GUIManager implements Listener {
 
     public GUIManager(Novaconomy plugin) {
         // this.plugin = plugin;
