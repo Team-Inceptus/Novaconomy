@@ -1,15 +1,10 @@
-package us.teaminceptus.novaconomy;
+package us.teaminceptus.novaconomy.v1_16_R2;
 
 import io.netty.channel.Channel;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.TextComponent;
-import net.minecraft.core.BlockPos;
-import net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket;
-import net.minecraft.network.protocol.game.ClientboundOpenSignEditorPacket;
-import net.minecraft.network.protocol.game.ServerboundSignUpdatePacket;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.level.block.Blocks;
+import net.minecraft.server.v1_16_R2.*;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
@@ -17,22 +12,23 @@ import org.bukkit.block.Block;
 import org.bukkit.block.data.Ageable;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.type.Fire;
-import org.bukkit.craftbukkit.v1_19_R2.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_16_R2.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.scheduler.BukkitRunnable;
 import us.teaminceptus.novaconomy.abstraction.NBTWrapper;
 import us.teaminceptus.novaconomy.abstraction.NovaInventory;
 import us.teaminceptus.novaconomy.abstraction.Wrapper;
 import us.teaminceptus.novaconomy.api.NovaConfig;
-import us.teaminceptus.novaconomy.v1_19_R2.NBTWrapper1_19_R2;
-import us.teaminceptus.novaconomy.v1_19_R2.NovaInventory1_19_R2;
-import us.teaminceptus.novaconomy.v1_19_R2.PacketHandler1_19_R2;
+import us.teaminceptus.novaconomy.v1_16_R2.NBTWrapper1_16_R2;
+import us.teaminceptus.novaconomy.v1_16_R2.NovaInventory1_16_R2;
+import us.teaminceptus.novaconomy.v1_16_R2.PacketHandler1_16_R2;
 
 import java.util.function.Consumer;
 
-public final class Wrapper1_19_R2 implements Wrapper {
+final class Wrapper1_16_R2 implements Wrapper {
 
     @Override
     public int getCommandVersion() { return 2; }
@@ -48,8 +44,8 @@ public final class Wrapper1_19_R2 implements Wrapper {
     }
 
     @Override
-    public org.bukkit.inventory.ItemStack createSkull(OfflinePlayer p) {
-        org.bukkit.inventory.ItemStack item = new org.bukkit.inventory.ItemStack(Material.PLAYER_HEAD);
+    public ItemStack createSkull(OfflinePlayer p) {
+        ItemStack item = new ItemStack(Material.PLAYER_HEAD);
         SkullMeta meta = (SkullMeta) item.getItemMeta();
         meta.setOwningPlayer(p);
         item.setItemMeta(meta);
@@ -75,27 +71,28 @@ public final class Wrapper1_19_R2 implements Wrapper {
 
     @Override
     public NovaInventory createInventory(String id, String name, int size) {
-        return new NovaInventory1_19_R2(id, name, size);
+        return new NovaInventory1_16_R2(id, name, size);
     }
 
     @Override
     public NBTWrapper createNBTWrapper(org.bukkit.inventory.ItemStack item) {
-        return new NBTWrapper1_19_R2(item);
+        return new NBTWrapper1_16_R2(item);
     }
 
     @Override
     public void addPacketInjector(Player p) {
-        ServerPlayer sp = ((CraftPlayer) p).getHandle();
-        Channel ch = sp.connection.connection.channel;
+        EntityPlayer sp = ((CraftPlayer) p).getHandle();
+        Channel ch = sp.playerConnection.networkManager.channel;
 
         if (ch.pipeline().get(PACKET_INJECTOR_ID) != null) return;
-        ch.pipeline().addAfter("decoder", PACKET_INJECTOR_ID, new PacketHandler1_19_R2(p));
+
+        ch.pipeline().addAfter("decoder", PACKET_INJECTOR_ID, new PacketHandler1_16_R2(p));
     }
 
     @Override
     public void removePacketInjector(Player p) {
-        ServerPlayer sp = ((CraftPlayer) p).getHandle();
-        Channel ch = sp.connection.connection.channel;
+        EntityPlayer sp = ((CraftPlayer) p).getHandle();
+        Channel ch = sp.playerConnection.networkManager.channel;
 
         if (ch.pipeline().get(PACKET_INJECTOR_ID) == null) return;
         ch.pipeline().remove(PACKET_INJECTOR_ID);
@@ -106,28 +103,30 @@ public final class Wrapper1_19_R2 implements Wrapper {
         addPacketInjector(p);
 
         Location l = p.getLocation();
-        BlockPos pos = new BlockPos(l.getBlockX(), 255, l.getBlockZ());
+        BlockPosition pos = new BlockPosition(l.getBlockX(), 255, l.getBlockZ());
 
-        ClientboundBlockUpdatePacket sent1 = new ClientboundBlockUpdatePacket(pos, Blocks.OAK_SIGN.defaultBlockState());
-        ((CraftPlayer) p).getHandle().connection.send(sent1);
+        PacketPlayOutBlockChange sent1 = new PacketPlayOutBlockChange(pos, Blocks.OAK_SIGN.getBlockData());
+        ((CraftPlayer) p).getHandle().playerConnection.sendPacket(sent1);
 
-        ClientboundOpenSignEditorPacket sent2 = new ClientboundOpenSignEditorPacket(pos);
-        ((CraftPlayer) p).getHandle().connection.send(sent2);
+        PacketPlayOutOpenSignEditor sent2 = new PacketPlayOutOpenSignEditor(pos);
+        ((CraftPlayer) p).getHandle().playerConnection.sendPacket(sent2);
 
-        PacketHandler1_19_R2.PACKET_HANDLERS.put(p.getUniqueId(), packetO -> {
-            if (!(packetO instanceof ServerboundSignUpdatePacket packet)) return false;
+        PacketHandler1_16_R2.PACKET_HANDLERS.put(p.getUniqueId(), packetO -> {
+            if (!(packetO instanceof PacketPlayInUpdateSign)) return false;
+            PacketPlayInUpdateSign packet = (PacketPlayInUpdateSign) packetO;
 
-            lines.accept(packet.getLines());
+            lines.accept(packet.c());
             return true;
         });
 
         new BukkitRunnable() {
             @Override
             public void run() {
-                ClientboundBlockUpdatePacket sent3 = new ClientboundBlockUpdatePacket(pos, Blocks.AIR.defaultBlockState());
-                ((CraftPlayer) p).getHandle().connection.send(sent3);
+                PacketPlayOutBlockChange sent3 = new PacketPlayOutBlockChange(pos, Blocks.AIR.getBlockData());
+                ((CraftPlayer) p).getHandle().playerConnection.sendPacket(sent3);
             }
         }.runTaskLater(NovaConfig.getPlugin(), 2L);
     }
+
 
 }

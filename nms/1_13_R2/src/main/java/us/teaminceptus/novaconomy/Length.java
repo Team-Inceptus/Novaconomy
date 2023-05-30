@@ -1,6 +1,6 @@
 package us.teaminceptus.novaconomy;
 
-public @interface Length {
+@interface Length {
 
     int value();
 

@@ -311,6 +311,13 @@ Market:
   # Those with the "novaconomy.admin.market.bypass_limit" permission will be exempt from this setting.
   MaxPurchases: -1
 
+  # List of case insensitive Materials that will be removed from the market
+  # Examples:
+  # - DIRT_BLOCK
+  # - cobblestone
+  # - Stone
+  Blacklisted: []
+
   # Market Restock Options
   Restock:
     # Whether Automatic Market restocking is enabled

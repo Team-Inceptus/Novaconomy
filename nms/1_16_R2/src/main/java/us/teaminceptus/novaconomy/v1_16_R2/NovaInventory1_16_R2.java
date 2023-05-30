@@ -9,7 +9,7 @@ import com.google.common.collect.ImmutableMap;
 
 import us.teaminceptus.novaconomy.abstraction.NovaInventory;
 
-public final class NovaInventory1_16_R2 extends CraftInventoryCustom implements NovaInventory{
+final class NovaInventory1_16_R2 extends CraftInventoryCustom implements NovaInventory{
 
     private final Map<String, Object> attributes = new HashMap<>();
 

@@ -61,7 +61,7 @@ public enum MarketCategory {
      */
     FURNITURE(FURNACE, CHEST, ENDER_CHEST, NOTE_BLOCK, JUKEBOX,
             "workbench:crafting_table", "grindstone", "loom", "smithing_table", "fletching_table",
-            "lectern", "lodestone", "barrel"
+            "lectern", "lodestone", "barrel", "bell", "blast_furnace", "smoker", "cartography_table"
     ),
 
     /**
