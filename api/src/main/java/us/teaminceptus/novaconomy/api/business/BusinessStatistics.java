@@ -325,6 +325,15 @@ public final class BusinessStatistics implements ConfigurationSerializable {
     }
 
     /**
+     * Fetches how much of a Product was bought from this Business.
+     * @param product Product to fetch
+     * @return Amount of Product bought, or 0 if none
+     */
+    public int getPurchaseCount(@NotNull Product product) {
+        return productSales.getOrDefault(product, 0);
+    }
+
+    /**
      * Sets the latest transaction for this Business.
      * @param last Transaction to set
      */

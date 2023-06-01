@@ -1,17 +1,20 @@
-package us.teaminceptus.novaconomy;
+package us.teaminceptus.novaconomy.v1_9_R2;
 
 import io.netty.channel.Channel;
+import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.BaseComponent;
-import net.minecraft.server.v1_8_R3.*;
+import net.md_5.bungee.api.chat.TextComponent;
+import net.minecraft.server.v1_9_R2.*;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.block.Block;
-import org.bukkit.craftbukkit.v1_8_R3.CraftWorld;
-import org.bukkit.craftbukkit.v1_8_R3.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_9_R2.CraftWorld;
+import org.bukkit.craftbukkit.v1_9_R2.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.material.Crops;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -19,29 +22,26 @@ import us.teaminceptus.novaconomy.abstraction.NBTWrapper;
 import us.teaminceptus.novaconomy.abstraction.NovaInventory;
 import us.teaminceptus.novaconomy.abstraction.Wrapper;
 import us.teaminceptus.novaconomy.api.NovaConfig;
-import us.teaminceptus.novaconomy.v1_8_R3.NBTWrapper1_8_R3;
-import us.teaminceptus.novaconomy.v1_8_R3.NovaInventory1_8_R3;
-import us.teaminceptus.novaconomy.v1_8_R3.PacketHandler1_8_R3;
+import us.teaminceptus.novaconomy.v1_9_R2.NBTWrapper1_9_R2;
+import us.teaminceptus.novaconomy.v1_9_R2.NovaInventory1_9_R2;
+import us.teaminceptus.novaconomy.v1_9_R2.PacketHandler1_9_R2;
 
-import java.util.Arrays;
 import java.util.function.Consumer;
 
-public final class Wrapper1_8_R3 implements Wrapper {
+final class Wrapper1_9_R2 implements Wrapper {
 
     @Override
     public int getCommandVersion() { return 2; }
 
     @Override
     public void sendActionbar(Player p, String message) {
-        PacketPlayOutChat packet = new PacketPlayOutChat(new ChatComponentText(message), (byte)2);
-        ((CraftPlayer) p).getHandle().playerConnection.sendPacket(packet);
+        sendActionbar(p, new TextComponent(message));
     }
 
     @Override
     public void sendActionbar(Player p, BaseComponent component) {
-        sendActionbar(p, component.toLegacyText());
+        p.spigot().sendMessage(ChatMessageType.ACTION_BAR, component);
     }
-
 
     @Override
     public ItemStack createSkull(OfflinePlayer p) {
@@ -60,7 +60,15 @@ public final class Wrapper1_8_R3 implements Wrapper {
 
     @Override
     public void removeItem(PlayerInteractEvent e) {
-        e.getPlayer().setItemInHand(null);
+        PlayerInventory inv = e.getPlayer().getInventory();
+        switch (e.getHand()) {
+            case HEAD: inv.setHelmet(null); break;
+            case CHEST: inv.setChestplate(null); break;
+            case LEGS: inv.setLeggings(null); break;
+            case FEET: inv.setBoots(null); break;
+            case HAND: inv.setItemInMainHand(null); break;
+            case OFF_HAND: inv.setItemInOffHand(null); break;
+        }
     }
 
     @Override
@@ -70,12 +78,12 @@ public final class Wrapper1_8_R3 implements Wrapper {
 
     @Override
     public NovaInventory createInventory(String id, String name, int size) {
-        return new NovaInventory1_8_R3(id, name, size);
+        return new NovaInventory1_9_R2(id, name, size);
     }
 
     @Override
     public NBTWrapper createNBTWrapper(org.bukkit.inventory.ItemStack item) {
-        return new NBTWrapper1_8_R3(item);
+        return new NBTWrapper1_9_R2(item);
     }
 
     @Override
@@ -85,7 +93,7 @@ public final class Wrapper1_8_R3 implements Wrapper {
 
         if (ch.pipeline().get(PACKET_INJECTOR_ID) != null) return;
 
-        ch.pipeline().addAfter("decoder", PACKET_INJECTOR_ID, new PacketHandler1_8_R3(p));
+        ch.pipeline().addAfter("decoder", PACKET_INJECTOR_ID, new PacketHandler1_9_R2(p));
     }
 
     @Override
@@ -113,13 +121,11 @@ public final class Wrapper1_8_R3 implements Wrapper {
         PacketPlayOutOpenSignEditor sent2 = new PacketPlayOutOpenSignEditor(pos);
         ((CraftPlayer) p).getHandle().playerConnection.sendPacket(sent2);
 
-        PacketHandler1_8_R3.PACKET_HANDLERS.put(p.getUniqueId(), packetO -> {
+        PacketHandler1_9_R2.PACKET_HANDLERS.put(p.getUniqueId(), packetO -> {
             if (!(packetO instanceof PacketPlayInUpdateSign)) return false;
             PacketPlayInUpdateSign packet = (PacketPlayInUpdateSign) packetO;
 
-            lines.accept(Arrays.stream(packet.b())
-                    .map(IChatBaseComponent::getText)
-                    .toArray(String[]::new));
+            lines.accept(packet.b());
             return true;
         });
 

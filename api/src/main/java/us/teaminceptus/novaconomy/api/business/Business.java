@@ -1453,6 +1453,24 @@ public final class Business implements ConfigurationSerializable {
     }
 
     /**
+     * Shortcut method to {@link BusinessStatistics#getProductSales()}.
+     * @return Product Sales
+     */
+    @NotNull
+    public Map<Product, Integer> getProductSales() {
+        return this.stats.getProductSales();
+    }
+
+    /**
+     * Shortcut method to {@link BusinessStatistics#getPurchaseCount(Product)}.
+     * @param p Product to check
+     * @return Purchase Count, or 0 if none
+     */
+    public int getPurchaseCount(@NotNull Product p) {
+        return this.stats.getPurchaseCount(p);
+    }
+
+    /**
      * Fetches the Business's Creation Date.
      * @return Business Creation Date, or May 17, 2009 (MC's Birth Date) if not set / created before this was tracked
      */
@@ -1809,7 +1827,7 @@ public final class Business implements ConfigurationSerializable {
          * Builds a Novaconomy Business.
          * @return Built Novaconomy Business
          * @throws IllegalArgumentException if a part is missing or is null
-         * @throws UnsupportedOperationException if Business exists
+         * @throws UnsupportedOperationException if Business exists via name or owner
          */
         @NotNull
         public Business build() throws IllegalArgumentException, UnsupportedOperationException {
@@ -1819,6 +1837,7 @@ public final class Business implements ConfigurationSerializable {
             Validate.notNull(icon, "Icon cannot be null");
 
             if (Business.exists(name)) throw new UnsupportedOperationException("Business already exists");
+            if (Business.exists(owner)) throw new UnsupportedOperationException("Owner already has a business");
 
             BUSINESS_CACHE.clear();
 

@@ -961,7 +961,9 @@ public final class Generator {
 
         inv.setItem(10, 19, 28, 37, GUI_BACKGROUND);
 
-        List<Material> products = category.getItems().stream()
+        List<Material> products = category.getItems()
+                .stream()
+                .filter(m -> !NovaConfig.getMarket().getBlacklistedMaterials().contains(m))
                 .collect(Collectors.toList())
                 .subList(page * 28, Math.min(category.getItems().size(), (page + 1) * 28))
                 .stream()

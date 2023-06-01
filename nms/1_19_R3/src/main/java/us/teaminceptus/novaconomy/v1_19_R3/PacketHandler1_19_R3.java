@@ -11,7 +11,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.Predicate;
 
-public final class PacketHandler1_19_R3 extends ChannelDuplexHandler {
+final class PacketHandler1_19_R3 extends ChannelDuplexHandler {
     
     public static final Map<UUID, Predicate<Packet<?>>> PACKET_HANDLERS = new HashMap<>();
 

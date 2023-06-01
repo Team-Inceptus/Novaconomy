@@ -1,6 +1,7 @@
 package us.teaminceptus.novaconomy.api.economy.market;
 
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.jetbrains.annotations.NotNull;
@@ -10,9 +11,7 @@ import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.events.market.player.PlayerMarketPurchaseEvent;
 
 import java.io.File;
-import java.util.Date;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CancellationException;
 import java.util.stream.Collectors;
 
@@ -318,4 +317,45 @@ public interface NovaMarket {
      */
     @Nullable
     Date getLastRestockTimestamp();
+
+    /**
+     * Fetches an immutable list of all of the blacklisted materials that won't be sold on the Novaconomy Market.
+     * @return List of Materials
+     */
+    @NotNull
+    List<Material> getBlacklistedMaterials();
+
+    /**
+     * Adds a blacklisted material to the Novaconomy Market.
+     * @param material Material to add
+     */
+    default void addBlacklistedMaterial(@NotNull Material material) {
+        setBlacklistedMaterials(Iterables.concat(getBlacklistedMaterials(), Collections.singleton(material)));
+    }
+
+    /**
+     * Removes a blacklisted material from the Novaconomy Market.
+     * @param material Material to remove
+     */
+    default void removeBlacklistedMaterial(@NotNull Material material) {
+        setBlacklistedMaterials(getBlacklistedMaterials()
+                .stream()
+                .filter(m -> m != material)
+                .collect(Collectors.toList())
+        );
+    }
+
+    /**
+     * Sets the blacklisted materials that won't be sold on the Novaconomy Market.
+     * @param materials Iterable of Materials
+     */
+    void setBlacklistedMaterials(@NotNull Iterable<Material> materials);
+
+    /**
+     * Sets the blacklisted materials that won't be sold on the Novaconomy Market.
+     * @param materials Array of Materials
+     */
+    default void setBlacklistedMaterials(@NotNull Material... materials) {
+         if (materials != null) setBlacklistedMaterials(Arrays.asList(materials));
+    }
 }

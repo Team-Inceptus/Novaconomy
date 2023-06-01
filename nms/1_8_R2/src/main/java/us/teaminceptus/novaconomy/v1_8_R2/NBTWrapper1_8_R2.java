@@ -14,7 +14,7 @@ import java.util.UUID;
 
 import static us.teaminceptus.novaconomy.abstraction.Wrapper.ROOT;
 
-public class NBTWrapper1_8_R2 extends NBTWrapper {
+final class NBTWrapper1_8_R2 extends NBTWrapper {
     
     public NBTWrapper1_8_R2(ItemStack item) {
         super(item);

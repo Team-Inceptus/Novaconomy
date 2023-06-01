@@ -34,7 +34,7 @@ import java.util.stream.Collectors;
 import static us.teaminceptus.novaconomy.abstraction.Wrapper.*;
 import static us.teaminceptus.novaconomy.util.NovaUtil.format;
 
-public final class CommandWrapperV2 implements CommandWrapper {
+final class CommandWrapperV2 implements CommandWrapper {
 
     private static BukkitCommandHandler handler;
 
@@ -865,6 +865,55 @@ public final class CommandWrapperV2 implements CommandWrapper {
         @Subcommand({"setplayeraccess", "setaccess"})
         public void setMarketAccess(CommandSender sender, OfflinePlayer target, boolean access) {
             wrapper.setMarketAccess(sender, target, access);
+        }
+
+        @Subcommand({"setprice", "price"})
+        public void setMarketPrice(CommandSender sender, Material material, double price) {
+            wrapper.setMarketPrice(sender, material, price);
+        }
+
+        @Subcommand({"setrestock", "restock"})
+        @AutoComplete("enabled|disabled")
+        public void setMarketRestockEnabled(CommandSender sender, @Single String enabled) {
+            if (!enabled.equalsIgnoreCase("enabled") && !enabled.equalsIgnoreCase("disabled")) throw new CommandErrorException(get("error.argument"));
+            wrapper.setMarketRestockEnabled(sender, enabled.equalsIgnoreCase("enabled"));
+        }
+
+        @Subcommand({"setrestockinterval", "restockinterval"})
+        public void setMarketRestockInterval(CommandSender sender, @Range(min = 0) long interval) {
+            wrapper.setMarketRestockInterval(sender, interval);
+        }
+
+        @Subcommand({"setrestockamount", "restockamount"})
+        public void setMarketRestockAmount(CommandSender sender, @Range(min = 0) long amount) {
+            wrapper.setMarketRestockAmount(sender, amount);
+        }
+
+        @Subcommand({"setmaxpurchases", "maxpurchases"})
+        public void setMarketMaxPurchases(CommandSender sender, @Range(min = 0) long maxPurchases) {
+            wrapper.setMarketMaxPurchases(sender, maxPurchases);
+        }
+
+        @Subcommand({"setdepositenabled", "depositenabled"})
+        @AutoComplete("enabled|disabled")
+        public void setMarketDepositEnabled(CommandSender sender, @Single String enabled) {
+            if (!enabled.equalsIgnoreCase("enabled") && !enabled.equalsIgnoreCase("disabled")) throw new CommandErrorException(get("error.argument"));
+            wrapper.setMarketDepositEnabled(sender, enabled.equalsIgnoreCase("enabled"));
+        }
+
+        @Subcommand({"setmembershipcost", "membershipcost"})
+        public void setMarketMembershipCost(CommandSender sender, @Range(min = 0) double cost) {
+            wrapper.setMarketMembershipCost(sender, cost);
+        }
+
+        @Subcommand({"setsellpercentage", "sellpercentage"})
+        public void setMarketSellPercentage(CommandSender sender, @Range(min = 0, max = 100) double percentage) {
+            wrapper.setMarketSellPercentage(sender, percentage);
+        }
+
+        @Subcommand({"setenabled", "setmarketenabled", "marketenabled"})
+        public void setMarketEnabled(CommandSender sender, boolean enabled) {
+            wrapper.setMarketEnabled(sender, enabled);
         }
 
     }

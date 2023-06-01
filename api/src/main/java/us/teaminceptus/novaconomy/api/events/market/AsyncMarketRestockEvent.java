@@ -3,7 +3,6 @@ package us.teaminceptus.novaconomy.api.events.market;
 import com.google.common.collect.ImmutableMap;
 import org.bukkit.Material;
 import org.bukkit.event.Cancellable;
-import org.bukkit.event.HandlerList;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.HashMap;
@@ -13,8 +12,6 @@ import java.util.Map;
  * Called before the market is restocked. Normally called Asyncronously.
  */
 public class AsyncMarketRestockEvent extends MarketEvent implements Cancellable {
-
-    private static final HandlerList HANDLERS = new HandlerList();
 
     private final Map<Material, Long> oldStock;
     private final Map<Material, Long> newStock;

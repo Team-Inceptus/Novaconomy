@@ -17,6 +17,7 @@ import us.teaminceptus.novaconomy.api.NovaConfig;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
@@ -90,7 +91,11 @@ public interface Wrapper {
 
     static Wrapper getWrapper() {
         try {
-            return (Wrapper) Class.forName("us.teaminceptus.novaconomy.Wrapper" + getServerVersion()).getConstructor().newInstance();
+            Constructor<? extends Wrapper> constr = Class.forName("us.teaminceptus.novaconomy.v" + getServerVersion() + ".Wrapper" + getServerVersion())
+                    .asSubclass(Wrapper.class)
+                    .getDeclaredConstructor();
+            constr.setAccessible(true);
+            return constr.newInstance();
         } catch (IndexOutOfBoundsException e) { // using test configuration
             return new TestWrapper();
         } catch (Exception e) {

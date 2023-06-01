@@ -1,4 +1,4 @@
-package us.teaminceptus.novaconomy;
+package us.teaminceptus.novaconomy.v1_9_R1;
 
 import io.netty.channel.Channel;
 import net.md_5.bungee.api.chat.BaseComponent;
@@ -26,7 +26,7 @@ import us.teaminceptus.novaconomy.v1_9_R1.PacketHandler1_9_R1;
 
 import java.util.function.Consumer;
 
-public final class Wrapper1_9_R1 implements Wrapper {
+final class Wrapper1_9_R1 implements Wrapper {
 
     @Override
     public int getCommandVersion() { return 2; }
