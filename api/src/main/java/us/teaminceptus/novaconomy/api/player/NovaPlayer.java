@@ -555,7 +555,7 @@ public final class NovaPlayer {
 
     /**
      * Fetches all of the Bounties that this player is the target of.
-     * @return Set of Bounties wanted by this player
+     * @return Set of Bounties with {@link #getPlayer()} as their target
      */
     @NotNull
     public Set<Bounty> getSelfBounties() {
@@ -564,9 +564,10 @@ public final class NovaPlayer {
         for (OfflinePlayer p : Bukkit.getOfflinePlayers()) {
             NovaPlayer np = new NovaPlayer(p);
             bounties.addAll(np.getOwnedBounties()
-                    .values()
+                    .entrySet()
                     .stream()
-                    .filter(b -> b.isOwner(p))
+                    .filter(entry -> entry.getKey().equals(this.p))
+                    .map(Map.Entry::getValue)
                     .collect(Collectors.toSet()));
         }
 

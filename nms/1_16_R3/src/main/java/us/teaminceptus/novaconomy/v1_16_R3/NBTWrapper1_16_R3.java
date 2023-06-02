@@ -13,7 +13,7 @@ import java.util.UUID;
 
 import static us.teaminceptus.novaconomy.abstraction.Wrapper.ROOT;
 
-public class NBTWrapper1_16_R3 extends NBTWrapper {
+final class NBTWrapper1_16_R3 extends NBTWrapper {
     
     public NBTWrapper1_16_R3(ItemStack item) {
         super(item);

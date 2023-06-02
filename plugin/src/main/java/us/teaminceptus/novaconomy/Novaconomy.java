@@ -56,6 +56,7 @@ import us.teaminceptus.novaconomy.util.NovaUtil;
 import us.teaminceptus.novaconomy.vault.VaultRegistry;
 
 import java.io.*;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.sql.*;
@@ -148,7 +149,12 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
             }
 
             wrapperVersion = tempV;
-            return (CommandWrapper) Class.forName(Novaconomy.class.getPackage().getName() + ".CommandWrapperV" + wrapperVersion).getConstructor(Plugin.class).newInstance(NovaConfig.getPlugin());
+
+            Constructor<? extends CommandWrapper> constr = Class.forName(Novaconomy.class.getPackage().getName() + ".CommandWrapperV" + wrapperVersion)
+                    .asSubclass(CommandWrapper.class)
+                    .getDeclaredConstructor(Plugin.class);
+            constr.setAccessible(true);
+            return constr.newInstance(NovaConfig.getPlugin());
         } catch (InvocationTargetException e) {
             NovaConfig.print(e.getTargetException());
             return null;
@@ -958,7 +964,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
                 .setNotifyOpsOnJoin(true)
                 .setSupportLink("https://discord.gg/WVFNWEvuqX")
                 .setChangelogLink("https://github.com/Team-Inceptus/Novaconomy/releases/")
-                .setUserAgent("Java 8 Novaconomy User Agent")
+                .setUserAgent("Team-Inceptus/Novaconomy UpdateChecker")
                 .setColoredConsoleOutput(true)
                 .setDonationLink("https://www.patreon.com/teaminceptus")
                 .setNotifyRequesters(true)
@@ -1623,6 +1629,10 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
             .put("lectern", 35.65)
             .put("lodestone", 1300.65)
             .put("barrel", 68.34)
+            .put("smoker", 68.34)
+            .put("blast_furnace", 87.54)
+            .put("cartography_table", 46.25)
+            .put("bell", 12.6)
 
             // Ores
             .put("coal", 15.55)
@@ -1743,7 +1753,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 
     static final Set<Receipt> purchases = new HashSet<>();
     static final Map<Material, Long> stock = new HashMap<>();
-    static AtomicLong lastRestockTimestamp = new AtomicLong(0);
+    static final AtomicLong lastRestockTimestamp = new AtomicLong(0);
 
     private void loadMarket() {
         readMarket();
@@ -2048,6 +2058,25 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
     public @Nullable Date getLastRestockTimestamp() {
         if (lastRestockTimestamp.get() == 0) return null;
         return new Date(lastRestockTimestamp.get());
+    }
+
+    @Override
+    public @NotNull List<Material> getBlacklistedMaterials() {
+        return ImmutableList.copyOf(config.getStringList("Market.Blacklisted")
+                .stream()
+                .map(Material::matchMaterial)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList()));
+    }
+
+    @Override
+    public void setBlacklistedMaterials(@NotNull Iterable<Material> materials) {
+        config.set("Market.Blacklisted", ImmutableList.copyOf(materials)
+                .stream()
+                .map(Material::name)
+                .collect(Collectors.toList())
+        );
+        saveConfig();
     }
 
 }

@@ -1,5 +1,5 @@
 name: Novaconomy
-version: 1.7.1
+version: 1.7.2
 description: ${project.description}
 author: Team Inceptus
 website: "https://github.com/Team-Inceptus/Novaconomy"
@@ -71,6 +71,12 @@ permissions:
 
   novaconomy.admin.market.manage_membership:
     description: Access to granting or revoking market membership
+    default: op
+    children:
+      novaconomy.admin.market: true
+
+  novaconomy.admin.market.manage:
+    description: Access to managing the market, i.e. enabling/disabling, price overrides, etc
     default: op
     children:
       novaconomy.admin.market: true

@@ -750,13 +750,21 @@ public interface CommandWrapper {
             return;
         }
 
+        if (Business.exists(name)) {
+            p.sendMessage(getMessage("error.business.exists_name"));
+            return;
+        }
+
+        if (Business.exists(p)) {
+            p.sendMessage(getMessage("error.business.exists"));
+            return;
+        }
+
         try {
             Business.builder().setOwner(p).setName(name).setIcon(icon).build();
             p.sendMessage(format(getMessage("success.business.create"), name));
         } catch (IllegalArgumentException e) {
             p.sendMessage(getMessage("error.argument"));
-        } catch (UnsupportedOperationException e) {
-            p.sendMessage(getMessage("error.business.exists_name"));
         }
     }
 
@@ -3384,6 +3392,11 @@ public interface CommandWrapper {
             return;
         }
 
+        if (!NovaConfig.getMarket().isMarketEnabled()) {
+            p.sendMessage(getError("error.market.disabled"));
+            return;
+        }
+
         Economy econ0;
         if (econ == null)
             econ0 = Economy.getEconomies()
@@ -3440,6 +3453,11 @@ public interface CommandWrapper {
             return;
         }
 
+        if (!NovaConfig.getMarket().isMarketEnabled()) {
+            p.sendMessage(getError("error.market.disabled"));
+            return;
+        }
+
         NovaInventory inv = w.createInventory("", get("constants.market.sell_items"), 54);
 
         inv.setItem(48, builder(Items.NEXT,
@@ -3451,6 +3469,141 @@ public interface CommandWrapper {
 
         p.openInventory(inv);
         NovaSound.BLOCK_ENDER_CHEST_OPEN.play(p);
+    }
+
+    default void setMarketPrice(CommandSender sender, Material material, double price) {
+        if (!sender.hasPermission("novaconomy.admin.market.manage")) {
+            sender.sendMessage(ERROR_PERMISSION_ARGUMENT);
+            return;
+        }
+
+        if (!NovaConfig.getMarket().getAllSold().contains(material)) {
+            sender.sendMessage(format(getError("error.market.not_sold"), material.name()));
+            return;
+        }
+
+        NovaConfig.getMarket().setPriceOverrides(material, price);
+        sender.sendMessage(format(getSuccess("success.market.set_price"), ChatColor.GOLD + material.name() + ChatColor.GREEN, ChatColor.GOLD + format("%,.2f", price) + ChatColor.GREEN));
+        NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(sender);
+    }
+
+    default void setMarketRestockEnabled(CommandSender sender, boolean enabled) {
+        if (!sender.hasPermission("novaconomy.admin.market.manage")) {
+            sender.sendMessage(ERROR_PERMISSION_ARGUMENT);
+            return;
+        }
+
+        NovaConfig.getMarket().setMarketRestockEnabled(enabled);
+        sender.sendMessage(getSuccess("success.market." + (enabled ? "enable" : "disable") + "_restock"));
+        NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(sender);
+    }
+
+    default void setMarketRestockInterval(CommandSender sender, long interval) {
+        if (!sender.hasPermission("novaconomy.admin.market.manage")) {
+            sender.sendMessage(ERROR_PERMISSION_ARGUMENT);
+            return;
+        }
+
+        if (interval < 1) {
+            sender.sendMessage(get("error.argument.integer"));
+            return;
+        }
+
+        NovaConfig.getMarket().setMarketRestockInterval(interval);
+        sender.sendMessage(format(getSuccess("success.market.restock_interval"), ChatColor.GOLD + format("%,d", interval) + ChatColor.GREEN));
+        NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(sender);
+    }
+
+    default void setMarketRestockAmount(CommandSender sender, long amount) {
+        if (!sender.hasPermission("novaconomy.admin.market.manage")) {
+            sender.sendMessage(ERROR_PERMISSION_ARGUMENT);
+            return;
+        }
+
+        if (amount < 1) {
+            sender.sendMessage(get("error.argument.amount"));
+            return;
+        }
+
+        NovaConfig.getMarket().setMarketRestockAmount(amount);
+        sender.sendMessage(format(getSuccess("success.market.restock_amount"), ChatColor.GOLD + format("%,d", amount) + ChatColor.GREEN));
+        NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(sender);
+    }
+
+    default void setMarketMaxPurchases(CommandSender sender, long maxPurchases) {
+        if (!sender.hasPermission("novaconomy.admin.market.manage")) {
+            sender.sendMessage(ERROR_PERMISSION_ARGUMENT);
+            return;
+        }
+
+        NovaConfig.getMarket().setMaxPurchases(maxPurchases);
+        sender.sendMessage(format(getSuccess("success.market.max_purchases"), ChatColor.GOLD + format("%,d", maxPurchases) + ChatColor.GREEN));
+        NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(sender);
+    }
+
+    default void setMarketDepositEnabled(CommandSender sender, boolean enabled) {
+        if (!sender.hasPermission("novaconomy.admin.market.manage")) {
+            sender.sendMessage(ERROR_PERMISSION_ARGUMENT);
+            return;
+        }
+
+        NovaConfig.getMarket().setDepositEnabled(enabled);
+        sender.sendMessage(getSuccess("success.market." + (enabled ? "enable" : "disable") + "_deposit"));
+        NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(sender);
+    }
+
+    default void setMarketMembershipEnabled(CommandSender sender, boolean enabled) {
+        if (!sender.hasPermission("novaconomy.admin.market.manage")) {
+            sender.sendMessage(ERROR_PERMISSION_ARGUMENT);
+            return;
+        }
+
+        NovaConfig.getMarket().setMarketMembershipEnabled(enabled);
+        sender.sendMessage(getSuccess("success.market." + (enabled ? "enable" : "disable") + "_membership"));
+        NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(sender);
+    }
+
+    default void setMarketMembershipCost(CommandSender sender, double cost) {
+        if (!sender.hasPermission("novaconomy.admin.market.manage")) {
+            sender.sendMessage(ERROR_PERMISSION_ARGUMENT);
+            return;
+        }
+
+        if (cost < 0) {
+            sender.sendMessage(get("error.argument.amount"));
+            return;
+        }
+
+        NovaConfig.getMarket().setMarketMembershipCost(cost);
+        sender.sendMessage(format(getSuccess("success.market.membership_cost"), ChatColor.GOLD + format("%,.2f", cost) + ChatColor.GREEN));
+        NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(sender);
+    }
+
+    default void setMarketSellPercentage(CommandSender sender, double percentage) {
+        if (!sender.hasPermission("novaconomy.admin.market.manage")) {
+            sender.sendMessage(ERROR_PERMISSION_ARGUMENT);
+            return;
+        }
+
+        if (percentage < 0 || percentage > 100) {
+            sender.sendMessage(get("error.argument.amount"));
+            return;
+        }
+
+        NovaConfig.getMarket().setSellPercentage(percentage);
+        sender.sendMessage(format(getSuccess("success.market.sell_percentage"), ChatColor.GOLD + format("%,.2f", percentage) + "%" + ChatColor.GREEN));
+        NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(sender);
+    }
+
+    default void setMarketEnabled(CommandSender sender, boolean enabled) {
+        if (!sender.hasPermission("novaconomy.admin.market.manage")) {
+            sender.sendMessage(ERROR_PERMISSION_ARGUMENT);
+            return;
+        }
+
+        NovaConfig.getMarket().setMarketEnabled(enabled);
+        sender.sendMessage(getSuccess("success.market." + (enabled ? "enable" : "disable")));
+        NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(sender);
     }
 
 }

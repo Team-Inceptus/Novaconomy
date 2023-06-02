@@ -22,7 +22,7 @@ import java.util.List;
 
 import static us.teaminceptus.novaconomy.abstraction.Wrapper.getMessage;
 
-public final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
+final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
 
     private final Plugin plugin;
     private static final Wrapper w = Wrapper.getWrapper();
@@ -1827,6 +1827,153 @@ public final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         Player p = (Player) sender;
 
                         openSellMarket(p);
+                        break;
+                    }
+                    case "setprice":
+                    case "price": {
+                        if (args.length < 2) {
+                            sender.sendMessage(getMessage("error.argument.item"));
+                            return false;
+                        }
+
+                        Material m = Material.matchMaterial(args[1]);
+                        if (m == null) {
+                            sender.sendMessage(getMessage("error.argument.item"));
+                            return false;
+                        }
+
+                        if (args.length < 3) {
+                            sender.sendMessage(getMessage("error.argument.amount"));
+                            return false;
+                        }
+
+                        try {
+                            double price = Double.parseDouble(args[2]);
+                            setMarketPrice(sender, m, price);
+                        } catch (NumberFormatException e) {
+                            sender.sendMessage(getMessage("error.argument.amount"));
+                            return false;
+                        }
+                        break;
+                    }
+                    case "setrestock":
+                    case "restock": {
+                        if (args.length < 2) {
+                            sender.sendMessage(getMessage("error.argument"));
+                            return false;
+                        }
+
+                        String enabled = args[1];
+                        if (!enabled.equalsIgnoreCase("enabled") && !enabled.equalsIgnoreCase("disabled")) {
+                            sender.sendMessage(getMessage("error.argument"));
+                            return false;
+                        }
+
+                        setMarketRestockEnabled(sender, enabled.equalsIgnoreCase("enabled"));
+                        break;
+                    }
+                    case "setrestockinterval":
+                    case "restockinterval": {
+                        if (args.length < 2) {
+                            sender.sendMessage(getMessage("error.argument.amount"));
+                            return false;
+                        }
+
+                        try {
+                            long interval = Long.parseLong(args[1]);
+                            setMarketRestockInterval(sender, interval);
+                        } catch (NumberFormatException e) {
+                            sender.sendMessage(getMessage("error.argument.amount"));
+                            return false;
+                        }
+                        break;
+                    }
+                    case "setmaxpurchases":
+                    case "maxpurchases": {
+                        if (args.length < 2) {
+                            sender.sendMessage(getMessage("error.argument.amount"));
+                            return false;
+                        }
+
+                        try {
+                            long max = Long.parseLong(args[1]);
+                            setMarketMaxPurchases(sender, max);
+                        } catch (NumberFormatException e) {
+                            sender.sendMessage(getMessage("error.argument.amount"));
+                            return false;
+                        }
+                        break;
+                    }
+                    case "setdepositenabled":
+                    case "depositenabled": {
+                        if (args.length < 2) {
+                            sender.sendMessage(getMessage("error.argument"));
+                            return false;
+                        }
+
+                        String enabled = args[1];
+                        if (!enabled.equalsIgnoreCase("enabled") && !enabled.equalsIgnoreCase("disabled")) {
+                            sender.sendMessage(getMessage("error.argument"));
+                            return false;
+                        }
+
+                        setMarketDepositEnabled(sender, enabled.equalsIgnoreCase("enabled"));
+                        break;
+                    }
+                    case "setmembershipcost":
+                    case "membershipcost": {
+                        if (args.length < 2) {
+                            sender.sendMessage(getMessage("error.argument.amount"));
+                            return false;
+                        }
+
+                        try {
+                            double cost = Double.parseDouble(args[1]);
+                            setMarketMembershipCost(sender, cost);
+                        } catch (NumberFormatException e) {
+                            sender.sendMessage(getMessage("error.argument.amount"));
+                            return false;
+                        }
+                        break;
+                    }
+                    case "setsellpercentage":
+                    case "sellpercentage": {
+                        if (args.length < 2) {
+                            sender.sendMessage(getMessage("error.argument.amount"));
+                            return false;
+                        }
+
+                        try {
+                            double percentage = Double.parseDouble(args[1]);
+                            setMarketSellPercentage(sender, percentage);
+                        } catch (NumberFormatException e) {
+                            sender.sendMessage(getMessage("error.argument.amount"));
+                            return false;
+                        }
+                        break;
+                    }
+                    case "setenabled":
+                    case "setmarketenabled":
+                    case "marketenabled": {
+                        if (args.length < 2) {
+                            sender.sendMessage(getMessage("error.argument.bool"));
+                            return false;
+                        }
+
+                        if (!args[1].equalsIgnoreCase("true") && !args[1].equalsIgnoreCase("false")) {
+                            sender.sendMessage(getMessage("error.argument.bool"));
+                            return false;
+                        }
+
+                        setMarketEnabled(sender, Boolean.parseBoolean(args[1]));
+                        break;
+                    }
+                    case "enable": {
+                        setMarketEnabled(sender, true);
+                        break;
+                    }
+                    case "disable": {
+                        setMarketEnabled(sender, false);
                         break;
                     }
                     default: {

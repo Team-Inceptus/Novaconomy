@@ -31,8 +31,21 @@ With the freedom to have your own symbols, icons, conversion rates, and even int
       - More information is available on the wiki.
     - Corporation-Only Chat 
   - Other Improvements
-    - Fixed Various Language & Data Storage Issues 
-   
+    - Fixed Various Language & Data Storage Issues
+
+- v1.7.2
+  - More Market Management
+    - More Commands
+    - Blacklisted Market Items
+    - More Market Items
+  - Wrapper Privating & Optimization
+  - Add Parametric Placeholders
+  - Bug Fixes
+    - Fix Creating Multiple Businesses Bug
+    - Fix Bounties & Corporation GUI Bugs
+  - Other Improvements
+    - Fixed Various Language & Data Storage Issues
+    - Create SortingType#PRODUCT_POPULARITY
 
 ### 📊 1.6.0 Update: Supreme Stonks
 - New Features:
@@ -178,6 +191,10 @@ Published as a JitPack repository
 
 -----
 ## 📷 Screenshots
+![Screenshot](https://github.com/Team-Inceptus/Novaconomy/assets/54124162/710b18f9-fa24-4a1d-bdf3-f2bdafc9a124)
+
+![Screenshot](https://github.com/Team-Inceptus/Novaconomy/assets/54124162/0bf0d340-0fcd-4049-8df5-dded4c326826)
+
 ![Screenshot1](https://cdn.discordapp.com/attachments/894254760075603980/1018685509641449532/2022-09-11_19.45.01.png)
 
 ![Screenshot2](https://media.discordapp.net/attachments/894254760075603980/1018685509410754600/2022-09-11_19.45.27.png)
