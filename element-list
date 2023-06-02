@@ -1,0 +1,17 @@
+us.teaminceptus.novaconomy.api
+us.teaminceptus.novaconomy.api.bank
+us.teaminceptus.novaconomy.api.business
+us.teaminceptus.novaconomy.api.corporation
+us.teaminceptus.novaconomy.api.economy
+us.teaminceptus.novaconomy.api.economy.market
+us.teaminceptus.novaconomy.api.events
+us.teaminceptus.novaconomy.api.events.business
+us.teaminceptus.novaconomy.api.events.corporation
+us.teaminceptus.novaconomy.api.events.market
+us.teaminceptus.novaconomy.api.events.market.player
+us.teaminceptus.novaconomy.api.events.player
+us.teaminceptus.novaconomy.api.events.player.economy
+us.teaminceptus.novaconomy.api.events.settings
+us.teaminceptus.novaconomy.api.player
+us.teaminceptus.novaconomy.api.settings
+us.teaminceptus.novaconomy.api.util
