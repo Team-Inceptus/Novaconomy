@@ -916,5 +916,15 @@ final class CommandWrapperV2 implements CommandWrapper {
             wrapper.setMarketEnabled(sender, enabled);
         }
 
+        @Subcommand("enable")
+        public void enableMarket(CommandSender sender) {
+            setMarketEnabled(sender, true);
+        }
+
+        @Subcommand("disable")
+        public void disableMarket(CommandSender sender) {
+            setMarketEnabled(sender, false);
+        }
+
     }
 }

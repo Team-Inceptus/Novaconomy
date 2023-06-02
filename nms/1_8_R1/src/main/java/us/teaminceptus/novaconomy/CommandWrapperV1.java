@@ -1968,6 +1968,14 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         setMarketEnabled(sender, Boolean.parseBoolean(args[1]));
                         break;
                     }
+                    case "enable": {
+                        setMarketEnabled(sender, true);
+                        break;
+                    }
+                    case "disable": {
+                        setMarketEnabled(sender, false);
+                        break;
+                    }
                     default: {
                         sender.sendMessage(getMessage("error.argument"));
                         return false;

@@ -3392,6 +3392,11 @@ public interface CommandWrapper {
             return;
         }
 
+        if (!NovaConfig.getMarket().isMarketEnabled()) {
+            p.sendMessage(getError("error.market.disabled"));
+            return;
+        }
+
         Economy econ0;
         if (econ == null)
             econ0 = Economy.getEconomies()
@@ -3448,6 +3453,11 @@ public interface CommandWrapper {
             return;
         }
 
+        if (!NovaConfig.getMarket().isMarketEnabled()) {
+            p.sendMessage(getError("error.market.disabled"));
+            return;
+        }
+
         NovaInventory inv = w.createInventory("", get("constants.market.sell_items"), 54);
 
         inv.setItem(48, builder(Items.NEXT,
@@ -3464,6 +3474,11 @@ public interface CommandWrapper {
     default void setMarketPrice(CommandSender sender, Material material, double price) {
         if (!sender.hasPermission("novaconomy.admin.market.manage")) {
             sender.sendMessage(ERROR_PERMISSION_ARGUMENT);
+            return;
+        }
+
+        if (!NovaConfig.getMarket().getAllSold().contains(material)) {
+            sender.sendMessage(format(getError("error.market.not_sold"), material.name()));
             return;
         }
 
