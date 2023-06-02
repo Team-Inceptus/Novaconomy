@@ -95,7 +95,6 @@ public interface SortingType<T> extends Comparator<T> {
      */
     SortingType<BusinessProduct> PRODUCT_STOCK_DESCENDING = PRODUCT_STOCK_ASCENDING.reversed();
 
-    // TODO Translate
     /**
      * Sorts a business product by its purchase popularity in ascending order.
      */
@@ -104,7 +103,6 @@ public interface SortingType<T> extends Comparator<T> {
         return Integer.compare(b.getPurchaseCount(p1), b.getPurchaseCount(p2));
     };
 
-    // TODO Translate
     /**
      * Sorts a business product by its purchase popularity in descending order.
      */
