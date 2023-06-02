@@ -31,8 +31,21 @@ With the freedom to have your own symbols, icons, conversion rates, and even int
       - More information is available on the wiki.
     - Corporation-Only Chat 
   - Other Improvements
-    - Fixed Various Language & Data Storage Issues 
-   
+    - Fixed Various Language & Data Storage Issues
+
+- v1.7.2
+  - More Market Management
+    - More Commands
+    - Blacklisted Market Items
+    - More Market Items
+  - Wrapper Privating & Optimization
+  - Add Parametric Placeholders
+  - Bug Fixes
+    - Fix Creating Multiple Businesses Bug
+    - Fix Bounties & Corporation GUI Bugs
+  - Other Improvements
+    - Fixed Various Language & Data Storage Issues
+    - Create SortingType#PRODUCT_POPULARITY
 
 ### 📊 1.6.0 Update: Supreme Stonks
 - New Features:
