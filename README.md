@@ -191,6 +191,10 @@ Published as a JitPack repository
 
 -----
 ## 📷 Screenshots
+![Screenshot](https://github.com/Team-Inceptus/Novaconomy/assets/54124162/710b18f9-fa24-4a1d-bdf3-f2bdafc9a124)
+
+![Screenshot](https://github.com/Team-Inceptus/Novaconomy/assets/54124162/0bf0d340-0fcd-4049-8df5-dded4c326826)
+
 ![Screenshot1](https://cdn.discordapp.com/attachments/894254760075603980/1018685509641449532/2022-09-11_19.45.01.png)
 
 ![Screenshot2](https://media.discordapp.net/attachments/894254760075603980/1018685509410754600/2022-09-11_19.45.27.png)
