@@ -30,7 +30,8 @@ listOf(
     "1_18_R2",
     "1_19_R1",
     "1_19_R2",
-    "1_19_R3"
+    "1_19_R3",
+    "1_20_R1"
 ).forEach {
     include(":novaconomy-$it")
     project(":novaconomy-$it").projectDir = rootDir.resolve("nms/$it")

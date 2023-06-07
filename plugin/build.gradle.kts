@@ -45,7 +45,8 @@ dependencies {
         "1_18_R2",
         "1_19_R1",
         "1_19_R2",
-        "1_19_R3"
+        "1_19_R3",
+        "1_20_R1"
     ).forEach { api(project(":novaconomy-$it")) }
 }
 
@@ -63,7 +64,8 @@ tasks {
             "1_18_R2",
             "1_19_R1",  
             "1_19_R2",
-            "1_19_R3"
+            "1_19_R3",
+            "1_20_R1"
         ).forEach { dependsOn(":novaconomy-$it:remap") }
     }
 
