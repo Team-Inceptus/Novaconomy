@@ -6,6 +6,7 @@ if [ ! -d "docs" ]; then
   mkdir docs
 fi;
 
+cp -Rfv api/src/main/javadoc/favicon.ico ./docs/
 cp -Rfv api/build/docs/javadoc/* ./docs/
 
 git switch -f gh-pages
