@@ -12,6 +12,7 @@ import net.minecraft.network.protocol.game.ServerboundSignUpdatePacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
@@ -19,6 +20,7 @@ import org.bukkit.block.Block;
 import org.bukkit.block.data.Ageable;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.type.Fire;
+import org.bukkit.craftbukkit.v1_20_R1.CraftWorld;
 import org.bukkit.craftbukkit.v1_20_R1.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -120,7 +122,8 @@ final class Wrapper1_20_R1 implements Wrapper {
         addPacketInjector(p);
 
         Location l = p.getLocation();
-        BlockPos pos = new BlockPos(l.getBlockX(), 255, l.getBlockZ());
+        BlockPos pos = new BlockPos(l.getBlockX(), l.getBlockY(), l.getBlockZ());
+        BlockState old = ((CraftWorld) l.getWorld()).getHandle().getBlockState(pos);
 
         ClientboundBlockUpdatePacket sent1 = new ClientboundBlockUpdatePacket(pos, Blocks.OAK_SIGN.defaultBlockState());
         ((CraftPlayer) p).getHandle().connection.send(sent1);
@@ -131,17 +134,12 @@ final class Wrapper1_20_R1 implements Wrapper {
         PacketHandler1_20_R1.PACKET_HANDLERS.put(p.getUniqueId(), packetO -> {
             if (!(packetO instanceof ServerboundSignUpdatePacket packet)) return false;
 
+            ClientboundBlockUpdatePacket sent3 = new ClientboundBlockUpdatePacket(pos, old);
+            ((CraftPlayer) p).getHandle().connection.send(sent3);
+
             lines.accept(packet.getLines());
             return true;
         });
-
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                ClientboundBlockUpdatePacket sent3 = new ClientboundBlockUpdatePacket(pos, Blocks.AIR.defaultBlockState());
-                ((CraftPlayer) p).getHandle().connection.send(sent3);
-            }
-        }.runTaskLater(NovaConfig.getPlugin(), 2L);
     }
 
 }
