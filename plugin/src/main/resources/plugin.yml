@@ -21,7 +21,7 @@ permissions:
 
   novaconomy.admin.config:
     description: Reload and Modify Novaconomy configuration
-    defualt: op
+    default: op
     children:
       novaconomy.admin: true
 
@@ -132,7 +132,7 @@ permissions:
     default: true
   novaconomy.user.balance:
     description: Access to viewing balance
-    defualt: true
+    default: true
     children:
       novaconomy.user: true
   novaconomy.user.check:
