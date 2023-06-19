@@ -66,7 +66,7 @@ tasks {
             "1_19_R2",
             "1_19_R3",
             "1_20_R1"
-        ).forEach { dependsOn(":novaconomy-$it:remap") }
+        ).forEach { dependsOn(":novaconomy-$it:jar") }
     }
 
     withType<ProcessResources> {

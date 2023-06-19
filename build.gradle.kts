@@ -1,7 +1,7 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 plugins {
-    id("org.sonarqube") version "4.2.0.3129"
+    id("org.sonarqube") version "4.0.0.2929"
     id("com.github.johnrengelman.shadow") version "8.1.1" apply false
 
     java
@@ -110,14 +110,6 @@ subprojects {
         targetCompatibility = jvmVersion
     }
 
-    publishing {
-        publications {
-            getByName<MavenPublication>("maven") {
-                artifact(tasks["shadowJar"])
-            }
-        }
-    }
-
     tasks {
         compileJava {
             options.encoding = "UTF-8"
@@ -154,10 +146,11 @@ subprojects {
         }
 
         jar.configure {
-            enabled = false
             dependsOn("shadowJar")
+            artifacts {
+                add("default", getByName<ShadowJar>("shadowJar"))
+            }
         }
-
         withType<ShadowJar> {
             manifest {
                 attributes(
@@ -172,6 +165,7 @@ subprojects {
             relocate("org.bstats", "us.teaminceptus.shaded.bstats")
             relocate("com.jeff_media.updatechecker", "us.teaminceptus.shaded.updatechecker")
 
+            archiveFileName.set("${project.name}-${project.version}.jar")
             archiveClassifier.set("")
         }
     }
