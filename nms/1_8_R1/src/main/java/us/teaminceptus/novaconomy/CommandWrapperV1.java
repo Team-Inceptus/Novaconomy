@@ -1158,7 +1158,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                 balanceLeaderboard(p, econ);
                 break;
             }
-            case "bounty": {
+            case "nbounty": {
                 if (!(sender instanceof Player)) return false;
                 Player p = (Player) sender;
 
@@ -1273,7 +1273,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                 }
                 break;
             }
-            case "rate": {
+            case "nrate": {
                 if (!(sender instanceof Player)) return false;
                 Player p = (Player) sender;
 
@@ -1293,7 +1293,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                 rate(p, b, comment);
                 break;
             }
-            case "statistics": {
+            case "npstatistics": {
                 if (!(sender instanceof Player)) return false;
                 Player p = (Player) sender;
 
