@@ -22,12 +22,11 @@ import us.teaminceptus.novaconomy.api.events.corporation.CorporationDeleteEvent;
 import us.teaminceptus.novaconomy.api.settings.Settings;
 
 import java.io.*;
+import java.lang.reflect.Method;
 import java.nio.file.Files;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.*;
+import java.util.Date;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -76,6 +75,7 @@ public final class Corporation {
 
     private double experience = 0.0;
     long views = 0;
+    private int customModelData;
 
     private final Set<Business> children = new HashSet<>();
     private final Map<UUID, Long> childrenJoinDates = new HashMap<>();
@@ -350,6 +350,15 @@ public final class Corporation {
         ItemMeta meta = icon.getItemMeta();
         meta.setDisplayName(ChatColor.AQUA + name);
         icon.setItemMeta(meta);
+
+        try {
+            Method m = meta.getClass().getDeclaredMethod("setCustomModelData", Integer.class);
+            m.setAccessible(true);
+            m.invoke(meta, this.customModelData);
+        } catch (NoSuchMethodException ignored) {}
+        catch (ReflectiveOperationException e) {
+            NovaConfig.print(e);
+        }
 
         return icon;
     }
@@ -1020,6 +1029,16 @@ public final class Corporation {
                 "invited BLOB(65535) NOT NULL," +
                 "PRIMARY KEY (id))"
         );
+
+        DatabaseMetaData md = db.getMetaData();
+        ResultSet rs = null;
+
+        try {
+            if (!(rs = md.getColumns(null, null, "corporations", "custom_model_data")).next())
+                db.createStatement().execute("ALTER TABLE corporations ADD COLUMN custom_model_dat INT NOT NULL");
+        } finally {
+            if (rs != null) rs.close();
+        }
     }
 
     /**
@@ -1062,10 +1081,11 @@ public final class Corporation {
                         "children_joindates = ?, " +
                         "achievements = ?, " +
                         "settings = ?, " +
-                        "invited = ? " +
+                        "invited = ?, " +
+                        "custom_model_data = ? " +
                         "WHERE id = \"" + this.id + "\"";
             else
-                sql = "INSERT INTO corporations VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                sql = "INSERT INTO corporations VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         }
 
         PreparedStatement ps = db.prepareStatement(sql);
@@ -1117,6 +1137,8 @@ public final class Corporation {
         invitedBos.writeObject(this.invited);
         invitedBos.close();
         ps.setBytes(13, invitedOs.toByteArray());
+
+        ps.setInt(14, this.customModelData);
 
         ps.executeUpdate();
         ps.close();
@@ -1170,6 +1192,8 @@ public final class Corporation {
         c.invited.putAll((Map<UUID, Long>) invitedBis.readObject());
         invitedBis.close();
 
+        c.customModelData = rs.getInt("custom_model_data");
+
         return c;
     }
 
@@ -1200,6 +1224,7 @@ public final class Corporation {
 
         if (!data.isConfigurationSection("stats")) data.createSection("stats");
         data.set("stats.views", this.views);
+        data.set("custom_model_data", this.customModelData);
 
         data.save(dataF);
 
@@ -1277,6 +1302,7 @@ public final class Corporation {
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
 
         c.views = data.getInt("stats.views");
+        c.customModelData = data.getInt("custom_model_data");
 
         File childrenF = new File(folder, "children.yml");
         if (!childrenF.exists()) childrenF.createNewFile();

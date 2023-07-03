@@ -34,11 +34,9 @@ import java.io.*;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.*;
+import java.util.Date;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -80,6 +78,7 @@ public final class Business implements ConfigurationSerializable {
     private Material icon;
     private Location home = null;
     private double advertisingBalance;
+    private int customModelData;
 
     final BusinessStatistics stats;
 
@@ -671,6 +670,23 @@ public final class Business implements ConfigurationSerializable {
     }
 
     /**
+     * Fetches the custom model data ID for this Business.
+     * @return Custom Model Data
+     */
+    public int getCustomModelData() {
+        return customModelData;
+    }
+
+    /**
+     * Sets the custom model data ID for this Business.
+     * @param customModelData Custom Model Data
+     */
+    public void setCustomModelData(int customModelData) {
+        this.customModelData = customModelData;
+        saveBusiness();
+    }
+
+    /**
      * Deserializes a Map into a Business.
      * @param serial Serialization from {@link #serialize()}
      * @deprecated Entire Bukkit Serialization is no longer used; this method exists only for the purposes of converting legacy businesses
@@ -758,6 +774,16 @@ public final class Business implements ConfigurationSerializable {
                 "blacklist BLOB(65535) NOT NULL," +
                 "PRIMARY KEY (id))"
         );
+
+        DatabaseMetaData md = db.getMetaData();
+        ResultSet rs = null;
+
+        try {
+            if (!(rs = md.getColumns(null, null, "businesses", "custom_model_data")).next())
+                db.createStatement().execute("ALTER TABLE businesses ADD custom_model_data INT ");
+        } finally {
+            if (rs != null) rs.close();
+        }
     }
 
     /**
@@ -798,10 +824,11 @@ public final class Business implements ConfigurationSerializable {
                         "stats = ?, " +
                         "keywords = ?, " +
                         "adbalance = ?, " +
-                        "blacklist = ? " +
+                        "blacklist = ?, " +
+                        "custom_model_data = ? " +
                         "WHERE id = \"" + this.id + "\"";
             else
-                sql = "INSERT INTO businesses VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                sql = "INSERT INTO businesses VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         }
 
         PreparedStatement ps = db.prepareStatement(sql);
@@ -865,6 +892,8 @@ public final class Business implements ConfigurationSerializable {
         blacklistBos.writeObject(this.blacklist);
         blacklistBos.close();
         ps.setBytes(13, blacklistOs.toByteArray());
+
+        ps.setInt(14, this.customModelData);
 
         ps.executeUpdate();
         ps.close();
@@ -937,6 +966,8 @@ public final class Business implements ConfigurationSerializable {
 
         Business b = new Business(id, name, icon, owner, products, resources, stats, settings, creationDate, keywords, adBal, blacklist);
         b.setHome(home, false);
+
+        b.customModelData = rs.getInt("custom_model_data");
         return b;
     }
 
@@ -1036,6 +1067,7 @@ public final class Business implements ConfigurationSerializable {
         oConfig.set("keywords", this.keywords);
         oConfig.set("home", this.home);
         oConfig.set("adverising_balance", this.advertisingBalance);
+        oConfig.set("custom_model_data", this.customModelData);
 
         List<String> blacklisted = this.blacklist.stream().map(UUID::toString).collect(Collectors.toList());
         oConfig.set("blacklist", blacklisted);
@@ -1169,6 +1201,8 @@ public final class Business implements ConfigurationSerializable {
 
         Business b = new Business(id, name, icon, owner, product, resources, stats, settings, creationDate, keywords, advertisingBalance, blacklist);
         b.setHome(home, false);
+
+        b.customModelData = oConfig.getInt("custom_model_data");
         return b;
     }
 
@@ -1629,6 +1663,16 @@ public final class Business implements ConfigurationSerializable {
 
         hMeta.addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1, true);
         hMeta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+
+        try {
+            Method m = hMeta.getClass().getDeclaredMethod("setCustomModelData", Integer.class);
+            m.setAccessible(true);
+            m.invoke(hMeta, this.customModelData);
+        } catch (NoSuchMethodException ignored) {}
+        catch (ReflectiveOperationException e) {
+            NovaConfig.print(e);
+        }
+
         icon.setItemMeta(hMeta);
 
         return icon;
