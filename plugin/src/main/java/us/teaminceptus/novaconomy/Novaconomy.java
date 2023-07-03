@@ -959,7 +959,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
         }
 
         // Update Checker
-        new UpdateChecker(this, UpdateCheckSource.SPIGOT, "100503")
+        new UpdateChecker(this, UpdateCheckSource.GITHUB_RELEASE_TAG, "Team-Inceptus/Novaconomy")
                 .setDownloadLink("https://www.spigotmc.org/resources/novaconomy.100503/")
                 .setNotifyOpsOnJoin(true)
                 .setSupportLink("https://discord.gg/WVFNWEvuqX")
