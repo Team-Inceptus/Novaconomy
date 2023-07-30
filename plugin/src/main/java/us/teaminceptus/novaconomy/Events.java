@@ -26,6 +26,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
 import us.teaminceptus.novaconomy.abstraction.NBTWrapper;
 import us.teaminceptus.novaconomy.api.NovaConfig;
+import us.teaminceptus.novaconomy.api.bank.Bank;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.corporation.Corporation;
 import us.teaminceptus.novaconomy.api.economy.Economy;
@@ -194,7 +195,7 @@ final class Events implements Listener {
     @EventHandler
     public void moneyIncrease(BlockBreakEvent e) {
         if (e.isCancelled()) return;
-        if (e.getBlock().getDrops().size() < 1) return;
+        if (e.getBlock().getDrops().isEmpty()) return;
 
         Block b = e.getBlock();
         boolean ageable = w.isAgeable(b);
@@ -339,6 +340,13 @@ final class Events implements Listener {
         NovaPlayer np = new NovaPlayer(p);
         double divider = r.nextInt(2) + 1;
         double increase = Math.min(random ? ((amount + r.nextInt(8) + 1) / divider) / econ.getConversionScale() : amount, plugin.getMaxIncrease());
+
+        if (NovaConfig.getConfiguration().isNaturalCauseIncomeTaxEnabled() && !NovaConfig.getConfiguration().isNaturalCauseIncomeTaxIgnoring(p)) {
+            double removed = increase * NovaConfig.getConfiguration().getNaturalCauseIncomeTax();
+            increase -= removed;
+
+            Bank.addBalance(econ, removed);
+        }
 
         double previousBal = np.getBalance(econ);
 

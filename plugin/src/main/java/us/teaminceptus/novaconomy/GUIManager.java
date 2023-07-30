@@ -25,6 +25,7 @@ import us.teaminceptus.novaconomy.abstraction.NBTWrapper;
 import us.teaminceptus.novaconomy.abstraction.NovaInventory;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.SortingType;
+import us.teaminceptus.novaconomy.api.bank.Bank;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.business.BusinessStatistics;
 import us.teaminceptus.novaconomy.api.business.Rating;
@@ -468,6 +469,13 @@ final class GUIManager implements Listener {
                 NovaPlayer owner = new NovaPlayer(bP.getBusiness().getOwner());
                 double mod = b.getParentCorporation() == null ? 1 : b.getParentCorporation().getProfitModifier();
                 double aAmount = amount * mod;
+
+                if (NovaConfig.getConfiguration().isBusinessIncomeTaxEnabled() && !NovaConfig.getConfiguration().isBusinessIncomeTaxIgnoring(b)) {
+                    double removed = aAmount * NovaConfig.getConfiguration().getBusinessIncomeTax();
+                    aAmount -= removed;
+
+                    Bank.addBalance(econ, removed);
+                }
 
                 if (b.getSetting(Settings.Business.AUTOMATIC_DEPOSIT)) {
                     owner.add(econ, aAmount * 0.85);

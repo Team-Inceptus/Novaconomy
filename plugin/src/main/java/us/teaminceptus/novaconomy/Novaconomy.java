@@ -17,6 +17,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.bukkit.configuration.serialization.ConfigurationSerialization;
 import org.bukkit.entity.Player;
+import org.bukkit.permissions.PermissionAttachment;
 import org.bukkit.permissions.PermissionAttachmentInfo;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -285,10 +286,10 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
             }
 
             previousBals.put(np, previousBal);
-            if (amount.size() > 0) amounts.put(np, amount);
+            if (!amount.isEmpty()) amounts.put(np, amount);
         }
 
-        if (amounts.size() < 1) return;
+        if (amounts.isEmpty()) return;
         AutomaticTaxEvent event = new AutomaticTaxEvent(previousBals, amounts);
         Bukkit.getPluginManager().callEvent(event);
 
@@ -1378,6 +1379,132 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
     public void setDatabaseConversionEnabled(boolean enabled) {
         config.set("Database.Convert", enabled);
         saveConfig();
+    }
+
+    @Override
+    public boolean isNaturalCauseIncomeTaxEnabled() {
+        return config.getBoolean("Taxes.Income.NaturalCauses.Enabled");
+    }
+
+    @Override
+    public void setNaturalCauseIncomeTaxEnabled(boolean enabled) {
+        config.set("Taxes.Income.NaturalCauses.Enabled", enabled);
+        saveConfig();
+    }
+
+    @Override
+    public double getNaturalCauseIncomeTax() {
+        return config.getDouble("Taxes.Income.NaturalCauses.Tax", 0.02);
+    }
+
+    @Override
+    public void setNaturalCauseIncomeTax(double tax) {
+        config.set("Taxes.Income.NaturalCauses.Tax", tax);
+        saveConfig();
+    }
+
+    @Override
+    public @NotNull List<String> getNaturalCauseIncomeTaxIgnoring() {
+        return config.getStringList("Taxes.Income.NaturalCauses.Ignore");
+    }
+
+    @Override
+    public void setNaturalCauseIncomeTaxIgnoring(@Nullable List<String> exempt) {
+        config.set("Taxes.Income.NaturalCauses.Ignore", exempt == null ? new ArrayList<>() : exempt);
+        saveConfig();
+    }
+
+    @Override
+    public boolean isNaturalCauseIncomeTaxIgnoring(@NotNull OfflinePlayer p) {
+        List<String> ignore = getNaturalCauseIncomeTaxIgnoring();
+        AtomicBoolean state = new AtomicBoolean();
+
+        state.compareAndSet(false, ignore.contains("OPS") && p.isOp());
+        state.compareAndSet(false, ignore.contains("NONOPS") && !p.isOp());
+        state.compareAndSet(false, ignore.stream().anyMatch(p.getName()::equals));
+
+        if (p.isOnline()) {
+            Player op = p.getPlayer();
+            state.compareAndSet(false, ignore.stream().anyMatch(
+                    s -> op.getEffectivePermissions()
+                            .stream()
+                            .map(PermissionAttachmentInfo::getAttachment)
+                            .filter(Objects::nonNull)
+                            .map(PermissionAttachment::getPermissions)
+                            .flatMap(m -> m.entrySet().stream())
+                            .filter(e -> e.getValue() != null)
+                            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
+                            .get(s)
+            ));
+
+            if (hasVault()) state.compareAndSet(false, VaultChat.isInGroup(ignore, op));
+        }
+
+        return state.get();
+    }
+
+    @Override
+    public boolean isBusinessIncomeTaxEnabled() {
+        return config.getBoolean("Taxes.Income.Business.Enabled");
+    }
+
+    @Override
+    public void setBusinessIncomeTaxEnabled(boolean enabled) {
+        config.set("Taxes.Income.Business.Enabled", enabled);
+        saveConfig();
+    }
+
+    @Override
+    public double getBusinessIncomeTax() {
+        return config.getDouble("Taxes.Income.Business.Tax", 0.03);
+    }
+
+    @Override
+    public void setBusinessIncomeTax(double tax) {
+        config.set("Taxes.Income.Business.Tax", tax);
+        saveConfig();
+    }
+
+    @Override
+    public @NotNull List<String> getBusinessIncomeTaxIgnoring() {
+        return config.getStringList("Taxes.Income.Business.Ignore");
+    }
+
+    @Override
+    public void setBusinessIncomeTaxIgnoring(@Nullable List<String> exempt) {
+        config.set("Taxes.Income.Business.Ignore", exempt == null ? new ArrayList<>() : exempt);
+        saveConfig();
+    }
+
+    @Override
+    public boolean isBusinessIncomeTaxIgnoring(@NotNull Business b) {
+        OfflinePlayer p = b.getOwner();
+        List<String> ignore = getNaturalCauseIncomeTaxIgnoring();
+        AtomicBoolean state = new AtomicBoolean();
+
+        state.compareAndSet(false, ignore.contains("OPS") && p.isOp());
+        state.compareAndSet(false, ignore.contains("NONOPS") && !p.isOp());
+        state.compareAndSet(false, ignore.stream().anyMatch(b.getName()::equals));
+        state.compareAndSet(false, ignore.stream().anyMatch(p.getName()::equals));
+
+        if (p.isOnline()) {
+            Player op = p.getPlayer();
+            state.compareAndSet(false, ignore.stream().anyMatch(
+                    s -> op.getEffectivePermissions()
+                            .stream()
+                            .map(PermissionAttachmentInfo::getAttachment)
+                            .filter(Objects::nonNull)
+                            .map(PermissionAttachment::getPermissions)
+                            .flatMap(m -> m.entrySet().stream())
+                            .filter(e -> e.getValue() != null)
+                            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
+                            .get(s)
+            ));
+
+            if (hasVault()) state.compareAndSet(false, VaultChat.isInGroup(ignore, op));
+        }
+
+        return state.get();
     }
 
     @Override
