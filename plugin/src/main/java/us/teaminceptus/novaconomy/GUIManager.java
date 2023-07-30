@@ -338,7 +338,7 @@ final class GUIManager implements Listener {
                 Business b = getBusiness(item);
 
                 p.sendMessage(get("cancel.business.purchase"));
-                p.openInventory(generateBusinessData(b, p, true, SortingType.PRODUCT_NAME_ASCENDING));
+                p.openInventory(generateBusinessData(b, p, true, SortingType.PRODUCT_NAME_ASCENDING).get(0));
                 NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
 
                 if (!b.isOwner(p)) {
@@ -875,7 +875,7 @@ final class GUIManager implements Listener {
 
                 boolean notOwner = !b.isOwner(p);
 
-                p.openInventory(generateBusinessData(b, p, notOwner, SortingType.PRODUCT_NAME_ASCENDING));
+                p.openInventory(generateBusinessData(b, p, notOwner, SortingType.PRODUCT_NAME_ASCENDING).get(0));
                 NovaSound.BLOCK_ENDER_CHEST_OPEN.play(p, 1F, 0.5F);
 
                 if (notOwner) {
@@ -1574,6 +1574,32 @@ final class GUIManager implements Listener {
                 int page = inv.getAttribute("page", Integer.class);
 
                 p.openInventory(Generator.generateMarket(p, category, sorter, econ, page));
+            })
+            .put("next:business", (e, inv) -> {
+                Player p = (Player) e.getWhoClicked();
+                Business b = Business.byId(inv.getAttribute("business", UUID.class));
+                SortingType<BusinessProduct> type = NovaUtil.byId(of(inv.getItem(18)).getString(TYPE_TAG), BusinessProduct.class);
+
+                CHANGE_PAGE_TRICONSUMER.accept(e, 1, generateBusinessData(b, p, !b.getOwner().equals(p), type));
+            })
+            .put("prev:business", (e, inv) -> {
+                Player p = (Player) e.getWhoClicked();
+                Business b = Business.byId(inv.getAttribute("business", UUID.class));
+                SortingType<BusinessProduct> type = NovaUtil.byId(of(inv.getItem(18)).getString(TYPE_TAG), BusinessProduct.class);
+
+                CHANGE_PAGE_TRICONSUMER.accept(e, -1, generateBusinessData(b, p, !b.getOwner().equals(p), type));
+            })
+            .put("prev:stored", (e, inv) -> {
+                Player p = (Player) e.getWhoClicked();
+                List<NovaInventory> invs = inv.getAttribute("invs", List.class);
+
+                CHANGE_PAGE_TRICONSUMER.accept(e, -1, invs);
+            })
+            .put("next:stored", (e, inv) -> {
+                Player p = (Player) e.getWhoClicked();
+                List<NovaInventory> invs = inv.getAttribute("invs", List.class);
+
+                CHANGE_PAGE_TRICONSUMER.accept(e, 1, invs);
             })
             .build();
 

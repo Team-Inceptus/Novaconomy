@@ -13,6 +13,7 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
@@ -662,7 +663,7 @@ public interface CommandWrapper {
             p.sendMessage(getMessage("error.business.not_an_owner"));
             return;
         }
-        p.openInventory(generateBusinessData(b, p, false, SortingType.PRODUCT_NAME_ASCENDING));
+        p.openInventory(generateBusinessData(b, p, false, SortingType.PRODUCT_NAME_ASCENDING).get(0));
         NovaSound.BLOCK_ENDER_CHEST_OPEN.play(p, 1F, 0.5F);
     }
 
@@ -673,7 +674,7 @@ public interface CommandWrapper {
         }
         boolean notOwner = !b.isOwner(p);
 
-        p.openInventory(generateBusinessData(b, p, notOwner, SortingType.PRODUCT_NAME_ASCENDING));
+        p.openInventory(generateBusinessData(b, p, notOwner, SortingType.PRODUCT_NAME_ASCENDING).get(0));
         NovaSound.BLOCK_ENDER_CHEST_OPEN.play(p, 1F, 0.5F);
 
         if (notOwner) {
@@ -696,11 +697,6 @@ public interface CommandWrapper {
 
         if (b == null) {
             p.sendMessage(getMessage("error.business.not_an_owner"));
-            return;
-        }
-
-        if (b.getProducts().size() >= 28) {
-            p.sendMessage(getMessage("error.business.too_many_products"));
             return;
         }
 
@@ -823,21 +819,49 @@ public interface CommandWrapper {
             return;
         }
 
-        NovaInventory inv = genGUI(54, get("constants.business.remove_product"));
-        inv.setCancelled();
-
-        NovaInventory bData = generateBusinessData(b, p, false, SortingType.PRODUCT_NAME_ASCENDING);
-
-        Arrays.stream(bData.getContents())
+        List<NovaInventory> bData = generateBusinessData(b, p, false, SortingType.PRODUCT_NAME_ASCENDING);
+        List<ItemStack> productItems = Arrays.stream(bData.stream().map(Inventory::getContents).flatMap(Arrays::stream).toArray(ItemStack[]::new))
                 .filter(Objects::nonNull)
                 .map(NBTWrapper::of)
                 .filter(NBTWrapper::isProduct)
-                .forEach(nbt -> {
+                .map(nbt -> {
                     nbt.setID("product:remove");
-                    inv.addItem(nbt.getItem());
-                });
+                    return nbt.getItem();
+                })
+                .collect(Collectors.toList());
 
-        p.openInventory(inv);
+        List<NovaInventory> invs = new ArrayList<>();
+
+        int limit = (productItems.size() - 1) / 52;
+        for (int i = 0; i <= limit; i++) {
+            final int fI = i;
+
+            NovaInventory inv = genGUI(54, get("constants.business.remove_product"));
+            inv.setCancelled();
+
+            if (limit > 0) {
+                if (i > 0) inv.setItem(46,
+                        NBTWrapper.builder(
+                                Items.prev("stored"),
+                                nbt -> nbt.set("page", fI)
+                        ));
+
+                if (i < limit)
+                    inv.setItem(52,
+                            NBTWrapper.builder(
+                                    Items.next("stored"),
+                                    nbt -> nbt.set("page", fI)
+                            ));
+            }
+
+            productItems.subList(i * 52, Math.min((i + 1) * 52, productItems.size())).forEach(inv::addItem);
+
+            invs.add(inv);
+        }
+
+        invs.forEach(inv -> inv.setAttribute("invs", invs));
+
+        p.openInventory(invs.get(0));
     }
 
     default void bankBalances(Player p) {
@@ -1582,26 +1606,53 @@ public interface CommandWrapper {
         }
 
         Business b = Business.byOwner(p);
-        NovaInventory select = genGUI(54, get("constants.business.select_product"));
-        select.setCancelled();
-
-        NovaInventory bData = generateBusinessData(b, p, false, SortingType.PRODUCT_NAME_ASCENDING);
-
-        Arrays.stream(bData.getContents())
+        List<NovaInventory> bData = generateBusinessData(b, p, false, SortingType.PRODUCT_NAME_ASCENDING);
+        List<ItemStack> productItems = Arrays.stream(bData.stream().map(Inventory::getContents).flatMap(Arrays::stream).toArray(ItemStack[]::new))
                 .filter(Objects::nonNull)
                 .map(NBTWrapper::of)
                 .filter(NBTWrapper::isProduct)
-                .forEach(nbt -> {
+                .map(nbt -> {
                     Product product = nbt.getProduct(PRODUCT_TAG);
 
                     nbt.setID("product:edit_price");
                     nbt.set(PRICE_TAG, newPrice);
                     nbt.set(ECON_TAG, product.getEconomy().getUniqueId());
+                    return nbt.getItem();
+                })
+                .collect(Collectors.toList());
 
-                    select.addItem(nbt.getItem());
-                });
+        List<NovaInventory> invs = new ArrayList<>();
 
-        p.openInventory(select);
+        int limit = (productItems.size() - 1) / 52;
+        for (int i = 0; i <= limit; i++) {
+            final int fI = i;
+
+            NovaInventory inv = genGUI(54, get("constants.business.select_product"));
+            inv.setCancelled();
+
+            if (limit > 0) {
+                if (i > 0) inv.setItem(46,
+                        NBTWrapper.builder(
+                                Items.prev("stored"),
+                                nbt -> nbt.set("page", fI)
+                        ));
+
+                if (i < limit)
+                    inv.setItem(52,
+                            NBTWrapper.builder(
+                                    Items.next("stored"),
+                                    nbt -> nbt.set("page", fI)
+                            ));
+            }
+
+            productItems.subList(i * 52, Math.min((i + 1) * 52, productItems.size())).forEach(inv::addItem);
+
+            invs.add(inv);
+        }
+
+        invs.forEach(inv -> inv.setAttribute("invs", invs));
+
+        p.openInventory(invs.get(0));
     }
 
     default void setBusinessName(Player p, String name) {
