@@ -46,6 +46,7 @@ allprojects {
         maven("https://hub.jeff-media.com/nexus/repository/jeff-media-public/")
         maven("https://libraries.minecraft.net/")
         maven("https://repo.extendedclip.com/content/repositories/placeholderapi/")
+        maven("https://repo.essentialsx.net/releases/")
     }
 
     publishing {
