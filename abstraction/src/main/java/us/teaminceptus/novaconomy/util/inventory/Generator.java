@@ -65,8 +65,8 @@ public final class Generator {
 
     public static List<NovaInventory> generateBusinessData(Business b, Player viewer, boolean advertising, SortingType<BusinessProduct> sorter) {
         List<NovaInventory> invs = new ArrayList<>();
-        int limit = (b.getProducts().size() - 1) / 26;
-        for (int i = 0; i <= limit; i++) {
+        int limit = ((b.getProducts().size() - 1) / 26) + 1;
+        for (int i = 0; i < limit; i++) {
             final int fI = i;
 
             NovaInventory inv = genGUI(54, ChatColor.GOLD + b.getName());
@@ -163,7 +163,7 @@ public final class Generator {
 
             bProducts.forEach(p -> {
                 if ((slot.get() + 1) % 9 == 0) slot.addAndGet(2);
-                if (slot.get() >= 46) slot.addAndGet(1);
+                if (slot.get() == 46) slot.addAndGet(1);
 
                 ItemStack item = p.getItem().clone();
                 if (item.getType() == Material.AIR) return;
@@ -205,13 +205,13 @@ public final class Generator {
                 slot.incrementAndGet();
             });
 
-            if (limit > 0) {
+            if (limit > 1) {
                 if (i > 0)
                     inv.setItem(46, NBTWrapper.builder(
                             Items.prev("business"),
                             nbt -> nbt.set("page", fI)
                     ));
-                if (i < limit)
+                if (i < (limit - 1))
                     inv.setItem(52, NBTWrapper.builder(
                             Items.next("business"),
                             nbt -> nbt.set("page", fI)
