@@ -37,6 +37,8 @@ import us.teaminceptus.novaconomy.api.business.Rating;
 import us.teaminceptus.novaconomy.api.corporation.Corporation;
 import us.teaminceptus.novaconomy.api.corporation.CorporationInvite;
 import us.teaminceptus.novaconomy.api.economy.Economy;
+import us.teaminceptus.novaconomy.api.economy.market.MarketCategory;
+import us.teaminceptus.novaconomy.api.economy.market.MarketItem;
 import us.teaminceptus.novaconomy.api.economy.market.NovaMarket;
 import us.teaminceptus.novaconomy.api.economy.market.Receipt;
 import us.teaminceptus.novaconomy.api.events.AutomaticTaxEvent;
@@ -1701,6 +1703,8 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
             .put("clock", 13.25)
             .put("recovery_compass", 107.8)
             .put("glowstone_dust", 10.9)
+            .put("netherite_upgrade_smithing_template", 115.99)
+            .put("brush", 12.24)
 
             // Building Blocks
             .put("oak_planks", 14.0)
@@ -1815,6 +1819,8 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
             .put("podzol", 3.45)
             .put("dripleaf", 8.35)
             .put("small_dripleaf", 4.23)
+            .put("torchflower", 9.49)
+            .put("pink_petals", 6.25)
 
             .put("torch", 19.46)
             .put("glass", 5.6)
@@ -1853,6 +1859,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
             .put("powdered_concrete", 13.2)
             .put("obsidian", 29.33)
             .put("tuff", 21.4)
+            .put("bamboo_block", 12.37)
 
             .put("netherrack", 0.7)
             .put("glowstone", 9.1)
@@ -2012,7 +2019,19 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
         if (m == null || !w.isItem(m)) throw new IllegalArgumentException("Material must be valid item");
         if (getPriceOverrides().containsKey(m)) return getPriceOverrides().get(m);
 
-        double base = prices.getOrDefault(m.name().toLowerCase(), -1D);
+        double base = -1D;
+
+        if (prices.containsKey(m.name().toLowerCase()))
+            base = prices.get(m.name().toLowerCase());
+
+        if (getCustomItems().stream().anyMatch(i -> i.getItem() == m))
+            base = getCustomItems()
+                    .stream()
+                    .filter(i -> i.getItem() == m)
+                    .findFirst()
+                    .map(MarketItem::getPrice)
+                    .orElse(-1D);
+
         if (base == -1) throw new IllegalArgumentException("Material not sold on market");
 
         return base;
@@ -2021,13 +2040,19 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
     @Override
     @NotNull
     public Set<Material> getAllSold() {
-        return ImmutableSet.copyOf(prices.keySet()
-                .stream()
+        Set<Material> sold = prices.keySet().stream()
                 .map(Material::matchMaterial)
                 .filter(Objects::nonNull)
                 .filter(w::isItem)
+                .collect(Collectors.toSet());
+
+        sold.addAll(getCustomItems()
+                .stream()
+                .map(MarketItem::getItem)
                 .collect(Collectors.toList())
         );
+
+        return ImmutableSet.copyOf(sold);
     }
 
     @Override
@@ -2203,6 +2228,60 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
                 .map(Material::name)
                 .collect(Collectors.toList())
         );
+        saveConfig();
+    }
+
+    @Override
+    public @NotNull Set<MarketItem> getCustomItems() {
+        return ImmutableSet.copyOf(config.getMapList("Market.CustomItems")
+                .stream()
+                .map(m -> {
+                    Material mat = Material.matchMaterial(m.get("id").toString());
+                    if (mat == null) throw new IllegalArgumentException("Invalid Material '" + mat + "'");
+
+                    MarketCategory category;
+                    try {
+                        category = MarketCategory.valueOf(m.get("category").toString().toUpperCase());
+                    } catch (IllegalArgumentException e) {
+                        throw new IllegalArgumentException("Invalid category for '" + mat + "': " + m.get("category"));
+                    }
+
+                    String price = m.get("price").toString();
+                    double d;
+                    try {
+                        d = Double.parseDouble(price);
+                        if (d < 0) throw new IllegalArgumentException("Price for '" + mat + "' must be positive");
+                    } catch (NumberFormatException e) {
+                        throw new IllegalArgumentException("Invalid price for '" + mat + "': " + price);
+                    }
+
+                    return new MarketItem(mat, category, d);
+                })
+                .collect(Collectors.toSet()));
+    }
+
+    @Override
+    public void setCustomItems(@NotNull Iterable<MarketItem> items) {
+        config.set("Market.CustomItems", ImmutableList.copyOf(items)
+                .stream()
+                .map(e -> {
+                    Map<String, Object> m = new HashMap<>();
+                    m.put("id", e.getItem().name().toLowerCase());
+                    m.put("price", e.getPrice());
+                    m.put("category", e.getCategory().name().toLowerCase());
+                    return m;
+                })
+                .collect(Collectors.toList())
+        );
+        saveConfig();
+    }
+
+    @Override
+    public void removeCustomItem(@NotNull Material material) {
+        List<Map<?, ?>> items = config.getMapList("Market.CustomItems");
+        items.removeIf(m -> m.get("id").equals(material.name()));
+
+        config.set("Market.CustomItems", items);
         saveConfig();
     }
 

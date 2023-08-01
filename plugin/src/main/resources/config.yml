@@ -349,6 +349,13 @@ Market:
   # - Stone
   Blacklisted: []
 
+  # Add Items to the Market Catalogue
+  # Valid IDs: https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Material.html, Case Insensitive
+  CustomItems:
+    # - id: "minecraft:host_armor_trim_smithing_template"
+    #   category: 'rarities' # List of Categories: https://novaconomy.teaminceptus.us/us/teaminceptus/novaconomy/api/economy/market/MarketCategory.html:
+    #   price: 99.99
+
   # Market Restock Options
   Restock:
     # Whether Automatic Market restocking is enabled

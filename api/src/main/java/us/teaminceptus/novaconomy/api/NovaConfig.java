@@ -391,6 +391,8 @@ public interface NovaConfig  {
         for (String s : config.getConfigurationSection("Market.PriceOverride").getKeys(false))
             if (Material.matchMaterial(s) == null || (!config.isDouble("Market.PriceOverride." + s) && !config.isInt("Market.PriceOverride." + s)))
                 config.set("Market.PriceOverride." + s, null);
+
+        if (!config.isList("Market.CustomItems")) config.set("Market.CustomItems", new ArrayList<>());
         
 
         if (!config.isConfigurationSection("Market.Restock")) config.createSection("Market.Restock");
