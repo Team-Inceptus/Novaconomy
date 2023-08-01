@@ -94,8 +94,8 @@ jobs:
         with:
           name: novaconomy
           path: |
-            plugin/build/libs/*[0-9].jar
-            api/build/libs/*[0-9].jar
+            plugin/build/libs/*.jar
+            api/build/libs/*.jar
 
   analyze:
     runs-on: ubuntu-latest
