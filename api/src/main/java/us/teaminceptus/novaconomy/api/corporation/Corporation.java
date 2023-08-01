@@ -1,5 +1,6 @@
 package us.teaminceptus.novaconomy.api.corporation;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.bukkit.*;
@@ -16,6 +17,7 @@ import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.business.Business;
+import us.teaminceptus.novaconomy.api.business.Rating;
 import us.teaminceptus.novaconomy.api.events.corporation.CorporationAwardAchievementEvent;
 import us.teaminceptus.novaconomy.api.events.corporation.CorporationCreateEvent;
 import us.teaminceptus.novaconomy.api.events.corporation.CorporationDeleteEvent;
@@ -620,6 +622,51 @@ public final class Corporation {
                 .forEach(p -> p.getPlayer().sendMessage(sent));
     }
 
+    /**
+     * Fetches all of the Ratings in all of the Businesses in this Corporation.
+     * @return Ratings in this Corporation
+     */
+    @NotNull
+    public List<Rating> getAllRatings() {
+        return ImmutableList.copyOf(children.stream().flatMap(b -> b.getRatings().stream()).collect(Collectors.toList()));
+    }
+
+    /**
+     * Fetches the average for the average rating in all of the Businesses in this Corporation.
+     * @return Average Rating of this Corporation
+     */
+    public double getAverageRating() {
+        List<Business> rated = children.stream()
+                .filter(b -> !b.getRatings().isEmpty())
+                .collect(Collectors.toList());
+
+        return rated.stream().mapToDouble(Business::getAverageRating).sum() / rated.size();
+    }
+
+    /**
+     * Fetches the total revenue of all of the Businesses in this Corporation.
+     * @return Total Revenue of this Corporation
+     */
+    public double getTotalRevenue() {
+        return children.stream().mapToDouble(Business::getTotalRevenue).sum();
+    }
+
+    /**
+     * Fetches the total resource amount of all of the Businesses in this Corporation.
+     * @return Total Resource Amount of this Corporation
+     */
+    public int getTotalResources() {
+        return children.stream().mapToInt(Business::getTotalResources).sum();
+    }
+
+    /**
+     * Utliity method for {@link #getMembers() getMembers().size()}.
+     * @return Member Count
+     */
+    public int getMemberCount() {
+        return children.size();
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -839,6 +886,14 @@ public final class Corporation {
         
         return getCorporations().stream()
                 .anyMatch(c -> c.getMembers().contains(member));
+    }
+
+    /**
+     * Whether any Corporations exist.
+     * @return true if any Corporations exist, false otherwise
+     */
+    public static boolean exists() {
+        return !getCorporations().isEmpty();
     }
 
     /**
