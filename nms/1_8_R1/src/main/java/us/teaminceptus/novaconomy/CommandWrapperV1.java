@@ -1756,6 +1756,15 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         settings(p, CORPORATION_TAG);
                         break;
                     }
+                    case "leaderboard":
+                    case "lboard":
+                    case "lb": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
+                        corporationLeaderboard(p, "ratings");
+                        break;
+                    }
                     default: {
                         sender.sendMessage(getMessage("error.argument"));
                         return false;
@@ -1981,6 +1990,13 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         return false;
                     }
                 }
+            }
+            case "corporationleaderboard": {
+                if (!(sender instanceof Player)) return false;
+                Player p = (Player) sender;
+
+                corporationLeaderboard(p, "ratings");
+                break;
             }
             default: {
                 sender.sendMessage(getMessage("error.argument"));

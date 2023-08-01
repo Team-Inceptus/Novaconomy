@@ -31,6 +31,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static java.util.Arrays.asList;
 import static us.teaminceptus.novaconomy.abstraction.Wrapper.*;
 import static us.teaminceptus.novaconomy.util.NovaUtil.format;
 
@@ -828,6 +829,10 @@ final class CommandWrapperV2 implements CommandWrapper {
         public void corporationSettings(Player p) {
             wrapper.settings(p, CORPORATION_TAG);
         }
+
+        @Subcommand({"leaderboard", "lboard", "lb"})
+        @CommandPermission("novaconomy.user.leaderboard")
+        public void corporationLeaderboard(Player p) { wrapper.corporationLeaderboard(p, "ratings"); }
     }
 
     @Override
@@ -838,6 +843,13 @@ final class CommandWrapperV2 implements CommandWrapper {
     public void corporationChat(Player p, String message) {
         CommandWrapper.super.corporationChat(p, message);
     }
+
+
+    @Command({"corporationleaderboard", "corpleaderboard", "cleaderboard", "corpboard", "cboard"})
+    @Usage("/cleaderboard [category]")
+    @Description("View the Top 10 Corporations in various categories")
+    @CommandPermission("novaconomy.user.leaderboard")
+    public void corporationLeaderboard(Player p) { CommandWrapper.super.corporationLeaderboard(p, "ratings"); }
 
     @Command({"market", "novamarket", "novam", "m"})
     @Usage("/market <open|sell|...>")

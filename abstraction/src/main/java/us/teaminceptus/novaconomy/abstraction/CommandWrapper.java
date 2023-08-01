@@ -108,6 +108,7 @@ public interface CommandWrapper {
         put(CORPORATION_TAG, asList("corp", "ncorp", "c"));
         put("corporationchat", asList("corpchat", "cc", "ncc", "corporationc", "corpc", "cchat"));
         put("market", asList("novamarket", "novam", "m"));
+        put("corporationleaderboard", asList("corpleaderboard", "cleaderboard", "corpboard", "cboard"));
     }};
 
     Map<String, String> COMMAND_PERMISSION = new HashMap<String, String>() {{
@@ -130,6 +131,7 @@ public interface CommandWrapper {
         put(CORPORATION_TAG, "novaconomy.user.corporation");
         put("corporationchat", "novaconomy.user.corporation");
         put("market", "novaconomy.user.market");
+        put("corporationleaderboard", "novaconomy.user.leaderboard");
     }};
 
     Map<String, String> COMMAND_DESCRIPTION = new HashMap<String, String>() {{
@@ -154,6 +156,7 @@ public interface CommandWrapper {
         put(CORPORATION_TAG, "Manage your Novaconomy Corporation");
         put("corporationchat", "Chat with your Novaconomy Corporation");
         put("market", "View and Manage the Novaconomy Market");
+        put("corporationleaderboard", "View the top 10 corporations in various categories");
     }};
 
     Map<String, String> COMMAND_USAGE = new HashMap<String, String>() {{
@@ -178,6 +181,7 @@ public interface CommandWrapper {
         put(CORPORATION_TAG, "/nc <create|delete|edit|...> <args...>");
         put("corporationchat", "/cc <message>");
         put("market", "/market <open|sell|...>");
+        put("corporationleaderboard", "/corporationleaderboard");
     }};
 
     // Command Methods
@@ -814,7 +818,7 @@ public interface CommandWrapper {
             return;
         }
 
-        if (b.getProducts().size() < 1) {
+        if (b.getProducts().isEmpty()) {
             p.sendMessage(getMessage("error.business.no_products"));
             return;
         }
@@ -1422,7 +1426,7 @@ public interface CommandWrapper {
 
         final ItemStack top;
 
-        if (productSales.size() > 0) {
+        if (!productSales.isEmpty()) {
             List<Map.Entry<Product, Integer>> topProd = productSales
                     .entrySet()
                     .stream()
@@ -1859,7 +1863,7 @@ public interface CommandWrapper {
             items.add(item);
             it.remove();
         }
-        if (b.getLeftoverStock().size() > 0) overflow = true;
+        if (!b.getLeftoverStock().isEmpty()) overflow = true;
 
         b.removeResource(items);
         p.getInventory().addItem(items.toArray(new ItemStack[0]));
@@ -2983,7 +2987,7 @@ public interface CommandWrapper {
             public void run() {
                 inv.setItem(13, builder(BL_ICONS.get(category),
                         meta -> {
-                            meta.setDisplayName(ChatColor.GOLD + get("constants.business.leaderboard." + category));
+                            meta.setDisplayName(ChatColor.GOLD + get("constants.leaderboard." + category));
                             meta.addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1, true);
                             meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
                         }, nbt -> {
@@ -2999,7 +3003,7 @@ public interface CommandWrapper {
 
                 if (category.equalsIgnoreCase("ratings"))
                     sorted = sorted.stream()
-                            .filter(b -> b.getRatings().size() > 0)
+                            .filter(b -> !b.getRatings().isEmpty())
                             .collect(Collectors.toList());
 
                 Map<Integer, ItemStack> items = new HashMap<>();
@@ -3656,6 +3660,121 @@ public interface CommandWrapper {
         NovaConfig.getMarket().setMarketEnabled(enabled);
         sender.sendMessage(getSuccess("success.market." + (enabled ? "enable" : "disable")));
         NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(sender);
+    }
+
+    List<String> CL_CATEGORIES = asList(
+            "ratings",
+            "resources",
+            "revenue",
+            "members"
+    );
+
+    Map<String, Comparator<Corporation>> CL_COMPARATORS = ImmutableMap.<String, Comparator<Corporation>>builder()
+            .put("ratings", Collections.reverseOrder(Comparator.comparingDouble(Corporation::getAverageRating))
+                    .thenComparing(Collections.reverseOrder(Comparator.comparingInt(c -> c.getAllRatings().size())))
+                    .thenComparing(Corporation::getName))
+            .put("resources", Collections.reverseOrder(Comparator.comparingInt(Corporation::getTotalResources))
+                    .thenComparing(Corporation::getName))
+            .put("revenue", Collections.reverseOrder(Comparator.comparingDouble(Corporation::getTotalRevenue))
+                    .thenComparing(Corporation::getName))
+            .put("members", Collections.reverseOrder(Comparator.comparingDouble(Corporation::getMemberCount))
+                    .thenComparing(Corporation::getName))
+            .build();
+
+    Map<String, Function<Corporation, List<String>>> CL_DESC = ImmutableMap.<String, Function<Corporation, List<String>>>builder()
+            .put("ratings", c -> asList(
+                    ChatColor.GOLD + format("%,.1f", c.getAverageRating()) + "⭐",
+                    ChatColor.GREEN + format("%,d", c.getAllRatings().size()) + " " + get("constants.corporation.ratings")
+            ))
+            .put("resources", c -> asList(
+                    ChatColor.GOLD + format("%,d", c.getTotalResources())
+            ))
+            .put("revenue", c -> asList(
+                    ChatColor.DARK_GREEN + format("%,.2f", c.getTotalRevenue())
+            ))
+            .put("members", c -> asList(
+                    ChatColor.AQUA + format("%,d", c.getMembers().size())
+            ))
+            .build();
+
+    Map<String, Material> CL_ICONS = ImmutableMap.<String, Material>builder()
+            .put("ratings", Material.DIAMOND)
+            .put("resources", Material.CHEST)
+            .put("revenue", Material.GOLD_INGOT)
+            .put("members", Material.ARMOR_STAND)
+            .build();
+
+    default void corporationLeaderboard(Player p, String category) {
+        if (!p.hasPermission("novaconomy.user.leaderboard")) {
+            p.sendMessage(ERROR_PERMISSION);
+            return;
+        }
+
+        if (!Corporation.exists()) {
+            p.sendMessage(getMessage("error.corporation.none_exists"));
+            return;
+        }
+
+        NovaInventory inv = genGUI(54, get("constants.corporation.leaderboard"));
+        inv.setCancelled();
+
+        for (int i = 30; i < 33; i++) inv.setItem(i, LOADING);
+        for (int i = 37; i < 44; i++) inv.setItem(i, LOADING);
+
+        p.openInventory(inv);
+
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                inv.setItem(13, builder(CL_ICONS.get(category),
+                        meta -> {
+                            meta.setDisplayName(ChatColor.GOLD + get("constants.leaderboard." + category));
+                            meta.addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1, true);
+                            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+                        }, nbt -> {
+                            nbt.setID("corporation:leaderboard_category");
+                            nbt.set("category", category);
+                        }
+                ));
+
+                List<Corporation> sorted = Corporation.getCorporations()
+                        .stream()
+                        .sorted(CL_COMPARATORS.get(category))
+                        .collect(Collectors.toList());
+
+                if (category.equalsIgnoreCase("ratings"))
+                    sorted = sorted.stream()
+                            .filter(c -> !c.getAllRatings().isEmpty())
+                            .collect(Collectors.toList());
+
+                Map<Integer, ItemStack> items = new HashMap<>();
+                for (int i = 0; i < 10; i++) {
+                    int index = 30 + i;
+                    if (i >= 3) index = 34 + i;
+
+                    if (i >= sorted.size()) {
+                        items.put(index, null);
+                        continue;
+                    }
+
+                    Corporation c = sorted.get(i);
+
+                    ItemStack icon = builder(c.getPublicIcon(),
+                            meta -> meta.setLore(CL_DESC.get(category).apply(c)),
+                            nbt -> {
+                                nbt.setID("corporation:click");
+                                nbt.set(CORPORATION_TAG, c.getUniqueId());
+                            }
+                    );
+
+                    items.put(index, icon);
+                }
+
+                items.forEach(inv::setItem);
+
+                NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
+            }
+        }.runTaskAsynchronously(NovaConfig.getPlugin());
     }
 
 }

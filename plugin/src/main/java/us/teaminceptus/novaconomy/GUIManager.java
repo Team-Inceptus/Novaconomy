@@ -1609,6 +1609,15 @@ final class GUIManager implements Listener {
 
                 CHANGE_PAGE_TRICONSUMER.accept(e, 1, invs);
             })
+            .put("corporation:leaderboard_category", (e, inv) -> {
+                Player p = (Player) e.getWhoClicked();
+                ItemStack item = e.getCurrentItem();
+
+                String category = of(item).getString("category");
+                String nextCategory = CL_CATEGORIES.get(CL_CATEGORIES.indexOf(category) == CL_CATEGORIES.size() - 1 ? 0 : CL_CATEGORIES.indexOf(category) + 1);
+
+                getCommandWrapper().corporationLeaderboard(p, nextCategory);
+            })
             .build();
 
     static final Map<String, BiConsumer<InventoryClickEvent, NovaInventory>> CLICK_INVENTORIES = ImmutableMap.<String, BiConsumer<InventoryClickEvent, NovaInventory>>builder()
