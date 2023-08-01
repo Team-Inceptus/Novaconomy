@@ -5,6 +5,7 @@ import com.google.common.collect.ImmutableSet;
 import org.bukkit.Material;
 import org.jetbrains.annotations.NotNull;
 import us.teaminceptus.novaconomy.api.Language;
+import us.teaminceptus.novaconomy.api.NovaConfig;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -25,7 +26,8 @@ public enum MarketCategory {
     UTILITIES(STICK, GLOWSTONE_DUST, BOWL, BUCKET, ARROW, MILK_BUCKET, COMPASS, PAPER, BOOK,
             "oak_planks", "spruce_planks", "birch_planks", "jungle_planks", "acacia_planks", "dark_oak_planks",
             "warped_planks", "crimson_planks", "cherry_planks", "concrete", "powdered_concrete", "hardened_clay",
-            "terracotta", "recovery_compass", "clock", "brush", "shears", "flint_and_steel"
+            "terracotta", "recovery_compass", "clock", "brush", "shears", "flint_and_steel", "netherite_upgrade_smithing_template",
+            "brush"
     ),
 
     /**
@@ -53,7 +55,7 @@ public enum MarketCategory {
             "glow_lichen", "raw_beef:beef", "porkchop", "chicken:raw_chicken", "mutton", "campfire",
             "kelp", "peony", "sunflower", "poppy", "sea_pickle", "candle", "dark_prismarine", "shroomlight",
             "mycelium", "podzol", "dripleaf", "small_dripleaf", "soul_lantern", "sweet_berries", "soul_campfire",
-            "seeds:wheat_seeds"
+            "seeds:wheat_seeds", "torchflower", "bamboo_block", "pink_petals"
     ),
 
     /**
@@ -95,7 +97,7 @@ public enum MarketCategory {
     }
 
     /**
-     * Fetches an immutable set of all of the resolvable items in this MarketCategory
+     * Fetches an immutable set of all of the resolvable items in this MarketCategory. This will include the items from {@link NovaMarket#getCustomItems()} that match this category.
      * @return Immutable Set of all resolved items in this Category
      */
     @NotNull
@@ -106,11 +108,18 @@ public enum MarketCategory {
             if (Material.matchMaterial(s) != null)
                 items.add(Material.matchMaterial(s));
 
+        items.addAll(NovaConfig.getMarket().getCustomItems()
+                .stream()
+                .filter(m -> m.getCategory() == this)
+                .map(MarketItem::getItem)
+                .collect(Collectors.toList())
+        );
+
         return ImmutableSet.copyOf(items);
     }
 
     /**
-     * Fetches an immutable list of all of the item names in this MarketCategory, whether they exist in the current Minecraft Version or not.
+     * Fetches an immutable list of all of the item names in this MarketCategory, whether they exist in the current Minecraft Version or not. This does not include the items from {@link NovaMarket#getCustomItems()} that match this category.
      * @return Immutable List of all item names in this Category
      */
     @NotNull
