@@ -6,6 +6,9 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.AtomicDouble;
 import org.apache.commons.lang.Validate;
 import org.bukkit.*;
+import org.bukkit.block.Block;
+import org.bukkit.block.Chest;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
@@ -24,6 +27,7 @@ import us.teaminceptus.novaconomy.api.corporation.Corporation;
 import us.teaminceptus.novaconomy.api.corporation.CorporationInvite;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.events.business.BusinessCreateEvent;
+import us.teaminceptus.novaconomy.api.events.business.BusinessSupplyEvent;
 import us.teaminceptus.novaconomy.api.player.NovaPlayer;
 import us.teaminceptus.novaconomy.api.settings.Settings;
 import us.teaminceptus.novaconomy.api.util.BusinessProduct;
@@ -35,8 +39,8 @@ import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.sql.*;
-import java.util.*;
 import java.util.Date;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -83,13 +87,14 @@ public final class Business implements ConfigurationSerializable {
     final BusinessStatistics stats;
 
     private final List<Product> products = new ArrayList<>();
-    private final Map<Settings.Business, Boolean> settings = new HashMap<>();
+    private final Map<Settings.Business<?>, Object> settings = new HashMap<>();
     private final List<ItemStack> resources = new ArrayList<>();
     private final List<String> keywords = new ArrayList<>();
     private final List<UUID> blacklist = new ArrayList<>();
+    private final List<Location> supplyChests = new ArrayList<>();
 
     private Business(UUID uid, @NotNull String name, Material icon, OfflinePlayer owner, Collection<Product> products, Collection<ItemStack> resources,
-                     BusinessStatistics stats, Map<Settings.Business, Boolean> settings, long creationDate, List<String> keywords,
+                     BusinessStatistics stats, Map<Settings.Business<?>, Object> settings, long creationDate, List<String> keywords,
                      double advertisingBalance, List<UUID> blacklist) {
         this.id = uid;
         this.name = name.length() > MAX_NAME_LENGTH ? name.substring(0, MAX_NAME_LENGTH) : name;
@@ -236,12 +241,15 @@ public final class Business implements ConfigurationSerializable {
         List<Product> p = new ArrayList<>();
         products.forEach(pr -> p.add(new Product(pr.getItem(), pr.getPrice())));
 
-        Map<String, Boolean> settings = this.settings
+        Map<String, Object> settings = this.settings
                 .entrySet()
                 .stream()
                 .collect(Collectors.toMap(e -> e.getKey().name().toLowerCase(), Map.Entry::getValue));
 
-        return new HashMap<String, Object>() {{
+        return new HashMap<String, Object>() {
+            private static final long serialVersionUID = -1783086253880529119L;
+
+            {
             put("id", id.toString());
             put("name", name);
             put("owner", owner.toString());
@@ -551,9 +559,9 @@ public final class Business implements ConfigurationSerializable {
      * @param setting Setting to check
      * @return Setting Value, or false if setting is null
      */
-    public boolean getSetting(@Nullable Settings.Business setting) {
-        if (setting == null) return false;
-        return this.settings.getOrDefault(setting, setting.getDefaultValue());
+    public <T> T getSetting(@Nullable Settings.Business<T> setting) {
+        if (setting == null) return null;
+        return (T) this.settings.getOrDefault(setting, setting.getDefaultValue());
     }
 
     /**
@@ -561,9 +569,9 @@ public final class Business implements ConfigurationSerializable {
      * @return Immutable Map of Settings
      */
     @NotNull
-    public Map<Settings.Business, Boolean> getSettings() {
-        Map<Settings.Business, Boolean> dupl = new HashMap<>(this.settings);
-        for (Settings.Business value : Settings.Business.values()) dupl.putIfAbsent(value, value.getDefaultValue());
+    public Map<Settings.Business<?>, Object> getSettings() {
+        Map<Settings.Business<?>, Object> dupl = new HashMap<>(this.settings);
+        for (Settings.Business<?> value : Settings.Business.values()) dupl.putIfAbsent(value, value.getDefaultValue());
 
         return ImmutableMap.copyOf(dupl);
     }
@@ -606,7 +614,7 @@ public final class Business implements ConfigurationSerializable {
      * @return this Business, for chaining
      */
     @NotNull
-    public Business setSetting(@NotNull Settings.Business setting, boolean value) {
+    public <T> Business setSetting(@NotNull Settings.Business<T> setting, T value) {
         this.settings.put(setting, value);
         saveBusiness();
         return this;
@@ -687,6 +695,102 @@ public final class Business implements ConfigurationSerializable {
     }
 
     /**
+     * Fetches an immutable set of all of the supply chests for this Business.
+     * @return Immutable Set of Supply Chest States
+     */
+    @NotNull
+    public Set<Chest> getSupplyChests() {
+        Set<Location> chests = new HashSet<>();
+
+        Iterator<Location> it = supplyChests.iterator();
+        while (it.hasNext()) {
+            Location loc = it.next();
+
+            if (loc.getBlock() == null || !(loc.getBlock().getState() instanceof Chest)) {
+                it.remove();
+                continue;
+            }
+
+            chests.add(loc);
+        }
+
+        return ImmutableSet.copyOf(
+                chests.stream()
+                        .map(Location::getBlock)
+                        .map(Block::getState)
+                        .map(Chest.class::cast)
+                        .collect(Collectors.toSet())
+        );
+    }
+
+    /**
+     * Adds a supply chest to this Business.
+     * @param chest Chest Block to add
+     */
+    @NotNull
+    public void addSupplyChest(@NotNull Chest chest) {
+        if (chest == null) throw new IllegalArgumentException("Chest cannot be null");
+        if (chest.getBlock() == null) throw new IllegalArgumentException("Chest must be placed");
+
+        supplyChests.add(chest.getLocation());
+        saveBusiness();
+    }
+
+    /**
+     * Adds a supply chest to this Business.
+     * @param loc Location of the chest
+     */
+    @NotNull
+    public void addSupplyChest(@NotNull Location loc) {
+        if (loc == null) throw new IllegalArgumentException("Location cannot be null");
+        if (loc.getWorld() == null) throw new IllegalArgumentException("Location must be in a world");
+        if (!(loc.getBlock().getState() instanceof Chest)) throw new IllegalArgumentException("Location must be a chest or double chest");
+
+        supplyChests.add(loc.clone());
+        saveBusiness();
+    }
+
+    /**
+     * Removes a supply chest from this Business.
+     * @param loc Location of the chest
+     */
+    @NotNull
+    public void removeSupplyChest(@Nullable Location loc) {
+        if (loc == null) return;
+
+        supplyChests.remove(loc);
+        saveBusiness();
+    }
+
+    /**
+     * Adds the resources from all of the supply chests to the Business's inventory, calling {@link BusinessSupplyEvent}. This method will silently fail if the event is cancelled.
+     */
+    public void supply() {
+        Map<ItemStack, Chest> items = new HashMap<>();
+        Set<Chest> supply = getSupplyChests();
+
+        for (Chest chest : supply) {
+            for (ItemStack item : chest.getInventory().getContents()) {
+                if (item == null || item.getType() == Material.AIR || !isProduct(item)) continue;
+                items.put(item, chest);
+            }
+        }
+
+        BusinessSupplyEvent event = new BusinessSupplyEvent(this, items.keySet(), supply);
+        Bukkit.getPluginManager().callEvent(event);
+
+        if (!event.isCancelled()) {
+            for (ItemStack item : event.getItems()) {
+                if (item == null || item.getType() == Material.AIR || !isProduct(item)) continue;
+                addResource(item);
+
+                if (items.containsKey(item))
+                    items.get(item).getInventory().removeItem(item);
+            }
+        }
+    }
+
+    /**
      * Deserializes a Map into a Business.
      * @param serial Serialization from {@link #serialize()}
      * @deprecated Entire Bukkit Serialization is no longer used; this method exists only for the purposes of converting legacy businesses
@@ -701,10 +805,10 @@ public final class Business implements ConfigurationSerializable {
         List<ItemStack> resources = new ArrayList<>(res.values());
         Location home = serial.containsKey("home") ? (Location) serial.get("home") : null;
 
-        Map<Settings.Business, Boolean> settings = serial.containsKey("settings") ? ((Map<String, Boolean>) serial.get("settings"))
+        Map<Settings.Business<?>, Object> settings = serial.containsKey("settings") ? ((Map<String, Object>) serial.get("settings"))
                 .entrySet()
                 .stream()
-                .collect(Collectors.toMap(e -> Settings.Business.valueOf(e.getKey().toUpperCase()), Map.Entry::getValue)) : null;
+                .collect(Collectors.toMap(e -> Settings.Business.valueOf(e.getKey()), Map.Entry::getValue)) : null;
 
         long creationDate = serial.containsKey("creation_date") ? (long) serial.get("creation_date") : 1242518400000L;
 
@@ -780,7 +884,10 @@ public final class Business implements ConfigurationSerializable {
 
         try {
             if (!(rs = md.getColumns(null, null, "businesses", "custom_model_data")).next())
-                db.createStatement().execute("ALTER TABLE businesses ADD custom_model_data INT ");
+                db.createStatement().execute("ALTER TABLE businesses ADD custom_model_data INT NOT NULL");
+
+            if (!(rs = md.getColumns(null, null, "businesses", "supply_chests")).next())
+                db.createStatement().execute("ALTER TABLE businessess ADD supply_chests LONGBLOB NOT NULL");
         } finally {
             if (rs != null) rs.close();
         }
@@ -825,10 +932,11 @@ public final class Business implements ConfigurationSerializable {
                         "keywords = ?, " +
                         "adbalance = ?, " +
                         "blacklist = ?, " +
-                        "custom_model_data = ? " +
+                        "custom_model_data = ?, " +
+                        "supply_chests = ? " +
                         "WHERE id = \"" + this.id + "\"";
             else
-                sql = "INSERT INTO businesses VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                sql = "INSERT INTO businesses VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         }
 
         PreparedStatement ps = db.prepareStatement(sql);
@@ -895,6 +1003,12 @@ public final class Business implements ConfigurationSerializable {
 
         ps.setInt(14, this.customModelData);
 
+        ByteArrayOutputStream supplyChestsOs = new ByteArrayOutputStream();
+        BukkitObjectOutputStream supplyChestsBos = new BukkitObjectOutputStream(supplyChestsOs);
+        supplyChestsBos.writeObject(this.supplyChests);
+        supplyChestsBos.close();
+        ps.setBytes(15, supplyChestsOs.toByteArray());
+
         ps.executeUpdate();
         ps.close();
     }
@@ -948,7 +1062,7 @@ public final class Business implements ConfigurationSerializable {
 
         ByteArrayInputStream settingsIs = new ByteArrayInputStream(rs.getBytes("settings"));
         ObjectInputStream settingsBis = new ObjectInputStream(settingsIs);
-        Map<Settings.Business, Boolean> settings = (Map<Settings.Business, Boolean>) settingsBis.readObject();
+        Map<Settings.Business<?>, Object> settings = (Map<Settings.Business<?>, Object>) settingsBis.readObject();
         settingsBis.close();
 
         ByteArrayInputStream statsIs = new ByteArrayInputStream(rs.getBytes("stats"));
@@ -964,10 +1078,16 @@ public final class Business implements ConfigurationSerializable {
         List<UUID> blacklist = (List<UUID>) blacklistBis.readObject();
         blacklistBis.close();
 
+        ByteArrayInputStream supplyChestsIs = new ByteArrayInputStream(rs.getBytes("supply_chests"));
+        BukkitObjectInputStream supplyChestsBis = new BukkitObjectInputStream(supplyChestsIs);
+        List<Location> supplyChests = (List<Location>) supplyChestsBis.readObject();
+        supplyChestsBis.close();
+
         Business b = new Business(id, name, icon, owner, products, resources, stats, settings, creationDate, keywords, adBal, blacklist);
         b.setHome(home, false);
 
         b.customModelData = rs.getInt("custom_model_data");
+        b.supplyChests.addAll(supplyChests);
         return b;
     }
 
@@ -1000,8 +1120,18 @@ public final class Business implements ConfigurationSerializable {
 
         FileConfiguration seConfig = YamlConfiguration.loadConfiguration(settings);
         if (!seConfig.isConfigurationSection("settings")) seConfig.createSection("settings");
-        for (Settings.Business setting : Settings.Business.values())
-            seConfig.set("settings." + setting.name().toLowerCase(), this.settings.getOrDefault(setting, setting.getDefaultValue()));
+        ConfigurationSection settingsSection = seConfig.getConfigurationSection("settings");
+
+        this.settings.entrySet()
+                .stream()
+                .map(e -> {
+                    Object value = e.getValue();
+                    if (value instanceof Enum<?>) value = value.toString();
+
+                    return new AbstractMap.SimpleEntry<>(e.getKey().name().toLowerCase(), value);
+                })
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
+                .forEach(settingsSection::set);
 
         seConfig.save(settings);
 
@@ -1055,6 +1185,13 @@ public final class Business implements ConfigurationSerializable {
             matOs.writeObject(res);
             matOs.close();
         }
+
+        // Supply Chests
+
+        File supply = new File(folder, "supply.yml");
+        FileConfiguration suConfig = YamlConfiguration.loadConfiguration(supply);
+        suConfig.set("supply_chests", this.supplyChests);
+        suConfig.save(supply);
 
         // Other Information
 
@@ -1145,15 +1282,24 @@ public final class Business implements ConfigurationSerializable {
 
         // Settings
 
-        Map<Settings.Business, Boolean> settings = new HashMap<>();
+        Map<Settings.Business<?>, Object> settings = new HashMap<>();
         File settingsF = new File(folder, "settings.yml");
 
         if (settingsF.exists()) {
             FileConfiguration seConfig = YamlConfiguration.loadConfiguration(settingsF);
-            settings.putAll(seConfig.getConfigurationSection("settings").getKeys(false)
-                    .stream()
-                    .collect(Collectors.toMap(k -> Settings.Business.valueOf(k.toUpperCase()), v -> seConfig.getBoolean("settings." + v)))
-            );
+            if (seConfig.isConfigurationSection("settings"))
+                settings.putAll(seConfig.getConfigurationSection("settings").getValues(false)
+                        .entrySet()
+                        .stream()
+                        .map(e -> {
+                            Settings.Business<?> key = Arrays.stream(Settings.Business.values())
+                                    .filter(sett -> sett.name().equalsIgnoreCase(e.getKey()))
+                                    .findFirst()
+                                    .orElseThrow(IllegalStateException::new);
+
+                            return new AbstractMap.SimpleEntry<>(key, key.parseValue(e.getValue().toString()));
+                        })
+                        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
         }
 
         // Resources
@@ -1199,10 +1345,19 @@ public final class Business implements ConfigurationSerializable {
             matOs.close();
         }
 
+        // Supply Chests
+        List<Location> supplyChests = new ArrayList<>();
+        File supply = new File(folder, "supply.yml");
+        if (supply.exists()) {
+            FileConfiguration sConfig = YamlConfiguration.loadConfiguration(supply);
+            supplyChests.addAll((List<Location>) sConfig.get("supply_chests"));
+        }
+
         Business b = new Business(id, name, icon, owner, product, resources, stats, settings, creationDate, keywords, advertisingBalance, blacklist);
         b.setHome(home, false);
 
         b.customModelData = oConfig.getInt("custom_model_data");
+        b.supplyChests.addAll(supplyChests);
         return b;
     }
 
@@ -1779,7 +1934,7 @@ public final class Business implements ConfigurationSerializable {
         OfflinePlayer owner;
         Material icon;
         List<String> keywords = new ArrayList<>();
-        Map<Settings.Business, Boolean> settings = new HashMap<>();
+        Map<Settings.Business<?>, Object> settings = new HashMap<>();
 
         private Builder() {}
 
@@ -1819,7 +1974,7 @@ public final class Business implements ConfigurationSerializable {
          * @param value Value to set
          * @return this builder, for chaining
          */
-        public Builder setSetting(@NotNull Settings.Business setting, boolean value) {
+        public <T> Builder setSetting(@NotNull Settings.Business<T> setting, T value) {
             if (setting == null) return this;
             this.settings.put(setting, value);
             return this;
@@ -1885,7 +2040,7 @@ public final class Business implements ConfigurationSerializable {
 
             BUSINESS_CACHE.clear();
 
-            for (Settings.Business setting : Settings.Business.values()) settings.putIfAbsent(setting, setting.getDefaultValue());
+            for (Settings.Business<?> setting : Settings.Business.values()) settings.putIfAbsent(setting, setting.getDefaultValue());
 
             Business b = new Business(UUID.nameUUIDFromBytes(name.getBytes()), name, icon, owner,
                     null, null, null, settings, System.currentTimeMillis(), keywords, 0, new ArrayList<>());
