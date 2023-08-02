@@ -86,103 +86,103 @@ public interface CommandWrapper {
     String TYPE_TAG = "type";
 
 
-    Map<String, List<String>> COMMANDS = new HashMap<String, List<String>>() {{
-        put("ehelp", asList("nhelp", "novahelp", "econhelp", "economyhelp"));
-        put(ECON_TAG, asList("econ", "novaecon", "novaconomy", "necon"));
-        put("balance", asList("bal", "novabal", "nbal"));
-        put("nconvert", asList("nconv", "convert", "conv"));
-        put("exchange", asList("convertgui", "convgui", "exch"));
-        put("pay", asList("givemoney", "novapay", "econpay", "givebal"));
-        put("novaconomyreload", asList("novareload", "nreload", "econreload"));
-        put(BUSINESS_TAG, asList("nbusiness", "b", "nb"));
-        put("nbank", asList("bank", "globalbank", "gbank"));
-        put("createcheck", asList("nc", "check", "novacheck", "ncheck"));
-        put("balanceleaderboard", asList("bleaderboard", "nleaderboard", "bl", "nl", "novaleaderboard", "balboard", "novaboard"));
-        put("nbounty", asList("novabounty"));
-        put("taxevent", asList("customtax"));
-        put("nsettings", asList("novasettings"));
-        put("nrate", asList("novarate", "ratebusiness"));
-        put("npstatistics", asList("stats", "pstats", "pstatistics", "playerstats", "playerstatistics", "nstats", "nstatistics"));
-        put("novaconfig", asList("novaconomyconfig", "nconfig", "nconf"));
-        put("businessleaderboard", asList("bleaderboard", "bboard", "businessl", "bl", "businessboard"));
-        put(CORPORATION_TAG, asList("corp", "ncorp", "c"));
-        put("corporationchat", asList("corpchat", "cc", "ncc", "corporationc", "corpc", "cchat"));
-        put("market", asList("novamarket", "novam", "m"));
-        put("corporationleaderboard", asList("corpleaderboard", "cleaderboard", "corpboard", "cboard"));
-    }};
+    Map<String, List<String>> COMMANDS = ImmutableMap.<String, List<String>>builder()
+            .put("ehelp", asList("nhelp", "novahelp", "econhelp", "economyhelp"))
+            .put(ECON_TAG, asList("econ", "novaecon", "novaconomy", "necon"))
+            .put("balance", asList("bal", "novabal", "nbal"))
+            .put("nconvert", asList("nconv", "convert", "conv"))
+            .put("exchange", asList("convertgui", "convgui", "exch"))
+            .put("pay", asList("givemoney", "novapay", "econpay", "givebal"))
+            .put("novaconomyreload", asList("novareload", "nreload", "econreload"))
+            .put(BUSINESS_TAG, asList("nbusiness", "b", "nb"))
+            .put("nbank", asList("bank", "globalbank", "gbank"))
+            .put("createcheck", asList("nc", "check", "novacheck", "ncheck"))
+            .put("balanceleaderboard", asList("bleaderboard", "nleaderboard", "bl", "nl", "novaleaderboard", "balboard", "novaboard"))
+            .put("nbounty", asList("novabounty"))
+            .put("taxevent", asList("customtax"))
+            .put("nsettings", asList("novasettings"))
+            .put("nrate", asList("novarate", "ratebusiness"))
+            .put("npstatistics", asList("stats", "pstats", "pstatistics", "playerstats", "playerstatistics", "nstats", "nstatistics"))
+            .put("novaconfig", asList("novaconomyconfig", "nconfig", "nconf"))
+            .put("businessleaderboard", asList("bleaderboard", "bboard", "businessl", "bl", "businessboard"))
+            .put(CORPORATION_TAG, asList("corp", "ncorp", "c"))
+            .put("corporationchat", asList("corpchat", "cc", "ncc", "corporationc", "corpc", "cchat"))
+            .put("market", asList("novamarket", "novam", "m"))
+            .put("corporationleaderboard", asList("corpleaderboard", "cleaderboard", "corpboard", "cboard"))
+            .build();
 
-    Map<String, String> COMMAND_PERMISSION = new HashMap<String, String>() {{
-        put(ECON_TAG, "novaconomy.economy");
-        put("balance", "novaconomy.user.balance");
-        put("nconvert", "novaconomy.user.convert");
-        put("exchange", "novaconomy.user.convert");
-        put("pay", "novaconomy.user.pay");
-        put("novaconomyreload", "novaconomy.admin.config");
-        put(BUSINESS_TAG, "novaconomy.user.business");
-        put("createcheck", "novaconomy.user.check");
-        put("balanceleaderboard", "novaconomy.user.leaderboard");
-        put("nbounty", "novaconomy.user.bounty");
-        put("taxevent", "novaconomy.admin.tax_event");
-        put("nsettings", "novaconomy.user.settings");
-        put("nrate", "novaconomy.user.rate");
-        put("npstatistics", "novaconomy.user.stats");
-        put("novaconfig", "novaconomy.admin.config");
-        put("businessleaderboard", "novaconomy.user.leaderboard");
-        put(CORPORATION_TAG, "novaconomy.user.corporation");
-        put("corporationchat", "novaconomy.user.corporation");
-        put("market", "novaconomy.user.market");
-        put("corporationleaderboard", "novaconomy.user.leaderboard");
-    }};
+    Map<String, String> COMMAND_PERMISSION = ImmutableMap.<String, String>builder()
+            .put(ECON_TAG, "novaconomy.economy")
+            .put("balance", "novaconomy.user.balance")
+            .put("nconvert", "novaconomy.user.convert")
+            .put("exchange", "novaconomy.user.convert")
+            .put("pay", "novaconomy.user.pay")
+            .put("novaconomyreload", "novaconomy.admin.config")
+            .put(BUSINESS_TAG, "novaconomy.user.business")
+            .put("createcheck", "novaconomy.user.check")
+            .put("balanceleaderboard", "novaconomy.user.leaderboard")
+            .put("nbounty", "novaconomy.user.bounty")
+            .put("taxevent", "novaconomy.admin.tax_event")
+            .put("nsettings", "novaconomy.user.settings")
+            .put("nrate", "novaconomy.user.rate")
+            .put("npstatistics", "novaconomy.user.stats")
+            .put("novaconfig", "novaconomy.admin.config")
+            .put("businessleaderboard", "novaconomy.user.leaderboard")
+            .put(CORPORATION_TAG, "novaconomy.user.corporation")
+            .put("corporationchat", "novaconomy.user.corporation")
+            .put("market", "novaconomy.user.market")
+            .put("corporationleaderboard", "novaconomy.user.leaderboard")
+            .build();
 
-    Map<String, String> COMMAND_DESCRIPTION = new HashMap<String, String>() {{
-        put("ehelp", "Economy help");
-        put(ECON_TAG, "Manage economies or their balances");
-        put("balance", "Access your balances from all economies");
-        put("nconvert", "Convert one balance in an economy to another balance");
-        put("exchange", "Convert one balance in an economy to another balance (with a GUI)");
-        put("pay", "Pay another user");
-        put("novaconomyreload", "Reload Novaconomy Configuration");
-        put(BUSINESS_TAG, "Manage your Novaconomy Business");
-        put("nbank", "Interact with the Global Novaconomy Bank");
-        put("createcheck", "Create a Novaconomy Check redeemable for a certain amount of money");
-        put("balanceleaderboard", "View the top 15 balances in all or certain economies");
-        put("nbounty", "Manage your Novaconomy Bounties");
-        put("taxevent", "Call a Custom Tax Event from the configuration");
-        put("nsettings", "Manage your Novaconomy Settings");
-        put("nrate", "Rate a Novaconomy Business");
-        put("npstatistics", "View your Novaconomy Statistics");
-        put("novaconfig", "View or edit the Novaconomy Configuration");
-        put("businessleaderboard", "View the top 10 businesses in various categories");
-        put(CORPORATION_TAG, "Manage your Novaconomy Corporation");
-        put("corporationchat", "Chat with your Novaconomy Corporation");
-        put("market", "View and Manage the Novaconomy Market");
-        put("corporationleaderboard", "View the top 10 corporations in various categories");
-    }};
+    Map<String, String> COMMAND_DESCRIPTION = ImmutableMap.<String, String>builder()
+            .put("ehelp", "Economy help")
+            .put(ECON_TAG, "Manage economies or their balances")
+            .put("balance", "Access your balances from all economies")
+            .put("nconvert", "Convert one balance in an economy to another balance")
+            .put("exchange", "Convert one balance in an economy to another balance (with a GUI)")
+            .put("pay", "Pay another user")
+            .put("novaconomyreload", "Reload Novaconomy Configuration")
+            .put(BUSINESS_TAG, "Manage your Novaconomy Business")
+            .put("nbank", "Interact with the Global Novaconomy Bank")
+            .put("createcheck", "Create a Novaconomy Check redeemable for a certain amount of money")
+            .put("balanceleaderboard", "View the top 15 balances in all or certain economies")
+            .put("nbounty", "Manage your Novaconomy Bounties")
+            .put("taxevent", "Call a Custom Tax Event from the configuration")
+            .put("nsettings", "Manage your Novaconomy Settings")
+            .put("nrate", "Rate a Novaconomy Business")
+            .put("npstatistics", "View your Novaconomy Statistics")
+            .put("novaconfig", "View or edit the Novaconomy Configuration")
+            .put("businessleaderboard", "View the top 10 businesses in various categories")
+            .put(CORPORATION_TAG, "Manage your Novaconomy Corporation")
+            .put("corporationchat", "Chat with your Novaconomy Corporation")
+            .put("market", "View and Manage the Novaconomy Market")
+            .put("corporationleaderboard", "View the top 10 corporations in various categories")
+            .build();
 
-    Map<String, String> COMMAND_USAGE = new HashMap<String, String>() {{
-        put("ehelp", "/ehelp");
-        put(ECON_TAG, "/economy <create|delete|addbal|removebal|info> <args...>");
-        put("balance", "/balance");
-        put("nconvert", "/convert <econ-from> <econ-to> <amount>");
-        put("exchange", "/exchange <amount>");
-        put("pay", "/pay <player> <economy> <amount>");
-        put("novaconomyreload", "/novareload");
-        put(BUSINESS_TAG, "/business <create|delete|edit|stock|...> <args...>");
-        put("overridelanguages", "/overridelanguages");
-        put("createcheck", "/createcheck <economy> <amount>");
-        put("balanceleaderboard", "/balanceleaderboard [<economy>]");
-        put("nbounty", "/nbounty <owned|create|delete|self> <args...>");
-        put("taxevent", "/taxevent <event> [<self>]");
-        put("nsettings", "/nsettings [<business|personal>]");
-        put("nrate", "/nrate <business> [<comment>]");
-        put("npstatistics", "/npstatistics");
-        put("novaconfig", "/novaconfig <naturalcauses|reload|rl|...> <args...>");
-        put("businessleaderboard", "/businessleaderboard");
-        put(CORPORATION_TAG, "/nc <create|delete|edit|...> <args...>");
-        put("corporationchat", "/cc <message>");
-        put("market", "/market <open|sell|...>");
-        put("corporationleaderboard", "/corporationleaderboard");
-    }};
+    Map<String, String> COMMAND_USAGE = ImmutableMap.<String, String>builder()
+            .put("ehelp", "/ehelp")
+            .put(ECON_TAG, "/economy <create|delete|addbal|removebal|info> <args...>")
+            .put("balance", "/balance")
+            .put("nconvert", "/convert <econ-from> <econ-to> <amount>")
+            .put("exchange", "/exchange <amount>")
+            .put("pay", "/pay <player> <economy> <amount>")
+            .put("novaconomyreload", "/novareload")
+            .put(BUSINESS_TAG, "/business <create|delete|edit|stock|...> <args...>")
+            .put("overridelanguages", "/overridelanguages")
+            .put("createcheck", "/createcheck <economy> <amount>")
+            .put("balanceleaderboard", "/balanceleaderboard [<economy>]")
+            .put("nbounty", "/nbounty <owned|create|delete|self> <args...>")
+            .put("taxevent", "/taxevent <event> [<self>]")
+            .put("nsettings", "/nsettings [<business|personal>]")
+            .put("nrate", "/nrate <business> [<comment>]")
+            .put("npstatistics", "/npstatistics")
+            .put("novaconfig", "/novaconfig <naturalcauses|reload|rl|...> <args...>")
+            .put("businessleaderboard", "/businessleaderboard")
+            .put(CORPORATION_TAG, "/nc <create|delete|edit|...> <args...>")
+            .put("corporationchat", "/cc <message>")
+            .put("market", "/market <open|sell|...>")
+            .put("corporationleaderboard", "/corporationleaderboard")
+            .build();
 
     // Command Methods
 
@@ -1263,8 +1263,8 @@ public interface CommandWrapper {
                     Business b = Business.byOwner(p);
                     settings = genGUI(36, get("constants.settings.business"));
 
-                    for (Settings.Business sett : Settings.Business.values()) {
-                        boolean value = b.getSetting(sett);
+                    for (Settings.Business<?> sett : Settings.Business.values()) {
+                        Object value = b.getSetting(sett);
                         settings.addItem(func.apply(sett, value));
                     }
                     break;
