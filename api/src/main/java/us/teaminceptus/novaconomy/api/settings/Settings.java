@@ -339,7 +339,8 @@ public final class Settings {
                 return (T) Boolean.valueOf(value);
 
             if (clazz.isEnum())
-                return Enum.valueOf(clazz.asSubclass(Enum.class), value.toUpperCase());
+                // Will not compile without cast on Java 8
+                return (T) Enum.valueOf(clazz.asSubclass(Enum.class), value.toUpperCase());
 
             throw new IllegalArgumentException("Unknown Business Setting: " + key);
         }

@@ -1704,7 +1704,6 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
             .put("recovery_compass", 107.8)
             .put("glowstone_dust", 10.9)
             .put("netherite_upgrade_smithing_template", 115.99)
-            .put("brush", 12.24)
 
             // Building Blocks
             .put("oak_planks", 14.0)
