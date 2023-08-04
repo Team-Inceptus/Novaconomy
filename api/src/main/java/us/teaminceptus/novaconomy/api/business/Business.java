@@ -17,6 +17,7 @@ import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.io.BukkitObjectInputStream;
 import org.bukkit.util.io.BukkitObjectOutputStream;
 import org.jetbrains.annotations.NotNull;
@@ -701,6 +702,7 @@ public final class Business implements ConfigurationSerializable {
     @NotNull
     public Set<Chest> getSupplyChests() {
         Set<Location> chests = new HashSet<>();
+        if (supplyChests.isEmpty()) return ImmutableSet.of();
 
         Iterator<Location> it = supplyChests.iterator();
         while (it.hasNext()) {
@@ -766,17 +768,18 @@ public final class Business implements ConfigurationSerializable {
      * Adds the resources from all of the supply chests to the Business's inventory, calling {@link BusinessSupplyEvent}. This method will silently fail if the event is cancelled.
      */
     public void supply() {
-        Map<ItemStack, Chest> items = new HashMap<>();
+        List<Map.Entry<ItemStack, Chest>> items = new ArrayList<>();
         Set<Chest> supply = getSupplyChests();
+        if (supply.isEmpty()) return;
 
         for (Chest chest : supply) {
             for (ItemStack item : chest.getInventory().getContents()) {
                 if (item == null || item.getType() == Material.AIR || !isProduct(item)) continue;
-                items.put(item, chest);
+                items.add(new AbstractMap.SimpleEntry<>(item, chest));
             }
         }
 
-        BusinessSupplyEvent event = new BusinessSupplyEvent(this, items.keySet(), supply);
+        BusinessSupplyEvent event = new BusinessSupplyEvent(this, items.stream().map(Map.Entry::getKey).collect(Collectors.toSet()), supply);
         Bukkit.getPluginManager().callEvent(event);
 
         if (!event.isCancelled()) {
@@ -784,8 +787,9 @@ public final class Business implements ConfigurationSerializable {
                 if (item == null || item.getType() == Material.AIR || !isProduct(item)) continue;
                 addResource(item);
 
-                if (items.containsKey(item))
-                    items.get(item).getInventory().removeItem(item);
+                if (items.stream().anyMatch(e -> e.getKey().equals(item)))
+                    items.stream().filter(e -> e.getKey().equals(item))
+                            .forEach(e -> e.getValue().getInventory().removeItem(item));
             }
         }
     }
@@ -1502,6 +1506,17 @@ public final class Business implements ConfigurationSerializable {
     public static boolean exists(@Nullable String name) {
         if (name == null) return false;
         return byName(name) != null;
+    }
+
+    /**
+     * Fetches if any of the Businesses have claimed this Supply Chest.
+     * @param loc Supply Chest Location
+     * @return true if claimed, else false
+     */
+    public static boolean isSupplyClaimed(@Nullable Location loc) {
+        if (loc == null) return false;
+
+        return getBusinesses().stream().anyMatch(b -> b.getSupplyChests().stream().anyMatch(c -> c.getLocation().equals(loc)));
     }
 
     /**
