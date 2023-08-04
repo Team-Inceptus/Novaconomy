@@ -2,10 +2,8 @@ package us.teaminceptus.novaconomy;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.commons.lang.WordUtils;
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.Material;
-import org.bukkit.OfflinePlayer;
+import org.bukkit.*;
+import org.bukkit.block.Block;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
@@ -1617,6 +1615,33 @@ final class GUIManager implements Listener {
                 String nextCategory = CL_CATEGORIES.get(CL_CATEGORIES.indexOf(category) == CL_CATEGORIES.size() - 1 ? 0 : CL_CATEGORIES.indexOf(category) + 1);
 
                 getCommandWrapper().corporationLeaderboard(p, nextCategory);
+            })
+            .put("business:remove_supply_chest", (e, inv) -> {
+                Player p = (Player) e.getWhoClicked();
+                ItemStack item = e.getCurrentItem(); NBTWrapper nbt = of(item);
+
+                World w = Bukkit.getWorld(nbt.getUUID("world"));
+                int x = nbt.getInt("x"), y = nbt.getInt("y"), z = nbt.getInt("z");
+                Business bus = Business.byId(inv.getAttribute("business", UUID.class));
+
+                Block b = w.getBlockAt(x, y, z);
+                NovaInventory confirm = InventorySelector.confirm(p, () -> {
+                    bus.removeSupplyChest(b.getLocation());
+                    NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
+                    p.closeInventory();
+                });
+                confirm.setItem(13, Items.builder(Material.CHEST,
+                        meta -> meta.setDisplayName(ChatColor.BLUE + b.getWorld().getName() + ChatColor.GOLD + " | " + ChatColor.YELLOW + b.getX() + ", " + b.getY() + ", " + b.getZ())
+                ));
+                p.openInventory(confirm);
+                NovaSound.BLOCK_ENDER_CHEST_OPEN.play(p);
+            })
+            .put("business:supply_chests", (e, inv) -> {
+                Player p = (Player) e.getWhoClicked();
+                Business b = getBusiness(e.getCurrentItem());
+
+                p.openInventory(Generator.generateBusinessSupplyChests(b, SortingType.BLOCK_LOCATION_ASCENDING).get(0));
+                NovaSound.BLOCK_CHEST_OPEN.play(p);
             })
             .build();
 
