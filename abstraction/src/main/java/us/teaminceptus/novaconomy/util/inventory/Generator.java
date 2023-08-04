@@ -5,6 +5,8 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.block.Block;
+import org.bukkit.block.Chest;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemFlag;
@@ -78,6 +80,7 @@ public final class Generator {
                     generateBusinessData(b, viewer, advertising, s).get(fI));
 
             inv.setItem(18, sorter(sorter));
+            inv.setItem(10, 16, 46, 52, GUI_BACKGROUND);
 
             if (!b.getRatings().isEmpty()) inv.setItem(44, Items.LOADING);
             for (int j = 46; j < 53; j++) inv.setItem(j, null);
@@ -141,6 +144,19 @@ public final class Generator {
                     }
             );
 
+            ItemStack advInfo = builder(Material.BUCKET,
+                    meta -> meta.setDisplayName(ChatColor.AQUA + get("constants.business.advertising")),
+                    nbt -> nbt.setID("business:advertising")
+            );
+
+            ItemStack supplyChests = builder(Material.CHEST,
+                    meta -> meta.setDisplayName(ChatColor.GOLD + get("constants.business.supply_chests")),
+                    nbt -> {
+                        nbt.setID("business:supply_chests");
+                        nbt.set(BUSINESS_TAG, b.getUniqueId());
+                    }
+            );
+
             ItemStack settings = builder(Material.NETHER_STAR,
                     meta -> meta.setDisplayName(ChatColor.GREEN + get("constants.settings.business")),
                     nbt -> {
@@ -151,6 +167,8 @@ public final class Generator {
 
             if (b.isOwner(viewer)) {
                 inv.setItem(17, invites);
+                inv.setItem(26, advInfo);
+                inv.setItem(27, supplyChests);
                 inv.setItem(53, settings);
             }
 
@@ -231,11 +249,6 @@ public final class Generator {
                     }
             );
             inv.setItem(14, stats);
-
-            if (b.isOwner(viewer)) inv.setItem(26, builder(Material.BUCKET,
-                    meta -> meta.setDisplayName(ChatColor.AQUA + get("constants.business.advertising")),
-                    nbt -> nbt.setID("business:advertising")
-            ));
 
             Material kMaterial;
             try {
@@ -1049,6 +1062,63 @@ public final class Generator {
         }
 
         return inv;
+    }
+
+    public static List<NovaInventory> generateBusinessSupplyChests(@NotNull Business business, @NotNull SortingType<Block> sorter) {
+        List<NovaInventory> invs = new ArrayList<>();
+
+        List<Block> blocks = business.getSupplyChests()
+                .stream()
+                .map(Chest::getBlock)
+                .sorted(sorter)
+                .collect(Collectors.toList());
+
+        int limit = (business.getSupplyChests().size() / 28) + 1;
+
+        for (int i = 0; i < limit; i++) {
+            NovaInventory inv = genGUI(54, get("constants.business.supply_chests"));
+
+            final int fI = i;
+            inv.setItem(18, Items.sorter(sorter));
+
+            inv.setAttribute("business", business.getUniqueId());
+            inv.setAttribute("sorter", sorter);
+            inv.setAttribute("sorting_type", Block.class);
+            inv.setAttribute("sorting_function", (Function<SortingType<Block>, NovaInventory>) s -> generateBusinessSupplyChests(business, s).get(fI));
+
+            List<Block> chests = blocks.subList(i * 28, Math.min(blocks.size(), (i + 1) * 28));
+            chests.forEach(b -> inv.addItem(NBTWrapper.builder(Material.CHEST,
+                    meta -> {
+                        meta.setDisplayName(ChatColor.BLUE + b.getWorld().getName() + ChatColor.GOLD + " | " + ChatColor.YELLOW + b.getX() + ", " + b.getY() + ", " + b.getZ());
+                        meta.setLore(Arrays.asList(
+                                " ",
+                                ChatColor.YELLOW + get("constants.click_remove")
+                        ));
+                    }, nbt -> {
+                        nbt.setID("business:remove_supply_chest");
+                        nbt.set("world", b.getWorld().getUID());
+                        nbt.set("x", b.getX());
+                        nbt.set("y", b.getY());
+                        nbt.set("z", b.getZ());
+                    })
+                )
+            );
+
+            if (limit > 1) {
+                if (i > 0)
+                    inv.setItem(47, Items.prev("stored"));
+
+                if (i < (limit - 1))
+                    inv.setItem(53, Items.next("stored"));
+            }
+
+            invs.add(inv);
+        }
+
+        if (limit > 1)
+            for (NovaInventory inv : invs) inv.setAttribute("invs", invs);
+
+        return invs;
     }
 
     public static void modelData(@NotNull ItemStack item, int data) {
