@@ -43,12 +43,14 @@ import us.teaminceptus.novaconomy.api.economy.market.NovaMarket;
 import us.teaminceptus.novaconomy.api.economy.market.Receipt;
 import us.teaminceptus.novaconomy.api.events.AutomaticTaxEvent;
 import us.teaminceptus.novaconomy.api.events.InterestEvent;
+import us.teaminceptus.novaconomy.api.events.business.BusinessSupplyEvent;
 import us.teaminceptus.novaconomy.api.events.market.AsyncMarketRestockEvent;
 import us.teaminceptus.novaconomy.api.events.market.player.PlayerMarketPurchaseEvent;
 import us.teaminceptus.novaconomy.api.events.player.PlayerMissTaxEvent;
 import us.teaminceptus.novaconomy.api.player.Bounty;
 import us.teaminceptus.novaconomy.api.player.NovaPlayer;
 import us.teaminceptus.novaconomy.api.player.PlayerStatistics;
+import us.teaminceptus.novaconomy.api.settings.Settings;
 import us.teaminceptus.novaconomy.api.util.BusinessProduct;
 import us.teaminceptus.novaconomy.api.util.Price;
 import us.teaminceptus.novaconomy.api.util.Product;
@@ -340,6 +342,30 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
                 return;
             }
             runTaxes();
+        }
+    };
+
+    private static final Map<Business, Long> AUTOMATIC_SUPPLY_COUNT = new HashMap<>();
+
+    private static final BukkitRunnable AUTOMATIC_SUPPLY_RUNNABLE = new BukkitRunnable() {
+        @Override
+        public void run() {
+            for (Business b : Business.getBusinesses()) {
+                BusinessSupplyEvent.Interval interval = b.getSetting(Settings.Business.SUPPLY_INTERVAL);
+                long count = AUTOMATIC_SUPPLY_COUNT.getOrDefault(b, 0L);
+
+                if (count <= 0) {
+                    AUTOMATIC_SUPPLY_COUNT.put(b, interval.getTicks());
+                    new BukkitRunnable() {
+                        public void run() {
+                            b.supply();
+                        }
+                    }.runTask(getPlugin(Novaconomy.class));
+                    continue;
+                }
+
+                AUTOMATIC_SUPPLY_COUNT.put(b, count - 20);
+            }
         }
     };
 
@@ -953,6 +979,12 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
         TAXES_RUNNABLE.runTaskTimer(this, getTaxesTicks(), getTaxesTicks());
 
         for (Player p : Bukkit.getOnlinePlayers()) w.addPacketInjector(p);
+
+        AUTOMATIC_SUPPLY_COUNT.putAll(Business.getBusinesses().stream()
+                .map(b -> new AbstractMap.SimpleEntry<>(b, 0L))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
+        );
+        AUTOMATIC_SUPPLY_RUNNABLE.runTaskTimerAsynchronously(this, 0L, 20L);
 
         getLogger().info("Loaded Core Functionality...");
 
