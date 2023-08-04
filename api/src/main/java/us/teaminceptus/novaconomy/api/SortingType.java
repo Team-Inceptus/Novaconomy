@@ -1,6 +1,7 @@
 package us.teaminceptus.novaconomy.api;
 
 import org.bukkit.Material;
+import org.bukkit.block.Block;
 import org.jetbrains.annotations.NotNull;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.corporation.CorporationInvite;
@@ -176,6 +177,29 @@ public interface SortingType<T> extends Comparator<T> {
      * Sorts a material by whether it is edible.
      */
     SortingType<Material> MATERIAL_EDIBLES = (m1, m2) -> Boolean.compare(m1.isEdible(), m2.isEdible());
+
+    // Block
+
+    /**
+     * Sorts a block by its world name in ascending order.
+     */
+    SortingType<Block> BLOCK_WORLD_ASCENDING = (b1, b2) -> b1.getWorld().getName().compareTo(b2.getWorld().getName());
+
+    /**
+     * Sorts a block by its world name in descending order.
+     */
+    SortingType<Block> BLOCK_WORLD_DESCENDING = BLOCK_WORLD_ASCENDING.reversed();
+
+    /**
+     * Sorts a block by its location (excluding world) in ascending order.
+     */
+    SortingType<Block> BLOCK_LOCATION_ASCENDING = (b1, b2) ->
+            Comparator.comparingInt(Block::getX).thenComparingInt(Block::getY).thenComparingInt(Block::getZ).compare(b1, b2);
+
+    /**
+     * Sorts a block by its location (excluding world) in descending order.
+     */
+    SortingType<Block> BLOCK_LOCATION_DESCENDING = BLOCK_LOCATION_ASCENDING.reversed();
 
     @Override
     default SortingType<T> reversed() {
