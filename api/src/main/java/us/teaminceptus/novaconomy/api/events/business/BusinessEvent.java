@@ -22,6 +22,16 @@ public abstract class BusinessEvent extends Event {
         this.b = b;
     }
 
+    /**
+     * Constructs a BusinessEvent.
+     * @param b Business involved
+     * @param async Whether the event is asynchronous or not
+     */
+    public BusinessEvent(Business b, boolean async) {
+        super(async);
+        this.b = b;
+    }
+
     @Override
     public HandlerList getHandlers() {
         return HANDLERS;
