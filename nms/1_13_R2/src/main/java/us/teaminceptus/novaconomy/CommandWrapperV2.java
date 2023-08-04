@@ -467,6 +467,15 @@ final class CommandWrapperV2 implements CommandWrapper {
 
         @Subcommand("leave")
         public void leaveCorporation(Player p) { wrapper.leaveCorporation(p); }
+
+        @Subcommand({"supplychests", "schests", "chests"})
+        public void editSupplyChests(Player p) { wrapper.businessSupplyChests(p); }
+
+        @Subcommand({"addsupplychest", "addsupply"})
+        public void addSupplyChest(Player p) { wrapper.addBusinessSupplyChest(p); }
+
+        @Subcommand("supply")
+        public void supply(Player p) { wrapper.businessSupply(p); }
     }
 
     @Command({"nbank", "bank", "globalbank", "gbank"})

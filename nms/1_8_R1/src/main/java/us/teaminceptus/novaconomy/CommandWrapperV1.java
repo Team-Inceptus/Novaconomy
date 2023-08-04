@@ -1024,6 +1024,30 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         leaveCorporation(p);
                         break;
                     }
+                    case "supplychests":
+                    case "schests":
+                    case "chests": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
+                        businessSupplyChests(p);
+                        break;
+                    }
+                    case "addsupplychest":
+                    case "addsupply": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
+                        addBusinessSupplyChest(p);
+                        break;
+                    }
+                    case "supply": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
+                        businessSupply(p);
+                        break;
+                    }
                     default: {
                         sender.sendMessage(getMessage("error.argument"));
                         return false;

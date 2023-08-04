@@ -3,6 +3,9 @@ package us.teaminceptus.novaconomy.abstraction;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.bukkit.*;
+import org.bukkit.block.Block;
+import org.bukkit.block.Chest;
+import org.bukkit.block.DoubleChest;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.configuration.ConfigurationSection;
@@ -13,10 +16,7 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.ItemFlag;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.inventory.*;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.plugin.Plugin;
@@ -48,12 +48,14 @@ import us.teaminceptus.novaconomy.util.NovaSound;
 import us.teaminceptus.novaconomy.util.NovaUtil;
 import us.teaminceptus.novaconomy.util.NovaWord;
 import us.teaminceptus.novaconomy.util.inventory.Generator;
+import us.teaminceptus.novaconomy.util.inventory.InventorySelector;
 import us.teaminceptus.novaconomy.util.inventory.Items;
 
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -3775,6 +3777,90 @@ public interface CommandWrapper {
                 NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
             }
         }.runTaskAsynchronously(NovaConfig.getPlugin());
+    }
+
+    default void businessSupplyChests(Player p) {
+        if (!Business.exists(p)) {
+            p.sendMessage(getMessage("error.business.not_an_owner"));
+            return;
+        }
+
+        Business b = Business.byOwner(p);
+        p.openInventory(Generator.generateBusinessSupplyChests(b, SortingType.BLOCK_LOCATION_ASCENDING).get(0));
+        NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
+    }
+
+    default void addBusinessSupplyChest(Player p) {
+        if (!Business.exists(p)) {
+            p.sendMessage(getMessage("error.business.not_an_owner"));
+            return;
+        }
+
+        Business bus = Business.byOwner(p);
+        Block b = p.getTargetBlock((HashSet<Material>) null, 5);
+
+        if (!(b.getState() instanceof Chest)) {
+            p.sendMessage(getError("error.business.not_supply_chest"));
+            return;
+        }
+
+        Chest chest = (Chest) b.getState();
+
+        if (bus.getSupplyChests().stream().anyMatch(c -> {
+            AtomicBoolean bool = new AtomicBoolean(false);
+
+            bool.compareAndSet(false, c.getLocation().equals(chest.getLocation()));
+
+            if (c.getInventory().getHolder() instanceof DoubleChest) {
+                DoubleChest dc = (DoubleChest) c.getInventory().getHolder();
+
+                bool.compareAndSet(false, chest.getInventory().getHolder().equals(dc.getLeftSide()) || chest.getInventory().getHolder().equals(dc.getRightSide()));
+            }
+
+            return bool.get();
+        })) {
+            p.sendMessage(getError("error.business.already_supply_chest"));
+            return;
+        }
+
+        if (Business.isSupplyClaimed(b.getLocation())) {
+            p.sendMessage(getError("error.business.supply_already_claimed"));
+            return;
+        }
+
+        NovaInventory inv = InventorySelector.confirm(p, () -> {
+            bus.addSupplyChest(b.getLocation());
+            p.sendMessage(format(getSuccess("success.business.add_supply_chest"),
+                    ChatColor.BLUE + String.valueOf(b.getX()) + ChatColor.GREEN,
+                    ChatColor.BLUE + String.valueOf(b.getY()) + ChatColor.GREEN,
+                    ChatColor.BLUE + String.valueOf(b.getZ()) + ChatColor.GREEN
+            ));
+            p.closeInventory();
+        });
+
+        inv.setItem(13, Items.builder(Material.CHEST,
+                meta -> meta.setDisplayName(ChatColor.BLUE + b.getWorld().getName() + ChatColor.GOLD + " | " + ChatColor.YELLOW + b.getX() + ", " + b.getY() + ", " + b.getZ())
+        ));
+        p.openInventory(inv);
+        NovaSound.BLOCK_ENDER_CHEST_OPEN.play(p);
+    }
+
+    default void businessSupply(Player p) {
+        if (!Business.exists(p)) {
+            p.sendMessage(getMessage("error.business.not_an_owner"));
+            return;
+        }
+
+        Business b = Business.byOwner(p);
+
+        if (b.getSupplyChests().isEmpty()) {
+            p.sendMessage(getError("error.business.no_supply_chests"));
+            return;
+        }
+
+        b.supply();
+        p.sendMessage(getSuccess("success.business.supply"));
+        NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
     }
 
 }
