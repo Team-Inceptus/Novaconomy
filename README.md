@@ -7,6 +7,22 @@ With the freedom to have your own symbols, icons, conversion rates, and even int
 
 <h2 style="text-decoration: underline;">📓Changelog</h2>
 
+### 💸 1.8.0 Update: Ecstatic Economy
+- New Features
+  - **Unlimited Business Products**
+  - Corporation Leaderboard
+  - Tax Revampment
+    - Create Business & Natural Cause Income Tax
+    - Fully Configurable in `config.yml`
+  - Custom Model Data for Business & Corporation Icons
+  - **Automatic Business Supply**
+    - Mark Chests to automatically gain supplies from for your Business
+    - 2 Businesses can share Double Chests, One Business per Chest *Block*
+- Other Improvements
+  - Update to Treasury v2
+  - Change Command Aliases for Less Confusion
+  - Minor Optimization Changes
+
 ### 👔 1.7.0 Update: Cunning Corporations
 - New Features
   - **Heavy Optimization**
@@ -135,55 +151,65 @@ unlimited stock and set the prices to whatever you want!
 
 -----
 ## 💻 Novaconomy API
-[![](https://jitpack.io/v/Team-Inceptus/Novaconomy.svg)](https://jitpack.io/#Team-Inceptus/Novaconomy)
-[![](https://jitci.com/gh/Team-Inceptus/Novaconomy/svg)](https://jitci.com/gh/Team-Inceptus/Novaconomy)
-![GitHub release (latest by date)](https://img.shields.io/github/v/release/Team-Inceptus/Novaconomy)
-![GitHub last commit](https://img.shields.io/github/last-commit/Team-Inceptus/Novaconomy)
+![GitHub](https://img.shields.io/github/license/Team-Inceptus/Novaconomy)
+[![GitHub branch checks state](https://github.com/Team-Inceptus/Novaconomy/actions/workflows/build.yml/badge.svg)](https://github.com/Team-Inceptus/PlasmaEnchants/actions/)
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/Team-Inceptus/Novaconomy?style=plastic)
 
-Published as a JitPack repository
+### Installation
+
 <details>
     <summary>Maven</summary>
 
 ```xml
-	<project>
-	    <repositories>
-		    <repository>
-		        <id>jitpack.io</id>
-		        <url>https://jitpack.io</url>
-		    </repository>
-	    </repositories>
+<project>
+
+    <repositories>
+        <repository>
+            <id>codemc-snapshots</id>
+            <url>https://repo.codemc.io/repository/maven-snapshots/</url>
+        </repository>
+    </repositories>
+  
+    <!-- Include a Version like 1.8.0-SNAPSHOT -->
     
-        <dependencies>
-            <!-- Include just the API -->
-            <dependency>
-                <groupId>us.teaminceptus.Novaconomy</groupId>
-                <artifactId>novaconomy-api</artifactId>
-                <version>1.2.0</version>
-            </dependency>
-            <!-- Include the Actual Plugin -->
-            <dependency>
-                <groupId>us.teaminceptus.Novaconomy</groupId>
-                <artifactId>novaconomy</artifactId>
-                <version>1.2.0</version>
-            </dependency>
-        </dependencies>
-	</project>
+    <dependencies>
+        <dependency>
+            <groupId>us.teaminceptus.novaconomy</groupId>
+            <artifactId>novaconomy-api</artifactId>
+            <version>[VERSION]</version>
+        </dependency>
+    </dependencies>
+    
+</project>
 ```
 </details>
 
 <details>
-    <summary>Gradle</summary>
+    <summary>Gradle (Groovy)</summary>
 
 ```gradle
-		repositories {
-			maven { url 'https://jitpack.io' }
-		}
+repositories {
+    maven { url 'https://repo.codemc.io/repository/maven-snapshots/' }
+}
 
-	 	dependencies {
-	   	     implementation 'com.github.Novaconomy:novaconomy-api:Tag'
-	   	     // Include the Actual Plugin
-	   	     implementation 'us.teaminceptus.Novaconomy:novaconomy:1.2.0'
-		}	
+dependencies {
+    // Include a Version like 1.8.0-SNAPSHOT
+    implementation 'us.teaminceptus.novaconomy:novaconomy-api:[VERSION]'
+}
+```
+</details>
+
+<details>
+    <summary>Gradle (Kotlin DSL)</summary>
+
+```kotlin
+repositories {
+    maven(url = "https://repo.codemc.io/repository/maven-snapshots/")
+}
+
+dependencies {
+    implementation('us.teaminceptus.novaconomy:novaconomy-api:[VERSION]')
+}
 ```
 </details>
 
