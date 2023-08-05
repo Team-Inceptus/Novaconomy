@@ -17,8 +17,8 @@ dependencies {
     // Soft Dependencies
     compileOnly("me.clip:placeholderapi:2.11.3")
     compileOnly("com.github.MilkBowl:VaultAPI:1.7.1")
-    compileOnly("com.github.lokka30.treasury:treasury-api:1.2.1")
-    compileOnly("com.github.EssentialsX.Essentials:EssentialsX:2.20.0")
+    compileOnly("com.github.lokka30.treasury:treasury-api:2.0.0")
+    compileOnly("net.essentialsx:EssentialsX:2.20.0")
 
     // API
 
@@ -66,7 +66,7 @@ tasks {
             "1_19_R2",
             "1_19_R3",
             "1_20_R1"
-        ).forEach { dependsOn(":novaconomy-$it:jar") }
+        ).forEach { dependsOn(":novaconomy-$it:remap") }
     }
 
     withType<ProcessResources> {

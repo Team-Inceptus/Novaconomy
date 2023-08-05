@@ -242,6 +242,37 @@ Taxes:
     #   ignore: [] # List of Player Names, Vault Groups, or Permissions to exempt from taxes.
     #   deposit: true # Whether this event will deposit into the bank
 
+  # Taxes on various Income sources
+  Income:
+    # Natural Causes Income Tax
+    NaturalCauses:
+      # Whether Natural Causes Income Tax is enabled
+      Enabled: false
+
+      # The percentage tax to take for Natural Causes Income
+      Tax: 0.02
+
+      # List of Player Names, Vault Groups, or Permissions to exempt from taxes.
+      Ignore: []
+        # - TheHardWorker
+        # - my.plugin.taxes.none
+        # - MyVaultGroup
+
+    # Business Income Tax
+    Business:
+      # Whether Busiess Tax Income is enabled
+      Enabled: true
+
+      # The percentage tax to take for Business Income
+      Tax: 0.03
+
+      # List of Player Names, Business Names, Vault Groups, or Permissions to exempt from taxes.
+      Ignore: []
+        # - MrNoTaxes
+        # - OwnersFavoriteBusiness
+        # - my.plugin.taxes.none
+        # - MyVaultGroup
+
 # Bounties Secton
 Bounties:
 
@@ -317,6 +348,13 @@ Market:
   # - cobblestone
   # - Stone
   Blacklisted: []
+
+  # Add Items to the Market Catalogue
+  # Valid IDs: https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Material.html, Case Insensitive
+  CustomItems:
+    # - id: "minecraft:host_armor_trim_smithing_template"
+    #   category: 'rarities' # List of Categories: https://novaconomy.teaminceptus.us/us/teaminceptus/novaconomy/api/economy/market/MarketCategory.html:
+    #   price: 99.99
 
   # Market Restock Options
   Restock:

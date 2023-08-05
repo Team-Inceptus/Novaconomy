@@ -31,6 +31,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static java.util.Arrays.asList;
 import static us.teaminceptus.novaconomy.abstraction.Wrapper.*;
 import static us.teaminceptus.novaconomy.util.NovaUtil.format;
 
@@ -245,7 +246,7 @@ final class CommandWrapperV2 implements CommandWrapper {
     public void pay(Player p, Player target, @Optional Economy economy, @Default("0") @Range(min = 0) double amount) { CommandWrapper.super.pay(p, target, economy, amount); }
 
     @Override
-    @Command({"convert", "conv"})
+    @Command({"nconvert", "nconv", "convert", "conv"})
     @Description("Convert one balance in an economy to another balance")
     @Usage("/convert <econ-from> <econ-to> <amount>")
     @CommandPermission("novaconomy.user.convert")
@@ -279,8 +280,8 @@ final class CommandWrapperV2 implements CommandWrapper {
     public void balanceLeaderboard(Player p, @Optional Economy econ) { CommandWrapper.super.balanceLeaderboard(p, econ); }
 
     @Override
-    @Command({"settings", "novasettings", "nsettings"})
-    @Usage("/settings [<business|personal>]")
+    @Command({"novasettings", "nsettings"})
+    @Usage("/nsettings [<business|personal>]")
     @Description("Manage your Novaconomy Settings")
     @AutoComplete("@settings")
     public void settings(Player p, @Optional String section) { CommandWrapper.super.settings(p, section); }
@@ -294,15 +295,15 @@ final class CommandWrapperV2 implements CommandWrapper {
     public void callEvent(CommandSender sender, String event, @Default("true") boolean self) { CommandWrapper.super.callEvent(sender, event, self); }
 
     @Override
-    @Command({"rate", "novarate", "nrate", "ratebusiness"})
-    @Usage("/rate <business> [<comment>]")
+    @Command({"novarate", "nrate", "ratebusiness"})
+    @Usage("/nrate <business> [<comment>]")
     @Description("Rate a business")
     @CommandPermission("novaconomy.user.rate")
     public void rate(Player p, Business business, @Default("") String comment) { CommandWrapper.super.rate(p, business, comment); }
 
     @Override
-    @Command({"statistics", "stats", "pstats", "pstatistics", "playerstats", "playerstatistics", "nstats", "nstatistics"})
-    @Usage("/statistics")
+    @Command({"npstatistics", "stats", "pstats", "pstatistics", "playerstats", "playerstatistics", "nstats", "nstatistics"})
+    @Usage("/nstatistics")
     @Description("View your Novaconomy Statistics")
     @CommandPermission("novaconomy.user.stats")
     public void playerStatistics(Player p, @Default("me") OfflinePlayer target) { CommandWrapper.super.playerStatistics(p, target); }
@@ -466,6 +467,15 @@ final class CommandWrapperV2 implements CommandWrapper {
 
         @Subcommand("leave")
         public void leaveCorporation(Player p) { wrapper.leaveCorporation(p); }
+
+        @Subcommand({"supplychests", "schests", "chests"})
+        public void editSupplyChests(Player p) { wrapper.businessSupplyChests(p); }
+
+        @Subcommand({"addsupplychest", "addsupply"})
+        public void addSupplyChest(Player p) { wrapper.addBusinessSupplyChest(p); }
+
+        @Subcommand("supply")
+        public void supply(Player p) { wrapper.businessSupply(p); }
     }
 
     @Command({"nbank", "bank", "globalbank", "gbank"})
@@ -584,9 +594,9 @@ final class CommandWrapperV2 implements CommandWrapper {
         public void setClickableReward(CommandSender sender, Economy economy, @Default("true") boolean clickableReward) { wrapper.setEconomyRewardable(sender, economy, clickableReward); }
     }
 
-    @Command({"bounty", "novabounty", "nbounty"})
+    @Command({"novabounty", "nbounty"})
     @Description("Manage your Novaconomy Bounties")
-    @Usage("/bounty <owned|create|delete|self> <args...>")
+    @Usage("/nbounty <owned|create|delete|self> <args...>")
     private static final class BountyCommands {
 
         private final CommandWrapperV2 wrapper;
@@ -828,6 +838,10 @@ final class CommandWrapperV2 implements CommandWrapper {
         public void corporationSettings(Player p) {
             wrapper.settings(p, CORPORATION_TAG);
         }
+
+        @Subcommand({"leaderboard", "lboard", "lb"})
+        @CommandPermission("novaconomy.user.leaderboard")
+        public void corporationLeaderboard(Player p) { wrapper.corporationLeaderboard(p, "ratings"); }
     }
 
     @Override
@@ -838,6 +852,13 @@ final class CommandWrapperV2 implements CommandWrapper {
     public void corporationChat(Player p, String message) {
         CommandWrapper.super.corporationChat(p, message);
     }
+
+
+    @Command({"corporationleaderboard", "corpleaderboard", "cleaderboard", "corpboard", "cboard"})
+    @Usage("/cleaderboard [category]")
+    @Description("View the Top 10 Corporations in various categories")
+    @CommandPermission("novaconomy.user.leaderboard")
+    public void corporationLeaderboard(Player p) { CommandWrapper.super.corporationLeaderboard(p, "ratings"); }
 
     @Command({"market", "novamarket", "novam", "m"})
     @Usage("/market <open|sell|...>")

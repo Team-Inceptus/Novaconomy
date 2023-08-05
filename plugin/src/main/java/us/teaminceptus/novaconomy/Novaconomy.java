@@ -17,6 +17,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.bukkit.configuration.serialization.ConfigurationSerialization;
 import org.bukkit.entity.Player;
+import org.bukkit.permissions.PermissionAttachment;
 import org.bukkit.permissions.PermissionAttachmentInfo;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -36,16 +37,20 @@ import us.teaminceptus.novaconomy.api.business.Rating;
 import us.teaminceptus.novaconomy.api.corporation.Corporation;
 import us.teaminceptus.novaconomy.api.corporation.CorporationInvite;
 import us.teaminceptus.novaconomy.api.economy.Economy;
+import us.teaminceptus.novaconomy.api.economy.market.MarketCategory;
+import us.teaminceptus.novaconomy.api.economy.market.MarketItem;
 import us.teaminceptus.novaconomy.api.economy.market.NovaMarket;
 import us.teaminceptus.novaconomy.api.economy.market.Receipt;
 import us.teaminceptus.novaconomy.api.events.AutomaticTaxEvent;
 import us.teaminceptus.novaconomy.api.events.InterestEvent;
+import us.teaminceptus.novaconomy.api.events.business.BusinessSupplyEvent;
 import us.teaminceptus.novaconomy.api.events.market.AsyncMarketRestockEvent;
 import us.teaminceptus.novaconomy.api.events.market.player.PlayerMarketPurchaseEvent;
 import us.teaminceptus.novaconomy.api.events.player.PlayerMissTaxEvent;
 import us.teaminceptus.novaconomy.api.player.Bounty;
 import us.teaminceptus.novaconomy.api.player.NovaPlayer;
 import us.teaminceptus.novaconomy.api.player.PlayerStatistics;
+import us.teaminceptus.novaconomy.api.settings.Settings;
 import us.teaminceptus.novaconomy.api.util.BusinessProduct;
 import us.teaminceptus.novaconomy.api.util.Price;
 import us.teaminceptus.novaconomy.api.util.Product;
@@ -285,10 +290,10 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
             }
 
             previousBals.put(np, previousBal);
-            if (amount.size() > 0) amounts.put(np, amount);
+            if (!amount.isEmpty()) amounts.put(np, amount);
         }
 
-        if (amounts.size() < 1) return;
+        if (amounts.isEmpty()) return;
         AutomaticTaxEvent event = new AutomaticTaxEvent(previousBals, amounts);
         Bukkit.getPluginManager().callEvent(event);
 
@@ -337,6 +342,30 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
                 return;
             }
             runTaxes();
+        }
+    };
+
+    private static final Map<Business, Long> AUTOMATIC_SUPPLY_COUNT = new HashMap<>();
+
+    private static final BukkitRunnable AUTOMATIC_SUPPLY_RUNNABLE = new BukkitRunnable() {
+        @Override
+        public void run() {
+            for (Business b : Business.getBusinesses()) {
+                BusinessSupplyEvent.Interval interval = b.getSetting(Settings.Business.SUPPLY_INTERVAL);
+                long count = AUTOMATIC_SUPPLY_COUNT.getOrDefault(b, 0L);
+
+                if (count <= 0) {
+                    AUTOMATIC_SUPPLY_COUNT.put(b, interval.getTicks());
+                    new BukkitRunnable() {
+                        public void run() {
+                            b.supply();
+                        }
+                    }.runTask(getPlugin(Novaconomy.class));
+                    continue;
+                }
+
+                AUTOMATIC_SUPPLY_COUNT.put(b, count - 20);
+            }
         }
     };
 
@@ -951,6 +980,12 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 
         for (Player p : Bukkit.getOnlinePlayers()) w.addPacketInjector(p);
 
+        AUTOMATIC_SUPPLY_COUNT.putAll(Business.getBusinesses().stream()
+                .map(b -> new AbstractMap.SimpleEntry<>(b, 0L))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
+        );
+        AUTOMATIC_SUPPLY_RUNNABLE.runTaskTimerAsynchronously(this, 0L, 20L);
+
         getLogger().info("Loaded Core Functionality...");
 
         if (w.getCommandVersion() == 0) {
@@ -959,7 +994,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
         }
 
         // Update Checker
-        new UpdateChecker(this, UpdateCheckSource.SPIGOT, "100503")
+        new UpdateChecker(this, UpdateCheckSource.GITHUB_RELEASE_TAG, "Team-Inceptus/Novaconomy")
                 .setDownloadLink("https://www.spigotmc.org/resources/novaconomy.100503/")
                 .setNotifyOpsOnJoin(true)
                 .setSupportLink("https://discord.gg/WVFNWEvuqX")
@@ -1381,6 +1416,132 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
     }
 
     @Override
+    public boolean isNaturalCauseIncomeTaxEnabled() {
+        return config.getBoolean("Taxes.Income.NaturalCauses.Enabled");
+    }
+
+    @Override
+    public void setNaturalCauseIncomeTaxEnabled(boolean enabled) {
+        config.set("Taxes.Income.NaturalCauses.Enabled", enabled);
+        saveConfig();
+    }
+
+    @Override
+    public double getNaturalCauseIncomeTax() {
+        return config.getDouble("Taxes.Income.NaturalCauses.Tax", 0.02);
+    }
+
+    @Override
+    public void setNaturalCauseIncomeTax(double tax) {
+        config.set("Taxes.Income.NaturalCauses.Tax", tax);
+        saveConfig();
+    }
+
+    @Override
+    public @NotNull List<String> getNaturalCauseIncomeTaxIgnoring() {
+        return config.getStringList("Taxes.Income.NaturalCauses.Ignore");
+    }
+
+    @Override
+    public void setNaturalCauseIncomeTaxIgnoring(@Nullable List<String> exempt) {
+        config.set("Taxes.Income.NaturalCauses.Ignore", exempt == null ? new ArrayList<>() : exempt);
+        saveConfig();
+    }
+
+    @Override
+    public boolean isNaturalCauseIncomeTaxIgnoring(@NotNull OfflinePlayer p) {
+        List<String> ignore = getNaturalCauseIncomeTaxIgnoring();
+        AtomicBoolean state = new AtomicBoolean();
+
+        state.compareAndSet(false, ignore.contains("OPS") && p.isOp());
+        state.compareAndSet(false, ignore.contains("NONOPS") && !p.isOp());
+        state.compareAndSet(false, ignore.stream().anyMatch(p.getName()::equals));
+
+        if (p.isOnline()) {
+            Player op = p.getPlayer();
+            state.compareAndSet(false, ignore.stream().anyMatch(
+                    s -> op.getEffectivePermissions()
+                            .stream()
+                            .map(PermissionAttachmentInfo::getAttachment)
+                            .filter(Objects::nonNull)
+                            .map(PermissionAttachment::getPermissions)
+                            .flatMap(m -> m.entrySet().stream())
+                            .filter(e -> e.getValue() != null)
+                            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
+                            .get(s)
+            ));
+
+            if (hasVault()) state.compareAndSet(false, VaultChat.isInGroup(ignore, op));
+        }
+
+        return state.get();
+    }
+
+    @Override
+    public boolean isBusinessIncomeTaxEnabled() {
+        return config.getBoolean("Taxes.Income.Business.Enabled");
+    }
+
+    @Override
+    public void setBusinessIncomeTaxEnabled(boolean enabled) {
+        config.set("Taxes.Income.Business.Enabled", enabled);
+        saveConfig();
+    }
+
+    @Override
+    public double getBusinessIncomeTax() {
+        return config.getDouble("Taxes.Income.Business.Tax", 0.03);
+    }
+
+    @Override
+    public void setBusinessIncomeTax(double tax) {
+        config.set("Taxes.Income.Business.Tax", tax);
+        saveConfig();
+    }
+
+    @Override
+    public @NotNull List<String> getBusinessIncomeTaxIgnoring() {
+        return config.getStringList("Taxes.Income.Business.Ignore");
+    }
+
+    @Override
+    public void setBusinessIncomeTaxIgnoring(@Nullable List<String> exempt) {
+        config.set("Taxes.Income.Business.Ignore", exempt == null ? new ArrayList<>() : exempt);
+        saveConfig();
+    }
+
+    @Override
+    public boolean isBusinessIncomeTaxIgnoring(@NotNull Business b) {
+        OfflinePlayer p = b.getOwner();
+        List<String> ignore = getNaturalCauseIncomeTaxIgnoring();
+        AtomicBoolean state = new AtomicBoolean();
+
+        state.compareAndSet(false, ignore.contains("OPS") && p.isOp());
+        state.compareAndSet(false, ignore.contains("NONOPS") && !p.isOp());
+        state.compareAndSet(false, ignore.stream().anyMatch(b.getName()::equals));
+        state.compareAndSet(false, ignore.stream().anyMatch(p.getName()::equals));
+
+        if (p.isOnline()) {
+            Player op = p.getPlayer();
+            state.compareAndSet(false, ignore.stream().anyMatch(
+                    s -> op.getEffectivePermissions()
+                            .stream()
+                            .map(PermissionAttachmentInfo::getAttachment)
+                            .filter(Objects::nonNull)
+                            .map(PermissionAttachment::getPermissions)
+                            .flatMap(m -> m.entrySet().stream())
+                            .filter(e -> e.getValue() != null)
+                            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
+                            .get(s)
+            ));
+
+            if (hasVault()) state.compareAndSet(false, VaultChat.isInGroup(ignore, op));
+        }
+
+        return state.get();
+    }
+
+    @Override
     public boolean hasMiningIncrease() {
         return ncauses.getBoolean("MiningIncrease", true);
     }
@@ -1574,6 +1735,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
             .put("clock", 13.25)
             .put("recovery_compass", 107.8)
             .put("glowstone_dust", 10.9)
+            .put("netherite_upgrade_smithing_template", 115.99)
 
             // Building Blocks
             .put("oak_planks", 14.0)
@@ -1688,6 +1850,8 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
             .put("podzol", 3.45)
             .put("dripleaf", 8.35)
             .put("small_dripleaf", 4.23)
+            .put("torchflower", 9.49)
+            .put("pink_petals", 6.25)
 
             .put("torch", 19.46)
             .put("glass", 5.6)
@@ -1726,6 +1890,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
             .put("powdered_concrete", 13.2)
             .put("obsidian", 29.33)
             .put("tuff", 21.4)
+            .put("bamboo_block", 12.37)
 
             .put("netherrack", 0.7)
             .put("glowstone", 9.1)
@@ -1885,7 +2050,19 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
         if (m == null || !w.isItem(m)) throw new IllegalArgumentException("Material must be valid item");
         if (getPriceOverrides().containsKey(m)) return getPriceOverrides().get(m);
 
-        double base = prices.getOrDefault(m.name().toLowerCase(), -1D);
+        double base = -1D;
+
+        if (prices.containsKey(m.name().toLowerCase()))
+            base = prices.get(m.name().toLowerCase());
+
+        if (getCustomItems().stream().anyMatch(i -> i.getItem() == m))
+            base = getCustomItems()
+                    .stream()
+                    .filter(i -> i.getItem() == m)
+                    .findFirst()
+                    .map(MarketItem::getPrice)
+                    .orElse(-1D);
+
         if (base == -1) throw new IllegalArgumentException("Material not sold on market");
 
         return base;
@@ -1894,13 +2071,19 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
     @Override
     @NotNull
     public Set<Material> getAllSold() {
-        return ImmutableSet.copyOf(prices.keySet()
-                .stream()
+        Set<Material> sold = prices.keySet().stream()
                 .map(Material::matchMaterial)
                 .filter(Objects::nonNull)
                 .filter(w::isItem)
+                .collect(Collectors.toSet());
+
+        sold.addAll(getCustomItems()
+                .stream()
+                .map(MarketItem::getItem)
                 .collect(Collectors.toList())
         );
+
+        return ImmutableSet.copyOf(sold);
     }
 
     @Override
@@ -2076,6 +2259,60 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
                 .map(Material::name)
                 .collect(Collectors.toList())
         );
+        saveConfig();
+    }
+
+    @Override
+    public @NotNull Set<MarketItem> getCustomItems() {
+        return ImmutableSet.copyOf(config.getMapList("Market.CustomItems")
+                .stream()
+                .map(m -> {
+                    Material mat = Material.matchMaterial(m.get("id").toString());
+                    if (mat == null) throw new IllegalArgumentException("Invalid Material '" + mat + "'");
+
+                    MarketCategory category;
+                    try {
+                        category = MarketCategory.valueOf(m.get("category").toString().toUpperCase());
+                    } catch (IllegalArgumentException e) {
+                        throw new IllegalArgumentException("Invalid category for '" + mat + "': " + m.get("category"));
+                    }
+
+                    String price = m.get("price").toString();
+                    double d;
+                    try {
+                        d = Double.parseDouble(price);
+                        if (d < 0) throw new IllegalArgumentException("Price for '" + mat + "' must be positive");
+                    } catch (NumberFormatException e) {
+                        throw new IllegalArgumentException("Invalid price for '" + mat + "': " + price);
+                    }
+
+                    return new MarketItem(mat, category, d);
+                })
+                .collect(Collectors.toSet()));
+    }
+
+    @Override
+    public void setCustomItems(@NotNull Iterable<MarketItem> items) {
+        config.set("Market.CustomItems", ImmutableList.copyOf(items)
+                .stream()
+                .map(e -> {
+                    Map<String, Object> m = new HashMap<>();
+                    m.put("id", e.getItem().name().toLowerCase());
+                    m.put("price", e.getPrice());
+                    m.put("category", e.getCategory().name().toLowerCase());
+                    return m;
+                })
+                .collect(Collectors.toList())
+        );
+        saveConfig();
+    }
+
+    @Override
+    public void removeCustomItem(@NotNull Material material) {
+        List<Map<?, ?>> items = config.getMapList("Market.CustomItems");
+        items.removeIf(m -> m.get("id").equals(material.name()));
+
+        config.set("Market.CustomItems", items);
         saveConfig();
     }
 

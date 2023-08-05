@@ -1,5 +1,6 @@
 package us.teaminceptus.novaconomy.api.economy.market;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import org.bukkit.Material;
@@ -358,4 +359,36 @@ public interface NovaMarket {
     default void setBlacklistedMaterials(@NotNull Material... materials) {
          if (materials != null) setBlacklistedMaterials(Arrays.asList(materials));
     }
+
+    /**
+     * Fetches an immutable set of all of the items additionally added to the Novaconomy Market.
+     * @return Set of Market Items
+     */
+    @NotNull
+    Set<MarketItem> getCustomItems();
+
+    /**
+     * Sets the custom items that will be added to the Novaconomy Market.
+     * @param items Map of Materials to their Price
+     */
+    void setCustomItems(@NotNull Iterable<MarketItem> items);
+
+    /**
+     * Adds a custom item to the Novaconomy Market.
+     * @param material Material to add
+     * @param price Price of the Material
+     */
+    default void addCustomItem(@NotNull Material material, @NotNull MarketCategory category, double price) {
+        setCustomItems(ImmutableSet.<MarketItem>builder()
+                .addAll(getCustomItems())
+                .add(new MarketItem(material, category, price))
+                .build()
+        );
+    }
+
+    /**
+     * Remove a custom item from the Novaconomy Market.
+     * @param material Material to remove
+     */
+    void removeCustomItem(@NotNull Material material);
 }

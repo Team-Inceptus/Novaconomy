@@ -6,6 +6,7 @@ import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.corporation.Corporation.JoinType;
+import us.teaminceptus.novaconomy.api.events.business.BusinessSupplyEvent;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -14,6 +15,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.function.BooleanSupplier;
+import java.util.function.Supplier;
 
 /**
  * Represents a Setting Category or global Settings
@@ -168,54 +170,82 @@ public final class Settings {
     /**
      * Represents Business Settings
      */
-    public enum Business implements NovaSetting<Boolean> {
+    public static final class Business<T> implements NovaSetting<T> {
         /**
          * Whether the owner of the Business is public.
          */
-        PUBLIC_OWNER("constants.settings.name.public_owner"),
+        public static final Business<Boolean> PUBLIC_OWNER = ofBoolean("public_owner", "constants.settings.name.public_owner", true);
         /**
          * Whether the statistics of the Business are public.
          */
-        PUBLIC_STATISTICS("constants.settings.name.public_stats"),
+        public static final Business<Boolean> PUBLIC_STATISTICS = ofBoolean("public_statistics", "constants.settings.name.public_stats", true);
         /**
          * Whether consumers of the Business can teleport to its home.
          */
         @SettingDescription("settings.business.home")
-        PUBLIC_HOME("constants.settings.name.public_home"),
+        public static final Business<Boolean> PUBLIC_HOME = ofBoolean("public_home", "constants.settings.name.public_home", true);
         /**
          * Whether the consumers of the Business can see the rating.
          */
         @SettingDescription("settings.business.rating")
-        PUBLIC_RATING("constants.settings.name.public_rating"),
+        public static final Business<Boolean> PUBLIC_RATING = ofBoolean("public_rating", "constants.settings.name.public_rating", true);
         /**
          * Whether this business is discoverable.
          */
         @SettingDescription("settings.business.discovery")
-        PUBLIC_DISCOVERY("constants.settings.name.public_discovery"),
+        public static final Business<Boolean> PUBLIC_DISCOVERY = ofBoolean("public_discovery", "constants.settings.name.public_discovery", true);
         /**
          * Whether the Business will automatically deposit 15% of its earnings into its advertising balance.
          */
         @SettingDescription("settings.business.deposit")
-        AUTOMATIC_DEPOSIT("constants.settings.name.automatic_deposit", false),
+        public static final Business<Boolean> AUTOMATIC_DEPOSIT = ofBoolean("automatic_deposit", "constants.settings.name.automatic_deposit", false);
         /**
          * Whether the Business allows advertising from other businesses.
          */
         @SettingDescription("settings.business.advertising")
-        EXTERNAL_ADVERTISEMENT("constants.settings.name.advertisement", NovaConfig.getConfiguration()::isAdvertisingEnabled)
-        ;
+        public static final Business<Boolean> EXTERNAL_ADVERTISEMENT = ofBoolean("external_advertisement", "constants.settings.name.advertisement", NovaConfig.getConfiguration()::isAdvertisingEnabled);
 
-        private final BooleanSupplier defaultValue;
+        /**
+         * The interval at which the Business will supply its stock from its supply locations.
+         * @see BusinessSupplyEvent.Interval
+         */
+        @SettingDescription("settings.business.supply_interval")
+        public static final Business<BusinessSupplyEvent.Interval> SUPPLY_INTERVAL = ofEnum("supply_interval","constants.settings.name.supply_interval", BusinessSupplyEvent.Interval.class, BusinessSupplyEvent.Interval.HOUR);
+
+        private final String key;
+        private final Supplier<T> defaultValue;
         private final String dKey;
+        private final Set<T> possibleValues;
+        private final Class<T> clazz;
 
-        Business(String dKey, boolean defaultV) { this(dKey, () -> defaultV); }
+        private Business(String key, String dKey, Class<T> clazz, Supplier<T> defaultValue, Set<T> possibleValues) {
+            this.key = key;
+            this.dKey = dKey;
+            this.defaultValue = defaultValue;
+            this.possibleValues = possibleValues;
+            this.clazz = clazz;
+        }
 
-        Business(String dKey) { this(dKey, true); }
+        private static <T extends Enum<T>> Business<T> ofEnum(String key, String dKey, Class<T> clazz, T defaultValue) {
+            return new Business<>(key, dKey, clazz, () -> defaultValue, ImmutableSet.copyOf(defaultValue.getDeclaringClass().getEnumConstants()));
+        }
 
-        Business(String dKey, BooleanSupplier defaultV) { this.dKey = dKey; this.defaultValue = defaultV; }
+        private static Business<Boolean> ofBoolean(String key, String dKey, boolean defaultValue) {
+            return new Business<>(key, dKey, Boolean.class, () -> defaultValue, ImmutableSet.of(true, false));
+        }
+
+        private static Business<Boolean> ofBoolean(String key, String dKey, Supplier<Boolean> defaultValue) {
+            return new Business<>(key, dKey, Boolean.class, defaultValue, ImmutableSet.of(true, false));
+        }
 
         @Override
-        public Boolean getDefaultValue() {
-            return defaultValue.getAsBoolean();
+        public T getDefaultValue() {
+            return defaultValue.get();
+        }
+
+        @Override
+        public String name() {
+            return key.toUpperCase();
         }
 
         @NotNull
@@ -237,17 +267,82 @@ public final class Settings {
         }
 
         @Override
-        public Set<Boolean> getPossibleValues() {
-            return ImmutableSet.of(true, false);
+        public Set<T> getPossibleValues() {
+            return possibleValues;
+        }
+
+        /**
+         * Fetches an array of all of the Corporation Settings.
+         * @return An array of all of the Corporation Settings.
+         */
+        @NotNull
+        public static Business<?>[] values() {
+            List<Business<?>> list = new ArrayList<>();
+
+            try {
+                for (Field f : Business.class.getDeclaredFields()) {
+                    if (!Modifier.isPublic(f.getModifiers())) continue;
+                    if (!Modifier.isStatic(f.getModifiers())) continue;
+                    if (!Business.class.isAssignableFrom(f.getType())) continue;
+
+                    list.add((Business<?>) f.get(null));
+                }
+            } catch (ReflectiveOperationException e) {
+                NovaConfig.print(e);
+            }
+
+            return list.toArray(new Business[0]);
+        }
+
+        /**
+         * Fetches the Corporation Setting with the given {@linkplain #name name}.
+         * @param name The name of the Corporation Setting.
+         * @return Setting Found, or null if not found
+         */
+        @Nullable
+        public static Business<?> valueOf(@Nullable String name) {
+            if (name == null) return null;
+
+            return Arrays.stream(values())
+                    .filter(c -> c.name().equalsIgnoreCase(name))
+                    .findFirst()
+                    .orElse(null);
+        }
+
+        /**
+         * Fetches the Business Setting with the given {@linkplain #name name} and {@linkplain #getType type}.
+         * @param <T> Type of the Setting
+         * @param name The name of the Corporation Setting.
+         * @param clazz The type of the Corporation Setting.
+         * @return Setting Found, or null if not found
+         */
+        public static <T> Business<T> valueOf(@Nullable String name, @Nullable Class<T> clazz) {
+            if (clazz == null) return null;
+
+            return Arrays.stream(values())
+                    .filter(b -> b.name().equalsIgnoreCase(name))
+                    .filter(b -> clazz == null || clazz.isAssignableFrom(b.getType()))
+                    .map(b -> (Business<T>) b)
+                    .findFirst()
+                    .orElse(null);
         }
 
         @Override
-        public Class<Boolean> getType() { return Boolean.class; }
+        public Class<T> getType() {
+            return clazz;
+        }
 
         @NotNull
         @Override
-        public Boolean parseValue(@NotNull String value) {
-            return Boolean.parseBoolean(value);
+        public T parseValue(@NotNull String value) {
+            if (Boolean.class.isAssignableFrom(clazz) || Boolean.TYPE.isAssignableFrom(clazz))
+                return (T) Boolean.valueOf(value);
+
+            if (clazz.isEnum())
+                // Will not compile without cast on Java 8
+                return (T) Enum.valueOf(clazz.asSubclass(Enum.class), value.toUpperCase());
+
+            throw new IllegalArgumentException("Unknown Business Setting: " + key);
         }
     }
 

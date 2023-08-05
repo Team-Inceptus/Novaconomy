@@ -2,9 +2,7 @@ package us.teaminceptus.novaconomy.treasury;
 
 import me.lokka30.treasury.api.economy.account.PlayerAccount;
 import me.lokka30.treasury.api.economy.currency.Currency;
-import me.lokka30.treasury.api.economy.response.EconomySubscriber;
 import me.lokka30.treasury.api.economy.transaction.EconomyTransaction;
-import me.lokka30.treasury.api.economy.transaction.EconomyTransactionInitiator;
 import org.jetbrains.annotations.NotNull;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.player.NovaPlayer;
@@ -13,9 +11,10 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.temporal.Temporal;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
-class TreasuryPlayerAccount implements PlayerAccount {
+final class TreasuryPlayerAccount implements PlayerAccount {
 
     private final NovaPlayer np;
 
@@ -27,7 +26,7 @@ class TreasuryPlayerAccount implements PlayerAccount {
     private static final Map<UUID, List<EconomyTransaction>> treasuryTrans = new HashMap<>();
 
     @Override
-    public @NotNull UUID getUniqueId() {
+    public @NotNull UUID identifier() {
         return np.getPlayer().getUniqueId();
     }
 
@@ -37,38 +36,33 @@ class TreasuryPlayerAccount implements PlayerAccount {
     }
 
     @Override
-    public void retrieveBalance(@NotNull Currency c, @NotNull EconomySubscriber<BigDecimal> sub) {
-        sub.succeed(BigDecimal.valueOf(np.getBalance(TreasuryCurrency.getEconomy(c))));
+    public CompletableFuture<BigDecimal> retrieveBalance(@NotNull Currency c) {
+        return CompletableFuture.completedFuture(BigDecimal.valueOf(np.getBalance(TreasuryCurrency.getEconomy(c))));
     }
 
     @Override
-    public void setBalance(@NotNull BigDecimal amount, @NotNull EconomyTransactionInitiator<?> initiator, @NotNull Currency c, @NotNull EconomySubscriber<BigDecimal> sub) {
-        np.setBalance(TreasuryCurrency.getEconomy(c), amount.doubleValue());
-        sub.succeed(BigDecimal.valueOf(np.getBalance(TreasuryCurrency.getEconomy(c))));
-    }
-
-    @Override
-    public void doTransaction(@NotNull EconomyTransaction trans, @NotNull EconomySubscriber<BigDecimal> sub) {
-        Economy econ = Economy.getEconomy(trans.getCurrencyID());
-        np.add(econ, trans.getTransactionAmount().doubleValue());
+    public CompletableFuture<BigDecimal> doTransaction(@NotNull EconomyTransaction trans) {
+        Economy econ = Economy.getEconomy(trans.getCurrencyId());
+        np.add(econ, trans.getAmount().doubleValue());
         treasuryTrans.get(this.np.getPlayer().getUniqueId()).add(trans);
-        sub.succeed(BigDecimal.valueOf(np.getBalance(econ)));
+
+        return CompletableFuture.completedFuture(BigDecimal.valueOf(np.getBalance(econ)));
     }
 
     @Override
-    public void deleteAccount(@NotNull EconomySubscriber<Boolean> sub) {
-        sub.succeed(false);
+    public CompletableFuture<Boolean> deleteAccount() {
+        return CompletableFuture.completedFuture(false);
     }
 
     @Override
-    public void retrieveHeldCurrencies(@NotNull EconomySubscriber<Collection<String>> sub) {
-        sub.succeed(Economy.getEconomies().stream().map(Economy::getName).collect(Collectors.toSet()));
+    public CompletableFuture<Collection<String>> retrieveHeldCurrencies() {
+        return CompletableFuture.completedFuture(Economy.getEconomies().stream().map(Economy::getName).collect(Collectors.toSet()));
     }
 
     @Override
-    public void retrieveTransactionHistory(int transactionCount, @NotNull Temporal from, @NotNull Temporal to, @NotNull EconomySubscriber<Collection<EconomyTransaction>> sub) {
+    public CompletableFuture<Collection<EconomyTransaction>> retrieveTransactionHistory(int transactionCount, @NotNull Temporal from, @NotNull Temporal to) {
         List<EconomyTransaction> l = treasuryTrans.get(this.np.getPlayer().getUniqueId());
-        sub.succeed(l.subList(0, transactionCount >= l.size() ? l.size() - 1 : transactionCount)
+        return CompletableFuture.completedFuture(l.subList(0, transactionCount >= l.size() ? l.size() - 1 : transactionCount)
                 .stream()
                 .filter(t -> t.getTimestamp().isAfter(Instant.from(from)) && t.getTimestamp().isBefore(Instant.from(to)))
                 .collect(Collectors.toSet())

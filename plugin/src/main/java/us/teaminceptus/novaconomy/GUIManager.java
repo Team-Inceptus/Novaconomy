@@ -2,10 +2,8 @@ package us.teaminceptus.novaconomy;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.commons.lang.WordUtils;
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.Material;
-import org.bukkit.OfflinePlayer;
+import org.bukkit.*;
+import org.bukkit.block.Block;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
@@ -25,6 +23,7 @@ import us.teaminceptus.novaconomy.abstraction.NBTWrapper;
 import us.teaminceptus.novaconomy.abstraction.NovaInventory;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.SortingType;
+import us.teaminceptus.novaconomy.api.bank.Bank;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.business.BusinessStatistics;
 import us.teaminceptus.novaconomy.api.business.Rating;
@@ -338,7 +337,7 @@ final class GUIManager implements Listener {
                 Business b = getBusiness(item);
 
                 p.sendMessage(get("cancel.business.purchase"));
-                p.openInventory(generateBusinessData(b, p, true, SortingType.PRODUCT_NAME_ASCENDING));
+                p.openInventory(generateBusinessData(b, p, true, SortingType.PRODUCT_NAME_ASCENDING).get(0));
                 NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
 
                 if (!b.isOwner(p)) {
@@ -468,6 +467,13 @@ final class GUIManager implements Listener {
                 NovaPlayer owner = new NovaPlayer(bP.getBusiness().getOwner());
                 double mod = b.getParentCorporation() == null ? 1 : b.getParentCorporation().getProfitModifier();
                 double aAmount = amount * mod;
+
+                if (NovaConfig.getConfiguration().isBusinessIncomeTaxEnabled() && !NovaConfig.getConfiguration().isBusinessIncomeTaxIgnoring(b)) {
+                    double removed = aAmount * NovaConfig.getConfiguration().getBusinessIncomeTax();
+                    aAmount -= removed;
+
+                    Bank.addBalance(econ, removed);
+                }
 
                 if (b.getSetting(Settings.Business.AUTOMATIC_DEPOSIT)) {
                     owner.add(econ, aAmount * 0.85);
@@ -875,7 +881,7 @@ final class GUIManager implements Listener {
 
                 boolean notOwner = !b.isOwner(p);
 
-                p.openInventory(generateBusinessData(b, p, notOwner, SortingType.PRODUCT_NAME_ASCENDING));
+                p.openInventory(generateBusinessData(b, p, notOwner, SortingType.PRODUCT_NAME_ASCENDING).get(0));
                 NovaSound.BLOCK_ENDER_CHEST_OPEN.play(p, 1F, 0.5F);
 
                 if (notOwner) {
@@ -1574,6 +1580,68 @@ final class GUIManager implements Listener {
                 int page = inv.getAttribute("page", Integer.class);
 
                 p.openInventory(Generator.generateMarket(p, category, sorter, econ, page));
+            })
+            .put("next:business", (e, inv) -> {
+                Player p = (Player) e.getWhoClicked();
+                Business b = Business.byId(inv.getAttribute("business", UUID.class));
+                SortingType<BusinessProduct> type = NovaUtil.byId(of(inv.getItem(18)).getString(TYPE_TAG), BusinessProduct.class);
+
+                CHANGE_PAGE_TRICONSUMER.accept(e, 1, generateBusinessData(b, p, !b.getOwner().equals(p), type));
+            })
+            .put("prev:business", (e, inv) -> {
+                Player p = (Player) e.getWhoClicked();
+                Business b = Business.byId(inv.getAttribute("business", UUID.class));
+                SortingType<BusinessProduct> type = NovaUtil.byId(of(inv.getItem(18)).getString(TYPE_TAG), BusinessProduct.class);
+
+                CHANGE_PAGE_TRICONSUMER.accept(e, -1, generateBusinessData(b, p, !b.getOwner().equals(p), type));
+            })
+            .put("prev:stored", (e, inv) -> {
+                Player p = (Player) e.getWhoClicked();
+                List<NovaInventory> invs = inv.getAttribute("invs", List.class);
+
+                CHANGE_PAGE_TRICONSUMER.accept(e, -1, invs);
+            })
+            .put("next:stored", (e, inv) -> {
+                Player p = (Player) e.getWhoClicked();
+                List<NovaInventory> invs = inv.getAttribute("invs", List.class);
+
+                CHANGE_PAGE_TRICONSUMER.accept(e, 1, invs);
+            })
+            .put("corporation:leaderboard_category", (e, inv) -> {
+                Player p = (Player) e.getWhoClicked();
+                ItemStack item = e.getCurrentItem();
+
+                String category = of(item).getString("category");
+                String nextCategory = CL_CATEGORIES.get(CL_CATEGORIES.indexOf(category) == CL_CATEGORIES.size() - 1 ? 0 : CL_CATEGORIES.indexOf(category) + 1);
+
+                getCommandWrapper().corporationLeaderboard(p, nextCategory);
+            })
+            .put("business:remove_supply_chest", (e, inv) -> {
+                Player p = (Player) e.getWhoClicked();
+                ItemStack item = e.getCurrentItem(); NBTWrapper nbt = of(item);
+
+                World w = Bukkit.getWorld(nbt.getUUID("world"));
+                int x = nbt.getInt("x"), y = nbt.getInt("y"), z = nbt.getInt("z");
+                Business bus = Business.byId(inv.getAttribute("business", UUID.class));
+
+                Block b = w.getBlockAt(x, y, z);
+                NovaInventory confirm = InventorySelector.confirm(p, () -> {
+                    bus.removeSupplyChest(b.getLocation());
+                    NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
+                    p.closeInventory();
+                });
+                confirm.setItem(13, Items.builder(Material.CHEST,
+                        meta -> meta.setDisplayName(ChatColor.BLUE + b.getWorld().getName() + ChatColor.GOLD + " | " + ChatColor.YELLOW + b.getX() + ", " + b.getY() + ", " + b.getZ())
+                ));
+                p.openInventory(confirm);
+                NovaSound.BLOCK_ENDER_CHEST_OPEN.play(p);
+            })
+            .put("business:supply_chests", (e, inv) -> {
+                Player p = (Player) e.getWhoClicked();
+                Business b = getBusiness(e.getCurrentItem());
+
+                p.openInventory(Generator.generateBusinessSupplyChests(b, SortingType.BLOCK_LOCATION_ASCENDING).get(0));
+                NovaSound.BLOCK_CHEST_OPEN.play(p);
             })
             .build();
 

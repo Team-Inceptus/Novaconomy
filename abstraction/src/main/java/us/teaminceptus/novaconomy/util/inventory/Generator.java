@@ -5,6 +5,8 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.block.Block;
+import org.bukkit.block.Chest;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemFlag;
@@ -63,206 +65,237 @@ public final class Generator {
         return genGUI("", size, name);
     }
 
-    public static NovaInventory generateBusinessData(Business b, Player viewer, boolean advertising, SortingType<BusinessProduct> sorter) {
-        NovaInventory inv = genGUI(54, ChatColor.GOLD + b.getName());
-        inv.setCancelled();
+    public static List<NovaInventory> generateBusinessData(Business b, Player viewer, boolean advertising, SortingType<BusinessProduct> sorter) {
+        List<NovaInventory> invs = new ArrayList<>();
+        int limit = ((b.getProducts().size() - 1) / 26) + 1;
+        for (int i = 0; i < limit; i++) {
+            final int fI = i;
 
-        inv.setAttribute("sorting_type", BusinessProduct.class);
-        inv.setAttribute("sorting_function", (Function<SortingType<BusinessProduct>, NovaInventory>) s ->
-                generateBusinessData(b, viewer, advertising, s));
+            NovaInventory inv = genGUI(54, ChatColor.GOLD + b.getName());
+            inv.setCancelled();
 
-        inv.setItem(18, sorter(sorter));
+            inv.setAttribute("business", b.getUniqueId());
+            inv.setAttribute("sorting_type", BusinessProduct.class);
+            inv.setAttribute("sorting_function", (Function<SortingType<BusinessProduct>, NovaInventory>) s ->
+                    generateBusinessData(b, viewer, advertising, s).get(fI));
 
-        if (!b.getRatings().isEmpty()) inv.setItem(44, Items.LOADING);
-        for (int i = 46; i < 53; i++) inv.setItem(i, null);
+            inv.setItem(18, sorter(sorter));
+            inv.setItem(10, 16, 46, 52, GUI_BACKGROUND);
 
-        Corporation parent = b.getParentCorporation();
-        if (parent != null) {
-            ItemStack pIcon = builder(parent.getPublicIcon(),
-                    meta -> meta.setLore(Collections.singletonList(
-                            ChatColor.GOLD + get("constants.parent_corporation")
-                    )), nbt -> {
-                        nbt.setID("corporation:click");
-                        nbt.set(CORPORATION_TAG, parent.getUniqueId());
-                    }
-            );
-            inv.setItem(13, pIcon);
-        }
+            if (!b.getRatings().isEmpty()) inv.setItem(44, Items.LOADING);
+            for (int j = 46; j < 53; j++) inv.setItem(j, null);
 
-        ItemStack icon = Items.builder(b.getIcon(),
-                meta -> {
-                    meta.setDisplayName(ChatColor.GOLD + b.getName());
-                    meta.setLore(Collections.singletonList(ChatColor.YELLOW + "ID: " + b.getUniqueId().toString().replace("-", "")));
-                }
-        );
-        inv.setItem(15, icon);
-
-        boolean anonymous = !b.getSetting(Settings.Business.PUBLIC_OWNER) && !b.isOwner(viewer);
-        ItemStack owner = builder(w.createSkull(anonymous ? null : b.getOwner()),
-                meta -> {
-                    meta.setDisplayName(anonymous ? ChatColor.AQUA + get("constants.business.anonymous") : format(get("constants.owner"), b.getOwner().getName()));
-                    if (b.isOwner(viewer) && !b.getSetting(Settings.Business.PUBLIC_OWNER))
-                        meta.setLore(Collections.singletonList(ChatColor.YELLOW + get("constants.business.hidden")));
-                }, nbt -> {
-                    if (!anonymous) {
-                        nbt.setID("player_stats");
-                        nbt.set("player", b.getOwner().getUniqueId());
-                    }
-                });
-        inv.setItem(11, owner);
-
-        boolean pHome = b.getSetting(Settings.Business.PUBLIC_HOME) || b.isOwner(viewer);
-        ItemStack home = builder(pHome ? (w.isLegacy() ? Material.matchMaterial("WORKBENCH") : Material.matchMaterial("CRAFTING_TABLE")) : Material.BARRIER,
-                meta -> {
-                    meta.setDisplayName(pHome ? ChatColor.AQUA + get("constants.business.home") : ChatColor.RED + get("constants.business.anonymous_home"));
-                    if (b.isOwner(viewer) && !b.getSetting(Settings.Business.PUBLIC_HOME))
-                        meta.setLore(Collections.singletonList(ChatColor.YELLOW + get("constants.business.hidden")));
-                }, nbt -> {
-                    nbt.setID("business:home");
-                    nbt.set(BUSINESS_TAG, b.getUniqueId());
-                    nbt.set("anonymous", !pHome);
-                }
-        );
-        ItemMeta hMeta = home.getItemMeta();
-        home.setItemMeta(hMeta);
-        inv.setItem(12, home);
-
-
-        ItemStack invites = builder(Material.ENCHANTED_BOOK,
-                meta -> meta.setDisplayName(ChatColor.AQUA + get("constants.business.invites")),
-                nbt -> {
-                    nbt.setID("business:invites");
-                    nbt.set(BUSINESS_TAG, b.getUniqueId());
-                }
-        );
-
-        ItemStack settings = builder(Material.NETHER_STAR,
-                meta -> meta.setDisplayName(ChatColor.GREEN + get("constants.settings.business")),
-                nbt -> {
-                    nbt.setID("business:settings");
-                    nbt.set(BUSINESS_TAG, b.getUniqueId());
-                }
-        );
-
-        if (b.isOwner(viewer)) {
-            inv.setItem(17, invites);
-            inv.setItem(53, settings);
-        }
-
-        AtomicInteger slot = new AtomicInteger(19);
-        List<BusinessProduct> bProducts = b.getProducts()
-                .stream()
-                .sorted(sorter)
-                .collect(Collectors.toList());
-
-        bProducts.forEach(p -> {
-            if (slot.get() == 26) slot.set(28);
-            if (slot.get() == 35) slot.set(37);
-            if (slot.get() == 44) slot.set(46);
-            if (slot.get() >= 53) return;
-
-            ItemStack item = p.getItem().clone();
-            if (item.getType() == Material.AIR) return;
-
-            AtomicBoolean stock = new AtomicBoolean(true);
-
-            ItemStack product = builder(item.clone(),
-                    meta -> {
-                        List<String> lore = meta.hasLore() ? meta.getLore() : new ArrayList<>();
-                        lore.add(" ");
-                        lore.add(
-                                format(get("constants.price"), format("%,.2f", p.getAmount()).replace("D", ""), String.valueOf(p.getEconomy().getSymbol()))
-                        );
-
-                        lore.add(" ");
-                        if (!b.isInStock(item)) {
-                            lore.add(ChatColor.RED + get("constants.business.no_stock"));
-                            stock.set(false);
-                        } else {
-                            AtomicInteger index = new AtomicInteger();
-                            b.getResources().forEach(res -> {
-                                if (item.isSimilar(res)) index.addAndGet(res.getAmount());
-                            });
-
-                            lore.add(format(get("constants.business.stock_left"), format("%,d", index.get())));
+            Corporation parent = b.getParentCorporation();
+            if (parent != null) {
+                ItemStack pIcon = builder(parent.getPublicIcon(),
+                        meta -> meta.setLore(Collections.singletonList(
+                                ChatColor.GOLD + get("constants.parent_corporation")
+                        )), nbt -> {
+                            nbt.setID("corporation:click");
+                            nbt.set(CORPORATION_TAG, parent.getUniqueId());
                         }
+                );
+                inv.setItem(13, pIcon);
+            }
 
-                        meta.setLore(lore);
-                    }, nbt -> nbt.setID("product:buy")
+            ItemStack icon = Items.builder(b.getIcon(),
+                    meta -> {
+                        meta.setDisplayName(ChatColor.GOLD + b.getName());
+                        meta.setLore(Collections.singletonList(ChatColor.YELLOW + "ID: " + b.getUniqueId().toString().replace("-", "")));
+                    }
+            );
+            inv.setItem(15, icon);
+
+            boolean anonymous = !b.getSetting(Settings.Business.PUBLIC_OWNER) && !b.isOwner(viewer);
+            ItemStack owner = builder(w.createSkull(anonymous ? null : b.getOwner()),
+                    meta -> {
+                        meta.setDisplayName(anonymous ? ChatColor.AQUA + get("constants.business.anonymous") : format(get("constants.owner"), b.getOwner().getName()));
+                        if (b.isOwner(viewer) && !b.getSetting(Settings.Business.PUBLIC_OWNER))
+                            meta.setLore(Collections.singletonList(ChatColor.YELLOW + get("constants.business.hidden")));
+                    }, nbt -> {
+                        if (!anonymous) {
+                            nbt.setID("player_stats");
+                            nbt.set("player", b.getOwner().getUniqueId());
+                        }
+                    });
+            inv.setItem(11, owner);
+
+            boolean pHome = b.getSetting(Settings.Business.PUBLIC_HOME) || b.isOwner(viewer);
+            ItemStack home = builder(pHome ? (w.isLegacy() ? Material.matchMaterial("WORKBENCH") : Material.matchMaterial("CRAFTING_TABLE")) : Material.BARRIER,
+                    meta -> {
+                        meta.setDisplayName(pHome ? ChatColor.AQUA + get("constants.business.home") : ChatColor.RED + get("constants.business.anonymous_home"));
+                        if (b.isOwner(viewer) && !b.getSetting(Settings.Business.PUBLIC_HOME))
+                            meta.setLore(Collections.singletonList(ChatColor.YELLOW + get("constants.business.hidden")));
+                    }, nbt -> {
+                        nbt.setID("business:home");
+                        nbt.set(BUSINESS_TAG, b.getUniqueId());
+                        nbt.set("anonymous", !pHome);
+                    }
+            );
+            ItemMeta hMeta = home.getItemMeta();
+            home.setItemMeta(hMeta);
+            inv.setItem(12, home);
+
+            ItemStack invites = builder(Material.ENCHANTED_BOOK,
+                    meta -> meta.setDisplayName(ChatColor.AQUA + get("constants.business.invites")),
+                    nbt -> {
+                        nbt.setID("business:invites");
+                        nbt.set(BUSINESS_TAG, b.getUniqueId());
+                    }
             );
 
-            NBTWrapper nbt = of(product);
+            ItemStack advInfo = builder(Material.BUCKET,
+                    meta -> meta.setDisplayName(ChatColor.AQUA + get("constants.business.advertising")),
+                    nbt -> nbt.setID("business:advertising")
+            );
 
-            nbt.set("product:in_stock", stock.get());
-            nbt.set(PRODUCT_TAG, p);
+            ItemStack supplyChests = builder(Material.CHEST,
+                    meta -> meta.setDisplayName(ChatColor.GOLD + get("constants.business.supply_chests")),
+                    nbt -> {
+                        nbt.setID("business:supply_chests");
+                        nbt.set(BUSINESS_TAG, b.getUniqueId());
+                    }
+            );
 
-            inv.setItem(slot.get(), nbt.getItem());
+            ItemStack settings = builder(Material.NETHER_STAR,
+                    meta -> meta.setDisplayName(ChatColor.GREEN + get("constants.settings.business")),
+                    nbt -> {
+                        nbt.setID("business:settings");
+                        nbt.set(BUSINESS_TAG, b.getUniqueId());
+                    }
+            );
 
-            slot.incrementAndGet();
-        });
-
-        boolean pStats = b.getSetting(Settings.Business.PUBLIC_STATISTICS) || b.isOwner(viewer);
-        ItemStack stats = builder(pStats ? Material.PAPER : Material.BARRIER,
-                meta -> {
-                    meta.setDisplayName(pStats ? ChatColor.AQUA + get("constants.business.statistics") : ChatColor.RED + get("constants.business.anonymous_statistics"));
-                    if (b.isOwner(viewer) && !b.getSetting(Settings.Business.PUBLIC_STATISTICS))
-                        meta.setLore(Collections.singletonList(ChatColor.YELLOW + get("constants.business.hidden")));
-                }, nbt -> {
-                    nbt.setID("business:statistics");
-                    nbt.set(BUSINESS_TAG, b.getUniqueId());
-                    nbt.set("anonymous", !pStats);
-                }
-        );
-        inv.setItem(14, stats);
-
-        if (b.isOwner(viewer)) inv.setItem(26, builder(Material.BUCKET,
-                meta -> meta.setDisplayName(ChatColor.AQUA + get("constants.business.advertising")),
-                nbt -> nbt.setID("business:advertising")
-        ));
-
-        Material kMaterial;
-        try {
-            kMaterial = Material.valueOf("SIGN");
-        } catch (IllegalArgumentException e) {
-            kMaterial = Material.valueOf("OAK_SIGN");
-        }
-
-        inv.setItem(35, Items.builder(kMaterial, meta -> {
-            meta.setDisplayName(ChatColor.YELLOW + get("constants.business.keywords"));
-            if (!b.getKeywords().isEmpty())
-                meta.setLore(Arrays.asList(ChatPaginator.wordWrap(ChatColor.AQUA + String.join(", ", b.getKeywords()), 30)));
-        }));
-
-        if (!b.getRatings().isEmpty()) {
-            boolean pRating = b.getSetting(Settings.Business.PUBLIC_RATING) || b.isOwner(viewer);
-            double avg = b.getAverageRating();
-            int avgI = (int) Math.round(avg - 1);
-
-            ItemStack rating = Items.builder(pRating ? RATING_MATS[avgI] : Material.BARRIER,
-                    meta -> {
-                        meta.setDisplayName(pRating ? ChatColor.YELLOW + format("%,.1f", avg) + "⭐" : ChatColor.RED + get("constants.business.anonymous_rating"));
-                        if (b.isOwner(viewer) && !b.getSetting(Settings.Business.PUBLIC_RATING))
-                            meta.setLore(Collections.singletonList(ChatColor.YELLOW + get("constants.business.hidden")));
-                    });
-            inv.setItem(44, rating);
-        } else inv.setItem(44, null);
-
-        if (Wrapper.r.nextBoolean() && advertising && b.getSetting(Settings.Business.EXTERNAL_ADVERTISEMENT) && NovaConfig.getConfiguration().isAdvertisingEnabled()) {
-            Business rand = Business.randomAdvertisingBusiness();
-            if (rand != null && !b.isBlacklisted(rand)) {
-                BusinessAdvertiseEvent event = new BusinessAdvertiseEvent(rand);
-                Bukkit.getPluginManager().callEvent(event);
-
-                if (!event.isCancelled())
-                    inv.setItem(27, builder(rand.getPublicIcon(), nbt -> {
-                        nbt.setID("business:click:advertising");
-                        nbt.set(BUSINESS_TAG, rand.getUniqueId());
-                        nbt.set("from_business", b.getUniqueId());
-                    }));
+            if (b.isOwner(viewer)) {
+                inv.setItem(17, invites);
+                inv.setItem(26, advInfo);
+                inv.setItem(27, supplyChests);
+                inv.setItem(53, settings);
             }
+
+            AtomicInteger slot = new AtomicInteger(19);
+            List<BusinessProduct> bProducts = b.getProducts()
+                    .stream()
+                    .sorted(sorter)
+                    .collect(Collectors.toList())
+                    .subList(i * 26, Math.min((i + 1) * 26, b.getProducts().size()));
+
+            bProducts.forEach(p -> {
+                if ((slot.get() + 1) % 9 == 0) slot.addAndGet(2);
+                if (slot.get() == 46) slot.addAndGet(1);
+
+                ItemStack item = p.getItem().clone();
+                if (item.getType() == Material.AIR) return;
+
+                AtomicBoolean stock = new AtomicBoolean(true);
+
+                ItemStack product = builder(item.clone(),
+                        meta -> {
+                            List<String> lore = meta.hasLore() ? meta.getLore() : new ArrayList<>();
+                            lore.add(" ");
+                            lore.add(
+                                    format(get("constants.price"), format("%,.2f", p.getAmount()).replace("D", ""), String.valueOf(p.getEconomy().getSymbol()))
+                            );
+
+                            lore.add(" ");
+                            if (!b.isInStock(item)) {
+                                lore.add(ChatColor.RED + get("constants.business.no_stock"));
+                                stock.set(false);
+                            } else {
+                                AtomicInteger index = new AtomicInteger();
+                                b.getResources().forEach(res -> {
+                                    if (item.isSimilar(res)) index.addAndGet(res.getAmount());
+                                });
+
+                                lore.add(format(get("constants.business.stock_left"), format("%,d", index.get())));
+                            }
+
+                            meta.setLore(lore);
+                        }, nbt -> nbt.setID("product:buy")
+                );
+
+                NBTWrapper nbt = of(product);
+
+                nbt.set("product:in_stock", stock.get());
+                nbt.set(PRODUCT_TAG, p);
+
+                inv.setItem(slot.get(), nbt.getItem());
+
+                slot.incrementAndGet();
+            });
+
+            if (limit > 1) {
+                if (i > 0)
+                    inv.setItem(46, NBTWrapper.builder(
+                            Items.prev("business"),
+                            nbt -> nbt.set("page", fI)
+                    ));
+                if (i < (limit - 1))
+                    inv.setItem(52, NBTWrapper.builder(
+                            Items.next("business"),
+                            nbt -> nbt.set("page", fI)
+                    ));
+            }
+
+            boolean pStats = b.getSetting(Settings.Business.PUBLIC_STATISTICS) || b.isOwner(viewer);
+            ItemStack stats = builder(pStats ? Material.PAPER : Material.BARRIER,
+                    meta -> {
+                        meta.setDisplayName(pStats ? ChatColor.AQUA + get("constants.business.statistics") : ChatColor.RED + get("constants.business.anonymous_statistics"));
+                        if (b.isOwner(viewer) && !b.getSetting(Settings.Business.PUBLIC_STATISTICS))
+                            meta.setLore(Collections.singletonList(ChatColor.YELLOW + get("constants.business.hidden")));
+                    }, nbt -> {
+                        nbt.setID("business:statistics");
+                        nbt.set(BUSINESS_TAG, b.getUniqueId());
+                        nbt.set("anonymous", !pStats);
+                    }
+            );
+            inv.setItem(14, stats);
+
+            Material kMaterial;
+            try {
+                kMaterial = Material.valueOf("SIGN");
+            } catch (IllegalArgumentException e) {
+                kMaterial = Material.valueOf("OAK_SIGN");
+            }
+
+            inv.setItem(35, Items.builder(kMaterial, meta -> {
+                meta.setDisplayName(ChatColor.YELLOW + get("constants.business.keywords"));
+                if (!b.getKeywords().isEmpty())
+                    meta.setLore(Arrays.asList(ChatPaginator.wordWrap(ChatColor.AQUA + String.join(", ", b.getKeywords()), 30)));
+            }));
+
+            if (!b.getRatings().isEmpty()) {
+                boolean pRating = b.getSetting(Settings.Business.PUBLIC_RATING) || b.isOwner(viewer);
+                double avg = b.getAverageRating();
+                int avgI = (int) Math.round(avg - 1);
+
+                ItemStack rating = Items.builder(pRating ? RATING_MATS[avgI] : Material.BARRIER,
+                        meta -> {
+                            meta.setDisplayName(pRating ? ChatColor.YELLOW + format("%,.1f", avg) + "⭐" : ChatColor.RED + get("constants.business.anonymous_rating"));
+                            if (b.isOwner(viewer) && !b.getSetting(Settings.Business.PUBLIC_RATING))
+                                meta.setLore(Collections.singletonList(ChatColor.YELLOW + get("constants.business.hidden")));
+                        });
+                inv.setItem(44, rating);
+            } else inv.setItem(44, null);
+
+            if (Wrapper.r.nextBoolean() && advertising && b.getSetting(Settings.Business.EXTERNAL_ADVERTISEMENT) && NovaConfig.getConfiguration().isAdvertisingEnabled()) {
+                Business rand = Business.randomAdvertisingBusiness();
+                if (rand != null && !b.isBlacklisted(rand)) {
+                    BusinessAdvertiseEvent event = new BusinessAdvertiseEvent(rand);
+                    Bukkit.getPluginManager().callEvent(event);
+
+                    if (!event.isCancelled())
+                        inv.setItem(27, builder(rand.getPublicIcon(), nbt -> {
+                            nbt.setID("business:click:advertising");
+                            nbt.set(BUSINESS_TAG, rand.getUniqueId());
+                            nbt.set("from_business", b.getUniqueId());
+                        }));
+                }
+            }
+
+            invs.add(inv);
         }
 
-        return inv;
+        return invs;
     }
 
     public static NovaInventory generateCorporationData(Corporation c, Player viewer, SortingType<Business> childrenSort) {
@@ -1029,6 +1062,63 @@ public final class Generator {
         }
 
         return inv;
+    }
+
+    public static List<NovaInventory> generateBusinessSupplyChests(@NotNull Business business, @NotNull SortingType<Block> sorter) {
+        List<NovaInventory> invs = new ArrayList<>();
+
+        List<Block> blocks = business.getSupplyChests()
+                .stream()
+                .map(Chest::getBlock)
+                .sorted(sorter)
+                .collect(Collectors.toList());
+
+        int limit = (business.getSupplyChests().size() / 28) + 1;
+
+        for (int i = 0; i < limit; i++) {
+            NovaInventory inv = genGUI(54, get("constants.business.supply_chests"));
+
+            final int fI = i;
+            inv.setItem(18, Items.sorter(sorter));
+
+            inv.setAttribute("business", business.getUniqueId());
+            inv.setAttribute("sorter", sorter);
+            inv.setAttribute("sorting_type", Block.class);
+            inv.setAttribute("sorting_function", (Function<SortingType<Block>, NovaInventory>) s -> generateBusinessSupplyChests(business, s).get(fI));
+
+            List<Block> chests = blocks.subList(i * 28, Math.min(blocks.size(), (i + 1) * 28));
+            chests.forEach(b -> inv.addItem(NBTWrapper.builder(Material.CHEST,
+                    meta -> {
+                        meta.setDisplayName(ChatColor.BLUE + b.getWorld().getName() + ChatColor.GOLD + " | " + ChatColor.YELLOW + b.getX() + ", " + b.getY() + ", " + b.getZ());
+                        meta.setLore(Arrays.asList(
+                                " ",
+                                ChatColor.YELLOW + get("constants.click_remove")
+                        ));
+                    }, nbt -> {
+                        nbt.setID("business:remove_supply_chest");
+                        nbt.set("world", b.getWorld().getUID());
+                        nbt.set("x", b.getX());
+                        nbt.set("y", b.getY());
+                        nbt.set("z", b.getZ());
+                    })
+                )
+            );
+
+            if (limit > 1) {
+                if (i > 0)
+                    inv.setItem(47, Items.prev("stored"));
+
+                if (i < (limit - 1))
+                    inv.setItem(53, Items.next("stored"));
+            }
+
+            invs.add(inv);
+        }
+
+        if (limit > 1)
+            for (NovaInventory inv : invs) inv.setAttribute("invs", invs);
+
+        return invs;
     }
 
     public static void modelData(@NotNull ItemStack item, int data) {

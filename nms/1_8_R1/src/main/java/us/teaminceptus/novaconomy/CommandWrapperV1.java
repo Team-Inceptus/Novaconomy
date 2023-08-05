@@ -1024,6 +1024,30 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         leaveCorporation(p);
                         break;
                     }
+                    case "supplychests":
+                    case "schests":
+                    case "chests": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
+                        businessSupplyChests(p);
+                        break;
+                    }
+                    case "addsupplychest":
+                    case "addsupply": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
+                        addBusinessSupplyChest(p);
+                        break;
+                    }
+                    case "supply": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
+                        businessSupply(p);
+                        break;
+                    }
                     default: {
                         sender.sendMessage(getMessage("error.argument"));
                         return false;
@@ -1158,7 +1182,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                 balanceLeaderboard(p, econ);
                 break;
             }
-            case "bounty": {
+            case "nbounty": {
                 if (!(sender instanceof Player)) return false;
                 Player p = (Player) sender;
 
@@ -1273,7 +1297,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                 }
                 break;
             }
-            case "rate": {
+            case "nrate": {
                 if (!(sender instanceof Player)) return false;
                 Player p = (Player) sender;
 
@@ -1293,7 +1317,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                 rate(p, b, comment);
                 break;
             }
-            case "statistics": {
+            case "npstatistics": {
                 if (!(sender instanceof Player)) return false;
                 Player p = (Player) sender;
 
@@ -1756,6 +1780,15 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         settings(p, CORPORATION_TAG);
                         break;
                     }
+                    case "leaderboard":
+                    case "lboard":
+                    case "lb": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
+                        corporationLeaderboard(p, "ratings");
+                        break;
+                    }
                     default: {
                         sender.sendMessage(getMessage("error.argument"));
                         return false;
@@ -1981,6 +2014,13 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         return false;
                     }
                 }
+            }
+            case "corporationleaderboard": {
+                if (!(sender instanceof Player)) return false;
+                Player p = (Player) sender;
+
+                corporationLeaderboard(p, "ratings");
+                break;
             }
             default: {
                 sender.sendMessage(getMessage("error.argument"));

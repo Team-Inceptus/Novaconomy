@@ -11,7 +11,7 @@ plugins {
 }
 
 val pGroup = "us.teaminceptus.novaconomy"
-val pVersion = "1.7.2-SNAPSHOT"
+val pVersion = "1.8.0-SNAPSHOT"
 val pAuthor = "Team-Inceptus"
 
 sonarqube {
@@ -46,6 +46,7 @@ allprojects {
         maven("https://hub.jeff-media.com/nexus/repository/jeff-media-public/")
         maven("https://libraries.minecraft.net/")
         maven("https://repo.extendedclip.com/content/repositories/placeholderapi/")
+        maven("https://repo.essentialsx.net/releases/")
     }
 
     publishing {
@@ -147,9 +148,7 @@ subprojects {
 
         jar.configure {
             dependsOn("shadowJar")
-            artifacts {
-                add("default", getByName<ShadowJar>("shadowJar"))
-            }
+            archiveClassifier.set("dev")
         }
         withType<ShadowJar> {
             manifest {
@@ -161,12 +160,16 @@ subprojects {
             }
             exclude("META-INF", "META-INF/**")
 
-            relocate("revxrsal.commands", "us.teaminceptus.shaded.lamp")
-            relocate("org.bstats", "us.teaminceptus.shaded.bstats")
-            relocate("com.jeff_media.updatechecker", "us.teaminceptus.shaded.updatechecker")
+            relocate("revxrsal.commands", "us.teaminceptus.novaconomy.shaded.lamp")
+            relocate("org.bstats", "us.teaminceptus.novaconomy.shaded.bstats")
+            relocate("com.jeff_media.updatechecker", "us.teaminceptus.novaconomy.shaded.updatechecker")
 
             archiveFileName.set("${project.name}-${project.version}.jar")
             archiveClassifier.set("")
         }
+    }
+
+    artifacts {
+        add("default", tasks.getByName<ShadowJar>("shadowJar"))
     }
 }

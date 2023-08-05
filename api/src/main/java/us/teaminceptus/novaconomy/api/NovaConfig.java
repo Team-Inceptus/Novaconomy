@@ -9,6 +9,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.economy.market.NovaMarket;
 import us.teaminceptus.novaconomy.api.player.NovaPlayer;
@@ -339,6 +340,19 @@ public interface NovaConfig  {
         }
 
         if (!taxes.isConfigurationSection("Events")) taxes.createSection("Events");
+        if (!taxes.isBoolean("Events.Enabled")) taxes.set("Events.Enabled", true);
+
+        if (!taxes.isConfigurationSection("Income")) taxes.createSection("Income");
+
+        if (!taxes.isConfigurationSection("Income.NaturalCauses")) taxes.createSection("Income.NaturalCauses");
+        if (!taxes.isBoolean("Income.NaturalCauses.Enabled")) taxes.set("Income.NaturalCauses.Enabled", true);
+        if (!taxes.isDouble("Income.NaturalCauses.Tax") && !taxes.isInt("Income.NaturalCauses.Tax")) taxes.set("Income.NaturalCauses.Tax", 0.02);
+        if (!taxes.isList("Income.NaturalCauses.Ignore")) taxes.set("Income.NaturalCauses.Ignore", new ArrayList<>());
+
+        if (!taxes.isConfigurationSection("Income.Business")) taxes.createSection("Income.Business");
+        if (!taxes.isBoolean("Income.Business.Enabled")) taxes.set("Income.Business.Enabled", true);
+        if (!taxes.isDouble("Income.Business.Tax") && !taxes.isInt("Income.Business.Tax")) taxes.set("Income.Business.Tax", 0.03);
+        if (!taxes.isList("Income.Business.Ignore")) taxes.set("Income.Business.Ignore", new ArrayList<>());
 
         if (!config.isConfigurationSection("Bounties")) config.createSection("Bounties");
         if (!config.isBoolean("Bounties.Enabled")) config.set("Bounties.Enabled", true);
@@ -377,6 +391,8 @@ public interface NovaConfig  {
         for (String s : config.getConfigurationSection("Market.PriceOverride").getKeys(false))
             if (Material.matchMaterial(s) == null || (!config.isDouble("Market.PriceOverride." + s) && !config.isInt("Market.PriceOverride." + s)))
                 config.set("Market.PriceOverride." + s, null);
+
+        if (!config.isList("Market.CustomItems")) config.set("Market.CustomItems", new ArrayList<>());
         
 
         if (!config.isConfigurationSection("Market.Restock")) config.createSection("Market.Restock");
@@ -996,5 +1012,93 @@ public interface NovaConfig  {
      * @see #isDatabaseConversionEnabled()
      */
     void setDatabaseConversionEnabled(boolean enabled);
+
+    /**
+     * Fetches whether income tax on Natural Causes is enabled.
+     * @return true if enabled, else false
+     */
+    boolean isNaturalCauseIncomeTaxEnabled();
+
+    /**
+     * Sets whether income tax on Natural Causes is enabled.
+     * @param enabled true if enabled, else false
+     */
+    void setNaturalCauseIncomeTaxEnabled(boolean enabled);
+
+    /**
+     * Fetches the income tax percentage on Natural Causes taken from the amount and deposited into the bank.
+     * @return Income tax percentage
+     */
+    double getNaturalCauseIncomeTax();
+
+    /**
+     * Sets the income tax percentage on Natural Causes taken from the amount and deposited into the bank.
+     * @param tax Income tax percentage
+     */
+    void setNaturalCauseIncomeTax(double tax);
+
+    /**
+     * Fetches the list of player names, vault groups and permissions exempt from income tax on Natural Causes.
+     * @return List of Exempt Groups
+     */
+    @NotNull
+    List<String> getNaturalCauseIncomeTaxIgnoring();
+
+    /**
+     * Sets the list of player names, vault groups and permissions exempt from income tax on Natural Causes.
+     * @param exempt List of Exempt Groups
+     */
+    void setNaturalCauseIncomeTaxIgnoring(@Nullable List<String> exempt);
+
+    /**
+     * Tests if this Player is exempt from income tax on Natural Causes.
+     * @param p Player to test against
+     * @return true if they are exempt, else false
+     */
+    boolean isNaturalCauseIncomeTaxIgnoring(@NotNull OfflinePlayer p);
+
+    /**
+     * Fetches whether income tax on Business Income is enabled.
+     * @return true if enabled, else false
+     */
+    boolean isBusinessIncomeTaxEnabled();
+
+    /**
+     * Sets whether income tax on Business Income is enabled.
+     * @param enabled true if enabled, else false
+     */
+    void setBusinessIncomeTaxEnabled(boolean enabled);
+
+    /**
+     * Fetches the income tax percentage on Business Income taken from the amount and deposited into the bank.
+     * @return Income tax percentage
+     */
+    double getBusinessIncomeTax();
+
+    /**
+     * Sets the income tax percentage on Business Income taken from the amount and deposited into the bank.
+     * @param tax Income tax percentage
+     */
+    void setBusinessIncomeTax(double tax);
+
+    /**
+     * Fetches the list of player names, business names, vault groups and permissions exempt from income tax on Business Income.
+     * @return List of Exempt Groups
+     */
+    @NotNull
+    List<String> getBusinessIncomeTaxIgnoring();
+
+    /**
+     * Sets the list of player names, business names, vault groups and permissions exempt from income tax on Business Income.
+     * @param exempt List of Exempt Groups
+     */
+    void setBusinessIncomeTaxIgnoring(@Nullable List<String> exempt);
+
+    /**
+     * Fetches whether income tax on Business Income is enabled.
+     * @param b Business to test against
+     * @return true if enabled, else false
+     */
+    boolean isBusinessIncomeTaxIgnoring(@NotNull Business b);
 
 }

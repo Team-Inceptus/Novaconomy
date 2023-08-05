@@ -1,14 +1,11 @@
 package us.teaminceptus.novaconomy.treasury;
 
+import me.lokka30.treasury.api.common.NamespacedKey;
 import me.lokka30.treasury.api.common.misc.TriState;
-import me.lokka30.treasury.api.common.response.FailureReason;
 import me.lokka30.treasury.api.economy.account.AccountPermission;
 import me.lokka30.treasury.api.economy.account.NonPlayerAccount;
 import me.lokka30.treasury.api.economy.currency.Currency;
-import me.lokka30.treasury.api.economy.response.EconomyException;
-import me.lokka30.treasury.api.economy.response.EconomySubscriber;
 import me.lokka30.treasury.api.economy.transaction.EconomyTransaction;
-import me.lokka30.treasury.api.economy.transaction.EconomyTransactionInitiator;
 import me.lokka30.treasury.api.economy.transaction.EconomyTransactionType;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -24,14 +21,15 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.temporal.Temporal;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import static us.teaminceptus.novaconomy.treasury.TreasuryCurrency.getEconomy;
 
-class TreasuryAccount implements NonPlayerAccount, ConfigurationSerializable {
+final class TreasuryAccount implements NonPlayerAccount, ConfigurationSerializable {
 
-    private final String id;
+    private final NamespacedKey id;
     private String name;
     private final Map<Economy, Double> balances;
 
@@ -44,17 +42,17 @@ class TreasuryAccount implements NonPlayerAccount, ConfigurationSerializable {
     static FileConfiguration global;
     static ConfigurationSection treasuryAccounts;
 
-    public TreasuryAccount(String id) {
+    public TreasuryAccount(NamespacedKey id) {
         this.id = id;
 
-        TreasuryAccount acc = (TreasuryAccount) treasuryAccounts.get(id);
+        TreasuryAccount acc = (TreasuryAccount) treasuryAccounts.get(id.toString());
         this.name = acc.name;
         this.balances = acc.balances;
         this.members = acc.members;
         this.memberPermissions = acc.memberPermissions;
     }
 
-    public TreasuryAccount(String id, String name) {
+    public TreasuryAccount(NamespacedKey id, String name) {
         this.id = id;
         this.name = name;
         this.balances = new HashMap<>();
@@ -63,7 +61,7 @@ class TreasuryAccount implements NonPlayerAccount, ConfigurationSerializable {
         transactions.put(id, new ArrayList<>());
     }
 
-    public TreasuryAccount(String id, String name, Map<String, Double> balances, List<String> members, Map<String, Map<String, Boolean>> memberPermissions) {
+    public TreasuryAccount(NamespacedKey id, String name, Map<String, Double> balances, List<String> members, Map<String, Map<String, Boolean>> memberPermissions) {
         this.id = id;
         this.name = name;
         this.members = members;
@@ -79,7 +77,7 @@ class TreasuryAccount implements NonPlayerAccount, ConfigurationSerializable {
     }
 
     @Override
-    public @NotNull String getIdentifier() {
+    public @NotNull NamespacedKey identifier() {
         return id;
     }
 
@@ -91,7 +89,7 @@ class TreasuryAccount implements NonPlayerAccount, ConfigurationSerializable {
     }
 
     private void save() {
-        treasuryAccounts.set(id, this);
+        treasuryAccounts.set(id.toString(), this);
         try { global.save(globalF); } catch (IOException e) {
             NovaConfig.print(e);
         }
@@ -103,55 +101,43 @@ class TreasuryAccount implements NonPlayerAccount, ConfigurationSerializable {
     }
 
     @Override
-    public void setName(@Nullable String name, @NotNull EconomySubscriber<Boolean> subscription) {
+    public CompletableFuture<Boolean> setName(@Nullable String name) {
         this.name = name;
         save();
-        subscription.succeed(true);
+        return CompletableFuture.completedFuture(true);
     }
 
     @Override
-    public void retrieveBalance(@NotNull Currency currency, @NotNull EconomySubscriber<BigDecimal> subscription) {
-        subscription.succeed(BigDecimal.valueOf(balances.getOrDefault(getEconomy(currency), 0.0)));
+    public @NotNull CompletableFuture<BigDecimal> retrieveBalance(@NotNull Currency currency) {
+        return CompletableFuture.completedFuture(BigDecimal.valueOf(balances.getOrDefault(getEconomy(currency), 0.0)));
     }
 
     @Override
-    public void setBalance(@NotNull BigDecimal amount, @NotNull EconomyTransactionInitiator<?> initiator, @NotNull Currency currency, @NotNull EconomySubscriber<BigDecimal> subscription) {
-        if (amount.compareTo(BigDecimal.ZERO) < 0) {
-            subscription.fail(new EconomyException(FailureReason.of("Cannot set a negative balance")));
-            return;
-        }
-
-        balances.put(getEconomy(currency), amount.doubleValue());
+    public @NotNull CompletableFuture<Boolean> deleteAccount() {
+        treasuryAccounts.set(id.toString(), null);
         save();
-        subscription.succeed(amount);
+        return CompletableFuture.completedFuture(true);
     }
 
     @Override
-    public void doTransaction(@NotNull EconomyTransaction trans, @NotNull EconomySubscriber<BigDecimal> sub) {
-        double amount = trans.getTransactionType() == EconomyTransactionType.DEPOSIT ? trans.getTransactionAmount().doubleValue() : -trans.getTransactionAmount().doubleValue();
-        Economy econ = Economy.getEconomy(trans.getCurrencyID());
+    public CompletableFuture<BigDecimal> doTransaction(@NotNull EconomyTransaction trans) {
+        double amount = trans.getType() == EconomyTransactionType.DEPOSIT ? trans.getAmount().doubleValue() : -trans.getAmount().doubleValue();
+        Economy econ = Economy.getEconomy(trans.getCurrencyId());
         balances.put(econ, balances.get(econ) + amount);
         save();
-        sub.succeed(BigDecimal.valueOf(amount));
+        return CompletableFuture.completedFuture(BigDecimal.valueOf(amount));
     }
 
     @Override
-    public void deleteAccount(@NotNull EconomySubscriber<Boolean> subscription) {
-        treasuryAccounts.set(id, null);
-        save();
-        subscription.succeed(true);
+    public @NotNull CompletableFuture<Collection<String>> retrieveHeldCurrencies() {
+        return CompletableFuture.completedFuture(balances.keySet().stream().map(Economy::getName).collect(Collectors.toSet()));
     }
 
-    @Override
-    public void retrieveHeldCurrencies(@NotNull EconomySubscriber<Collection<String>> subscription) {
-        subscription.succeed(balances.keySet().stream().map(Economy::getName).collect(Collectors.toSet()));
-    }
-
-    private static final Map<String, List<EconomyTransaction>> transactions = new HashMap<>();
+    private static final Map<NamespacedKey, List<EconomyTransaction>> transactions = new HashMap<>();
 
     @Override
-    public void retrieveTransactionHistory(int transactionCount, @NotNull Temporal from, @NotNull Temporal to, @NotNull EconomySubscriber<Collection<EconomyTransaction>> subscription) {
-        subscription.succeed(transactions.get(this.id)
+    public @NotNull CompletableFuture<Collection<EconomyTransaction>> retrieveTransactionHistory(int transactionCount, @NotNull Temporal from, @NotNull Temporal to) {
+        return CompletableFuture.completedFuture(transactions.get(this.id)
                 .subList(0, transactionCount)
                 .stream()
                 .filter(t -> t.getTimestamp().isAfter(Instant.from(from)) && t.getTimestamp().isBefore(Instant.from(to)))
@@ -159,42 +145,53 @@ class TreasuryAccount implements NonPlayerAccount, ConfigurationSerializable {
     }
 
     @Override
-    public void retrieveMemberIds(@NotNull EconomySubscriber<Collection<UUID>> subscription) {
-        subscription.succeed(members.stream().map(UUID::fromString).collect(Collectors.toSet()));
+    public CompletableFuture<Collection<UUID>> retrieveMemberIds() {
+        return CompletableFuture.completedFuture(members.stream().map(UUID::fromString).collect(Collectors.toSet()));
     }
 
     @Override
-    public void isMember(@NotNull UUID player, @NotNull EconomySubscriber<Boolean> subscription) {
-        subscription.succeed(members.contains(player.toString()));
+    public CompletableFuture<Boolean> isMember(@NotNull UUID player) {
+        return CompletableFuture.completedFuture(members.contains(player.toString()));
     }
 
     @Override
-    public void setPermission(@NotNull UUID p, @NotNull TriState value, @NotNull EconomySubscriber<TriState> sub, @NotNull AccountPermission... perms) {
-        Map<String, Boolean> playerPerms = new HashMap<>(memberPermissions.get(p.toString()));
-        for (AccountPermission perm : perms) playerPerms.put(perm.name(), value.asBoolean());
-        memberPermissions.put(p.toString(), playerPerms);
-        sub.succeed(value);
-        save();
+    public @NotNull CompletableFuture<Boolean> setPermissions(@NotNull UUID player, @NotNull Map<AccountPermission, TriState> permissionsMap) {
+        memberPermissions.get(player.toString())
+                .putAll(permissionsMap.entrySet()
+                    .stream()
+                    .map(e -> new AbstractMap.SimpleEntry<>(e.getKey().name(), e.getValue().asBoolean()))
+                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
+                );
+
+        return CompletableFuture.completedFuture(true);
     }
 
     @Override
-    public void retrievePermissions(@NotNull UUID p, @NotNull EconomySubscriber<Map<AccountPermission, TriState>> sub) {
+    public CompletableFuture<Map<AccountPermission, TriState>> retrievePermissions(@NotNull UUID p) {
         Map<AccountPermission, TriState> perms = new HashMap<>();
         memberPermissions.getOrDefault(p.toString(), new HashMap<>()).forEach((k, v) -> perms.put(AccountPermission.valueOf(k), TriState.fromBoolean(v)));
-        sub.succeed(perms);
+        return CompletableFuture.completedFuture(perms);
     }
 
     @Override
-    public void hasPermission(@NotNull UUID p, @NotNull EconomySubscriber<TriState> sub, @NotNull AccountPermission... permissions) {
+    public @NotNull CompletableFuture<Map<UUID, Map<AccountPermission, TriState>>> retrievePermissionsMap() {
+        return null;
+    }
+
+    @Override
+    public CompletableFuture<TriState> hasPermissions(@NotNull UUID p, @NotNull AccountPermission... permissions) {
         Map<String, Boolean> playerPerms = memberPermissions.getOrDefault(p.toString(), new HashMap<>());
         AtomicBoolean has = new AtomicBoolean(true);
+
         for (AccountPermission perm : permissions) has.set(has.get() && playerPerms.getOrDefault(perm.name(), false));
-        sub.succeed(TriState.fromBoolean(has.get()));
+
+        return CompletableFuture.completedFuture(TriState.fromBoolean(has.get()));
     }
 
     @SuppressWarnings("unchecked")
     public static TreasuryAccount deserialize(Map<String, Object> map) {
-        return new TreasuryAccount((String) map.get("id"), (String) map.get("name"), (Map<String, Double>) map.get("balances"), (List<String>) map.get("members"), (Map<String, Map<String, Boolean>>) map.get("member_permissions"));
+        String[] split = map.get("id").toString().split(":");
+        return new TreasuryAccount(NamespacedKey.of(split[0], split[1]), (String) map.get("name"), (Map<String, Double>) map.get("balances"), (List<String>) map.get("members"), (Map<String, Map<String, Boolean>>) map.get("member_permissions"));
     }
 
     @Override
@@ -203,7 +200,7 @@ class TreasuryAccount implements NonPlayerAccount, ConfigurationSerializable {
         balances.forEach((k, v) -> balString.put(k.getName(), v));
 
         return new HashMap<String, Object>() {{
-            put("id", id);
+            put("id", id.toString());
             put("name", name);
             put("balances", balString);
             put("members", members);

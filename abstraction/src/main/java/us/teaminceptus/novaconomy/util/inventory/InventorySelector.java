@@ -50,6 +50,9 @@ public final class InventorySelector {
                 nbt -> nbt.set("type", "cancel"))
         );
 
+        while (inv.firstEmpty() != -1)
+            inv.setItem(inv.firstEmpty(), Items.GUI_BACKGROUND);
+
         return inv;
     }
 
