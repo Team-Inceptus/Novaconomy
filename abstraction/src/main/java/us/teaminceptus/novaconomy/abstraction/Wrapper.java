@@ -135,6 +135,8 @@ public interface Wrapper {
     
 
     static OfflinePlayer getPlayer(String name) {
+        if (Bukkit.getPlayer(name) != null) return Bukkit.getPlayer(name);
+
         if (Bukkit.getOnlineMode()) try {
             URL url = new URL("https://api.mojang.com/users/profiles/minecraft/" + name);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
