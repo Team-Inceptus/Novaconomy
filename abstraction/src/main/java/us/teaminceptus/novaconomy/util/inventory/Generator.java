@@ -1027,7 +1027,7 @@ public final class Generator {
             ));
 
         inv.setItem(17, 26, 35, 44, null);
-        inv.setItem(45, Items.economyWheel("market", econ));
+        inv.setItem(45, Items.economyWheel("market", econ, p));
 
         for (int i = 0; i < Math.min(products.size(), 28); i++) {
             int index = 11 + i + ((i / 7) * 2);

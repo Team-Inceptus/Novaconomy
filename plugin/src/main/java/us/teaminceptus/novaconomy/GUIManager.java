@@ -349,7 +349,8 @@ final class GUIManager implements Listener {
                 }
             })
             .put("economy:wheel", (e, inv) -> {
-                e.setCancelled(true);
+                Player p = (Player) e.getWhoClicked();
+                NovaPlayer np = new NovaPlayer(p);
 
                 int slot = e.getRawSlot();
                 ItemStack item = e.getCurrentItem().clone();
@@ -366,7 +367,12 @@ final class GUIManager implements Listener {
                 modelData(item, next.getCustomModelData());
 
                 item = builder(item,
-                        meta -> meta.setDisplayName(ChatColor.GOLD + next.getName()),
+                        meta -> {
+                            meta.setDisplayName(ChatColor.GOLD + next.getName());
+                            meta.setLore(Collections.singletonList(
+                                    format(ChatColor.AQUA + get("constants.balance"), ChatColor.GOLD + format("%,.2f", np.getBalance(econ) + econ.getSymbol()))
+                            ));
+                        },
                         nbt -> nbt.set(ECON_TAG, next.getUniqueId())
                 );
 

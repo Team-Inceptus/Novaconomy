@@ -602,7 +602,7 @@ public interface CommandWrapper {
         ));
 
         inv.setItem(12, Items.ARROW);
-        inv.setItem(13, Items.economyWheel("pay", econ));
+        inv.setItem(13, Items.economyWheel("pay", econ, p));
         inv.setItem(14, Items.ARROW);
 
         for (int i = 0; i < 2; i++)
@@ -729,7 +729,7 @@ public interface CommandWrapper {
         inv.setCancelled();
 
         inv.setAttribute("item", pr);
-        inv.setItem(22, Items.economyWheel("add_product"));
+        inv.setItem(22, Items.economyWheel("add_product", p));
 
         inv.setItem(13, builder(pr,
                 meta -> meta.setLore(Collections.singletonList(format(get("constants.price"), price, econ.getSymbol()))),
@@ -2055,7 +2055,7 @@ public interface CommandWrapper {
                 inv.setItem((j * 9) + i + 9, change);
             }
 
-        inv.setItem(31, Items.economyWheel("change_advertising"));
+        inv.setItem(31, Items.economyWheel("change_advertising", p));
 
         inv.setItem(39, builder(CONFIRM,
                 nbt -> {
@@ -3472,7 +3472,7 @@ public interface CommandWrapper {
             inv.setCancelled();
             for (int i = 0; i < 7; i++) inv.setItem(10 + i, GUI_BACKGROUND);
 
-            inv.setItem(12, Items.economyWheel("market_access", econ0));
+            inv.setItem(12, Items.economyWheel("market_access", econ0, p));
 
             inv.setItem(14, NBTWrapper.builder(Material.DIAMOND_BLOCK,
                     meta -> {
@@ -3523,7 +3523,7 @@ public interface CommandWrapper {
                 nbt -> nbt.setID("market:sell_items")
         ));
 
-        inv.setItem(50, Items.economyWheel());
+        inv.setItem(50, Items.economyWheel(p));
 
         p.openInventory(inv);
         NovaSound.BLOCK_ENDER_CHEST_OPEN.play(p);
