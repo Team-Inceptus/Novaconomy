@@ -220,6 +220,7 @@ public final class Bounty implements ConfigurationSerializable, Comparable<Bount
 
             owner.stats.totalBountiesCreated++;
             data.put(key, b);
+            owner.save();
 
             NovaPlayer targetN = new NovaPlayer(target);
             targetN.stats.totalBountiesHad++;
