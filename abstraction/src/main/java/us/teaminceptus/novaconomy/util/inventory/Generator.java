@@ -332,14 +332,16 @@ public final class Generator {
         int level = c.getLevel();
 
         if (level >= 3) {
-            ItemStack hq = builder(Material.GLASS,
-                    meta -> meta.setDisplayName(ChatColor.YELLOW + get("constants.corporation.headquarters")),
-                    nbt -> {
-                        nbt.setID("corporation:hq");
-                        nbt.set(CORPORATION_TAG, c.getUniqueId());
-                    }
-            );
-            inv.setItem(11, hq);
+            if (c.getSetting(Settings.Corporation.PUBLIC_HEADQUARTERS) || c.getMembers().contains(viewer) || c.isOwner(viewer)) {
+                ItemStack hq = builder(Material.GLASS,
+                        meta -> meta.setDisplayName(ChatColor.YELLOW + get("constants.corporation.headquarters")),
+                        nbt -> {
+                            nbt.setID("corporation:hq");
+                            nbt.set(CORPORATION_TAG, c.getUniqueId());
+                        }
+                );
+                inv.setItem(11, hq);
+            }
         } else if (c.isOwner(viewer)) inv.setItem(11, Items.LOCKED);
 
         ItemStack achievements = builder(Material.BOOK,
