@@ -47,7 +47,6 @@ import us.teaminceptus.novaconomy.api.util.Price;
 import us.teaminceptus.novaconomy.api.util.Product;
 import us.teaminceptus.novaconomy.util.NovaSound;
 import us.teaminceptus.novaconomy.util.NovaUtil;
-import us.teaminceptus.novaconomy.util.NovaWord;
 import us.teaminceptus.novaconomy.util.inventory.Generator;
 import us.teaminceptus.novaconomy.util.inventory.InventorySelector;
 import us.teaminceptus.novaconomy.util.inventory.Items;
@@ -243,7 +242,7 @@ final class GUIManager implements Listener {
                 Player p = (Player) e.getWhoClicked();
                 NovaPlayer np = new NovaPlayer(p);
                 ItemStack item = e.getCurrentItem();
-                String name = item.hasItemMeta() && item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : NovaWord.capitalize(item.getType().name().replace('_', ' '));
+                String name = item.hasItemMeta() && item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : NovaUtil.capitalize(item.getType().name().replace('_', ' '));
 
                 if (!of(item).getBoolean("product:in_stock")) {
                     p.sendMessage(format(get("error.business.not_in_stock"), name));
@@ -257,7 +256,7 @@ final class GUIManager implements Listener {
                     return;
                 }
 
-                NovaInventory purchaseGUI = genGUI(27, NovaWord.capitalize(get("constants.purchase")) + " \"" + ChatColor.RESET + name + ChatColor.RESET + "\"?");
+                NovaInventory purchaseGUI = genGUI(27, NovaUtil.capitalize(get("constants.purchase")) + " \"" + ChatColor.RESET + name + ChatColor.RESET + "\"?");
                 purchaseGUI.setCancelled();
 
                 for (int i = 10; i < 17; i++) purchaseGUI.setItem(i, GUI_BACKGROUND);
@@ -464,7 +463,7 @@ final class GUIManager implements Listener {
                 bStats.getProductSales().put(bPrS, bStats.getProductSales().getOrDefault(bPrS, 0) + product.getAmount());
                 b.saveBusiness();
 
-                String material = product.hasItemMeta() && product.getItemMeta().hasDisplayName() ? product.getItemMeta().getDisplayName() : NovaWord.capitalize(product.getType().name().replace('_', ' '));
+                String material = product.hasItemMeta() && product.getItemMeta().hasDisplayName() ? product.getItemMeta().getDisplayName() : NovaUtil.capitalize(product.getType().name().replace('_', ' '));
 
                 p.sendMessage(format(get("success.business.purchase"), material, bP.getBusiness().getName()));
                 p.closeInventory();
@@ -515,7 +514,7 @@ final class GUIManager implements Listener {
                     Product added = new Product(pr.getItem(), pr.getPrice());
                     b.addProduct(added);
 
-                    String name = product.hasItemMeta() && product.getItemMeta().hasDisplayName() ? product.getItemMeta().getDisplayName() : NovaWord.capitalize(product.getType().name().replace('_', ' '));
+                    String name = product.hasItemMeta() && product.getItemMeta().hasDisplayName() ? product.getItemMeta().getDisplayName() : NovaUtil.capitalize(product.getType().name().replace('_', ' '));
                     p.sendMessage(format(getMessage("success.business.add_product"), name));
                     p.closeInventory();
                 }
@@ -569,7 +568,7 @@ final class GUIManager implements Listener {
                         .collect(Collectors.toList());
 
                 b.removeResource(stock);
-                String name = product.hasItemMeta() && product.getItemMeta().hasDisplayName() ? product.getItemMeta().getDisplayName() : NovaWord.capitalize(product.getType().name().replace('_', ' '));
+                String name = product.hasItemMeta() && product.getItemMeta().hasDisplayName() ? product.getItemMeta().getDisplayName() : NovaUtil.capitalize(product.getType().name().replace('_', ' '));
 
                 p.sendMessage(format(get("success.business.remove_product"), name, b.getName()));
 
@@ -909,7 +908,7 @@ final class GUIManager implements Listener {
 
                 b.getProduct(pr.getItem()).setPrice(new Price(econ, price));
 
-                String display = pr.getItem().hasItemMeta() && pr.getItem().getItemMeta().hasDisplayName() ? pr.getItem().getItemMeta().getDisplayName() : NovaWord.capitalize(pr.getItem().getType().name().replace('_', ' '));
+                String display = pr.getItem().hasItemMeta() && pr.getItem().getItemMeta().hasDisplayName() ? pr.getItem().getItemMeta().getDisplayName() : NovaUtil.capitalize(pr.getItem().getType().name().replace('_', ' '));
                 p.sendMessage(format(getMessage("success.business.edit_price"), display, format("%,.2f", price) + econ.getSymbol()));
                 p.closeInventory();
             })
@@ -1170,9 +1169,15 @@ final class GUIManager implements Listener {
                     return;
                 }
 
+                if (!c.getSetting(Settings.Corporation.PUBLIC_HEADQUARTERS) && !c.getMembers().contains(p)) {
+                    p.sendMessage(getError("error.corporation.private_hq"));
+                    NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
+                    return;
+                }
+
                 p.closeInventory();
                 p.teleport(c.getHeadquarters());
-                p.sendMessage(get("constants.teleporting"));
+                p.sendMessage(ChatColor.AQUA + get("constants.teleporting"));
                 NovaSound.ENTITY_ENDERMAN_TELEPORT.playSuccess(p);
             })
             .put("corporation:click", (e, inv) -> {
