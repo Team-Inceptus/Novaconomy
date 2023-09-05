@@ -64,6 +64,23 @@ public interface NovaInventory extends Inventory {
         setItem(d, item);
     }
 
+    default void setItem(int a, int b, int c, int d, int e, ItemStack item) {
+        setItem(a, item);
+        setItem(b, item);
+        setItem(c, item);
+        setItem(d, item);
+        setItem(e, item);
+    }
+
+    default void setItem(int a, int b, int c, int d, int e, int f, ItemStack item) {
+        setItem(a, item);
+        setItem(b, item);
+        setItem(c, item);
+        setItem(d, item);
+        setItem(e, item);
+        setItem(f, item);
+    }
+
     default void addItem(int times, ItemStack item) {
         for (int i = 0; i < times; i++) {
             int next = firstEmpty();
