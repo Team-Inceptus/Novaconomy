@@ -72,6 +72,15 @@ public final class NovaUtil {
         }.runTask(NovaConfig.getPlugin());
     }
 
+    public static void async(Runnable r) {
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                r.run();
+            }
+        }.runTaskAsynchronously(NovaConfig.getPlugin());
+    }
+
     public static String getDisplayName(@NotNull SortingType<?> type) {
         return get("constants.sorting_types." + getId(type));
     }
@@ -134,5 +143,20 @@ public final class NovaUtil {
         return format(get("constants.time.ago.years_ago"), format("%,d", years));
     }
 
+
+    public static String capitalize(@NotNull String str) {
+        if (str.isEmpty()) return str;
+
+        String[] words = str.split("\\s");
+        StringBuilder sb = new StringBuilder();
+
+        for (String word : words) {
+            sb.append(word.substring(0, 1).toUpperCase());
+            sb.append(word.substring(1).toLowerCase());
+            sb.append(" ");
+        }
+
+        return sb.toString().trim();
+    }
 
 }
