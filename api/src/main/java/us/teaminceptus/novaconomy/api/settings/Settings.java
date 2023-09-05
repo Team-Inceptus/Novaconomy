@@ -117,6 +117,17 @@ public final class Settings {
          */
         @SettingDescription("settings.personal.rating")
         ANONYMOUS_RATING("constants.settings.name.anonymous_rate", false),
+        /**
+         * Whether the player's transaction history is publicly visible
+         */
+        @SettingDescription("settings.personal.transaction_history")
+        PUBLIC_TRANSACTION_HISTORY("constants.settings.name.public_transaction_history", true),
+
+        /**
+         * Whether the player's statistics are publicly visible
+         */
+        @SettingDescription("settings.personal.statistics")
+        PUBLIC_STATISTICS("constants.settings.name.public_stats", true)
 
         ;
 
@@ -362,6 +373,12 @@ public final class Settings {
          */
         @SettingDescription("settings.corporation.chat")
         public static final Corporation<Boolean> CHAT = ofBoolean("chat", "constants.settings.name.chat", true);
+
+        /**
+         * Whether anyone can teleport to the Corporation's headquarters.
+         */
+        @SettingDescription("settings.corporation.public_headquarters")
+        public static final Corporation<Boolean> PUBLIC_HEADQUARTERS = ofBoolean("public_headquarters", "constants.settings.name.public_headquarters", true);
 
         private final String key;
         private final T defaultValue;
