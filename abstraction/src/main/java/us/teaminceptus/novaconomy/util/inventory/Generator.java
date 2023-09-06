@@ -332,14 +332,16 @@ public final class Generator {
         int level = c.getLevel();
 
         if (level >= 3) {
-            ItemStack hq = builder(Material.GLASS,
-                    meta -> meta.setDisplayName(ChatColor.YELLOW + get("constants.corporation.headquarters")),
-                    nbt -> {
-                        nbt.setID("corporation:hq");
-                        nbt.set(CORPORATION_TAG, c.getUniqueId());
-                    }
-            );
-            inv.setItem(11, hq);
+            if (c.getSetting(Settings.Corporation.PUBLIC_HEADQUARTERS) || c.getMembers().contains(viewer) || c.isOwner(viewer)) {
+                ItemStack hq = builder(Material.GLASS,
+                        meta -> meta.setDisplayName(ChatColor.YELLOW + get("constants.corporation.headquarters")),
+                        nbt -> {
+                            nbt.setID("corporation:hq");
+                            nbt.set(CORPORATION_TAG, c.getUniqueId());
+                        }
+                );
+                inv.setItem(11, hq);
+            }
         } else if (c.isOwner(viewer)) inv.setItem(11, Items.LOCKED);
 
         ItemStack achievements = builder(Material.BOOK,
@@ -1027,7 +1029,7 @@ public final class Generator {
             ));
 
         inv.setItem(17, 26, 35, 44, null);
-        inv.setItem(45, Items.economyWheel("market", econ));
+        inv.setItem(45, Items.economyWheel("market", econ, p));
 
         for (int i = 0; i < Math.min(products.size(), 28); i++) {
             int index = 11 + i + ((i / 7) * 2);

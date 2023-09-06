@@ -46,7 +46,6 @@ import us.teaminceptus.novaconomy.api.util.Price;
 import us.teaminceptus.novaconomy.api.util.Product;
 import us.teaminceptus.novaconomy.util.NovaSound;
 import us.teaminceptus.novaconomy.util.NovaUtil;
-import us.teaminceptus.novaconomy.util.NovaWord;
 import us.teaminceptus.novaconomy.util.inventory.Generator;
 import us.teaminceptus.novaconomy.util.inventory.InventorySelector;
 import us.teaminceptus.novaconomy.util.inventory.Items;
@@ -602,7 +601,7 @@ public interface CommandWrapper {
         ));
 
         inv.setItem(12, Items.ARROW);
-        inv.setItem(13, Items.economyWheel("pay", econ));
+        inv.setItem(13, Items.economyWheel("pay", econ, p));
         inv.setItem(14, Items.ARROW);
 
         for (int i = 0; i < 2; i++)
@@ -725,11 +724,11 @@ public interface CommandWrapper {
                 .collect(Collectors.toList())
                 .get(0);
 
-        NovaInventory inv = genGUI(36, pr.hasItemMeta() && pr.getItemMeta().hasDisplayName() ? pr.getItemMeta().getDisplayName() : NovaWord.capitalize(pr.getType().name().replace('_', ' ')));
+        NovaInventory inv = genGUI(36, pr.hasItemMeta() && pr.getItemMeta().hasDisplayName() ? pr.getItemMeta().getDisplayName() : NovaUtil.capitalize(pr.getType().name().replace('_', ' ')));
         inv.setCancelled();
 
         inv.setAttribute("item", pr);
-        inv.setItem(22, Items.economyWheel("add_product"));
+        inv.setItem(22, Items.economyWheel("add_product", p));
 
         inv.setItem(13, builder(pr,
                 meta -> meta.setLore(Collections.singletonList(format(get("constants.price"), price, econ.getSymbol()))),
@@ -1248,7 +1247,7 @@ public interface CommandWrapper {
 
             switch (section.toLowerCase()) {
                 case "personal": {
-                    settings = genGUI(36, get("constants.settings.corporation"));
+                    settings = genGUI(36, get("constants.settings.player"));
 
                     for (Settings.Personal sett : Settings.Personal.values()) {
                         boolean value = np.getSetting(sett);
@@ -1352,7 +1351,7 @@ public interface CommandWrapper {
                     meta -> {
                         meta.setDisplayName(ChatColor.YELLOW + get("constants.business.stats.global.latest"));
 
-                        String display = prI.hasItemMeta() && prI.getItemMeta().hasDisplayName() ? prI.getItemMeta().getDisplayName() : NovaWord.capitalize(prI.getType().name().replace('_', ' '));
+                        String display = prI.hasItemMeta() && prI.getItemMeta().hasDisplayName() ? prI.getItemMeta().getDisplayName() : NovaUtil.capitalize(prI.getType().name().replace('_', ' '));
                         meta.setLore(asList(
                                 ChatColor.AQUA + String.valueOf(ChatColor.UNDERLINE) + (buyer.isOnline() && buyer.getPlayer().getDisplayName() != null ? buyer.getPlayer().getDisplayName() : buyer.getName()),
                                 " ",
@@ -1449,7 +1448,7 @@ public interface CommandWrapper {
                             int num = j + 1;
 
                             ItemStack item = pr.getItem();
-                            String display = item.hasItemMeta() && item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : NovaWord.capitalize(item.getType().name().replace('_', ' '));
+                            String display = item.hasItemMeta() && item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : NovaUtil.capitalize(item.getType().name().replace('_', ' '));
 
                             pLore.add(ChatColor.YELLOW + "#" + num + ") " + ChatColor.RESET + display + ChatColor.GOLD + " - " + ChatColor.BLUE + format("%,.2f", pr.getAmount()) + pr.getEconomy().getSymbol() + ChatColor.GOLD + " | " + ChatColor.AQUA + format("%,d", sales));
                         }
@@ -1691,7 +1690,7 @@ public interface CommandWrapper {
 
         Business b = Business.byOwner(p);
         b.setIcon(icon);
-        p.sendMessage(format(getMessage("success.business.set_icon"), NovaWord.capitalize(icon.name().replace("_", " "))));
+        p.sendMessage(format(getMessage("success.business.set_icon"), NovaUtil.capitalize(icon.name().replace("_", " "))));
     }
 
     default void setEconomyModel(CommandSender sender, Economy econ, int data) {
@@ -1716,7 +1715,7 @@ public interface CommandWrapper {
         }
 
         econ.setIcon(icon);
-        sender.sendMessage(format(getMessage("success.economy.set_icon"), econ.getName(), NovaWord.capitalize(icon.name().replace("_", " "))));
+        sender.sendMessage(format(getMessage("success.economy.set_icon"), econ.getName(), NovaUtil.capitalize(icon.name().replace("_", " "))));
     }
 
     default void setEconomyScale(CommandSender sender, Economy econ, double scale) {
@@ -1760,77 +1759,98 @@ public interface CommandWrapper {
                 }, NBTWrapper::removeID
         ));
 
-        inv.setItem(10, Items.builder(Material.EMERALD_BLOCK,
-                meta -> {
-                    meta.setDisplayName(ChatColor.YELLOW + get("constants.player_statistics.highest_balance"));
-                    String s = stats.getHighestBalance() == null ? format("%,.2f", np.getTotalBalance()) : stats.getHighestBalance().toString();
+        if (!np.getSetting(Settings.Personal.PUBLIC_STATISTICS) && !p.equals(target)) {
+            inv.setItem(13, Items.builder(Material.BARRIER,
+                    meta -> meta.setDisplayName(ChatColor.RED + get("constants.player_statistics.hidden"))
+            ));
 
-                    meta.setLore(Collections.singletonList(ChatColor.GOLD + s));
-                }
-        ));
-
-        inv.setItem(12, Items.builder(Material.DIAMOND_CHESTPLATE,
-                meta -> {
-                    meta.setDisplayName(ChatColor.YELLOW + get("constants.player_statistics.business"));
-                    meta.setLore(asList(
-                            ChatColor.GOLD + format(get("constants.player_statistics.business.products_purchased"), format("%,d", stats.getProductsPurchased())),
-                            ChatColor.AQUA + format(get("constants.player_statistics.business.money_spent"), format("%,.2f", stats.getTotalMoneySpent()))
-                    ));
-                    meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
-                })
-        );
-
-        inv.setItem(14, Items.builder(Material.GOLD_INGOT,
-                meta -> {
-                    meta.setDisplayName(ChatColor.YELLOW + get("constants.player_statistics.bank"));
-                    meta.setLore(asList(
-                            format(get("constants.player_statistics.bank.total_withdrawn"), format("%,.2f", stats.getTotalWithdrawn()))
-                    ));
-                })
-        );
-
-        Material bountyM = Material.BOW;
-        try {
-            bountyM = Material.valueOf("TARGET");
-        } catch (IllegalArgumentException ignored) {
+            p.openInventory(inv);
+            NovaSound.BLOCK_ANVIL_USE.play(p, 1F, 1.5F);
+            return;
         }
 
-        inv.setItem(16, Items.builder(bountyM,
-                meta -> {
-                    meta.setDisplayName(ChatColor.YELLOW + get("constants.player_statistics.bounty"));
-                    meta.setLore(asList(
-                            ChatColor.RED + format(get("constants.player_statistics.bounty.created"), format("%,d", stats.getTotalBountiesCreated())),
-                            ChatColor.DARK_RED + format(get("constants.player_statistics.bounty.had"), format("%,d", stats.getTotalBountiesTargeted()))
-                    ));
-                }
-        ));
-
-        inv.setItem(22, Items.builder(Material.BOOK,
-                meta -> {
-                    meta.setDisplayName(ChatColor.YELLOW + get("constants.player_statistics.history"));
-
-                    List<String> lore = new ArrayList<>();
-                    List<BusinessStatistics.Transaction> transactions = stats.getTransactionHistory().stream().sorted(Collections.reverseOrder(Comparator.comparing(BusinessStatistics.Transaction::getTimestamp))).collect(Collectors.toList());
-
-                    for (BusinessStatistics.Transaction t : transactions) {
-                        Product pr = t.getProduct();
-                        ItemStack prItem = pr.getItem();
-                        String display = prItem.hasItemMeta() && prItem.getItemMeta().hasDisplayName() ? prItem.getItemMeta().getDisplayName() : NovaWord.capitalize(prItem.getType().name().replace("_", " "));
-                        lore.add(ChatColor.WHITE + display + " (" + prItem.getAmount() + ")"
-                                + ChatColor.GOLD + " - "
-                                + ChatColor.BLUE + pr.getPrice()
-                                + ChatColor.GOLD + " @ "
-                                + ChatColor.AQUA + (t.getBusiness() == null ? get("constants.unknown") : t.getBusiness().getName())
-                                + ChatColor.GOLD + " | "
-                                + ChatColor.DARK_AQUA + NovaUtil.formatTimeAgo(t.getTimestamp().getTime()));
-                    }
-
-                    meta.setLore(lore);
-                }
-        ));
-
+        inv.setItem(10, 12, 14, 16, 22, LOADING);
         op.openInventory(inv);
         NovaSound.BLOCK_ANVIL_USE.play(p, 1F, 1.5F);
+
+        NovaUtil.async(() -> {
+            inv.setItem(10, Items.builder(Material.EMERALD_BLOCK,
+                    meta -> {
+                        meta.setDisplayName(ChatColor.YELLOW + get("constants.player_statistics.highest_balance"));
+                        String s = stats.getHighestBalance() == null ? format("%,.2f", np.getTotalBalance()) : stats.getHighestBalance().toString();
+
+                        meta.setLore(Collections.singletonList(ChatColor.GOLD + s));
+                    }
+            ));
+
+            inv.setItem(12, Items.builder(Material.DIAMOND_CHESTPLATE,
+                    meta -> {
+                        meta.setDisplayName(ChatColor.YELLOW + get("constants.player_statistics.business"));
+                        meta.setLore(asList(
+                                ChatColor.GOLD + format(get("constants.player_statistics.business.products_purchased"), format("%,d", stats.getProductsPurchased())),
+                                ChatColor.AQUA + format(get("constants.player_statistics.business.money_spent"), format("%,.2f", stats.getTotalMoneySpent()))
+                        ));
+                        meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+                    })
+            );
+
+            inv.setItem(14, Items.builder(Material.GOLD_INGOT,
+                    meta -> {
+                        meta.setDisplayName(ChatColor.YELLOW + get("constants.player_statistics.bank"));
+                        meta.setLore(asList(
+                                format(get("constants.player_statistics.bank.total_withdrawn"), format("%,.2f", stats.getTotalWithdrawn()))
+                        ));
+                    })
+            );
+
+            Material bountyM = Material.BOW;
+            try {
+                bountyM = Material.valueOf("TARGET");
+            } catch (IllegalArgumentException ignored) {
+            }
+
+            inv.setItem(16, Items.builder(bountyM,
+                    meta -> {
+                        meta.setDisplayName(ChatColor.YELLOW + get("constants.player_statistics.bounty"));
+                        meta.setLore(asList(
+                                ChatColor.RED + format(get("constants.player_statistics.bounty.created"), format("%,d", stats.getTotalBountiesCreated())),
+                                ChatColor.DARK_RED + format(get("constants.player_statistics.bounty.had"), format("%,d", stats.getTotalBountiesTargeted()))
+                        ));
+                    }
+            ));
+
+            if (np.getSetting(Settings.Personal.PUBLIC_TRANSACTION_HISTORY) || p.equals(target))
+                inv.setItem(22, Items.builder(Material.BOOK,
+                        meta -> {
+                            meta.setDisplayName(ChatColor.YELLOW + get("constants.player_statistics.history"));
+
+                            List<String> lore = new ArrayList<>();
+                            List<BusinessStatistics.Transaction> transactions = stats.getTransactionHistory()
+                                    .stream()
+                                    .sorted(Collections.reverseOrder(Comparator.comparing(BusinessStatistics.Transaction::getTimestamp)))
+                                    .collect(Collectors.toList());
+
+                            for (BusinessStatistics.Transaction t : transactions) {
+                                Product pr = t.getProduct();
+                                ItemStack prItem = pr.getItem();
+                                ItemMeta prMeta = prItem.getItemMeta();
+
+                                String display = prMeta.hasDisplayName() ? prMeta.getDisplayName() : NovaUtil.capitalize(prItem.getType().name().replace("_", " "));
+                                lore.add((prMeta.hasEnchants() ? ChatColor.AQUA : ChatColor.WHITE) + display + " (" + prItem.getAmount() + ")"
+                                        + ChatColor.GOLD + " - "
+                                        + ChatColor.BLUE + pr.getPrice()
+                                        + ChatColor.GOLD + " @ "
+                                        + ChatColor.GREEN + (t.getBusiness() == null ? get("constants.unknown") : t.getBusiness().getName())
+                                        + ChatColor.GOLD + " | "
+                                        + ChatColor.DARK_AQUA + NovaUtil.formatTimeAgo(t.getTimestamp().getTime()));
+                            }
+
+                            meta.setLore(lore);
+                        }
+                ));
+            else
+                inv.setItem(22, null);
+        });
     }
 
     default void businessRecover(Player p) {
@@ -2055,7 +2075,7 @@ public interface CommandWrapper {
                 inv.setItem((j * 9) + i + 9, change);
             }
 
-        inv.setItem(31, Items.economyWheel("change_advertising"));
+        inv.setItem(31, Items.economyWheel("change_advertising", p));
 
         inv.setItem(39, builder(CONFIRM,
                 nbt -> {
@@ -3472,7 +3492,7 @@ public interface CommandWrapper {
             inv.setCancelled();
             for (int i = 0; i < 7; i++) inv.setItem(10 + i, GUI_BACKGROUND);
 
-            inv.setItem(12, Items.economyWheel("market_access", econ0));
+            inv.setItem(12, Items.economyWheel("market_access", econ0, p));
 
             inv.setItem(14, NBTWrapper.builder(Material.DIAMOND_BLOCK,
                     meta -> {
@@ -3523,7 +3543,7 @@ public interface CommandWrapper {
                 nbt -> nbt.setID("market:sell_items")
         ));
 
-        inv.setItem(50, Items.economyWheel());
+        inv.setItem(50, Items.economyWheel(p));
 
         p.openInventory(inv);
         NovaSound.BLOCK_ENDER_CHEST_OPEN.play(p);

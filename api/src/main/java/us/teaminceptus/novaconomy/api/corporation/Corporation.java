@@ -481,13 +481,19 @@ public final class Corporation {
      * Fetches the value of a Corporation's setting.
      * @param <T> Setting Type
      * @param setting Setting to fetch
-     * @return Setting Value, or null if not found
+     * @return Setting Value, or null if not found (if the setting type is primitive, it will return its default value)
      */
     @Nullable
     public <T> T getSetting(@NotNull Settings.Corporation<T> setting) {
-        if (setting.getType().isPrimitive()) return getSetting(setting, setting.getDefaultValue());
+        if (isPrimitiveOrWrapper(setting.getType())) return getSetting(setting, setting.getDefaultValue());
 
         return getSetting(setting, null);
+    }
+
+    private static boolean isPrimitiveOrWrapper(Class<?> clazz) {
+        if (clazz.isPrimitive()) return true;
+
+        return clazz == Boolean.class || clazz == Character.class || clazz == Byte.class || clazz == Short.class || clazz == Integer.class || clazz == Long.class || clazz == Float.class || clazz == Double.class;
     }
 
     /**

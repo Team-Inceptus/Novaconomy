@@ -373,7 +373,6 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
     private static void updateRunnables() {
         Novaconomy plugin = getPlugin(Novaconomy.class);
 
-        config = plugin.getConfig();
         interest = config.getConfigurationSection("Interest");
         ncauses = config.getConfigurationSection("NaturalCauses");
 
@@ -443,11 +442,6 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
             getLogger().info("Placeholder API Found! Hooking...");
             new Placeholders(this);
             getLogger().info("Hooked into Placeholder API!");
-        }
-
-        if (hasVault()) {
-            getLogger().info("Vault Found! Hooking...");
-            VaultRegistry.reloadVault();
         }
 
         if (Bukkit.getPluginManager().getPlugin("Treasury") != null) {
@@ -939,6 +933,19 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
                 serial.put(entry.getKey(), toMap(((ConfigurationSection) entry.getValue()).getValues(true)));
 
         return serial;
+    }
+
+    /**
+     * called when the Plugin is loaded
+     */
+    @Override
+    public void onLoad() {
+        config = getConfig();
+
+        if (hasVault()) {
+            getLogger().info("Vault Found! Hooking...");
+            VaultRegistry.reloadVault();
+        }
     }
 
     /**
