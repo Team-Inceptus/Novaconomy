@@ -33,6 +33,7 @@ import us.teaminceptus.novaconomy.api.economy.market.MarketCategory;
 import us.teaminceptus.novaconomy.api.economy.market.Receipt;
 import us.teaminceptus.novaconomy.api.events.business.*;
 import us.teaminceptus.novaconomy.api.events.corporation.CorporationSettingChangeEvent;
+import us.teaminceptus.novaconomy.api.events.corporation.CorporationTeleportHeadquartersEvent;
 import us.teaminceptus.novaconomy.api.events.player.PlayerRateBusinessEvent;
 import us.teaminceptus.novaconomy.api.events.player.PlayerSettingChangeEvent;
 import us.teaminceptus.novaconomy.api.events.player.economy.PlayerChangeBalanceEvent;
@@ -803,8 +804,14 @@ final class GUIManager implements Listener {
                 }
 
                 p.sendMessage(ChatColor.DARK_AQUA + get("constants.teleporting"));
-                p.teleport(b.getHome());
-                NovaSound.ENTITY_ENDERMAN_TELEPORT.play(p, 1F, 1F);
+
+                BusinessTeleportHomeEvent event = new BusinessTeleportHomeEvent(p, b);
+                Bukkit.getPluginManager().callEvent(event);
+
+                if (!event.isCancelled()) {
+                    p.teleport(event.getLocation());
+                    NovaSound.ENTITY_ENDERMAN_TELEPORT.play(p, 1F, 1F);
+                }
             })
             .put("business:settings", (e, inv) -> {
                 Player p = (Player) e.getWhoClicked();
@@ -1176,9 +1183,15 @@ final class GUIManager implements Listener {
                 }
 
                 p.closeInventory();
-                p.teleport(c.getHeadquarters());
-                p.sendMessage(ChatColor.AQUA + get("constants.teleporting"));
-                NovaSound.ENTITY_ENDERMAN_TELEPORT.playSuccess(p);
+
+                CorporationTeleportHeadquartersEvent event = new CorporationTeleportHeadquartersEvent(p, c);
+                Bukkit.getPluginManager().callEvent(event);
+
+                if (!event.isCancelled()) {
+                    p.teleport(event.getLocation());
+                    p.sendMessage(ChatColor.AQUA + get("constants.teleporting"));
+                    NovaSound.ENTITY_ENDERMAN_TELEPORT.playSuccess(p);
+                }
             })
             .put("corporation:click", (e, inv) -> {
                 Player p = (Player) e.getWhoClicked();

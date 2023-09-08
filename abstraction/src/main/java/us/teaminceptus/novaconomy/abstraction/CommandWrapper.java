@@ -36,7 +36,9 @@ import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.economy.market.MarketCategory;
 import us.teaminceptus.novaconomy.api.events.CommandTaxEvent;
 import us.teaminceptus.novaconomy.api.events.business.BusinessAdvertiseEvent;
+import us.teaminceptus.novaconomy.api.events.business.BusinessTeleportHomeEvent;
 import us.teaminceptus.novaconomy.api.events.business.BusinessViewEvent;
+import us.teaminceptus.novaconomy.api.events.corporation.CorporationTeleportHeadquartersEvent;
 import us.teaminceptus.novaconomy.api.player.Bounty;
 import us.teaminceptus.novaconomy.api.player.NovaPlayer;
 import us.teaminceptus.novaconomy.api.player.PlayerStatistics;
@@ -925,8 +927,14 @@ public interface CommandWrapper {
             }
 
             p.sendMessage(ChatColor.DARK_AQUA + get("constants.teleporting"));
-            p.teleport(b.getHome());
-            NovaSound.ENTITY_ENDERMAN_TELEPORT.play(p, 1F, 1F);
+
+            BusinessTeleportHomeEvent event = new BusinessTeleportHomeEvent(p, b);
+            Bukkit.getPluginManager().callEvent(event);
+
+            if (!event.isCancelled()) {
+                p.teleport(event.getLocation());
+                NovaSound.ENTITY_ENDERMAN_TELEPORT.play(p, 1F, 1F);
+            }
         }
     }
 
@@ -3438,8 +3446,14 @@ public interface CommandWrapper {
             return;
         }
 
-        p.teleport(c.getHeadquarters());
-        p.sendMessage(ChatColor.AQUA + get("constants.teleporting"));
+        CorporationTeleportHeadquartersEvent event = new CorporationTeleportHeadquartersEvent(p, c);
+        Bukkit.getPluginManager().callEvent(event);
+
+        if (!event.isCancelled()) {
+            p.teleport(event.getLocation());
+            p.sendMessage(ChatColor.AQUA + get("constants.teleporting"));
+            NovaSound.ENTITY_ENDERMAN_TELEPORT.playSuccess(p);
+        }
     }
 
     default void corporationChat(@NotNull Player p, String message) {
