@@ -501,7 +501,8 @@ public final class Settings {
         public T parseValue(@NotNull String value) {
             switch (key) {
                 case "join_type": return (T) JoinType.valueOf(value.toUpperCase());
-                case "chat": return (T) Boolean.valueOf(value);
+                case "chat":
+                case "public_headquarters": return (T) Boolean.valueOf(value);
                 default:
                     throw new IllegalArgumentException("Unknown Corporation Setting: " + key);
             }
