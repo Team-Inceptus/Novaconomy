@@ -84,6 +84,33 @@ public enum CorporationAchievement {
             default: return 1D;
         }
     }),
+
+    /**
+     * The achievement for reaching a collective 5K, 20K, 75K, 130K, 285K, and 610K in total Corporation Resources.
+     */
+    STOCKPILER(Material.CHEST, 6, "constants.corporation.achievement.stockpiler", 137500, (c, level) -> {
+        int resources = c.getTotalResources();
+
+        switch (level) {
+            case 0: return resources / 5_000D;
+            case 1: return resources / 20_000D;
+            case 2: return resources / 75_000D;
+            case 3: return resources / 130_000D;
+            case 4: return resources / 285_000D;
+            case 5: return resources / 610_000D;
+            default: return 1D;
+        }
+    }),
+
+    /**
+     * The achievement for reaching an average rating of 4 stars or more on all of this Corporation's Children when they have at least 5 members.
+     */
+    SUPER_QUALITY(Material.EMERALD, 1, "constants.corporation.achievement.super_quality", 100000, (c, level) -> {
+        if (c.getChildren().size() < 5) return 0D;
+        if (c.getAverageRating() > 4D) return 1D;
+
+        return c.getAverageRating() / 4D;
+    }),
     
     ;
 
