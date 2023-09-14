@@ -3098,6 +3098,16 @@ public interface CommandWrapper {
         if (!corp.isOwner(p)) corp.addView();
     }
 
+    default void queryCorporation(Player p, Corporation corp) {
+        if (!p.hasPermission("novaconomy.user.corporation.query")) {
+            p.sendMessage(ERROR_PERMISSION_ARGUMENT);
+            return;
+        }
+
+        p.openInventory(generateCorporationData(corp, p, SortingType.BUSINESS_NAME_ASCENDING));
+        if (!corp.isOwner(p)) corp.addView();
+    }
+
     default void createCorporation(Player p, String name, Material icon) {
         if (!p.hasPermission("novaconomy.user.corporation.manage")) {
             p.sendMessage(ERROR_PERMISSION_ARGUMENT);

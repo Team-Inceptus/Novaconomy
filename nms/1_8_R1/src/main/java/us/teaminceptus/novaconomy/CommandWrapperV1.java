@@ -13,6 +13,7 @@ import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.corporation.Corporation;
 import us.teaminceptus.novaconomy.api.economy.Economy;
+import us.teaminceptus.novaconomy.util.NovaSound;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -1515,6 +1516,25 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         }
 
                         createCorporation(p, name, icon);
+                        break;
+                    }
+                    case "query": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
+                        if (args.length < 2) {
+                            p.sendMessage(getMessage("error.argument.corporation"));
+                            return false;
+                        }
+
+                        Corporation c = Corporation.byName(args[1]);
+                        if (c == null) {
+                            p.sendMessage(getMessage("error.corporation.inexistent"));
+                            return false;
+                        }
+
+                        queryCorporation(p, c);
+                        NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
                         break;
                     }
                     case "delete": {

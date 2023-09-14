@@ -266,6 +266,12 @@ permissions:
     children:
       novaconomy.user.corporation: true
 
+  novaconomy.user.corporation.query:
+    description: Access to Querying about other Corporations
+    default: true
+    children:
+      novaconomy.user.corporation: true
+
   # User Market
   novaconomy.user.market:
     description: Access to all Novaconomy Market User Actions and Commands
