@@ -380,6 +380,12 @@ public final class Settings {
         @SettingDescription("settings.corporation.public_headquarters")
         public static final Corporation<Boolean> PUBLIC_HEADQUARTERS = ofBoolean("public_headquarters", "constants.settings.name.public_headquarters", true);
 
+        /**
+         * Whether random Products under this Corporation will be featured on the main Corporation page.
+         */
+        @SettingDescription("settings.corporation.feature_products")
+        public static final Corporation<Boolean> FEATURE_PRODUCTS = ofBoolean("feature_products", "constants.settings.name.feature_products", true);
+
         private final String key;
         private final T defaultValue;
         private final String dKey;
@@ -502,7 +508,8 @@ public final class Settings {
             switch (key) {
                 case "join_type": return (T) JoinType.valueOf(value.toUpperCase());
                 case "chat":
-                case "public_headquarters": return (T) Boolean.valueOf(value);
+                case "public_headquarters":
+                case "feature_products": return (T) Boolean.valueOf(value);
                 default:
                     throw new IllegalArgumentException("Unknown Corporation Setting: " + key);
             }

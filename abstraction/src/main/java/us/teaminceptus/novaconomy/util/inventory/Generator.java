@@ -190,7 +190,7 @@ public final class Generator {
 
                 ItemStack product = builder(item.clone(),
                         meta -> {
-                            List<String> lore = meta.hasLore() ? meta.getLore() : new ArrayList<>();
+                            List<String> lore = meta.hasLore() ? new ArrayList<>(meta.getLore()) : new ArrayList<>();
                             lore.add(" ");
                             lore.add(
                                     format(get("constants.price"), format("%,.2f", p.getAmount()).replace("D", ""), String.valueOf(p.getEconomy().getSymbol()))
@@ -379,6 +379,53 @@ public final class Generator {
                 }
         );
         inv.setItem(15, leveling);
+
+        if (c.getSetting(Settings.Corporation.FEATURE_PRODUCTS) && !c.getChildren().isEmpty() && r.nextDouble() < 0.4) {
+            List<Map.Entry<Business, BusinessProduct>> products = c.getChildren()
+                    .stream()
+                    .map(b -> {
+                        List<BusinessProduct> bps = b.getProducts()
+                                .stream()
+                                .filter(p -> p.getBusiness().isInStock(p.getItem()))
+                                .collect(Collectors.toList());
+
+                        return new AbstractMap.SimpleEntry<>(b, bps.isEmpty() ? null : bps.get(r.nextInt(bps.size())));
+                    })
+                    .filter(e -> e.getValue() != null)
+                    .collect(Collectors.toList());
+
+            if (!products.isEmpty()) {
+                Map.Entry<Business, BusinessProduct> random = products.get(r.nextInt(products.size()));
+                Business b = random.getKey();
+                BusinessProduct p = random.getValue();
+                ItemStack item = p.getItem();
+
+                ItemStack product = builder(item.clone(),
+                        meta -> {
+                            List<String> lore = meta.hasLore() ? new ArrayList<>(meta.getLore()) : new ArrayList<>();
+                            lore.addAll(Arrays.asList(
+                                    ChatColor.AQUA + get("constants.featured_product"),
+                                    " ",
+                                    format(get("constants.price"), format("%,.2f", p.getAmount()).replace("D", ""), String.valueOf(p.getEconomy().getSymbol())),
+                                    " "
+                            ));
+                            AtomicInteger index = new AtomicInteger();
+                            b.getResources().forEach(res -> {
+                                if (item.isSimilar(res)) index.addAndGet(res.getAmount());
+                            });
+
+                            lore.add(format(get("constants.business.stock_left"), format("%,d", index.get())));
+
+                            meta.setLore(lore);
+                        }, nbt -> {
+                            nbt.setID("product:buy");
+                            nbt.set("product:in_stock", true);
+                            nbt.set(PRODUCT_TAG, p);
+                        }
+                );
+                inv.setItem(36, product);
+            }
+        }
 
         // Children
 
