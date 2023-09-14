@@ -60,6 +60,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.IntUnaryOperator;
 import java.util.stream.Collectors;
 
 import static java.util.Arrays.asList;
@@ -1069,21 +1070,22 @@ public interface CommandWrapper {
         for (int i = 10; i < 12; i++) inv.setItem(i, GUI_BACKGROUND);
         for (int i = 15; i < 17; i++) inv.setItem(i, GUI_BACKGROUND);
 
-        ItemStack head = createPlayerHead(p);
-        ItemMeta meta = head.getItemMeta();
-        meta.setDisplayName(ChatColor.AQUA + (p.getDisplayName() == null ? p.getName() : p.getDisplayName()));
-        if (owned)
-            meta.setLore(Collections.singletonList(format(get("constants.bounty.amount"), np.getOwnedBounties().size())));
-        head.setItemMeta(meta);
+        ItemStack head = Items.builder(createPlayerHead(p),
+            meta -> {
+                meta.setDisplayName(ChatColor.AQUA + (p.getDisplayName() == null ? p.getName() : p.getDisplayName()));
+                if (owned)
+                    meta.setLore(Collections.singletonList(format(get("constants.bounty.amount"), np.getOwnedBounties().size())));
+            }
+        );
         inv.setItem(4, head);
 
-        Function<Integer, Integer> fIndex = i -> i > 2 ? i + 16 : i + 12;
+        IntUnaryOperator fIndex = i -> i > 2 ? i + 16 : i + 12;
 
         if (owned) {
             List<Map.Entry<OfflinePlayer, Bounty>> bounties = np.getTopBounties(10);
             for (int i = 0; i < bounties.size(); i++) {
                 Map.Entry<OfflinePlayer, Bounty> bounty = bounties.get(i);
-                int index = fIndex.apply(i);
+                int index = fIndex.applyAsInt(i);
 
                 OfflinePlayer target = bounty.getKey();
                 Bounty b = bounty.getValue();
@@ -1099,7 +1101,7 @@ public interface CommandWrapper {
         } else {
             List<Bounty> bounties = np.getTopSelfBounties(10);
             for (int i = 0; i < bounties.size(); i++) {
-                int index = fIndex.apply(i);
+                int index = fIndex.applyAsInt(i);
 
                 Bounty b = bounties.get(i);
 
@@ -1494,14 +1496,15 @@ public interface CommandWrapper {
         NovaPlayer np = new NovaPlayer(p);
 
         long time = (np.getLastRating(b).getTime() - System.currentTimeMillis()) + 86400000;
-        long timeSecs = (long) Math.floor((double) time / 1000D);
+        long timeSecs = Math.floorDiv(time, 1000L);
         final String timeS;
 
-        if (timeSecs < 60) timeS = timeSecs + " " + get("constants.time.second");
+        if (timeSecs < 60)
+            timeS = timeSecs + " " + get("constants.time.second");
         else if (timeSecs >= 60 && timeSecs < 3600)
-            timeS = ((long) Math.floor((double) timeSecs / 60D) + " ").replace("L", "") + get("constants.time.minute");
+            timeS = format("%,d", Math.floorDiv(timeSecs, 60L)) + get("constants.time.minute");
         else
-            timeS = ((long) Math.floor((double) timeSecs / (60D * 60D)) + " ").replace("L", "") + get("constants.time.hour");
+            timeS = format("%,d", Math.floorDiv(timeSecs, 3600L)) + get("constants.time.hour");
 
         if (time > 0) {
             p.sendMessage(format(get("error.business.rate_time"), timeS, b.getName()));
@@ -1551,7 +1554,11 @@ public interface CommandWrapper {
 
         Business b = Business.byOwner(p);
 
-        Optional<Rating> r = b.getRatings().stream().filter(ra -> ra.isOwner(target) && !new NovaPlayer(ra.getOwner()).getSetting(Settings.Personal.ANONYMOUS_RATING)).findFirst();
+        Optional<Rating> r = b.getRatings()
+                .stream()
+                .filter(ra -> ra.isOwner(target) && !new NovaPlayer(ra.getOwner()).getSetting(Settings.Personal.ANONYMOUS_RATING))
+                .findFirst();
+
         if (!r.isPresent()) {
             p.sendMessage(getMessage("error.business.no_rating"));
             return;
@@ -1658,7 +1665,7 @@ public interface CommandWrapper {
                             ));
             }
 
-            productItems.subList(i * 52, Math.min((i + 1) * 52, productItems.size())).forEach(inv::addItem);
+            productItems.subList(i * 28, Math.min((i + 1) * 28, productItems.size())).forEach(inv::addItem);
 
             invs.add(inv);
         }
