@@ -1362,12 +1362,11 @@ final class GUIManager implements Listener {
 
                 Economy econ = getEconomy(inv.getItem(12));
 
-                ItemStack display = inv.getItem(14).clone();
-                ItemMeta meta = display.getItemMeta();
-                meta.setLore(Arrays.asList(
-                        ChatColor.GOLD + format(get("constants.price"), format("%,.2f", NovaConfig.getMarket().getMarketMembershipCost(econ)), String.valueOf(econ.getSymbol()))
-                ));
-                display.setItemMeta(meta);
+                ItemStack display = Items.builder(inv.getItem(14).clone(),
+                    meta -> meta.setLore(Arrays.asList(
+                            ChatColor.GOLD + format(get("constants.price"), format("%,.2f", NovaConfig.getMarket().getMarketMembershipCost(econ)), String.valueOf(econ.getSymbol()))
+                    ))
+                );
                 inv.setItem(14, display);
             })
             .put("market:category", (e, inv) -> {

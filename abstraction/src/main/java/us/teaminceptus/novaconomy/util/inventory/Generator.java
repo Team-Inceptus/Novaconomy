@@ -16,7 +16,6 @@ import org.bukkit.util.ChatPaginator;
 import org.jetbrains.annotations.NotNull;
 import us.teaminceptus.novaconomy.abstraction.NBTWrapper;
 import us.teaminceptus.novaconomy.abstraction.NovaInventory;
-import us.teaminceptus.novaconomy.abstraction.Wrapper;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.SortingType;
 import us.teaminceptus.novaconomy.api.bank.Bank;
@@ -49,6 +48,8 @@ import static us.teaminceptus.novaconomy.util.NovaUtil.*;
 import static us.teaminceptus.novaconomy.util.inventory.Items.*;
 
 public final class Generator {
+
+    public static final int GUI_SPACE = 28;
 
     private Generator() {
     }
@@ -277,7 +278,7 @@ public final class Generator {
                 inv.setItem(44, rating);
             } else inv.setItem(44, null);
 
-            if (Wrapper.r.nextBoolean() && advertising && b.getSetting(Settings.Business.EXTERNAL_ADVERTISEMENT) && NovaConfig.getConfiguration().isAdvertisingEnabled()) {
+            if (r.nextBoolean() && advertising && b.getSetting(Settings.Business.EXTERNAL_ADVERTISEMENT) && NovaConfig.getConfiguration().isAdvertisingEnabled()) {
                 Business rand = Business.randomAdvertisingBusiness();
                 if (rand != null && !b.isBlacklisted(rand)) {
                     BusinessAdvertiseEvent event = new BusinessAdvertiseEvent(rand);
@@ -439,7 +440,7 @@ public final class Generator {
 
         for (int i = 0; i < children.size(); i++) {
             Business b = children.get(i);
-            int index = i < 7 ? 28 + i : 37 + i;
+            int index = i < 7 ? GUI_SPACE + i : 37 + i;
 
             ItemStack bIcon = builder(b.getIcon(),
                     nbt -> {
@@ -555,7 +556,7 @@ public final class Generator {
             if (CorporationAchievement.values().length <= i) break;
 
             CorporationAchievement a = CorporationAchievement.values()[i];
-            int index = i < 7 ? 28 + i : 37 + i;
+            int index = i < 7 ? GUI_SPACE + i : 37 + i;
 
             ItemStack icon = Items.builder(a.getIcon(),
                     meta -> {
@@ -629,8 +630,8 @@ public final class Generator {
     }
 
     public static NovaInventory genGUI(String id, int size, String name) {
-        if (size < 9 || size > 54) return null;
-        if (size % 9 > 0) return null;
+        if (size < 9 || size > 54) throw new IllegalArgumentException("Invalid size " + size);
+        if (size % 9 > 0) throw new IllegalArgumentException("Invalid size " + size);
 
         NovaInventory inv = w.createInventory(id, name, size);
         ItemStack bg = Items.GUI_BACKGROUND;
@@ -681,7 +682,7 @@ public final class Generator {
 
         List<Rating> ratings = b.getRatings();
 
-        int pageCount = (int) Math.floor((ratings.size() - 1) / 28D) + 1;
+        int pageCount = Math.floorDiv(ratings.size() - 1, GUI_SPACE) + 1;
 
         for (int i = 0; i < pageCount; i++) {
             NovaInventory inv = genGUI(54, ChatColor.DARK_AQUA + get("constants.business.ratings") + " - " + format(get("constants.page"), i + 1));
@@ -701,7 +702,7 @@ public final class Generator {
                 inv.setItem(50, nbtP.getItem());
             }
 
-            List<Rating> rlist = new ArrayList<>(ratings.subList(i * 28, Math.min((i + 1) * 28, ratings.size())));
+            List<Rating> rlist = new ArrayList<>(ratings.subList(i * GUI_SPACE, Math.min((i + 1) * GUI_SPACE, ratings.size())));
             rlist.forEach(r -> {
                 OfflinePlayer owner = r.getOwner();
                 NovaPlayer np = new NovaPlayer(owner);
@@ -747,7 +748,7 @@ public final class Generator {
                 .sorted(sorter)
                 .collect(Collectors.toList());
 
-        int pageCount = (int) Math.floor((econs.size() - 1D) / 28D) + 1;
+        int pageCount = Math.floorDiv(econs.size() - 1, GUI_SPACE) + 1;
 
         boolean ad = r.nextBoolean() && NovaConfig.getConfiguration().isAdvertisingEnabled();
         Business randB = Business.randomAdvertisingBusiness();
@@ -776,7 +777,7 @@ public final class Generator {
                 inv.setItem(50, nbtP.getItem());
             }
 
-            List<Economy> elist = new ArrayList<>(econs.subList(i * 28, Math.min((i + 1) * 28, econs.size())));
+            List<Economy> elist = new ArrayList<>(econs.subList(i * GUI_SPACE, Math.min((i + 1) * GUI_SPACE, econs.size())));
             elist.forEach(econ -> {
                 ItemStack item = econ.getIcon().clone();
                 ItemMeta eMeta = item.getItemMeta();
@@ -814,7 +815,8 @@ public final class Generator {
                 .stream()
                 .sorted(sorter)
                 .collect(Collectors.toList());
-        int pageCount = (int) Math.floor((econs.size() - 1D) / 28D) + 1;
+
+        int pageCount = Math.floorDiv(econs.size() - 1, GUI_SPACE);
 
         boolean ad = r.nextBoolean() && NovaConfig.getConfiguration().isAdvertisingEnabled();
         Business randB = Business.randomAdvertisingBusiness();
@@ -842,7 +844,7 @@ public final class Generator {
                 inv.setItem(50, nbtP.getItem());
             }
 
-            List<Economy> elist = new ArrayList<>(econs.subList(i * 28, Math.min((i + 1) * 28, econs.size())));
+            List<Economy> elist = new ArrayList<>(econs.subList(i * GUI_SPACE, Math.min((i + 1) * GUI_SPACE, econs.size())));
             elist.forEach(econ -> {
                 ItemStack item = new ItemStack(econ.getIconType());
                 modelData(item, econ.getCustomModelData());
@@ -906,7 +908,7 @@ public final class Generator {
         if (businesses.isEmpty()) return null;
 
         Collections.shuffle(businesses);
-        for (int i = 0; i < 28; i++) {
+        for (int i = 0; i < GUI_SPACE; i++) {
             int index = 10 + i;
             if (index > 16) index += 2;
             if (index > 25) index += 2;
@@ -1041,19 +1043,19 @@ public final class Generator {
             ));
         }
 
-        inv.setItem(10, 19, 28, 37, GUI_BACKGROUND);
+        inv.setItem(10, 19, GUI_SPACE, 37, GUI_BACKGROUND);
 
         List<Material> products = category.getItems()
                 .stream()
                 .filter(m -> !NovaConfig.getMarket().getBlacklistedMaterials().contains(m))
                 .collect(Collectors.toList())
-                .subList(page * 28, Math.min(category.getItems().size(), (page + 1) * 28))
+                .subList(page * GUI_SPACE, Math.min(category.getItems().size(), (page + 1) * GUI_SPACE))
                 .stream()
                 .sorted(sorter)
                 .collect(Collectors.toList());
 
         inv.setAttribute("page", page);
-        int pages = (category.getItems().size() / 28) + 1;
+        int pages = (category.getItems().size() / GUI_SPACE) + 1;
 
         if (pages > 1 && page > 0)
             inv.setItem(47, builder(Items.head("arrow_left_gray"),
@@ -1078,7 +1080,7 @@ public final class Generator {
         inv.setItem(17, 26, 35, 44, null);
         inv.setItem(45, Items.economyWheel("market", econ, p));
 
-        for (int i = 0; i < Math.min(products.size(), 28); i++) {
+        for (int i = 0; i < Math.min(products.size(), GUI_SPACE); i++) {
             int index = 11 + i + ((i / 7) * 2);
             Material m = products.get(i);
 
@@ -1122,7 +1124,7 @@ public final class Generator {
                 .sorted(sorter)
                 .collect(Collectors.toList());
 
-        int limit = (business.getSupplyChests().size() / 28) + 1;
+        int limit = (business.getSupplyChests().size() / GUI_SPACE) + 1;
 
         for (int i = 0; i < limit; i++) {
             NovaInventory inv = genGUI(54, get("constants.business.supply_chests"));
@@ -1135,7 +1137,7 @@ public final class Generator {
             inv.setAttribute("sorting_type", Block.class);
             inv.setAttribute("sorting_function", (Function<SortingType<Block>, NovaInventory>) s -> generateBusinessSupplyChests(business, s).get(fI));
 
-            List<Block> chests = blocks.subList(i * 28, Math.min(blocks.size(), (i + 1) * 28));
+            List<Block> chests = blocks.subList(i * GUI_SPACE, Math.min(blocks.size(), (i + 1) * GUI_SPACE));
             chests.forEach(b -> inv.addItem(NBTWrapper.builder(Material.CHEST,
                     meta -> {
                         meta.setDisplayName(ChatColor.BLUE + b.getWorld().getName() + ChatColor.GOLD + " | " + ChatColor.YELLOW + b.getX() + ", " + b.getY() + ", " + b.getZ());

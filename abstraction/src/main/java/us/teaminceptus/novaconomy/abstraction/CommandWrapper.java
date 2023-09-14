@@ -1643,7 +1643,7 @@ public interface CommandWrapper {
 
         List<NovaInventory> invs = new ArrayList<>();
 
-        int limit = (productItems.size() - 1) / 52;
+        int limit = (productItems.size() - 1) / GUI_SPACE;
         for (int i = 0; i <= limit; i++) {
             final int fI = i;
 
@@ -1665,7 +1665,7 @@ public interface CommandWrapper {
                             ));
             }
 
-            productItems.subList(i * 28, Math.min((i + 1) * 28, productItems.size())).forEach(inv::addItem);
+            productItems.subList(i * GUI_SPACE, Math.min((i + 1) * GUI_SPACE, productItems.size())).forEach(inv::addItem);
 
             invs.add(inv);
         }

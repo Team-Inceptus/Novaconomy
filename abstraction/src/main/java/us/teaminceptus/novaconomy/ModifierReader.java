@@ -11,7 +11,9 @@ import java.util.*;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
-public class ModifierReader {
+public final class ModifierReader {
+
+    private ModifierReader() {}
 
     public static Map<String, Map<String, Set<Entry<Economy, Double>>>> getAllModifiers() throws IllegalArgumentException {
         Map<String, Map<String, Set<Entry<Economy, Double>>>> mods = new HashMap<>();
@@ -58,7 +60,7 @@ public class ModifierReader {
     }
 
     public static Map<EntityDamageEvent.DamageCause, Double> getDeathModifiers() {
-        Map<EntityDamageEvent.DamageCause, Double> mods = new HashMap<>();
+        Map<EntityDamageEvent.DamageCause, Double> mods = new EnumMap<>(EntityDamageEvent.DamageCause.class);
 
         FileConfiguration config = NovaConfig.getConfig();
 
@@ -66,7 +68,7 @@ public class ModifierReader {
             ConfigurationSection modifiers = config.getConfigurationSection("NaturalCauses.Modifiers.Death");
 
             modifiers.getValues(false).forEach((k, v) -> {
-                EntityDamageEvent.DamageCause cause = null;
+                EntityDamageEvent.DamageCause cause;
                 try {
                     cause = EntityDamageEvent.DamageCause.valueOf(k.toUpperCase());
                 } catch (IllegalArgumentException e) {
@@ -74,7 +76,7 @@ public class ModifierReader {
                     return;
                 }
 
-                double d = 0;
+                double d;
                 try {
                     d = Double.parseDouble(v.toString());
                     if (d == 0) {
@@ -115,8 +117,8 @@ public class ModifierReader {
     }
 
     public static List<String> toModList(List<Entry<Economy, Double>> list) {
-        if (list == null) return null;
-        if (list.isEmpty()) return null;
+        if (list == null) return Collections.emptyList();
+        if (list.isEmpty()) return Collections.emptyList();
         return list.stream()
             .filter(Objects::nonNull)
             .map(ModifierReader::toModString).collect(Collectors.toList());

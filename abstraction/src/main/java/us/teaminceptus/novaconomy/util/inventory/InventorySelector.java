@@ -17,6 +17,7 @@ import java.util.stream.Collectors;
 import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.BUSINESS_TAG;
 import static us.teaminceptus.novaconomy.abstraction.NBTWrapper.builder;
 import static us.teaminceptus.novaconomy.abstraction.Wrapper.get;
+import static us.teaminceptus.novaconomy.util.inventory.Generator.GUI_SPACE;
 import static us.teaminceptus.novaconomy.util.inventory.Generator.genGUI;
 import static us.teaminceptus.novaconomy.util.inventory.Items.sorter;
 
@@ -80,7 +81,7 @@ public final class InventorySelector {
         List<Business> children = c.getChildren().stream()
                 .sorted(sorter)
                 .filter(b -> searchQuery.isEmpty() || b.getName().toLowerCase().contains(searchQuery.toLowerCase()))
-                .limit(28)
+                .limit(GUI_SPACE)
                 .collect(Collectors.toList());
 
         children.forEach(b -> inv.addItem(builder(b.getIcon(), nbt -> nbt.set(BUSINESS_TAG, b.getUniqueId()) )) );

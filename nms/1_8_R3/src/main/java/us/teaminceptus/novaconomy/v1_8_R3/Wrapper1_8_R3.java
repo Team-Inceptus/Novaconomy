@@ -19,9 +19,6 @@ import us.teaminceptus.novaconomy.abstraction.NBTWrapper;
 import us.teaminceptus.novaconomy.abstraction.NovaInventory;
 import us.teaminceptus.novaconomy.abstraction.Wrapper;
 import us.teaminceptus.novaconomy.api.NovaConfig;
-import us.teaminceptus.novaconomy.v1_8_R3.NBTWrapper1_8_R3;
-import us.teaminceptus.novaconomy.v1_8_R3.NovaInventory1_8_R3;
-import us.teaminceptus.novaconomy.v1_8_R3.PacketHandler1_8_R3;
 
 import java.util.Arrays;
 import java.util.function.Consumer;
