@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -55,14 +56,11 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
     private ItemStack icon;
     private boolean hasNaturalIncrease;
     private double conversionScale;
-
     private final UUID uid;
-
     private boolean interestEnabled;
-
     private int customModelData;
-
     private boolean clickableReward;
+    private boolean isConvertable;
 
     private Economy(UUID id, String name, ItemStack icon, char symbol, boolean naturalIncrease, double conversionScale, boolean clickable) {
         this.symbol = symbol;
@@ -394,6 +392,7 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
      * Fetch the name of this economy
      * @return Name of this economy
      */
+    @NotNull
     public String getName() { return this.name; }
 
     /**
@@ -408,6 +407,7 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
      * Get the Icon of this Economy
      * @return Icon of this Economy
      */
+    @NotNull
     public ItemStack getIcon() {
         return this.icon;
     }
@@ -416,6 +416,7 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
      * Gets the Economy Icon's Type.
      * @return Icon Material Type
      */
+    @NotNull
     public Material getIconType() { return this.icon.getType(); }
 
     /**
@@ -423,10 +424,10 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
      * @param to The New Economy to convert to
      * @param fromAmount How much amount is to be converted
      * @return Converted amount in the other economy's form
-     * @throws IllegalArgumentException if to or from is null, or economies are identical
+     * @throws IllegalArgumentException if to or from is null, economies are identical, or either are not convertable
      * @see Economy#convertAmount(Economy, Economy, double)
      */
-    public double convertAmount(Economy to, double fromAmount) throws IllegalArgumentException {
+    public double convertAmount(@NotNull Economy to, double fromAmount) throws IllegalArgumentException {
         return convertAmount(this, to, fromAmount);
     }
 
@@ -439,18 +440,23 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
         return this.uid;
     }
 
+
+
     /**
      * Convert one economy's balance to another
      * @param from The Economy to convert from
      * @param to The Economy to convert to
      * @param fromAmount How much amount is to be converted
      * @return Converted amount in the other economy's form
-     * @throws IllegalArgumentException if to or from is null, or economies are identical
+     * @throws IllegalArgumentException if to or from is null, economies are identical, or either is not convertable
      */
-    public static double convertAmount(Economy from, Economy to, double fromAmount) throws IllegalArgumentException {
+    public static double convertAmount(@NotNull Economy from, @NotNull Economy to, double fromAmount) throws IllegalArgumentException {
         if (from == null) throw new IllegalArgumentException("Economy from is null");
         if (to == null) throw new IllegalArgumentException("Economy to is null");
-        if (from.getName().equals(to.getName())) throw new IllegalArgumentException("Economies are identical");
+        if (from == to) throw new IllegalArgumentException("Economies are identical");
+        if (!from.isConvertable) throw new IllegalArgumentException("Economy from is not convertable");
+        if (!to.isConvertable) throw new IllegalArgumentException("Economy to is not convertable");
+
         double scale = from.getConversionScale() / to.getConversionScale();
 
         return fromAmount * scale;
@@ -499,6 +505,23 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
      */
     public int getCustomModelData() {
         return customModelData;
+    }
+
+    /**
+     * Fetches whether an Economy can be converted to another Economy.
+     * @return true if convertable, else false
+     */
+    public boolean isConvertable() {
+        return isConvertable;
+    }
+
+    /**
+     * Sets whether an Economy can be converted to another Economy.
+     * @param convertable true if convertable, else false
+     */
+    public void setConvertable(boolean convertable) {
+        this.isConvertable = convertable;
+        saveEconomy();
     }
 
     /**
@@ -568,8 +591,19 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
                 "interest BOOL NOT NULL," +
                 "custom_model_data INT NOT NULL," +
                 "clickable_reward BOOL NOT NULL," +
+                "convertable BOOL NOT NULL DEFAULT TRUE," +
                 "PRIMARY KEY (id))"
         );
+
+        DatabaseMetaData md = db.getMetaData();
+        ResultSet rs = null;
+
+        try {
+            if (!(rs = md.getColumns(null, null, "economies", "convertable")).next())
+                db.createStatement().execute("ALTER TABLE economies ADD convertable BOOL NOT NULL DEFAULT TRUE");
+        } finally {
+            if (rs != null) rs.close();
+        }
     }
 
     /**
@@ -613,10 +647,11 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
                         "conversion_scale = ?, " +
                         "interest = ?, " +
                         "custom_model_data = ?, " +
-                        "clickable_reward = ? " +
+                        "clickable_reward = ?, " +
+                        "convertable = ? " +
                         "WHERE id = \"" + this.uid + "\"";
             else
-                sql = "INSERT INTO economies VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                sql = "INSERT INTO economies VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         }
 
         PreparedStatement ps = db.prepareStatement(sql);
@@ -637,6 +672,7 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
         ps.setBoolean(7, this.interestEnabled);
         ps.setInt(8, this.customModelData);
         ps.setBoolean(9, this.clickableReward);
+        ps.setBoolean(10, this.isConvertable);
 
         ps.executeUpdate();
         ps.close();
@@ -657,10 +693,12 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
         boolean interestEnabled = rs.getBoolean("interest");
         int customModelData = rs.getInt("custom_model_data");
         boolean clickableReward = rs.getBoolean("clickable_reward");
+        boolean isConvertable = rs.getBoolean("convertable");
 
         Economy en = new Economy(uid, name, icon, symbol, hasNaturalIncrease,  conversionScale, clickableReward);
         en.interestEnabled = interestEnabled;
         en.customModelData = customModelData;
+        en.isConvertable = isConvertable;
 
         return en;
     }
@@ -682,6 +720,7 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
         serial.put("interest", this.interestEnabled);
         serial.put("custom-model-data", this.customModelData);
         serial.put("clickable", this.clickableReward);
+        serial.put("convertable", this.isConvertable);
         return serial;
     }
 
@@ -712,6 +751,7 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
 
         econ.interestEnabled = (boolean) serial.getOrDefault("interest", true);
         econ.customModelData = (int) serial.getOrDefault("custom-model-data", 0);
+        econ.isConvertable = (boolean) serial.getOrDefault("convertable", true);
 
         return econ;
     }
@@ -858,6 +898,7 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
 
             Economy econ = new Economy(id, this.name, this.icon, this.symbol, this.increaseNaturally, this.conversionScale, this.clickableReward);
             econ.customModelData = customModelData;
+            econ.isConvertable = true;
 
             econ.saveEconomy();
 

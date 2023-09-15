@@ -591,10 +591,17 @@ final class GUIManager implements Listener {
 
                 ItemStack takeItem = inv.getItem(12);
                 Economy takeEcon = getEconomy(takeItem);
+                if (!takeEcon.isConvertable()) {
+                    p.closeInventory();
+                    p.sendMessage(format(getError("error.economy.transfer_not_convertable"), takeEcon.getName()));
+                    NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(e.getWhoClicked());
+                    return;
+                }
+
                 double take = getAmount(takeItem);
                 if (np.getBalance(takeEcon) < take) {
                     p.closeInventory();
-                    p.sendMessage(format(getMessage("error.economy.invalid_amount"), get("constants.convert")));
+                    p.sendMessage(format(getError("error.economy.invalid_amount"), get("constants.convert")));
                     NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(e.getWhoClicked());
                     return;
                 }
@@ -608,6 +615,13 @@ final class GUIManager implements Listener {
 
                 ItemStack giveItem = inv.getItem(14);
                 Economy giveEcon = getEconomy(giveItem);
+                if (!giveEcon.isConvertable()) {
+                    p.closeInventory();
+                    p.sendMessage(format(getError("error.economy.transfer_not_convertable"), giveEcon.getName()));
+                    NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(e.getWhoClicked());
+                    return;
+                }
+
                 double give = getAmount(inv.getItem(14));
 
                 double takeBal = np.getBalance(takeEcon);

@@ -591,6 +591,10 @@ final class CommandWrapperV2 implements CommandWrapper {
         @Subcommand({"setclickablereward", "clickablereward", "setclickable", "clickable"})
         @CommandPermission("novaconomy.economy.create")
         public void setClickableReward(CommandSender sender, Economy economy, @Default("true") boolean clickableReward) { wrapper.setEconomyRewardable(sender, economy, clickableReward); }
+
+        @Subcommand({"setconvertable", "convertable"})
+        @CommandPermission("novaconomy.economy.create")
+        public void setConvertable(CommandSender sender, Economy economy, @Default("true") boolean convertable) { wrapper.setEconomyConvertable(sender, economy, convertable); }
     }
 
     @Command({"novabounty", "nbounty"})

@@ -262,6 +262,16 @@ public interface CommandWrapper {
             return;
         }
 
+        if (!from.isConvertable()) {
+            p.sendMessage(format(getMessage("error.economy.transfer_not_convertable"), from.getName()));
+            return;
+        }
+
+        if (!to.isConvertable()) {
+            p.sendMessage(format(getMessage("error.economy.transfer_not_convertable"), to.getName()));
+            return;
+        }
+
         NovaPlayer np = new NovaPlayer(p);
 
         if (amount <= 0) {
@@ -293,7 +303,13 @@ public interface CommandWrapper {
             return;
         }
 
-        if (Economy.getEconomies().size() < 2) {
+        List<Economy> economies = Economy.getEconomies()
+                .stream()
+                .filter(Economy::isConvertable)
+                .sorted(Comparator.comparing(Economy::getName))
+                .collect(Collectors.toList());
+
+        if (economies.size() < 2) {
             p.sendMessage(getMessage("error.economy.none"));
             return;
         }
@@ -311,8 +327,6 @@ public interface CommandWrapper {
 
         NovaInventory inv = genGUI(36, get("constants.economy.exchange"));
         inv.setCancelled();
-
-        List<Economy> economies = Economy.getEconomies().stream().sorted(Comparator.comparing(Economy::getName)).collect(Collectors.toList());
 
         Economy e1 = economies.get(0);
         Economy e2 = economies.get(1);
@@ -3912,6 +3926,22 @@ public interface CommandWrapper {
         b.supply();
         p.sendMessage(getSuccess("success.business.supply"));
         NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
+    }
+
+    default void setEconomyConvertable(CommandSender sender, Economy econ, boolean convertable) {
+        if (!sender.hasPermission("novaconomy.economy.create")) {
+            sender.sendMessage(ERROR_PERMISSION_ARGUMENT);
+            return;
+        }
+
+        if (econ == null) {
+            sender.sendMessage(getError("error.economy.none"));
+            return;
+        }
+
+        econ.setConvertable(convertable);
+        sender.sendMessage(format(getSuccess("success.economy." + (convertable ? "enable" : "disable") + "_convertable"), ChatColor.GOLD + econ.getName()));
+        NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(sender);
     }
 
 }

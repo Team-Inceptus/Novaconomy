@@ -22,6 +22,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static us.teaminceptus.novaconomy.abstraction.Wrapper.getMessage;
+import static us.teaminceptus.novaconomy.util.NovaUtil.format;
 
 final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
 
@@ -105,6 +106,11 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
 
                     Economy from = Economy.getEconomy(args[0]);
 
+                    if (!from.isConvertable()) {
+                        p.sendMessage(format(getMessage("error.economy.transfer_not_convertable"), from.getName()));
+                        return false;
+                    }
+
                     if (args.length < 2) {
                         p.sendMessage(getMessage("error.economy.transfer_to"));
                         return false;
@@ -116,6 +122,11 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                     }
 
                     Economy to = Economy.getEconomy(args[1]);
+
+                    if (!to.isConvertable()) {
+                        p.sendMessage(format(getMessage("error.economy.transfer_not_convertable"), to.getName()));
+                        return false;
+                    }
 
                     if (args.length < 3) {
                         p.sendMessage(getMessage("error.economy.transfer_amount"));
@@ -550,6 +561,77 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         }
 
                         setEconomyName(sender, econ, args[2]);
+                        break;
+                    }
+                    case "setclickablereward":
+                    case "setclickable":
+                    case "clickablereward": {
+                        if (!sender.hasPermission("novaconomy.economy.create")) {
+                            sender.sendMessage(getMessage("error.permission.argument"));
+                            return false;
+                        }
+                        if (!economyCount(sender)) return false;
+
+                        if (args.length < 2) {
+                            sender.sendMessage(getMessage("error.argument.economy"));
+                            return false;
+                        }
+
+                        if (!Economy.exists(args[1])) {
+                            sender.sendMessage(getMessage("error.economy.inexistent"));
+                            return false;
+                        }
+
+                        Economy econ = Economy.getEconomy(args[1]);
+
+                        if (args.length < 3) {
+                            sender.sendMessage(getMessage("error.argument.bool"));
+                            return false;
+                        }
+
+                        if (!args[2].equalsIgnoreCase("true") && !args[2].equalsIgnoreCase("false")) {
+                            sender.sendMessage(getMessage("error.argument.bool"));
+                            return false;
+                        }
+
+                        boolean clickableReward = Boolean.parseBoolean(args[2].toLowerCase());
+                        setEconomyRewardable(sender, econ, clickableReward);
+                        break;
+                    }
+                    case "setconvertable":
+                    case "convertable": {
+                        if (!sender.hasPermission("novaconomy.economy.create")) {
+                            sender.sendMessage(getMessage("error.permission.argument"));
+                            return false;
+                        }
+
+                        if (!economyCount(sender)) return false;
+
+                        if (args.length < 2) {
+                            sender.sendMessage(getMessage("error.argument.economy"));
+                            return false;
+                        }
+
+                        if (!Economy.exists(args[1])) {
+                            sender.sendMessage(getMessage("error.economy.inexistent"));
+                            return false;
+                        }
+
+                        Economy econ = Economy.getEconomy(args[1]);
+
+                        if (args.length < 3) {
+                            sender.sendMessage(getMessage("error.argument.bool"));
+                            return false;
+                        }
+
+                        if (!args[2].equalsIgnoreCase("true") && !args[2].equalsIgnoreCase("false")) {
+                            sender.sendMessage(getMessage("error.argument.bool"));
+                            return false;
+                        }
+
+                        boolean convertable = Boolean.parseBoolean(args[2].toLowerCase());
+
+                        setEconomyConvertable(sender, econ, convertable);
                         break;
                     }
                     default: {
