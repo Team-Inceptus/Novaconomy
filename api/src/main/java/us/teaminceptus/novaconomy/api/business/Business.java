@@ -1192,6 +1192,8 @@ public final class Business implements ConfigurationSerializable {
         // Supply Chests
 
         File supply = new File(folder, "supply.yml");
+        if (!supply.exists()) supply.createNewFile();
+        
         FileConfiguration suConfig = YamlConfiguration.loadConfiguration(supply);
         suConfig.set("supply_chests", this.supplyChests);
         suConfig.save(supply);
