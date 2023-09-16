@@ -263,12 +263,12 @@ public interface CommandWrapper {
         }
 
         if (!from.isConvertable()) {
-            p.sendMessage(format(getMessage("error.economy.transfer_not_convertable"), from.getName()));
+            p.sendMessage(format(getError("error.economy.transfer_not_convertable"), from.getName()));
             return;
         }
 
         if (!to.isConvertable()) {
-            p.sendMessage(format(getMessage("error.economy.transfer_not_convertable"), to.getName()));
+            p.sendMessage(format(getError("error.economy.transfer_not_convertable"), to.getName()));
             return;
         }
 
@@ -854,21 +854,22 @@ public interface CommandWrapper {
 
         List<NovaInventory> invs = new ArrayList<>();
 
-        int limit = (productItems.size() - 1) / 52;
-        for (int i = 0; i <= limit; i++) {
+        int limit = (productItems.size() / GUI_SPACE) + 1;
+        for (int i = 0; i < limit; i++) {
             final int fI = i;
 
             NovaInventory inv = genGUI(54, get("constants.business.remove_product"));
             inv.setCancelled();
 
-            if (limit > 0) {
-                if (i > 0) inv.setItem(46,
+            if (limit > 1) {
+                if (i > 0)
+                    inv.setItem(46,
                         NBTWrapper.builder(
                                 Items.prev("stored"),
                                 nbt -> nbt.set("page", fI)
                         ));
 
-                if (i < limit)
+                if (i < (limit - 1))
                     inv.setItem(52,
                             NBTWrapper.builder(
                                     Items.next("stored"),
@@ -876,7 +877,7 @@ public interface CommandWrapper {
                             ));
             }
 
-            productItems.subList(i * 52, Math.min((i + 1) * 52, productItems.size())).forEach(inv::addItem);
+            productItems.subList(i * GUI_SPACE, Math.min((i + 1) * GUI_SPACE, productItems.size())).forEach(inv::addItem);
 
             invs.add(inv);
         }
@@ -884,6 +885,7 @@ public interface CommandWrapper {
         invs.forEach(inv -> inv.setAttribute("invs", invs));
 
         p.openInventory(invs.get(0));
+        NovaSound.BLOCK_ENDER_CHEST_OPEN.play(p, 1F, 0.5F);
     }
 
     default void bankBalances(Player p) {
@@ -966,14 +968,14 @@ public interface CommandWrapper {
 
         NovaPlayer np = new NovaPlayer(p);
         long time = (np.getLastBankWithdraw().getTimestamp() - System.currentTimeMillis()) + 86400000;
-        long timeSecs = (long) Math.floor((double) time / 1000D);
+        long timeSecs = Math.floorDiv(time, 1000L);
         final String timeS;
 
         if (timeSecs < 60) timeS = timeSecs + " " + get("constants.time.second");
         else if (timeSecs >= 60 && timeSecs < 3600)
-            timeS = ((long) Math.floor((double) timeSecs / 60D) + " ").replace("L", "") + get("constants.time.minute");
+            timeS = format("%,d", Math.floorDiv(timeSecs, 60L)) + get("constants.time.minute");
         else
-            timeS = ((long) Math.floor((double) timeSecs / (60D * 60D)) + " ").replace("L", "") + get("constants.time.hour");
+            timeS = format("%,d", Math.floorDiv(timeSecs, 3600L)) + get("constants.time.hour");
 
         if (time > 0) {
             p.sendMessage(format(getMessage("error.bank.withdraw_time"), timeS));
@@ -1657,21 +1659,22 @@ public interface CommandWrapper {
 
         List<NovaInventory> invs = new ArrayList<>();
 
-        int limit = (productItems.size() - 1) / GUI_SPACE;
-        for (int i = 0; i <= limit; i++) {
+        int limit = (productItems.size() / GUI_SPACE) + 1;
+        for (int i = 0; i < limit; i++) {
             final int fI = i;
 
             NovaInventory inv = genGUI(54, get("constants.business.select_product"));
             inv.setCancelled();
 
-            if (limit > 0) {
-                if (i > 0) inv.setItem(46,
+            if (limit > 1) {
+                if (i > 0)
+                    inv.setItem(46,
                         NBTWrapper.builder(
                                 Items.prev("stored"),
                                 nbt -> nbt.set("page", fI)
                         ));
 
-                if (i < limit)
+                if (i < (limit - 1))
                     inv.setItem(52,
                             NBTWrapper.builder(
                                     Items.next("stored"),
@@ -1687,6 +1690,7 @@ public interface CommandWrapper {
         invs.forEach(inv -> inv.setAttribute("invs", invs));
 
         p.openInventory(invs.get(0));
+        NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
     }
 
     default void setBusinessName(Player p, String name) {
@@ -3940,7 +3944,7 @@ public interface CommandWrapper {
         }
 
         econ.setConvertable(convertable);
-        sender.sendMessage(format(getSuccess("success.economy." + (convertable ? "enable" : "disable") + "_convertable"), ChatColor.GOLD + econ.getName()));
+        sender.sendMessage(format(getSuccess("success.economy." + (convertable ? "enable" : "disable") + "_convertable"), ChatColor.GOLD + econ.getName() + ChatColor.GREEN));
         NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(sender);
     }
 
