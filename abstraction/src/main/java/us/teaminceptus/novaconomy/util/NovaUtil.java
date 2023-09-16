@@ -159,4 +159,16 @@ public final class NovaUtil {
         return sb.toString().trim();
     }
 
+    private static final char[] SUFFIXES = "KMBTQEXSON".toCharArray();
+
+    public static String withSuffix(double num) {
+        if (num < 0) return "-" + withSuffix(-num);
+        if (num < 1000) return format("%,.2f", num);
+
+        int index = (int) (Math.log10(num) / 3);
+        String suffix = SUFFIXES[index - 1] + "";
+
+        return format("%.2f%s", num / Math.pow(1000, index), suffix);
+    }
+
 }

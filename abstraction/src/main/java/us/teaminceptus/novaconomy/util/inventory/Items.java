@@ -33,6 +33,7 @@ import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.TYPE_TAG;
 import static us.teaminceptus.novaconomy.abstraction.Wrapper.get;
 import static us.teaminceptus.novaconomy.abstraction.Wrapper.w;
 import static us.teaminceptus.novaconomy.util.NovaUtil.format;
+import static us.teaminceptus.novaconomy.util.NovaUtil.withSuffix;
 
 public final class Items {
 
@@ -251,7 +252,7 @@ public final class Items {
         meta -> {
             meta.setDisplayName(ChatColor.GOLD + econ.getName());
             meta.setLore(Collections.singletonList(
-                    format(ChatColor.AQUA + get("constants.balance"), ChatColor.YELLOW + format("%,.2f", np.getBalance(econ)) + econ.getSymbol())
+                    format(ChatColor.AQUA + get("constants.balance"), ChatColor.YELLOW + withSuffix(np.getBalance(econ)) + " (" + econ.getSymbol() + ")")
             ));
         },
         nbt -> {
