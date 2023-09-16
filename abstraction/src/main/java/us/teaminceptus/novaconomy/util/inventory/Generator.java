@@ -194,10 +194,8 @@ public final class Generator {
                             List<String> lore = meta.hasLore() ? new ArrayList<>(meta.getLore()) : new ArrayList<>();
                             lore.add(" ");
                             lore.add(
-                                    format(get("constants.price"), format("%,.2f", p.getAmount()).replace("D", ""), String.valueOf(p.getEconomy().getSymbol()))
+                                    format(get("constants.price"), format("%,.2f", p.getAmount()), String.valueOf(p.getEconomy().getSymbol()))
                             );
-
-                            lore.add(" ");
                             if (!b.isInStock(item)) {
                                 lore.add(ChatColor.RED + get("constants.business.no_stock"));
                                 stock.set(false);
@@ -405,10 +403,12 @@ public final class Generator {
                         meta -> {
                             List<String> lore = meta.hasLore() ? new ArrayList<>(meta.getLore()) : new ArrayList<>();
                             lore.addAll(Arrays.asList(
-                                    ChatColor.AQUA + get("constants.featured_product"),
                                     " ",
-                                    format(get("constants.price"), format("%,.2f", p.getAmount()).replace("D", ""), String.valueOf(p.getEconomy().getSymbol())),
-                                    " "
+                                    ChatColor.AQUA + get("constants.featured_product"),
+                                    ChatColor.DARK_AQUA + b.getName(),
+                                    ChatColor.GOLD + "----------",
+                                    " ",
+                                    format(get("constants.price"), format("%,.2f", p.getAmount()), String.valueOf(p.getEconomy().getSymbol()))
                             ));
                             AtomicInteger index = new AtomicInteger();
                             b.getResources().forEach(res -> {
