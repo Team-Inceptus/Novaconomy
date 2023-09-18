@@ -2,6 +2,7 @@ package us.teaminceptus.novaconomy.vault;
 
 import net.milkbowl.vault.economy.AbstractEconomy;
 import net.milkbowl.vault.economy.EconomyResponse;
+import org.bukkit.OfflinePlayer;
 import us.teaminceptus.novaconomy.api.bank.Bank;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.player.NovaPlayer;
@@ -81,7 +82,10 @@ class VaultEconomy extends AbstractEconomy {
 
     @Override
     public double getBalance(String playerName) {
-        return new NovaPlayer(getPlayer(playerName)).getBalance(econ);
+        OfflinePlayer p = getPlayer(playerName);
+        if (p == null) return 0;
+
+        return new NovaPlayer(p).getBalance(econ);
     }
 
     @Override
@@ -101,7 +105,10 @@ class VaultEconomy extends AbstractEconomy {
 
     @Override
     public EconomyResponse withdrawPlayer(String playerName, double amount) {
-        NovaPlayer np = new NovaPlayer(getPlayer(playerName));
+        OfflinePlayer p = getPlayer(playerName);
+        if (p == null) return new VaultEconomyResponse(amount, 0);
+
+        NovaPlayer np = new NovaPlayer(p);
         np.remove(econ, amount);
         return new VaultEconomyResponse(amount, np.getBalance(econ));
     }
@@ -113,7 +120,10 @@ class VaultEconomy extends AbstractEconomy {
 
     @Override
     public EconomyResponse depositPlayer(String playerName, double amount) {
-        NovaPlayer np = new NovaPlayer(getPlayer(playerName));
+        OfflinePlayer p = getPlayer(playerName);
+        if (p == null) return new VaultEconomyResponse(amount, 0);
+
+        NovaPlayer np = new NovaPlayer(p);
         np.add(econ, amount);
         return new VaultEconomyResponse(amount, np.getBalance(econ));
     }

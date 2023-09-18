@@ -31,7 +31,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static java.util.Arrays.asList;
 import static us.teaminceptus.novaconomy.abstraction.Wrapper.*;
 import static us.teaminceptus.novaconomy.util.NovaUtil.format;
 
@@ -592,6 +591,10 @@ final class CommandWrapperV2 implements CommandWrapper {
         @Subcommand({"setclickablereward", "clickablereward", "setclickable", "clickable"})
         @CommandPermission("novaconomy.economy.create")
         public void setClickableReward(CommandSender sender, Economy economy, @Default("true") boolean clickableReward) { wrapper.setEconomyRewardable(sender, economy, clickableReward); }
+
+        @Subcommand({"setconvertable", "convertable"})
+        @CommandPermission("novaconomy.economy.create")
+        public void setConvertable(CommandSender sender, Economy economy, @Default("true") boolean convertable) { wrapper.setEconomyConvertable(sender, economy, convertable); }
     }
 
     @Command({"novabounty", "nbounty"})
@@ -746,6 +749,12 @@ final class CommandWrapperV2 implements CommandWrapper {
         @Subcommand("info")
         public void corporationInfo(Player p) {
             wrapper.corporationInfo(p);
+            NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
+        }
+
+        @Subcommand("query")
+        public void queryCorporation(Player p, Corporation corp) {
+            wrapper.queryCorporation(p, corp);
             NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
         }
 

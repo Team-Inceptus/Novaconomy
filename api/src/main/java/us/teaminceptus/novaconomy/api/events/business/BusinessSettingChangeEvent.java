@@ -17,7 +17,7 @@ public class BusinessSettingChangeEvent extends SettingEvent {
 
     private final boolean newValue;
 
-    private final Settings.Business setting;
+    private final Settings.Business<?> setting;
 
     /**
      * Constructs a BusinessSettingChangeEvent.
@@ -27,7 +27,7 @@ public class BusinessSettingChangeEvent extends SettingEvent {
      * @param newValue   New value of the setting
      * @throws IllegalArgumentException if business or setting is null
      */
-    public BusinessSettingChangeEvent(@NotNull Business business, boolean oldValue, boolean newValue, @NotNull Settings.Business setting) throws IllegalArgumentException {
+    public BusinessSettingChangeEvent(@NotNull Business business, boolean oldValue, boolean newValue, @NotNull Settings.Business<?> setting) throws IllegalArgumentException {
         super(setting);
 
         Preconditions.checkNotNull(business, "Business cannot be null");
@@ -63,7 +63,7 @@ public class BusinessSettingChangeEvent extends SettingEvent {
     }
 
     @Override
-    public Settings.Business getSetting() {
+    public Settings.Business<?> getSetting() {
         return setting;
     }
 }

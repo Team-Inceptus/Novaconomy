@@ -17,10 +17,12 @@ import us.teaminceptus.novaconomy.abstraction.NBTWrapper;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.SortingType;
 import us.teaminceptus.novaconomy.api.economy.Economy;
+import us.teaminceptus.novaconomy.api.player.NovaPlayer;
 import us.teaminceptus.novaconomy.util.NovaUtil;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.util.Collections;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -31,6 +33,7 @@ import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.TYPE_TAG;
 import static us.teaminceptus.novaconomy.abstraction.Wrapper.get;
 import static us.teaminceptus.novaconomy.abstraction.Wrapper.w;
 import static us.teaminceptus.novaconomy.util.NovaUtil.format;
+import static us.teaminceptus.novaconomy.util.NovaUtil.withSuffix;
 
 public final class Items {
 
@@ -229,23 +232,29 @@ public final class Items {
         return w.isLegacy() ? legacy.get() : contemporary.get();
     }
 
-    public static ItemStack economyWheel() {
-        return economyWheel(null);
+    public static ItemStack economyWheel(OfflinePlayer p) {
+        return economyWheel(null, p);
     }
 
-    public static ItemStack economyWheel(String suffix) {
+    public static ItemStack economyWheel(String suffix, OfflinePlayer p) {
         Economy econ = Economy.getEconomies()
                 .stream()
                 .sorted(Economy::compareTo)
                 .collect(Collectors.toList())
                 .get(0);
                 
-        return economyWheel(suffix, econ);
+        return economyWheel(suffix, econ, p);
     }
 
-    public static ItemStack economyWheel(String suffix, Economy econ) {
+    public static ItemStack economyWheel(String suffix, Economy econ, OfflinePlayer p) {
+        NovaPlayer np = new NovaPlayer(p);
         ItemStack economyWheel = NBTWrapper.builder(econ.getIconType(),
-        meta -> meta.setDisplayName(ChatColor.GOLD + econ.getName()),
+        meta -> {
+            meta.setDisplayName(ChatColor.GOLD + econ.getName());
+            meta.setLore(Collections.singletonList(
+                    format(ChatColor.AQUA + get("constants.balance"), ChatColor.YELLOW + withSuffix(np.getBalance(econ)) + " (" + econ.getSymbol() + ")")
+            ));
+        },
         nbt -> {
                 nbt.set(CommandWrapper.ECON_TAG, econ.getUniqueId());
                 nbt.setID("economy:wheel" + (suffix == null ? "" : ":" + suffix));

@@ -17,7 +17,6 @@ import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.io.BukkitObjectInputStream;
 import org.bukkit.util.io.BukkitObjectOutputStream;
 import org.jetbrains.annotations.NotNull;
@@ -1193,6 +1192,8 @@ public final class Business implements ConfigurationSerializable {
         // Supply Chests
 
         File supply = new File(folder, "supply.yml");
+        if (!supply.exists()) supply.createNewFile();
+        
         FileConfiguration suConfig = YamlConfiguration.loadConfiguration(supply);
         suConfig.set("supply_chests", this.supplyChests);
         suConfig.save(supply);

@@ -117,6 +117,17 @@ public final class Settings {
          */
         @SettingDescription("settings.personal.rating")
         ANONYMOUS_RATING("constants.settings.name.anonymous_rate", false),
+        /**
+         * Whether the player's transaction history is publicly visible
+         */
+        @SettingDescription("settings.personal.transaction_history")
+        PUBLIC_TRANSACTION_HISTORY("constants.settings.name.public_transaction_history", true),
+
+        /**
+         * Whether the player's statistics are publicly visible
+         */
+        @SettingDescription("settings.personal.statistics")
+        PUBLIC_STATISTICS("constants.settings.name.public_stats", true)
 
         ;
 
@@ -363,6 +374,18 @@ public final class Settings {
         @SettingDescription("settings.corporation.chat")
         public static final Corporation<Boolean> CHAT = ofBoolean("chat", "constants.settings.name.chat", true);
 
+        /**
+         * Whether anyone can teleport to the Corporation's headquarters.
+         */
+        @SettingDescription("settings.corporation.public_headquarters")
+        public static final Corporation<Boolean> PUBLIC_HEADQUARTERS = ofBoolean("public_headquarters", "constants.settings.name.public_headquarters", true);
+
+        /**
+         * Whether random Products under this Corporation will be featured on the main Corporation page.
+         */
+        @SettingDescription("settings.corporation.feature_products")
+        public static final Corporation<Boolean> FEATURE_PRODUCTS = ofBoolean("feature_products", "constants.settings.name.feature_products", true);
+
         private final String key;
         private final T defaultValue;
         private final String dKey;
@@ -484,7 +507,9 @@ public final class Settings {
         public T parseValue(@NotNull String value) {
             switch (key) {
                 case "join_type": return (T) JoinType.valueOf(value.toUpperCase());
-                case "chat": return (T) Boolean.valueOf(value);
+                case "chat":
+                case "public_headquarters":
+                case "feature_products": return (T) Boolean.valueOf(value);
                 default:
                     throw new IllegalArgumentException("Unknown Corporation Setting: " + key);
             }

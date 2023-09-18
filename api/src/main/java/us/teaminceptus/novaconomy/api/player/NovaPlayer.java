@@ -479,7 +479,7 @@ public final class NovaPlayer {
         Map<OfflinePlayer, Bounty> bounties = new HashMap<>();
 
         for (Map.Entry<String, Object> entry : pConfig.entrySet()) {
-            if (!entry.getKey().startsWith("bounty.")) continue;
+            if (!entry.getKey().startsWith("bounties.")) continue;
 
             OfflinePlayer target = Bukkit.getOfflinePlayer(UUID.fromString(entry.getKey().split("\\.")[1]));
             if (target == null) continue;
