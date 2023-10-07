@@ -563,7 +563,6 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
             getLogger().info("Database found! Connecting...");
 
             connectDB(true);
-            PING_DB_RUNNABLE.runTaskTimerAsynchronously(this, 60 * 20, 60 * 20);
 
             getLogger().info("Connection Successful!");
             convertToDatabase();
@@ -962,6 +961,10 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
         config = getConfig();
         interest = config.getConfigurationSection("Interest");
         ncauses = config.getConfigurationSection("NaturalCauses");
+
+        if (isDatabaseEnabled()) {
+            PING_DB_RUNNABLE.runTaskTimerAsynchronously(this, 60 * 20, 60 * 20);
+        }
 
         SERIALIZABLE.forEach(ConfigurationSerialization::registerClass);
         getLogger().info("Initialized Serializables...");
