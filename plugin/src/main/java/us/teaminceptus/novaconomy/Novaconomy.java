@@ -941,6 +941,14 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
     @Override
     public void onLoad() {
         config = getConfig();
+        loadFiles();
+
+        getLogger().info("Loaded Files...");
+
+        if (hasVault()) {
+            getLogger().info("Vault Found! Hooking...");
+            VaultRegistry.reloadVault();
+        }
     }
 
     /**
@@ -954,15 +962,6 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
         config = getConfig();
         interest = config.getConfigurationSection("Interest");
         ncauses = config.getConfigurationSection("NaturalCauses");
-
-        loadFiles();
-
-        getLogger().info("Loaded Files...");
-
-        if (hasVault()) {
-            getLogger().info("Vault Found! Hooking...");
-            VaultRegistry.reloadVault();
-        }
 
         SERIALIZABLE.forEach(ConfigurationSerialization::registerClass);
         getLogger().info("Initialized Serializables...");
