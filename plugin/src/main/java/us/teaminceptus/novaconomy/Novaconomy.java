@@ -962,9 +962,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
         interest = config.getConfigurationSection("Interest");
         ncauses = config.getConfigurationSection("NaturalCauses");
 
-        if (isDatabaseEnabled()) {
-            PING_DB_RUNNABLE.runTaskTimerAsynchronously(this, 60 * 20, 60 * 20);
-        }
+        loadTasks();
 
         SERIALIZABLE.forEach(ConfigurationSerialization::registerClass);
         getLogger().info("Initialized Serializables...");
@@ -1038,6 +1036,22 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 
         saveConfig();
         getLogger().info("Successfully loaded Novaconomy");
+    }
+
+    // Some tasks that were loaded by loadFiles or Vault are needed to be ran in onEnable
+    private void loadTasks() {
+        if (isDatabaseEnabled()) {
+            PING_DB_RUNNABLE.runTaskTimerAsynchronously(this, 60 * 20, 60 * 20);
+        }
+
+        boolean scheduled = false;
+        try {
+            RESTOCK_RUNNABLE.getTaskId();
+            scheduled = true;
+        } catch (IllegalStateException ignored) {}
+
+        if (isMarketEnabled() && isMarketRestockEnabled() && !scheduled)
+            RESTOCK_RUNNABLE.runTaskTimerAsynchronously(this, getMarketRestockInterval(), getMarketRestockInterval());
     }
 
     @Override
@@ -1998,15 +2012,6 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
                 .map(Material::matchMaterial)
                 .filter(w::isItem)
                 .forEach(m -> stock.putIfAbsent(m, getMarketRestockAmount()));
-
-        boolean scheduled = false;
-        try {
-            RESTOCK_RUNNABLE.getTaskId();
-            scheduled = true;
-        } catch (IllegalStateException ignored) {}
-
-        if (isMarketEnabled() && isMarketRestockEnabled() && !scheduled)
-            RESTOCK_RUNNABLE.runTaskTimerAsynchronously(this, getMarketRestockInterval(), getMarketRestockInterval());
     }
 
     private void writeMarket() {
