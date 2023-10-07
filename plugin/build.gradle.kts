@@ -61,11 +61,11 @@ tasks {
 
     compileJava {
         listOf(
-            "1_18_R1",
-            "1_18_R2",
-            "1_19_R1",  
-            "1_19_R2",
-            "1_19_R3",
+//            "1_18_R1",
+//            "1_18_R2",
+//            "1_19_R1",
+//            "1_19_R2",
+//            "1_19_R3",
             "1_20_R1"
         ).forEach { dependsOn(":novaconomy-$it:remap") }
     }
