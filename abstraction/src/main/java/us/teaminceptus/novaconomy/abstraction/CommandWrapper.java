@@ -1773,7 +1773,6 @@ public interface CommandWrapper {
 
     default void playerStatistics(Player p, OfflinePlayer target) {
         Player op = target.getPlayer();
-        boolean online = op != null;
         if (!p.hasPermission("novaconomy.user.stats")) {
             op.sendMessage(ERROR_PERMISSION);
             return;
@@ -1788,7 +1787,7 @@ public interface CommandWrapper {
         inv.setItem(4, builder(createPlayerHead(target),
                 meta -> {
                     meta.setDisplayName(ChatColor.LIGHT_PURPLE + get("constants.player_statistics"));
-                    meta.setLore(Collections.singletonList(ChatColor.YELLOW + (online && op.getDisplayName() == null ? target.getName() : op.getDisplayName())));
+                    meta.setLore(Collections.singletonList(ChatColor.YELLOW + (op == null ? p.getName() : op.getDisplayName())));
                 }, NBTWrapper::removeID
         ));
 
