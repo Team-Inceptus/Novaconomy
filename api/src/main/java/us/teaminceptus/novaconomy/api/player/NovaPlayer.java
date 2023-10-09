@@ -52,7 +52,7 @@ public final class NovaPlayer {
 
     private final Map<String, Object> pConfig = new HashMap<>();
 
-    final PlayerStatistics stats;
+    PlayerStatistics stats;
 
     private static void checkTable() throws SQLException {
         Connection db = NovaConfig.getConfiguration().getDatabaseConnection();
@@ -96,13 +96,11 @@ public final class NovaPlayer {
                     BukkitObjectInputStream statsBIs = new BukkitObjectInputStream(statsIs);
                     stats = (PlayerStatistics) statsBIs.readObject();
                     statsBIs.close();
-                } else
-                    stats = new PlayerStatistics(p);
+                }
 
                 rs.close();
             } catch (Exception e) {
                 NovaConfig.print(e);
-                stats = new PlayerStatistics(p);
             }
         else {
             if (!NovaConfig.getPlayerDirectory().exists()) NovaConfig.getPlayerDirectory().mkdir();
@@ -194,6 +192,7 @@ public final class NovaPlayer {
         if (newBal < 0) throw new IllegalArgumentException("Balance cannot be negative");
         if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
 
+        checkStats();
         pConfig.put("economies." + econ.getName().toLowerCase() + ".balance", newBal);
 
         if (newBal > stats.highestBalance) {
@@ -277,6 +276,7 @@ public final class NovaPlayer {
      */
     public void add(@NotNull Economy econ, double add) throws IllegalArgumentException {
         if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
+        checkStats();
 
         stats.moneyAdded += add;
         setBalance(econ, getBalance(econ) + add);
@@ -290,6 +290,7 @@ public final class NovaPlayer {
      */
     public void remove(@NotNull Economy econ, double remove) throws IllegalArgumentException {
         if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
+        checkStats();
 
         stats.totalMoneySpent += remove;
         setBalance(econ, getBalance(econ) - remove);
@@ -359,6 +360,7 @@ public final class NovaPlayer {
         if (System.currentTimeMillis() - 86400000 < (long) pConfig.getOrDefault(LBW + ".timestamp", 0))
             throw new UnsupportedOperationException("Last withdraw was less than 24 hours ago");
 
+        checkStats();
         Bank.removeBalance(econ, amount);
         add(econ, amount);
 
@@ -768,5 +770,10 @@ public final class NovaPlayer {
                 .filter(r -> r.getPurchased() == m)
                 .collect(Collectors.toList())
         );
+    }
+
+    private void checkStats() {
+        if (stats == null)
+            stats = new PlayerStatistics(p);
     }
 }
