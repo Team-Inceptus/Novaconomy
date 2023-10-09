@@ -521,7 +521,7 @@ final class CommandWrapperV2 implements CommandWrapper {
         @Subcommand({"create", "make"})
         @AutoComplete("* @symbol *")
         @CommandPermission("novaconomy.economy.create")
-        public void createEconomy(CommandSender sender, String name, String symbol, Material icon, @Optional(def = "1") @Range(min = 0.01, max = Integer.MAX_VALUE) double scale, @Named("natural-increase") @Default("true") boolean naturalIncrease, @Named("clickable-reward") @Default("true") boolean clickableReward) {
+        public void createEconomy(CommandSender sender, String name, String symbol, Material icon, @Default("1") @Range(min = 0.01, max = Integer.MAX_VALUE) double scale, @Named("natural-increase") @Default("true") boolean naturalIncrease, @Named("clickable-reward") @Default("true") boolean clickableReward) {
             wrapper.createEconomy(sender, name, symbol.startsWith("\"") || symbol.startsWith("'") ? symbol.charAt(1) : symbol.charAt(0), icon, scale, naturalIncrease, clickableReward);
         }
 
