@@ -10,6 +10,7 @@ import net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket;
 import net.minecraft.network.protocol.game.ClientboundOpenSignEditorPacket;
 import net.minecraft.network.protocol.game.ServerboundSignUpdatePacket;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.ServerCommonPacketListenerImpl;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
@@ -89,7 +90,7 @@ final class Wrapper1_20_R2 implements Wrapper {
         ServerPlayer sp = ((CraftPlayer) p).getHandle();
 
         try {
-            Field connection = ServerGamePacketListenerImpl.class.getDeclaredField("h");
+            Field connection = ServerCommonPacketListenerImpl.class.getDeclaredField("c");
             connection.setAccessible(true);
             Channel ch = ((Connection) connection.get(sp.connection)).channel;
 
@@ -105,7 +106,7 @@ final class Wrapper1_20_R2 implements Wrapper {
         ServerPlayer sp = ((CraftPlayer) p).getHandle();
         
         try {
-            Field connection = ServerGamePacketListenerImpl.class.getDeclaredField("h");
+            Field connection = ServerCommonPacketListenerImpl.class.getDeclaredField("c");
             connection.setAccessible(true);
             Channel ch = ((Connection) connection.get(sp.connection)).channel;
 
