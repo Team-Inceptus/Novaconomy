@@ -224,12 +224,12 @@ public final class Settings {
         private static final long serialVersionUID = -7174484717138758485L;
 
         private final String key;
-        private final Supplier<T> defaultValue;
+        private final T defaultValue;
         private final String dKey;
         private final Set<T> possibleValues;
         private final Class<T> clazz;
 
-        private Business(String key, String dKey, Class<T> clazz, Supplier<T> defaultValue, Set<T> possibleValues) {
+        private Business(String key, String dKey, Class<T> clazz, T defaultValue, Set<T> possibleValues) {
             this.key = key;
             this.dKey = dKey;
             this.defaultValue = defaultValue;
@@ -238,20 +238,20 @@ public final class Settings {
         }
 
         private static <T extends Enum<T>> Business<T> ofEnum(String key, String dKey, Class<T> clazz, T defaultValue) {
-            return new Business<>(key, dKey, clazz, () -> defaultValue, ImmutableSet.copyOf(defaultValue.getDeclaringClass().getEnumConstants()));
+            return new Business<>(key, dKey, clazz, defaultValue, ImmutableSet.copyOf(defaultValue.getDeclaringClass().getEnumConstants()));
         }
 
         private static Business<Boolean> ofBoolean(String key, String dKey, boolean defaultValue) {
-            return new Business<>(key, dKey, Boolean.class, () -> defaultValue, ImmutableSet.of(true, false));
+            return new Business<>(key, dKey, Boolean.class, defaultValue, ImmutableSet.of(true, false));
         }
 
         private static Business<Boolean> ofBoolean(String key, String dKey, Supplier<Boolean> defaultValue) {
-            return new Business<>(key, dKey, Boolean.class, defaultValue, ImmutableSet.of(true, false));
+            return new Business<>(key, dKey, Boolean.class, defaultValue.get(), ImmutableSet.of(true, false));
         }
 
         @Override
         public T getDefaultValue() {
-            return defaultValue.get();
+            return defaultValue;
         }
 
         @Override
