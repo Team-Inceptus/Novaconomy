@@ -11,7 +11,7 @@ plugins {
 }
 
 val pGroup = "us.teaminceptus.novaconomy"
-val pVersion = "1.8.1-SNAPSHOT"
+val pVersion = "1.8.2-SNAPSHOT"
 val pAuthor = "Team-Inceptus"
 
 sonarqube {
@@ -102,7 +102,7 @@ subprojects {
 
         testImplementation("org.spigotmc:spigot-api:1.8-R0.1-SNAPSHOT")
         testImplementation("net.md-5:bungeecord-chat:1.20-R0.1")
-        testImplementation("org.mockito:mockito-core:5.5.0")
+        testImplementation("org.mockito:mockito-core:5.6.0")
         testImplementation("org.junit.jupiter:junit-jupiter:5.9.3")
     }
 

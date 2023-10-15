@@ -8,12 +8,10 @@ import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.corporation.Corporation.JoinType;
 import us.teaminceptus.novaconomy.api.events.business.BusinessSupplyEvent;
 
+import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
@@ -181,7 +179,7 @@ public final class Settings {
     /**
      * Represents Business Settings
      */
-    public static final class Business<T> implements NovaSetting<T> {
+    public static final class Business<T> implements NovaSetting<T>, Serializable {
         /**
          * Whether the owner of the Business is public.
          */
@@ -222,6 +220,8 @@ public final class Settings {
          */
         @SettingDescription("settings.business.supply_interval")
         public static final Business<BusinessSupplyEvent.Interval> SUPPLY_INTERVAL = ofEnum("supply_interval","constants.settings.name.supply_interval", BusinessSupplyEvent.Interval.class, BusinessSupplyEvent.Interval.HOUR);
+
+        private static final long serialVersionUID = -7174484717138758485L;
 
         private final String key;
         private final Supplier<T> defaultValue;
@@ -355,12 +355,25 @@ public final class Settings {
 
             throw new IllegalArgumentException("Unknown Business Setting: " + key);
         }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            Business<?> business = (Business<?>) o;
+            return Objects.equals(key, business.key);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(key);
+        }
     }
 
     /**
      * Represents Corporation Settings
      */
-    public static final class Corporation<T> implements NovaSetting<T> {
+    public static final class Corporation<T> implements NovaSetting<T>, Serializable {
 
         /**
          * The privacy setting of a Corporation, determining how and whether businesses can join.
@@ -385,6 +398,8 @@ public final class Settings {
          */
         @SettingDescription("settings.corporation.feature_products")
         public static final Corporation<Boolean> FEATURE_PRODUCTS = ofBoolean("feature_products", "constants.settings.name.feature_products", true);
+
+        private static final long serialVersionUID = 2912177260114871976L;
 
         private final String key;
         private final T defaultValue;
@@ -515,6 +530,18 @@ public final class Settings {
             }
         }
 
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            Corporation<?> that = (Corporation<?>) o;
+            return Objects.equals(key, that.key);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(key);
+        }
     }
 
 

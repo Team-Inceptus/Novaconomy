@@ -14,6 +14,7 @@ import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.corporation.Corporation;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.util.NovaSound;
+import us.teaminceptus.novaconomy.util.command.MaterialSelector;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -2109,6 +2110,33 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                     }
                     case "disable": {
                         setMarketEnabled(sender, false);
+                        break;
+                    }
+                    case "setstock":
+                    case "stock": {
+                        if (args.length < 2) {
+                            sender.sendMessage(getMessage("error.argument.item"));
+                            return false;
+                        }
+
+                        MaterialSelector selector = MaterialSelector.of(args[1]);
+                        if (selector == null) {
+                            sender.sendMessage(getMessage("error.argument.item"));
+                            return false;
+                        }
+
+                        if (args.length < 3) {
+                            sender.sendMessage(getMessage("error.argument.amount"));
+                            return false;
+                        }
+
+                        try {
+                            long amount = Long.parseLong(args[2]);
+                            setMarketStock(sender, selector.getMaterials(), amount);
+                        } catch (NumberFormatException e) {
+                            sender.sendMessage(getMessage("error.argument.amount"));
+                            return false;
+                        }
                         break;
                     }
                     default: {

@@ -890,7 +890,7 @@ public final class Business implements ConfigurationSerializable {
                 db.createStatement().execute("ALTER TABLE businesses ADD custom_model_data INT NOT NULL");
 
             if (!(rs = md.getColumns(null, null, "businesses", "supply_chests")).next())
-                db.createStatement().execute("ALTER TABLE businessess ADD supply_chests LONGBLOB NOT NULL");
+                db.createStatement().execute("ALTER TABLE businesses ADD supply_chests LONGBLOB NOT NULL");
         } finally {
             if (rs != null) rs.close();
         }

@@ -1,5 +1,5 @@
 val mcVersion = "1.13.2"
-val lampVersion = "3.1.5"
+val lampVersion = "3.1.7"
 
 dependencies {
     api(project(":novaconomy-abstract"))

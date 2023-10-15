@@ -169,7 +169,7 @@ public final class Items {
             ItemStack head = new ItemStack(w.isLegacy() ? Material.matchMaterial("SKULL_ITEM") : Material.matchMaterial("PLAYER_HEAD"));
 
             SkullMeta meta = (SkullMeta) head.getItemMeta();
-            GameProfile profile = new GameProfile(UUID.randomUUID(), null);
+            GameProfile profile = new GameProfile(UUID.randomUUID(), name);
             profile.getProperties().put("textures", new Property("textures", texture));
             try {
                 Method mtd = meta.getClass().getDeclaredMethod("setProfile", GameProfile.class);

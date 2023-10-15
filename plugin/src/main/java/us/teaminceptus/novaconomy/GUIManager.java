@@ -1372,9 +1372,47 @@ final class GUIManager implements Listener {
                 getCommandWrapper().settings(p, CORPORATION_TAG);
             })
             .put("economy:wheel:market_access", (e, inv) -> {
-                items().get("economy:wheel").accept(e, inv);
+                Player p = (Player) e.getWhoClicked();
+                NovaPlayer np = new NovaPlayer(p);
+                int slot = e.getRawSlot();
+                ItemStack item = e.getCurrentItem().clone();
 
-                Economy econ = getEconomy(inv.getItem(12));
+                List<String> econs = Economy.getEconomies()
+                        .stream()
+                        .filter(econ -> {
+                            Set<Economy> whitelisted = NovaConfig.getMarket().getWhitelistedEconomies();
+                            if (!whitelisted.isEmpty())
+                                return whitelisted.contains(econ);
+
+                            Set<Economy> blacklisted = NovaConfig.getMarket().getBlacklistedEconomies();
+                            if (!blacklisted.isEmpty())
+                                return !blacklisted.contains(econ);
+
+                            return true;
+                        })
+                        .map(Economy::getName)
+                        .sorted(String.CASE_INSENSITIVE_ORDER)
+                        .collect(Collectors.toList());
+
+                Economy econ = getEconomy(item);
+                int nextI = econs.indexOf(econ.getName()) + (e.getClick().isRightClick() ? -1 : 1);
+                Economy next = econs.size() == 1 ? econ : Economy.getEconomy(econs.get(nextI == econs.size() ? 0 : nextI));
+
+                item.setType(next.getIconType());
+                modelData(item, next.getCustomModelData());
+
+                item = builder(item,
+                        meta -> {
+                            meta.setDisplayName(ChatColor.GOLD + next.getName());
+                            meta.setLore(Collections.singletonList(
+                                    format(ChatColor.AQUA + get("constants.balance"), ChatColor.GOLD + format("%,.2f", np.getBalance(econ) + econ.getSymbol()))
+                            ));
+                        },
+                        nbt -> nbt.set(ECON_TAG, next.getUniqueId())
+                );
+
+                e.getView().setItem(slot, item);
+                NovaSound.BLOCK_NOTE_BLOCK_PLING.play(p);
 
                 ItemStack display = Items.builder(inv.getItem(14).clone(),
                     meta -> meta.setLore(Arrays.asList(

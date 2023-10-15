@@ -1096,7 +1096,7 @@ public final class Corporation {
 
         try {
             if (!(rs = md.getColumns(null, null, "corporations", "custom_model_data")).next())
-                db.createStatement().execute("ALTER TABLE corporations ADD COLUMN custom_model_dat INT NOT NULL");
+                db.createStatement().execute("ALTER TABLE corporations ADD COLUMN custom_model_data INT NOT NULL");
         } finally {
             if (rs != null) rs.close();
         }

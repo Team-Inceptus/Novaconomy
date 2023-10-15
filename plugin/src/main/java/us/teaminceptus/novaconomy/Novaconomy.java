@@ -563,7 +563,6 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
             getLogger().info("Database found! Connecting...");
 
             connectDB(true);
-            PING_DB_RUNNABLE.runTaskTimerAsynchronously(this, 60 * 20, 60 * 20);
 
             getLogger().info("Connection Successful!");
             convertToDatabase();
@@ -941,6 +940,9 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
     @Override
     public void onLoad() {
         config = getConfig();
+        loadFiles();
+
+        getLogger().info("Loaded Files...");
 
         if (hasVault()) {
             getLogger().info("Vault Found! Hooking...");
@@ -960,9 +962,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
         interest = config.getConfigurationSection("Interest");
         ncauses = config.getConfigurationSection("NaturalCauses");
 
-        loadFiles();
-
-        getLogger().info("Loaded Files...");
+        loadTasks();
 
         SERIALIZABLE.forEach(ConfigurationSerialization::registerClass);
         getLogger().info("Initialized Serializables...");
@@ -1008,7 +1008,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
                 .setChangelogLink("https://github.com/Team-Inceptus/Novaconomy/releases/")
                 .setUserAgent("Team-Inceptus/Novaconomy UpdateChecker")
                 .setColoredConsoleOutput(true)
-                .setDonationLink("https://www.patreon.com/teaminceptus")
+                .setDonationLink("https://www.patreon.com/gamercoder215")
                 .setNotifyRequesters(true)
                 .checkEveryXHours(1)
                 .checkNow();
@@ -1036,6 +1036,22 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 
         saveConfig();
         getLogger().info("Successfully loaded Novaconomy");
+    }
+
+    // Some tasks that were loaded by loadFiles or Vault are needed to be ran in onEnable
+    private void loadTasks() {
+        if (isDatabaseEnabled()) {
+            PING_DB_RUNNABLE.runTaskTimerAsynchronously(this, 60 * 20, 60 * 20);
+        }
+
+        boolean scheduled = false;
+        try {
+            RESTOCK_RUNNABLE.getTaskId();
+            scheduled = true;
+        } catch (IllegalStateException ignored) {}
+
+        if (isMarketEnabled() && isMarketRestockEnabled() && !scheduled)
+            RESTOCK_RUNNABLE.runTaskTimerAsynchronously(this, getMarketRestockInterval(), getMarketRestockInterval());
     }
 
     @Override
@@ -1996,15 +2012,6 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
                 .map(Material::matchMaterial)
                 .filter(w::isItem)
                 .forEach(m -> stock.putIfAbsent(m, getMarketRestockAmount()));
-
-        boolean scheduled = false;
-        try {
-            RESTOCK_RUNNABLE.getTaskId();
-            scheduled = true;
-        } catch (IllegalStateException ignored) {}
-
-        if (isMarketEnabled() && isMarketRestockEnabled() && !scheduled)
-            RESTOCK_RUNNABLE.runTaskTimerAsynchronously(this, getMarketRestockInterval(), getMarketRestockInterval());
     }
 
     private void writeMarket() {
@@ -2160,9 +2167,29 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 
     @Override
     public void setStock(@NotNull Material m, long stock) throws IllegalArgumentException {
+        if (m == null) throw new IllegalArgumentException("Material cannot be null");
+        if (!prices.containsKey(m.name().toLowerCase())) return;
+        if (stock < 0) throw new IllegalArgumentException("Stock must be positive");
+
         Novaconomy.stock.put(m, stock);
         writeMarket();
     }
+
+    @Override
+    public void setStock(@NotNull Iterable<Material> materials, long stock) throws IllegalArgumentException {
+        if (materials == null) throw new IllegalArgumentException("Materials cannot be null");
+        if (stock < 0) throw new IllegalArgumentException("Stock must be positive");
+
+        AtomicBoolean write = new AtomicBoolean(false);
+        for (Material m : materials) {
+            if (!prices.containsKey(m.name().toLowerCase())) continue;
+            Novaconomy.stock.put(m, stock);
+            write.compareAndSet(false, true);
+        }
+
+        writeMarket();
+    }
+
 
     @Override
     public @NotNull Receipt buy(@NotNull OfflinePlayer buyer, @NotNull Material m, int amount, @NotNull Economy econ) throws IllegalArgumentException, CancellationException {
@@ -2380,6 +2407,42 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
         items.removeIf(m -> m.get("id").equals(material.name()));
 
         config.set("Market.CustomItems", items);
+        saveConfig();
+    }
+
+    @Override
+    public @NotNull Set<Economy> getWhitelistedEconomies() {
+        return ImmutableSet.copyOf(config.getStringList("Market.Purchasing.WhitelistedEconomies").stream()
+                .map(Economy::getEconomy)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet()));
+    }
+
+    @Override
+    public void setWhitelistedEconomies(@NotNull Iterable<Economy> economies) {
+        config.set("Market.Purchasing.WhitelistedEconomies", ImmutableList.copyOf(economies)
+                .stream()
+                .map(Economy::getName)
+                .collect(Collectors.toList())
+        );
+        saveConfig();
+    }
+
+    @Override
+    public @NotNull Set<Economy> getBlacklistedEconomies() {
+        return ImmutableSet.copyOf(config.getStringList("Market.Purchasing.BlacklistedEconomies").stream()
+                .map(Economy::getEconomy)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet()));
+    }
+
+    @Override
+    public void setBlacklistedEconomies(@NotNull Iterable<Economy> economies) {
+        config.set("Market.Purchasing.BlacklistedEconomies", ImmutableList.copyOf(economies)
+                .stream()
+                .map(Economy::getName)
+                .collect(Collectors.toList())
+        );
         saveConfig();
     }
 
