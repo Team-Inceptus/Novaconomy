@@ -379,3 +379,13 @@ Market:
 
     # The base amount of money required to gain access to the Market
     Amount: 10000.0
+
+  # Market Purchasing Options
+  Purchasing:
+    # A list of Whitelisted Economies by name that can be used to purchase items from the market.
+    # This overrides the Blacklist.
+    WhitelistedEconomies: []
+
+    # A list of Blacklisted Economies by name that can be used to purchase items from the market.
+    # This does not override the Whitelist.
+    BlacklistedEconomies: []

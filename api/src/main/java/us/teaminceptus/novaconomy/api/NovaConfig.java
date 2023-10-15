@@ -404,6 +404,10 @@ public interface NovaConfig  {
         if (!config.isBoolean("Market.Membership.Enabled")) config.set("Market.Membership.Enabled", true);
         if (!config.isInt("Market.Membership.Amount") && !config.isDouble("Market.Membership.Amount")) config.set("Market.Membership.Amount", 10000.0);
 
+        if (!config.isConfigurationSection("Market.Purchasing")) config.createSection("Market.Purchasing");
+        if (!config.isList("Market.Purchasing.WhitelistedEconomies")) config.set("Market.Purchasing.WhitelistedEconomies", new ArrayList<>());
+        if (!config.isList("Market.Purchasing.BlacklistedEconomies")) config.set("Market.Purchasing.BlacklistedEconomies", new ArrayList<>());
+
         try { config.save(f); } catch (IOException e) { print(e); }
 
         return config;

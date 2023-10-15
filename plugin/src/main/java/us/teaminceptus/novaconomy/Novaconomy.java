@@ -2410,4 +2410,40 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
         saveConfig();
     }
 
+    @Override
+    public @NotNull Set<Economy> getWhitelistedEconomies() {
+        return ImmutableSet.copyOf(config.getStringList("Market.Purchasing.WhitelistedEconomies").stream()
+                .map(Economy::getEconomy)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet()));
+    }
+
+    @Override
+    public void setWhitelistedEconomies(@NotNull Iterable<Economy> economies) {
+        config.set("Market.Purchasing.WhitelistedEconomies", ImmutableList.copyOf(economies)
+                .stream()
+                .map(Economy::getName)
+                .collect(Collectors.toList())
+        );
+        saveConfig();
+    }
+
+    @Override
+    public @NotNull Set<Economy> getBlacklistedEconomies() {
+        return ImmutableSet.copyOf(config.getStringList("Market.Purchasing.BlacklistedEconomies").stream()
+                .map(Economy::getEconomy)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet()));
+    }
+
+    @Override
+    public void setBlacklistedEconomies(@NotNull Iterable<Economy> economies) {
+        config.set("Market.Purchasing.BlacklistedEconomies", ImmutableList.copyOf(economies)
+                .stream()
+                .map(Economy::getName)
+                .collect(Collectors.toList())
+        );
+        saveConfig();
+    }
+
 }
