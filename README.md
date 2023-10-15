@@ -23,13 +23,19 @@ With the freedom to have your own symbols, icons, conversion rates, and even int
   - Change Command Aliases for Less Confusion
   - Minor Optimization Changes
 
-- v1.8.1
+- **v1.8.1**
   - Various Bug Fixes
   - Add Convertable Economies Option
   - More Corporation Achievements
   - Featured Corporation Products
   - Corporation Query Command
   - Redstone Market Category
+- **v1.8.2**
+  - Add Bulk Change Market Stock
+  - Add Whitelisted/Blacklisted Market Economies
+  - Fix 1.20.2 Errors
+  - Update Lamp to v3.1.7
+    - Fix Command Errors 
 
 ### 👔 1.7.0 Update: Cunning Corporations
 - New Features
