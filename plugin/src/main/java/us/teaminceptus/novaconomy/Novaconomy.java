@@ -2167,9 +2167,29 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 
     @Override
     public void setStock(@NotNull Material m, long stock) throws IllegalArgumentException {
+        if (m == null) throw new IllegalArgumentException("Material cannot be null");
+        if (!prices.containsKey(m.name().toLowerCase())) return;
+        if (stock < 0) throw new IllegalArgumentException("Stock must be positive");
+
         Novaconomy.stock.put(m, stock);
         writeMarket();
     }
+
+    @Override
+    public void setStock(@NotNull Iterable<Material> materials, long stock) throws IllegalArgumentException {
+        if (materials == null) throw new IllegalArgumentException("Materials cannot be null");
+        if (stock < 0) throw new IllegalArgumentException("Stock must be positive");
+
+        AtomicBoolean write = new AtomicBoolean(false);
+        for (Material m : materials) {
+            if (!prices.containsKey(m.name().toLowerCase())) continue;
+            Novaconomy.stock.put(m, stock);
+            write.compareAndSet(false, true);
+        }
+
+        writeMarket();
+    }
+
 
     @Override
     public @NotNull Receipt buy(@NotNull OfflinePlayer buyer, @NotNull Material m, int amount, @NotNull Economy econ) throws IllegalArgumentException, CancellationException {

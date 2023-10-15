@@ -96,6 +96,14 @@ public interface NovaMarket {
     void setStock(@NotNull Material m, long stock) throws IllegalArgumentException;
 
     /**
+     * Sets the amount of stock for Materials on the Market.
+     * @param materials Materials to set
+     * @param stock Stock to set
+     * @throws IllegalArgumentException if stock is negative
+     */
+    void setStock(@NotNull Iterable<Material> materials, long stock) throws IllegalArgumentException;
+
+    /**
      * Adds stock to a Material on the Market.
      * @param m Material to add
      * @param add Stock to add

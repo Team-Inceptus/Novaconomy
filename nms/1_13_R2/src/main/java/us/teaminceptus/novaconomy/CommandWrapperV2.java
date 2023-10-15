@@ -3,6 +3,7 @@ package us.teaminceptus.novaconomy;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.Tag;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.EntityType;
@@ -15,6 +16,7 @@ import revxrsal.commands.autocomplete.SuggestionProvider;
 import revxrsal.commands.bukkit.BukkitCommandActor;
 import revxrsal.commands.bukkit.BukkitCommandHandler;
 import revxrsal.commands.bukkit.annotation.CommandPermission;
+import revxrsal.commands.bukkit.brigadier.MinecraftArgumentType;
 import revxrsal.commands.exception.CommandErrorException;
 import us.teaminceptus.novaconomy.abstraction.CommandWrapper;
 import us.teaminceptus.novaconomy.abstraction.Wrapper;
@@ -25,11 +27,14 @@ import us.teaminceptus.novaconomy.api.corporation.Corporation;
 import us.teaminceptus.novaconomy.api.corporation.CorporationInvite;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.util.NovaSound;
+import us.teaminceptus.novaconomy.util.command.MaterialSelector;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import static us.teaminceptus.novaconomy.abstraction.Wrapper.*;
 import static us.teaminceptus.novaconomy.util.NovaUtil.format;
@@ -84,6 +89,10 @@ final class CommandWrapperV2 implements CommandWrapper {
                 Corporation c = Corporation.byName(ctx.popForParameter());
                 if (c == null) throw new CommandErrorException(getError("error.argument.corporation"));
                 return c;
+            }).registerValueResolver(MaterialSelector.class, ctx -> {
+                MaterialSelector selector = MaterialSelector.of(ctx.popForParameter());
+                if (selector == null) throw new CommandErrorException(getError("error.argument.item"));
+                return selector;
             });
 
         handler.getAutoCompleter()
@@ -97,6 +106,33 @@ final class CommandWrapperV2 implements CommandWrapper {
                 .registerParameterSuggestions(boolean.class, SuggestionProvider.of("true", "false"))
                 .registerParameterSuggestions(OfflinePlayer.class, SuggestionProvider.map(() -> Arrays.asList(Bukkit.getOfflinePlayers()), OfflinePlayer::getName))
                 .registerParameterSuggestions(Corporation.class, SuggestionProvider.map(Corporation::getCorporations, Corporation::getName))
+                .registerParameterSuggestions(MaterialSelector.class, SuggestionProvider.of(() -> {
+                    List<String> suggestions = new ArrayList<>();
+                    suggestions.add("all");
+                    suggestions.addAll(Arrays.stream(Material.values())
+                            .map(m -> new String[] {
+                                    "minecraft:" + m.name().toLowerCase(),
+                                    m.name().toLowerCase()
+                            })
+                            .flatMap(Arrays::stream)
+                            .collect(Collectors.toList()));
+
+                    Stream<Tag<Material>> tags = Stream.concat(
+                            StreamSupport.stream(Bukkit.getTags("items", Material.class).spliterator(), false),
+                            StreamSupport.stream(Bukkit.getTags("blocks", Material.class).spliterator(), false)
+                    );
+                    suggestions.addAll(tags
+                            .map(Tag::getKey)
+                            .map(key -> new String[] {
+                                    "#" + key.toString().toLowerCase(),
+                                    "#" + key.getKey().toLowerCase()
+                            })
+                            .flatMap(Arrays::stream)
+                            .collect(Collectors.toList())
+                    );
+
+                    return suggestions;
+                }))
 
                 // Suggestions
 
@@ -954,6 +990,11 @@ final class CommandWrapperV2 implements CommandWrapper {
         @Subcommand("disable")
         public void disableMarket(CommandSender sender) {
             setMarketEnabled(sender, false);
+        }
+
+        @Subcommand({"setstock", "stock"})
+        public void setMarketStock(CommandSender sender, MaterialSelector selector, long amount) {
+            wrapper.setMarketStock(sender, selector.getMaterials(), amount);
         }
 
     }
