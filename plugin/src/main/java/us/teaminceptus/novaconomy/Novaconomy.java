@@ -1008,7 +1008,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
                 .setChangelogLink("https://github.com/Team-Inceptus/Novaconomy/releases/")
                 .setUserAgent("Team-Inceptus/Novaconomy UpdateChecker")
                 .setColoredConsoleOutput(true)
-                .setDonationLink("https://www.patreon.com/teaminceptus")
+                .setDonationLink("https://www.patreon.com/gamercoder215")
                 .setNotifyRequesters(true)
                 .checkEveryXHours(1)
                 .checkNow();
