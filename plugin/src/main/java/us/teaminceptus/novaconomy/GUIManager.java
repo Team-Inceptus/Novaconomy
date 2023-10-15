@@ -1379,9 +1379,17 @@ final class GUIManager implements Listener {
 
                 List<String> econs = Economy.getEconomies()
                         .stream()
-                        .filter(econ ->
-                                NovaConfig.getMarket().getWhitelistedEconomies().contains(econ) && !NovaConfig.getMarket().getBlacklistedEconomies().contains(econ)
-                        )
+                        .filter(econ -> {
+                            Set<Economy> whitelisted = NovaConfig.getMarket().getWhitelistedEconomies();
+                            if (!whitelisted.isEmpty())
+                                return whitelisted.contains(econ);
+
+                            Set<Economy> blacklisted = NovaConfig.getMarket().getBlacklistedEconomies();
+                            if (!blacklisted.isEmpty())
+                                return !blacklisted.contains(econ);
+
+                            return true;
+                        })
                         .map(Economy::getName)
                         .sorted(String.CASE_INSENSITIVE_ORDER)
                         .collect(Collectors.toList());
