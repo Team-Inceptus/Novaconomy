@@ -161,9 +161,7 @@ final class NBTWrapper1_18_R1 extends NBTWrapper {
         if (product instanceof BusinessProduct bp)
             productT.putUUID("business", bp.getBusiness().getUniqueId());
 
-        novaconomy.put(key, productT);
-        tag.put(ROOT, novaconomy);
-        nmsitem.setTag(tag);
+item = CraftItemStack.asBukkitCopy(nmsitem);
     }
 
 }
