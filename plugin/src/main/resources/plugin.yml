@@ -1,7 +1,8 @@
 name: Novaconomy
-version: 1.8.2.1
+version: 1.8.3
 description: ${project.description}
 author: Team Inceptus
+load: POSTWORLD
 website: "https://github.com/Team-Inceptus/Novaconomy"
 api-version: 1.13
 main: us.teaminceptus.novaconomy.Novaconomy
