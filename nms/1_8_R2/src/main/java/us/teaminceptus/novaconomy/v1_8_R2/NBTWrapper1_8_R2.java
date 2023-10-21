@@ -200,6 +200,7 @@ final class NBTWrapper1_8_R2 extends NBTWrapper {
         novaconomy.set(key, productT);
         tag.set(ROOT, novaconomy);
         nmsitem.setTag(tag);
+        item = CraftItemStack.asBukkitCopy(nmsitem);
     }
 
 }

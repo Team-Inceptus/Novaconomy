@@ -36,6 +36,11 @@ With the freedom to have your own symbols, icons, conversion rates, and even int
   - Fix 1.20.2 Errors
   - Update Lamp to v3.1.7
     - Fix Command Errors 
+- **v1.8.3**
+  - Fix various SQL and SQL-Conversion related errors
+  - Fix Business Setting Serializability Errors
+  - Fix NBT Product Errors
+  - Fix Natural Increase sounds being played when not enabled
 
 ### 👔 1.7.0 Update: Cunning Corporations
 - New Features

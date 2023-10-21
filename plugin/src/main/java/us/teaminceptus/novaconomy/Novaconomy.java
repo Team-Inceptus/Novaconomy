@@ -533,7 +533,8 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
             if (db == null) {
                 getLogger().severe("Failed to connect to database!");
                 throw new RuntimeException("Failed to connect to database");
-            }
+            } else
+                conversion = ConversionMethod.FILES_TO_DATABASE;
         } catch (SQLException e) {
             if (validate) {
                 getLogger().severe("Failed to connect to database!");
@@ -553,6 +554,12 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
         }
     }
 
+    private enum ConversionMethod {
+        DATABASE_TO_FILES, FILES_TO_DATABASE, NONE
+    }
+
+    private static ConversionMethod conversion = ConversionMethod.NONE;
+
     private void loadFiles() {
         if (isDatabaseEnabled()) {
             if (db != null) {
@@ -561,15 +568,12 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
             }
 
             getLogger().info("Database found! Connecting...");
-
             connectDB(true);
-
             getLogger().info("Connection Successful!");
-            convertToDatabase();
         } else {
             try {
                 getLogger().info("Database is disabled! Loading Files...");
-                convertToFiles();
+                conversion = ConversionMethod.DATABASE_TO_FILES;
 
                 File economiesDir = new File(getDataFolder(), "economies");
                 if (!economiesDir.exists()) economiesDir.mkdir();
@@ -775,7 +779,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
             DatabaseMetaData meta = db.getMetaData();
 
             try (ResultSet economies = meta.getTables(null, null, "economies", null)) {
-                if (!NovaConfig.getEconomiesFolder().exists() && economies.first()) {
+                if (empty(NovaConfig.getEconomiesFolder().list()) && economies.first()) {
                     NovaConfig.getEconomiesFolder().mkdir();
                     getLogger().warning("Converting Economies to File Storage...");
 
@@ -797,7 +801,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
             }
 
             try (ResultSet businesses = meta.getTables(null, null, "businesses", null)) {
-                if (!NovaConfig.getBusinessesFolder().exists() && businesses.first()) {
+                if (empty(NovaConfig.getBusinessesFolder().list() )&& businesses.first()) {
                     NovaConfig.getBusinessesFolder().mkdir();
                     getLogger().warning("Converting Businesses to File Storage...");
 
@@ -819,7 +823,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
             }
 
             try (ResultSet corporations = meta.getTables(null, null, "corporations", null)) {
-                if (!NovaConfig.getCorporationsFolder().exists() && corporations.first()) {
+                if (empty(NovaConfig.getCorporationsFolder().list()) && corporations.first()) {
                     NovaConfig.getCorporationsFolder().mkdir();
                     getLogger().warning("Converting Corporations to File Storage...");
 
@@ -841,7 +845,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
             }
 
             try (ResultSet players = meta.getTables(null, null, "players", null)) {
-                if (!NovaConfig.getPlayerDirectory().exists() && players.first()) {
+                if (empty(NovaConfig.getPlayerDirectory().list()) && players.first()) {
                     NovaConfig.getPlayerDirectory().mkdir();
                     getLogger().warning("Converting Players to File Storage...");
 
@@ -875,7 +879,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
             }
 
             try (ResultSet market = meta.getTables(null, null, "market", null)) {
-                if (!NovaMarket.getMarketFile().exists() && market.first()) {
+                if (empty(NovaMarket.getMarketFile().list()) && market.first()) {
                     getLogger().warning("Converting Market to File Storage...");
                     readMarketDB();
                     writeMarketFile();
@@ -919,6 +923,11 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
         disconnectDB();
     }
 
+    private static boolean empty(String[] array) {
+        if (array == null) return true;
+        return array.length == 0;
+    }
+
     private static void deleteDir(File dir) {
         if (dir.isDirectory())
             for (File child : dir.listFiles()) deleteDir(child);
@@ -935,7 +944,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
     }
 
     /**
-     * called when the Plugin is loaded
+     * Called when the Plugin is loaded
      */
     @Override
     public void onLoad() {
@@ -961,6 +970,18 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
         config = getConfig();
         interest = config.getConfigurationSection("Interest");
         ncauses = config.getConfigurationSection("NaturalCauses");
+
+        getLogger().info("Loading More Files...");
+        switch (conversion) {
+            case DATABASE_TO_FILES:
+                convertToFiles();
+                break;
+            case FILES_TO_DATABASE:
+                convertToDatabase();
+                break;
+            default:
+                break;
+        }
 
         loadTasks();
 
@@ -2036,14 +2057,17 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
         }
     }
 
-    private static void writeMarketDB() throws SQLException, IOException {
+    private static void checkMarketTable() throws SQLException {
         db.createStatement().execute("CREATE TABLE IF NOT EXISTS market (" +
                 "material VARCHAR(255) NOT NULL, " +
                 "purchases LONGBLOB NOT NULL, " +
                 "stock BIGINT NOT NULL, " +
                 "PRIMARY KEY (material))"
         );
+    }
 
+    private static void writeMarketDB() throws SQLException, IOException {
+        checkMarketTable();
         for (Material m : NovaConfig.getMarket().getAllSold()) {
             String sql;
             PreparedStatement has = db.prepareStatement("SELECT * FROM market WHERE material = ?");
@@ -2075,6 +2099,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
     }
 
     private static void readMarketDB() throws SQLException, IOException, ClassNotFoundException {
+        checkMarketTable();
         for (Material m : NovaConfig.getMarket().getAllSold()) {
             PreparedStatement ps = db.prepareStatement("SELECT * FROM market WHERE material = ?");
             ps.setString(1, m.name());

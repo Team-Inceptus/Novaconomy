@@ -109,6 +109,7 @@ final class Events implements Listener {
     public void moneyIncrease(EntityDamageByEntityEvent e) {
         if (e.isCancelled()) return;
         if (!plugin.hasKillIncrease()) return;
+        if (Economy.getNaturalEconomies().isEmpty()) return;
 
         final Player p;
         Player tmpP = null;
@@ -196,6 +197,7 @@ final class Events implements Listener {
     public void moneyIncrease(BlockBreakEvent e) {
         if (e.isCancelled()) return;
         if (e.getBlock().getDrops().isEmpty()) return;
+        if (Economy.getNaturalEconomies().isEmpty()) return;
 
         Block b = e.getBlock();
         boolean ageable = w.isAgeable(b);
@@ -289,6 +291,7 @@ final class Events implements Listener {
     public void moneyIncrease(PlayerFishEvent e) {
         if (e.isCancelled()) return;
         if (!plugin.hasFishingIncrease()) return;
+        if (Economy.getNaturalEconomies().isEmpty()) return;
 
         if (e.getState() != PlayerFishEvent.State.CAUGHT_FISH) return;
 
@@ -363,6 +366,7 @@ final class Events implements Listener {
     }
 
     private void sendUpdateActionbar(Player p, List<String> added) {
+        if (added == null || added.isEmpty()) return;
         if (new NovaPlayer(p).hasNotifications()) {
             List<String> msgs = new ArrayList<>(added);
 
