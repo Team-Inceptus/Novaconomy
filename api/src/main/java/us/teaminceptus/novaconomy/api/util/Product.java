@@ -1,5 +1,6 @@
 package us.teaminceptus.novaconomy.api.util;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import org.apache.commons.lang.Validate;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
@@ -8,7 +9,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
@@ -128,10 +128,10 @@ public class Product implements ConfigurationSerializable, Comparable<Product> {
 
     @Override
     public Map<String, Object> serialize() {
-        return new HashMap<String, Object>() {{
-            put("price", price);
-            put("item", item);
-        }};
+        return ImmutableMap.<String, Object>builder()
+                .put("price", price)
+                .put("item", item)
+                .build();
     }
 
     @Override

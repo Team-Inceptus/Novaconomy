@@ -1,5 +1,6 @@
 package us.teaminceptus.novaconomy.api.economy.market;
 
+import com.google.common.collect.ImmutableMap;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
@@ -11,7 +12,6 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -128,13 +128,13 @@ public final class Receipt implements ConfigurationSerializable, Serializable {
 
     @Override
     public Map<String, Object> serialize() {
-        return new HashMap<String, Object>() {{
-            put("timestamp", timestamp);
-            put("purchased", purchased.name());
-            put("amount", purchaseAmount);
-            put("purchaser", purchaserUUID.toString());
-            put("price", purchasePrice);
-        }};
+        return ImmutableMap.<String, Object>builder()
+                .put("timestamp", timestamp)
+                .put("purchased", purchased.name())
+                .put("amount", purchaseAmount)
+                .put("purchaser", purchaserUUID.toString())
+                .put("price", purchasePrice)
+                .build();
     }
 
     /**
