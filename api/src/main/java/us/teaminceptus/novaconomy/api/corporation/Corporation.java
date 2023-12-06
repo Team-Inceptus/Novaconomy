@@ -914,12 +914,25 @@ public final class Corporation {
 
         CORPORATION_CACHE.clear();
 
-        for (File f : c.folder.listFiles()) {
-            if (f == null) continue;
-            f.delete();
-        }
+        if (NovaConfig.getConfiguration().isDatabaseEnabled()) {
+            Connection db = NovaConfig.getConfiguration().getDatabaseConnection();
 
-        c.folder.delete();
+            try {
+                PreparedStatement ps = db.prepareStatement("DELETE FROM corporations WHERE id = ?");
+                ps.setString(1, c.getUniqueId().toString());
+                ps.executeUpdate();
+                ps.close();
+            } catch (SQLException e) {
+                NovaConfig.print(e);
+            }
+        } else {
+            for (File f : c.folder.listFiles()) {
+                if (f == null) continue;
+                f.delete();
+            }
+
+            c.folder.delete();
+        }
     }
 
     /**

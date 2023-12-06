@@ -251,6 +251,9 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
      */
     public static void removeEconomy(@Nullable Economy econ) throws IllegalArgumentException {
         if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
+
+        ECONOMY_CACHE.clear();
+
         for (OfflinePlayer p : Bukkit.getOfflinePlayers()) {
             NovaPlayer np = new NovaPlayer(p);
             Map<String, Object> data = np.getPlayerData();
@@ -260,7 +263,21 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
                     .forEach(data::remove);
         }
 
-        econ.file.delete();
+        if (NovaConfig.getConfiguration().isDatabaseEnabled()) {
+            Connection db = NovaConfig.getConfiguration().getDatabaseConnection();
+
+            try {
+                PreparedStatement ps = db.prepareStatement("DELETE FROM economies WHERE id = ?");
+                ps.setString(1, econ.getUniqueId().toString());
+                ps.executeUpdate();
+                ps.close();
+            } catch (SQLException e) {
+                NovaConfig.print(e);
+            }
+        } else {
+            econ.file.delete();
+        }
+
         NovaConfig.getConfiguration().reloadHooks();
     }
 

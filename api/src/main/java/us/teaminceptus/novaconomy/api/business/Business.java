@@ -1491,12 +1491,26 @@ public final class Business implements ConfigurationSerializable {
     public static void remove(@Nullable Business b) {
         if (b == null) return;
 
-        for (File f : b.folder.listFiles()) {
-            if (f == null) continue;
-            f.delete();
-        }
+        BUSINESS_CACHE.clear();
 
-        b.folder.delete();
+        if (NovaConfig.getConfiguration().isDatabaseEnabled()) {
+            Connection db = NovaConfig.getConfiguration().getDatabaseConnection();
+            try {
+                PreparedStatement ps = db.prepareStatement("DELETE FROM businesses WHERE id = ?");
+                ps.setString(1, b.id.toString());
+                ps.executeUpdate();
+                ps.close();
+            } catch (SQLException e) {
+                NovaConfig.print(e);
+            }
+        } else {
+            for (File f : b.folder.listFiles()) {
+                if (f == null) continue;
+                f.delete();
+            }
+
+            b.folder.delete();
+        }
     }
 
     /**
