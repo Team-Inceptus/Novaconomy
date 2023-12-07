@@ -18,6 +18,7 @@ import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.SortingType;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.player.NovaPlayer;
+import us.teaminceptus.novaconomy.api.settings.Settings;
 import us.teaminceptus.novaconomy.util.NovaUtil;
 
 import java.io.IOException;
@@ -251,9 +252,10 @@ public final class Items {
         ItemStack economyWheel = NBTWrapper.builder(econ.getIconType(),
         meta -> {
             meta.setDisplayName(ChatColor.GOLD + econ.getName());
-            meta.setLore(Collections.singletonList(
-                    format(ChatColor.AQUA + get("constants.balance"), ChatColor.YELLOW + withSuffix(np.getBalance(econ)) + " (" + econ.getSymbol() + ")")
-            ));
+            if (np.getSetting(Settings.Personal.BALANCE_ON_ECONOMY_WHEEL))
+                meta.setLore(Collections.singletonList(
+                        format(ChatColor.AQUA + get("constants.balance"), ChatColor.YELLOW + withSuffix(np.getBalance(econ)) + " (" + econ.getSymbol() + ")")
+                ));
         },
         nbt -> {
                 nbt.set(CommandWrapper.ECON_TAG, econ.getUniqueId());

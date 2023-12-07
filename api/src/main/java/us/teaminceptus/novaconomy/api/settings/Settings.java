@@ -125,7 +125,13 @@ public final class Settings {
          * Whether the player's statistics are publicly visible
          */
         @SettingDescription("settings.personal.statistics")
-        PUBLIC_STATISTICS("constants.settings.name.public_stats", true)
+        PUBLIC_STATISTICS("constants.settings.name.public_stats", true),
+
+        /**
+         * Whether your balance should be shown on any Economy Wheel
+         */
+        @SettingDescription("settings.personal.balance_economy_wheel")
+        BALANCE_ON_ECONOMY_WHEEL("constants.settings.name.balance_economy_wheel", true)
 
         ;
 
