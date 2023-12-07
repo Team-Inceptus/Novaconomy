@@ -454,7 +454,7 @@ final class GUIManager implements Listener {
 
                 List<BusinessStatistics.Transaction> newTransactions = new ArrayList<>(pStats.getTransactionHistory());
                 newTransactions.add(t);
-                if (newTransactions.size() > 10) newTransactions.remove(0);
+                if (newTransactions.size() > PlayerStatistics.MAX_TRANSACTION_HISTORY) newTransactions.remove(0);
                 pStats.setTransactionHistory(newTransactions);
                 np.save();
 
