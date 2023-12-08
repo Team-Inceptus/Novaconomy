@@ -19,6 +19,8 @@ import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.bank.Bank;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.business.Rating;
+import us.teaminceptus.novaconomy.api.corporation.Corporation;
+import us.teaminceptus.novaconomy.api.corporation.CorporationPermission;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.economy.market.NovaMarket;
 import us.teaminceptus.novaconomy.api.economy.market.Receipt;
@@ -770,6 +772,24 @@ public final class NovaPlayer {
                 .filter(r -> r.getPurchased() == m)
                 .collect(Collectors.toList())
         );
+    }
+
+    /**
+     * <p>Checks if this player has a specific corporation permission.</p>
+     * <p>This will return {@code false} if the player does not own a corporation, business, or if the permission is null.</p>
+     * @param permission
+     * @return true if this player has the corporation permission, else false
+     */
+    public boolean hasPermission(@Nullable CorporationPermission permission) {
+        if (permission == null) return false;
+
+        Business b = Business.byOwner(p);
+        if (b == null) return false;
+
+        Corporation c = Corporation.byMember(p);
+        if (c == null) return false;
+
+        return c.hasPermission(b, permission);
     }
 
     private void checkStats() {

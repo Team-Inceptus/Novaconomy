@@ -19,8 +19,11 @@ import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.business.Rating;
 import us.teaminceptus.novaconomy.api.events.corporation.CorporationAwardAchievementEvent;
+import us.teaminceptus.novaconomy.api.events.corporation.CorporationBanEvent;
 import us.teaminceptus.novaconomy.api.events.corporation.CorporationCreateEvent;
 import us.teaminceptus.novaconomy.api.events.corporation.CorporationDeleteEvent;
+import us.teaminceptus.novaconomy.api.events.corporation.CorporationKickEvent;
+import us.teaminceptus.novaconomy.api.events.corporation.CorporationUnbanEvent;
 import us.teaminceptus.novaconomy.api.settings.Settings;
 
 import java.io.*;
@@ -29,6 +32,7 @@ import java.nio.file.Files;
 import java.sql.*;
 import java.util.*;
 import java.util.Date;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -83,6 +87,9 @@ public final class Corporation {
     private final Map<UUID, Long> childrenJoinDates = new HashMap<>();
     private final Map<CorporationAchievement, Integer> achievements = new HashMap<>();
     private final Map<Settings.Corporation<?>, Object> settings = new HashMap<>();
+    private final Set<UUID> banList = new HashSet<>();
+    final Map<UUID, CorporationRank> ranks = new HashMap<>();
+    private final Map<UUID, UUID> memberRanks = new HashMap<>();
 
     private Corporation(@NotNull UUID id, long creationDate, OfflinePlayer owner) {
         this.id = id;
@@ -168,13 +175,14 @@ public final class Corporation {
     /**
      * Adds a Business to this Corporation's children.
      * @param b Business to add
-     * @throws IllegalArgumentException if the Business already has a parent corporation, or is null
+     * @throws IllegalArgumentException if the Business already has a parent corporation, is banned, or is null
      * @throws IllegalStateException if the Corporation already has the maximum amount of children
      */
     public void addChild(@NotNull Business b) throws IllegalArgumentException, IllegalStateException {
         if (b == null) throw new IllegalArgumentException("Business cannot be null");
         if (b.getParentCorporation() != null) throw new IllegalArgumentException("Business already has a parent corporation");
         if (children.contains(b)) throw new IllegalArgumentException("Business is already a child of this corporation");
+        if (isBanned(b)) throw new IllegalArgumentException("Business is banned from joining this corporation");
 
         int newSize = children.size() + 1;
         if (newSize > getMaxChildren()) throw new IllegalStateException("Cannot add a business to a corporation with too many children");
@@ -201,7 +209,12 @@ public final class Corporation {
         if (!b.getParentCorporation().equals(this)) throw new IllegalArgumentException("Business is not a child of this corporation");
         if (b.getOwner().equals(owner)) throw new IllegalArgumentException("Cannot remove a business owned by the corporation owner");
 
+        CorporationKickEvent event = new CorporationKickEvent(this, b);
+        Bukkit.getPluginManager().callEvent(event);
+        if (event.isCancelled()) return;
+
         children.remove(b);
+        memberRanks.remove(b.getUniqueId());
         saveCorporation();
     }
 
@@ -673,6 +686,167 @@ public final class Corporation {
         return children.size();
     }
 
+    /**
+     * Gets the custom model data number for this corporation's icon.
+     * @return Custom Model Data
+     */
+    public int getCustomModelData() {
+        return customModelData;
+    }
+
+    /**
+     * Sets the custom model data number for this corporation's icon.
+     * @param customModelData New Custom Model Data
+     */
+    public void setCustomModelData(int customModelData) {
+        this.customModelData = customModelData;
+        saveCorporation();
+    }
+
+    /**
+     * Fetches an immutable copy of all banned players from this Corporation.
+     * @return Banned Players
+     */
+    @NotNull
+    public Set<OfflinePlayer> getBanList() {
+        return ImmutableSet.copyOf(banList.stream()
+                .map(Bukkit::getOfflinePlayer)
+                .collect(Collectors.toList())
+        );
+    }
+
+    /**
+     * Checks if a Player is banned from joining this Corporation.
+     * @param player Player to check
+     * @return true if banned, false otherwise
+     */
+    public boolean isBanned(@NotNull OfflinePlayer player) {
+        if (player == null) return false;
+        return banList.contains(player.getUniqueId());
+    }
+
+    /**
+     * Checks if a Business is banned from joining this Corporation.
+     * @param business Business to check
+     * @return true if banned, false otherwise
+     */
+    public boolean isBanned(@NotNull Business business) {
+        if (business == null) return false;
+        return isBanned(business.getOwner());
+    }
+
+    /**
+     * Bans a Player from joining this Corporation.
+     * @param player Player to ban
+     */
+    public void ban(@NotNull OfflinePlayer player) {
+        if (player == null) throw new IllegalArgumentException("Player cannot be null!");
+
+        Business b = Business.byOwner(player);
+
+        CorporationBanEvent event = new CorporationBanEvent(this, b);
+        Bukkit.getPluginManager().callEvent(event);
+        if (event.isCancelled()) return;
+
+        if (children.contains(b)) removeChild(b);
+
+        banList.add(player.getUniqueId());
+        saveCorporation();
+    }
+
+    /**
+     * Bans a Business from joining this Corporation.
+     * @param business Business to ban
+     */
+    public void ban(@NotNull Business business) {
+        if (business == null) throw new IllegalArgumentException("Business cannot be null!");
+        ban(business.getOwner());
+    }
+
+    /**
+     * Unbans a Player, allowing them to join this Corporation.
+     * @param player Player to unban
+     */
+    public void unban(@NotNull OfflinePlayer player) {
+        if (player == null) throw new IllegalArgumentException("Player cannot be null!");
+
+        CorporationUnbanEvent event = new CorporationUnbanEvent(this, Business.byOwner(player));
+        Bukkit.getPluginManager().callEvent(event);
+        if (event.isCancelled()) return;
+
+        banList.remove(player.getUniqueId());
+        saveCorporation();
+    }
+
+    /**
+     * Unbans a Business, allowing them to join this Corporation.
+     * @param business Business to unban
+     */
+    public void unban(@NotNull Business business) {
+        if (business == null) throw new IllegalArgumentException("Business cannot be null!");
+        unban(business.getOwner());
+    }
+
+    /**
+     * Gets an immutable copy of all of the ranks in this Corporation.
+     * @return Corporation Ranks
+     */
+    @NotNull
+    public Set<CorporationRank> getRanks() {
+        return ImmutableSet.copyOf(ranks.values());
+    }
+
+    /**
+     * Gets a corporation rank by its ID.
+     * @param id Rank ID
+     * @return Corporation Rank, or null if not found
+     */
+    @Nullable
+    public CorporationRank rankById(@NotNull UUID id) {
+        if (id == null) throw new IllegalArgumentException("UUID cannot be null!");
+        return ranks.get(id);
+    }
+
+    /**
+     * Gets a corporation rank by its name.
+     * @param child Business to get rank for
+     * @return Corporation Rank, or null if not found
+     */
+    public CorporationRank getRank(@NotNull Business child) {
+        if (!children.contains(child)) throw new IllegalArgumentException("Business is not a child of this corporation!");
+
+        return rankById(memberRanks.get(child.getUniqueId()));
+    }
+
+    /**
+     * Checks if a Business has a rank.
+     * @param child Business to check
+     * @param permission Permission to check
+     * @return true if has permission, false otherwise
+     */
+    public boolean hasPermission(@NotNull Business child, @NotNull CorporationPermission permission) {
+        if (!children.contains(child)) throw new IllegalArgumentException("Business is not a child of this corporation!");
+        if (permission == null) throw new IllegalArgumentException("Permission cannot be null!");
+
+        CorporationRank rank = getRank(child);
+        if (rank == null) return false;
+
+        return rank.hasPermission(permission);
+    }
+
+    /**
+     * Sets the rank for a Business.
+     * @param child Business to set rank for
+     * @param rank Rank to set
+     */
+    public void setRank(@NotNull Business child, @NotNull CorporationRank rank) {
+        if (!children.contains(child)) throw new IllegalArgumentException("Business is not a child of this corporation!");
+        if (rank == null) throw new IllegalArgumentException("Rank cannot be null!");
+
+        memberRanks.put(child.getUniqueId(), rank.getIdentifier());
+        saveCorporation();
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -1110,6 +1284,15 @@ public final class Corporation {
         try {
             if (!(rs = md.getColumns(null, null, "corporations", "custom_model_data")).next())
                 db.createStatement().execute("ALTER TABLE corporations ADD COLUMN custom_model_data INT NOT NULL");
+
+            if (!(rs = md.getColumns(null, null, "corporations", "ban_list")).next())
+                db.createStatement().execute("ALTER TABLE corporations ADD COLUMN ban_list MEDIUMBLOB NOT NULL");
+
+            if (!(rs = md.getColumns(null, null, "corporations", "ranks")).next())
+                db.createStatement().execute("ALTER TABLE corporations ADD COLUMN ranks MEDIUMBLOB NOT NULL");
+
+            if (!(rs = md.getColumns(null, null, "corporations", "member_ranks")).next())
+                db.createStatement().execute("ALTER TABLE corporations ADD COLUMN member_ranks BLOB(65535) NOT NULL");
         } finally {
             if (rs != null) rs.close();
         }
@@ -1156,10 +1339,13 @@ public final class Corporation {
                         "achievements = ?, " +
                         "settings = ?, " +
                         "invited = ?, " +
-                        "custom_model_data = ? " +
+                        "custom_model_data = ?, " +
+                        "ban_list = ?, " +
+                        "ranks = ?, " +
+                        "member_ranks = ?" +
                         "WHERE id = \"" + this.id + "\"";
             else
-                sql = "INSERT INTO corporations VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                sql = "INSERT INTO corporations VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         }
 
         PreparedStatement ps = db.prepareStatement(sql);
@@ -1213,6 +1399,24 @@ public final class Corporation {
         ps.setBytes(13, invitedOs.toByteArray());
 
         ps.setInt(14, this.customModelData);
+
+        ByteArrayOutputStream banListOs = new ByteArrayOutputStream();
+        ObjectOutputStream banListBos = new ObjectOutputStream(banListOs);
+        banListBos.writeObject(this.banList);
+        banListBos.close();
+        ps.setBytes(15, banListOs.toByteArray());
+
+        ByteArrayOutputStream ranksOs = new ByteArrayOutputStream();
+        ObjectOutputStream ranksBos = new ObjectOutputStream(ranksOs);
+        ranksBos.writeObject(this.ranks);
+        ranksBos.close();
+        ps.setBytes(16, ranksOs.toByteArray());
+
+        ByteArrayOutputStream memberRanksOs = new ByteArrayOutputStream();
+        ObjectOutputStream memberRanksBos = new ObjectOutputStream(memberRanksOs);
+        memberRanksBos.writeObject(this.memberRanks);
+        memberRanksBos.close();
+        ps.setBytes(17, memberRanksOs.toByteArray());
 
         ps.executeUpdate();
         ps.close();
@@ -1268,6 +1472,21 @@ public final class Corporation {
 
         c.customModelData = rs.getInt("custom_model_data");
 
+        ByteArrayInputStream banListIs = new ByteArrayInputStream(rs.getBytes("ban_list"));
+        ObjectInputStream banListBis = new ObjectInputStream(banListIs);
+        c.banList.addAll((Set<UUID>) banListBis.readObject());
+        banListBis.close();
+
+        ByteArrayInputStream ranksIs = new ByteArrayInputStream(rs.getBytes("ranks"));
+        ObjectInputStream ranksBis = new ObjectInputStream(ranksIs);
+        c.ranks.putAll((Map<UUID, CorporationRank>) ranksBis.readObject());
+        ranksBis.close();
+
+        ByteArrayInputStream memberRanksIs = new ByteArrayInputStream(rs.getBytes("member_ranks"));
+        ObjectInputStream memberRanksBis = new ObjectInputStream(memberRanksIs);
+        c.memberRanks.putAll((Map<UUID, UUID>) memberRanksBis.readObject());
+        memberRanksBis.close();
+
         return c;
     }
 
@@ -1280,6 +1499,8 @@ public final class Corporation {
         infoOs.writeLong(this.creationDate);
         infoOs.writeObject(this.owner.getUniqueId());
         infoOs.close();
+
+        // Regular Data
 
         File dataF = new File(folder, "data.yml");
         if (!dataF.exists()) dataF.createNewFile();
@@ -1299,8 +1520,11 @@ public final class Corporation {
         if (!data.isConfigurationSection("stats")) data.createSection("stats");
         data.set("stats.views", this.views);
         data.set("custom_model_data", this.customModelData);
+        data.set("ban_list", this.banList.stream().map(UUID::toString).collect(Collectors.toList()));
 
         data.save(dataF);
+
+        // Children
 
         File childrenF = new File(folder, "children.yml");
         if (!childrenF.exists()) childrenF.createNewFile();
@@ -1325,6 +1549,8 @@ public final class Corporation {
         );
         children.save(childrenF);
 
+        // Settings
+
         File settingsF = new File(folder, "settings.yml");
         if (!settingsF.exists()) settingsF.createNewFile();
 
@@ -1344,6 +1570,24 @@ public final class Corporation {
                 .forEach(settingsSection::set);
 
         settings.save(settingsF);
+
+        // Ranks
+
+        File ranksF = new File(folder, "ranks.yml");
+        if (!ranksF.exists()) ranksF.createNewFile();
+        FileConfiguration ranks = YamlConfiguration.loadConfiguration(ranksF);
+
+        ranks.set("ranks", new ArrayList<>(this.ranks.values()));
+
+        if (!ranks.isConfigurationSection("member_ranks")) ranks.createSection("member_ranks");
+        ConfigurationSection memberRanksSection = ranks.getConfigurationSection("member_ranks");
+        this.memberRanks.entrySet()
+                .stream()
+                .map(e -> new AbstractMap.SimpleEntry<>(e.getKey().toString(), e.getValue().toString()))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
+                .forEach(memberRanksSection::set);
+
+        ranks.save(ranksF);
     }
 
     @NotNull
@@ -1358,6 +1602,8 @@ public final class Corporation {
         infoIs.close();
 
         Corporation c = new Corporation(id, creationDate, owner);
+
+        // Data
 
         File dataF = new File(folder, "data.yml");
         if (!dataF.exists()) dataF.createNewFile();
@@ -1377,6 +1623,12 @@ public final class Corporation {
 
         c.views = data.getInt("stats.views");
         c.customModelData = data.getInt("custom_model_data");
+        c.banList.addAll(data.getStringList("ban_list").stream()
+                .map(UUID::fromString)
+                .collect(Collectors.toList())
+        );
+
+        // Children
 
         File childrenF = new File(folder, "children.yml");
         if (!childrenF.exists()) childrenF.createNewFile();
@@ -1404,6 +1656,8 @@ public final class Corporation {
                 c.invited.put(bid, inviteDate);
             }
 
+        // Settings
+
         File settingsF = new File(folder, "settings.yml");
         if (!settingsF.exists()) settingsF.createNewFile();
 
@@ -1421,6 +1675,25 @@ public final class Corporation {
                         return new AbstractMap.SimpleEntry<>(key, key.parseValue(e.getValue().toString()));
                     })
                     .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
+
+        // Ranks
+        File ranksF = new File(folder, "ranks.yml");
+        if (!ranksF.exists()) ranksF.createNewFile();
+
+        FileConfiguration ranks = YamlConfiguration.loadConfiguration(ranksF);
+        if (ranks.isList("ranks"))
+            c.ranks.putAll(((List<CorporationRank>) ranks.getList("ranks"))
+                    .stream()
+                    .collect(Collectors.toMap(CorporationRank::getIdentifier, Function.identity()))
+            );
+
+        if (ranks.isConfigurationSection("member_ranks"))
+            for (Map.Entry<String, Object> entry : ranks.getConfigurationSection("member_ranks").getValues(false).entrySet()) {
+                UUID bid = UUID.fromString(entry.getKey());
+                UUID rid = UUID.fromString(entry.getValue().toString());
+
+                c.memberRanks.put(bid, rid);
+            }
 
         return c;
     }
