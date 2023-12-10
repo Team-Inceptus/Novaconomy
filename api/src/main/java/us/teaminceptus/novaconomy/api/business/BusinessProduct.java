@@ -1,11 +1,12 @@
-package us.teaminceptus.novaconomy.api.util;
+package us.teaminceptus.novaconomy.api.business;
 
 import com.google.common.collect.ImmutableMap;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.economy.Economy;
+import us.teaminceptus.novaconomy.api.util.Price;
+import us.teaminceptus.novaconomy.api.util.Product;
 
 import java.util.Map;
 import java.util.UUID;

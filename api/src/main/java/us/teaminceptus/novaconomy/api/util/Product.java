@@ -7,6 +7,7 @@ import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import us.teaminceptus.novaconomy.api.business.BusinessProduct;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 
 import java.util.Map;
@@ -17,9 +18,15 @@ import java.util.Objects;
  */
 public class Product implements ConfigurationSerializable, Comparable<Product> {
 
-    ItemStack item;
+    /**
+     * Item to sell
+     */
+    protected ItemStack item;
 
-    Price price;
+    /**
+     * Price to sell at
+     */
+    protected Price price;
 
     /**
      * Constructs a Product.

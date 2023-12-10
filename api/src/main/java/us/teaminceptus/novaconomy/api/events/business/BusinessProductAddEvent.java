@@ -2,7 +2,7 @@ package us.teaminceptus.novaconomy.api.events.business;
 
 import org.bukkit.event.Cancellable;
 import org.jetbrains.annotations.NotNull;
-import us.teaminceptus.novaconomy.api.util.BusinessProduct;
+import us.teaminceptus.novaconomy.api.business.BusinessProduct;
 
 /**
  * Called before a Business Product is created

@@ -6,7 +6,7 @@ import org.jetbrains.annotations.NotNull;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.corporation.CorporationInvite;
 import us.teaminceptus.novaconomy.api.economy.Economy;
-import us.teaminceptus.novaconomy.api.util.BusinessProduct;
+import us.teaminceptus.novaconomy.api.business.BusinessProduct;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
