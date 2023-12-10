@@ -107,6 +107,15 @@ public final class AuctionItem implements Serializable {
     }
 
     /**
+     * Gets the timestamp of when the auction item will expire.
+     * @return Timestamp of Expiration Time.
+     */
+    @NotNull
+    public Date getExpirationTimestamp() {
+        return new Date(postedTimestmap + (buyNow ? BUY_NOW_DURATION : AUCTION_DURATION));
+    }
+
+    /**
      * Gets whether the current Auction Item has expired.
      * @return true if the auction item has expired, false otherwise.
      */
