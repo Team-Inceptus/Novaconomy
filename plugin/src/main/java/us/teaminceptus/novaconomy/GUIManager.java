@@ -83,7 +83,7 @@ final class GUIManager implements Listener {
 
     @Nullable
     private static Economy getEconomy(ItemStack item) {
-        return Economy.getEconomy(of(item).getUUID(ECON_TAG));
+        return Economy.byId(of(item).getUUID(ECON_TAG));
     }
 
     @Nullable
@@ -234,7 +234,7 @@ final class GUIManager implements Listener {
                 List<Economy> economies = Economy.getEconomies().stream().sorted().collect(Collectors.toList());
 
                 String econ = ChatColor.stripColor(item.getItemMeta().getDisplayName());
-                int index = economies.indexOf(Economy.getEconomy(econ)) + 1;
+                int index = economies.indexOf(Economy.byName(econ)) + 1;
                 Economy newEcon = economies.get(index >= economies.size() ? 0 : index);
 
                 inv.setItem(e.getSlot(), newEcon.getIcon());
@@ -361,7 +361,7 @@ final class GUIManager implements Listener {
 
                 Economy econ = getEconomy(item);
                 int nextI = sortedList.indexOf(econ.getName()) + (e.getClick().isRightClick() ? -1 : 1);
-                Economy next = sortedList.size() == 1 ? econ : Economy.getEconomy(sortedList.get(nextI == sortedList.size() ? 0 : nextI));
+                Economy next = sortedList.size() == 1 ? econ : Economy.byName(sortedList.get(nextI == sortedList.size() ? 0 : nextI));
 
                 item.setType(next.getIconType());
                 modelData(item, next.getCustomModelData());
@@ -402,7 +402,7 @@ final class GUIManager implements Listener {
                 int nextI = economies.indexOf(econ) + 1;
                 if (nextI >= economies.size()) nextI = 0;
 
-                Economy next = economies.get(nextI).equalsIgnoreCase("all") ? null : Economy.getEconomy(economies.get(nextI));
+                Economy next = economies.get(nextI).equalsIgnoreCase("all") ? null : Economy.byName(economies.get(nextI));
                 getCommandWrapper().balanceLeaderboard(p, next);
             })
             .put("yes:buy_product", (e, inv) -> {
@@ -1396,7 +1396,7 @@ final class GUIManager implements Listener {
 
                 Economy econ = getEconomy(item);
                 int nextI = econs.indexOf(econ.getName()) + (e.getClick().isRightClick() ? -1 : 1);
-                Economy next = econs.size() == 1 ? econ : Economy.getEconomy(econs.get(nextI == econs.size() ? 0 : nextI));
+                Economy next = econs.size() == 1 ? econ : Economy.byName(econs.get(nextI == econs.size() ? 0 : nextI));
 
                 item.setType(next.getIconType());
                 modelData(item, next.getCustomModelData());
@@ -1537,7 +1537,7 @@ final class GUIManager implements Listener {
                 Player p = (Player) e.getWhoClicked();
                 NovaPlayer np = new NovaPlayer(p);
 
-                Economy econ = Economy.getEconomy(inv.getAttribute(ECON_TAG, UUID.class));
+                Economy econ = Economy.byId(inv.getAttribute(ECON_TAG, UUID.class));
 
                 ItemStack productI = inv.getItem(12).clone();
                 Material product = productI.getType();

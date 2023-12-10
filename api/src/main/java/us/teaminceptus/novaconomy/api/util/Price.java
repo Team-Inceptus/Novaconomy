@@ -37,7 +37,7 @@ public final class Price implements ConfigurationSerializable, Comparable<Price>
     public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
         this.amount = in.readDouble();
         String s = (String) in.readObject();
-        this.econ = s.isEmpty() ? null : Economy.getEconomy(UUID.fromString(s));
+        this.econ = s.isEmpty() ? null : Economy.byId(UUID.fromString(s));
     }
 
     // Other
@@ -230,8 +230,8 @@ public final class Price implements ConfigurationSerializable, Comparable<Price>
         if (!serial.containsKey("economy")) return new Price((double) serial.get("amount"));
 
         String econInfo = (String) serial.get("economy");
-        if (econInfo.length() == 36) return new Price(Economy.getEconomy(UUID.fromString(econInfo)), (double) serial.get("amount"));
-        else return new Price(Economy.getEconomy(econInfo), (double) serial.get("amount"));
+        if (econInfo.length() == 36) return new Price(Economy.byId(UUID.fromString(econInfo)), (double) serial.get("amount"));
+        else return new Price(Economy.byName(econInfo), (double) serial.get("amount"));
     }
 
     @Override

@@ -150,7 +150,7 @@ final class NBTWrapper1_8_R1 extends NBTWrapper {
         long eF = ebb.getLong();
         long eS = ebb.getLong();
 
-        Economy econ = Economy.getEconomy(new UUID(eF, eS));
+        Economy econ = Economy.byId(new UUID(eF, eS));
         ItemStack item = CraftItemStack.asBukkitCopy(net.minecraft.server.v1_8_R1.ItemStack.createStack(productT.getCompound("item")));
 
         Product p = new Product(item, econ, amount);

@@ -16,7 +16,6 @@ import revxrsal.commands.autocomplete.SuggestionProvider;
 import revxrsal.commands.bukkit.BukkitCommandActor;
 import revxrsal.commands.bukkit.BukkitCommandHandler;
 import revxrsal.commands.bukkit.annotation.CommandPermission;
-import revxrsal.commands.bukkit.brigadier.MinecraftArgumentType;
 import revxrsal.commands.exception.CommandErrorException;
 import us.teaminceptus.novaconomy.abstraction.CommandWrapper;
 import us.teaminceptus.novaconomy.abstraction.Wrapper;
@@ -65,7 +64,7 @@ final class CommandWrapperV2 implements CommandWrapper {
                         .sorted(Economy::compareTo)
                         .collect(Collectors.toList())
                         .get(0);
-                else econ = Economy.getEconomy(s);
+                else econ = Economy.byName(s);
 
                 if (econ == null) throw new CommandErrorException(getMessage("error.argument.economy"));
                 return econ;

@@ -135,7 +135,7 @@ final class NBTWrapper1_19_R2 extends NBTWrapper {
         if (productT.isEmpty()) return null;
 
         double amount = productT.getDouble("amount");
-        Economy econ = Economy.getEconomy(productT.getUUID("economy"));
+        Economy econ = Economy.byId(productT.getUUID("economy"));
         ItemStack item = CraftItemStack.asBukkitCopy(net.minecraft.world.item.ItemStack.of(productT.getCompound("item")));
 
         Product p = new Product(item, econ, amount);

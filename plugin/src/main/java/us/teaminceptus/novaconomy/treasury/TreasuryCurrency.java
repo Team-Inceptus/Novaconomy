@@ -24,7 +24,7 @@ final class TreasuryCurrency implements Currency {
     }
 
     static Economy getEconomy(Currency c) {
-        return Economy.getEconomy(c.getIdentifier());
+        return Economy.byName(c.getIdentifier());
     }
 
     @Override

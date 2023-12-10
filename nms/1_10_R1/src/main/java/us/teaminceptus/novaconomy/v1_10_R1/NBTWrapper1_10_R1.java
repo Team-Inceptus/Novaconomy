@@ -134,7 +134,7 @@ final class NBTWrapper1_10_R1 extends NBTWrapper {
         NBTTagCompound productT = novaconomy.getCompound(key);
         if (productT.isEmpty()) return null;
         double amount = productT.getDouble("amount");
-        Economy econ = Economy.getEconomy(productT.a("economy"));
+        Economy econ = Economy.byId(productT.a("economy"));
         ItemStack item = CraftItemStack.asBukkitCopy(net.minecraft.server.v1_10_R1.ItemStack.createStack(productT.getCompound("item")));
 
         Product p = new Product(item, econ, amount);

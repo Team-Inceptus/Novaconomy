@@ -29,7 +29,7 @@ public final class EssentialsListener implements Listener {
     public void onNickChange(NickChangeEvent e) {
         if (!NovaConfig.getFunctionalityConfig().getBoolean("Essentials.NickCost.Enabled", false)) return;
     
-        Economy econ = Economy.getEconomy(NovaConfig.getFunctionalityConfig().getString("Essentials.NickCost.Economy", ""));
+        Economy econ = Economy.byName(NovaConfig.getFunctionalityConfig().getString("Essentials.NickCost.Economy", ""));
         if (econ == null) return;
 
         double amount = NovaConfig.getFunctionalityConfig().getDouble("Essentials.NickCost.Amount", 0.0);
@@ -51,7 +51,7 @@ public final class EssentialsListener implements Listener {
     public void onWarp(UserWarpEvent e) {
         if (!NovaConfig.getFunctionalityConfig().getBoolean("Essentials.WarpCost.Enabled", false)) return;
     
-        Economy econ = Economy.getEconomy(NovaConfig.getFunctionalityConfig().getString("Essentials.WarpCost.Economy", ""));
+        Economy econ = Economy.byName(NovaConfig.getFunctionalityConfig().getString("Essentials.WarpCost.Economy", ""));
         if (econ == null) return;
 
         double amount = NovaConfig.getFunctionalityConfig().getDouble("Essentials.WarpCost.Amount", 0.0);
@@ -73,7 +73,7 @@ public final class EssentialsListener implements Listener {
     public void onTeleport(TeleportWarmupEvent e) {
         if (!NovaConfig.getFunctionalityConfig().getBoolean("Essentials.TeleportCost.Enabled", false)) return;
     
-        Economy econ = Economy.getEconomy(NovaConfig.getFunctionalityConfig().getString("Essentials.TeleportCost.Economy", ""));
+        Economy econ = Economy.byName(NovaConfig.getFunctionalityConfig().getString("Essentials.TeleportCost.Economy", ""));
         if (econ == null) return;
 
         double amount = NovaConfig.getFunctionalityConfig().getDouble("Essentials.TeleportCost.Amount", 0.0);

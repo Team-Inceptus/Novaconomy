@@ -121,7 +121,7 @@ public final class Bounty implements ConfigurationSerializable, Comparable<Bount
 
         try {
             OfflinePlayer owner = Bukkit.getOfflinePlayer(UUID.fromString((String) serialize.get("owner")));
-            Economy econ = Economy.getEconomy(UUID.fromString((String) serialize.get("economy")));
+            Economy econ = Economy.byId(UUID.fromString((String) serialize.get("economy")));
             OfflinePlayer target = Bukkit.getOfflinePlayer(UUID.fromString((String) serialize.get("target")));
             return new Bounty(owner, econ, (double) serialize.get("amount"), target);
         } catch (ClassCastException | NullPointerException e) {

@@ -242,7 +242,7 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
      * @param name Name of the Economy
      * @see Economy#removeEconomy(Economy)
      */
-    public static void removeEconomy(@NotNull String name) { removeEconomy(getEconomy(name)); }
+    public static void removeEconomy(@NotNull String name) { removeEconomy(byName(name)); }
 
     /**
      * Remove an Economy from the Plugin
@@ -288,7 +288,7 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
      * @throws IllegalArgumentException if name is null
      */
     @Nullable
-    public static Economy getEconomy(@NotNull String name) throws IllegalArgumentException {
+    public static Economy byName(@NotNull String name) throws IllegalArgumentException {
         if (name == null) throw new IllegalArgumentException("Name cannot be null");
 
         return Economy.getEconomies().stream()
@@ -304,7 +304,7 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
      */
     public static boolean exists(@Nullable String name) {
         if (name == null) return false;
-        return getEconomy(name) != null;
+        return byName(name) != null;
     }
 
     /**
@@ -314,7 +314,7 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
      */
     public static boolean exists(@Nullable UUID uid) {
         if (uid == null) return false;
-        return getEconomy(uid) != null;
+        return byId(uid) != null;
     }
 
     /**
@@ -323,7 +323,7 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
      * @return true if economy exists, else false`
      */
     public static boolean exists(char c) {
-        return getEconomy(c) != null;
+        return bySymbol(c) != null;
     }
 
     /**
@@ -383,7 +383,7 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
             for (File f : files) {
                 if (f == null) continue;
                 UUID id = UUID.fromString(f.getName().replace(".yml", ""));
-                economies.add(getEconomy(id));
+                economies.add(byId(id));
             }
         }
 
@@ -485,7 +485,7 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
      * @return Economy found, or null if not found or if UUID is null
      */
     @Nullable
-    public static Economy getEconomy(@Nullable UUID uid) {
+    public static Economy byId(@Nullable UUID uid) {
         if (uid == null) return null;
 
         Economy econ = null;
@@ -547,7 +547,7 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
      * @return Economy found, or null if not found
      */
     @Nullable
-    public static Economy getEconomy(char symbol) {
+    public static Economy bySymbol(char symbol) {
         for (Economy econ : Economy.getEconomies()) if (econ.getSymbol() == symbol) return econ;
         return null;
     }

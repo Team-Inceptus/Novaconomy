@@ -105,7 +105,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         return false;
                     }
 
-                    Economy from = Economy.getEconomy(args[0]);
+                    Economy from = Economy.byName(args[0]);
 
                     if (!from.isConvertable()) {
                         p.sendMessage(format(getMessage("error.economy.transfer_not_convertable"), from.getName()));
@@ -122,7 +122,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         return false;
                     }
 
-                    Economy to = Economy.getEconomy(args[1]);
+                    Economy to = Economy.byName(args[1]);
 
                     if (!to.isConvertable()) {
                         p.sendMessage(format(getMessage("error.economy.transfer_not_convertable"), to.getName()));
@@ -180,7 +180,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                 Economy econ = null;
 
                 if (args.length >= 2) {
-                    econ = Economy.getEconomy(args[1]);
+                    econ = Economy.byName(args[1]);
 
                     if (econ == null) {
                         p.sendMessage(getMessage("error.argument.economy"));
@@ -284,7 +284,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                             return false;
                         }
 
-                        Economy econ = Economy.getEconomy(args[1]);
+                        Economy econ = Economy.byName(args[1]);
                         removeEconomy(sender, econ);
                         break;
                     }
@@ -299,7 +299,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                             return false;
                         }
 
-                        Economy econ = Economy.getEconomy(args[1]);
+                        Economy econ = Economy.byName(args[1]);
 
                         economyInfo(sender, econ);
                         break;
@@ -321,7 +321,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                                 return false;
                             }
 
-                            Economy econ = Economy.getEconomy(args[1]);
+                            Economy econ = Economy.byName(args[1]);
 
                             if (args.length < 3) {
                                 sender.sendMessage(getMessage("error.argument.player"));
@@ -380,7 +380,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                             return false;
                         }
 
-                        Economy econ = Economy.getEconomy(args[1]);
+                        Economy econ = Economy.byName(args[1]);
 
                         try {
                             if (args.length < 3) {
@@ -414,7 +414,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                             return false;
                         }
 
-                        Economy econ = Economy.getEconomy(args[1]);
+                        Economy econ = Economy.byName(args[1]);
 
                         try {
                             if (args.length < 3) {
@@ -447,7 +447,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                             return false;
                         }
 
-                        Economy econ = Economy.getEconomy(args[1]);
+                        Economy econ = Economy.byName(args[1]);
 
                         if (args.length < 3) {
                             sender.sendMessage(getMessage("error.argument.icon"));
@@ -484,7 +484,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                             return false;
                         }
 
-                        Economy econ = Economy.getEconomy(args[1]);
+                        Economy econ = Economy.byName(args[1]);
 
                         try {
                             if (args.length < 3) {
@@ -520,7 +520,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                             return false;
                         }
 
-                        Economy econ = Economy.getEconomy(args[1]);
+                        Economy econ = Economy.byName(args[1]);
 
                         if (args.length < 3) {
                             sender.sendMessage(getMessage("error.argument.bool"));
@@ -554,7 +554,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                             return false;
                         }
 
-                        Economy econ = Economy.getEconomy(args[1]);
+                        Economy econ = Economy.byName(args[1]);
 
                         if (args.length < 3) {
                             sender.sendMessage(getMessage("error.argument.name"));
@@ -583,7 +583,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                             return false;
                         }
 
-                        Economy econ = Economy.getEconomy(args[1]);
+                        Economy econ = Economy.byName(args[1]);
 
                         if (args.length < 3) {
                             sender.sendMessage(getMessage("error.argument.bool"));
@@ -618,7 +618,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                             return false;
                         }
 
-                        Economy econ = Economy.getEconomy(args[1]);
+                        Economy econ = Economy.byName(args[1]);
 
                         if (args.length < 3) {
                             sender.sendMessage(getMessage("error.argument.bool"));
@@ -844,7 +844,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
 
                             Economy econ = null;
                             if (args.length > 2) {
-                                econ = Economy.getEconomy(args[2]);
+                                econ = Economy.byName(args[2]);
 
                                 if (econ == null) {
                                     sender.sendMessage(getMessage("error.argument.economy"));
@@ -1168,7 +1168,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                                 return false;
                             }
 
-                            Economy econ = Economy.getEconomy(args[2]);
+                            Economy econ = Economy.byName(args[2]);
                             if (econ == null) {
                                 sender.sendMessage(getMessage("error.economy.inexistent"));
                                 return false;
@@ -1197,7 +1197,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                                 return false;
                             }
 
-                            Economy econ = Economy.getEconomy(args[2]);
+                            Economy econ = Economy.byName(args[2]);
                             if (econ == null) {
                                 sender.sendMessage(getMessage("error.economy.inexistent"));
                                 return false;
@@ -1225,7 +1225,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         sender.sendMessage(getMessage("error.argument.economy"));
                         return false;
                     }
-                    Economy econ = Economy.getEconomy(args[0]);
+                    Economy econ = Economy.byName(args[0]);
 
                     if (econ == null) {
                         sender.sendMessage(getMessage("error.economy.inexistent"));
@@ -1256,7 +1256,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
 
                 Economy econ = null;
                 if (args.length > 0) {
-                    econ = Economy.getEconomy(args[0]);
+                    econ = Economy.byName(args[0]);
                     if (econ == null) {
                         sender.sendMessage(getMessage("error.economy.inexistent"));
                         return false;
@@ -1296,7 +1296,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                                 return false;
                             }
 
-                            Economy econ = Economy.getEconomy(args[2]);
+                            Economy econ = Economy.byName(args[2]);
 
                             if (econ == null) {
                                 sender.sendMessage(getMessage("error.economy.inexistent"));
@@ -1537,7 +1537,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                             return false;
                         }
 
-                        Economy econ = Economy.getEconomy(args[1]);
+                        Economy econ = Economy.byName(args[1]);
 
                         if (econ == null) {
                             sender.sendMessage(getMessage("error.economy.inexistent"));
@@ -1930,7 +1930,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         if (args.length < 2)
                             econ = Economy.getEconomies().stream().findFirst().orElse(null);
                         else
-                            econ = Economy.getEconomy(args[1]);
+                            econ = Economy.byName(args[1]);
                 
                         openMarket(p, econ);
                         break;

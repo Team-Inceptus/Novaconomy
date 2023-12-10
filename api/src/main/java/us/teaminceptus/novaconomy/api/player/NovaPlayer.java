@@ -333,7 +333,7 @@ public final class NovaPlayer {
      */
     @NotNull
     public PlayerWithdrawEvent getLastBankWithdraw() {
-        return new PlayerWithdrawEvent(getOnlinePlayer(), (double) pConfig.getOrDefault(LBW + ".amount", 0D), Economy.getEconomy((String) pConfig.getOrDefault(LBW + ".economy", "")), (long) pConfig.getOrDefault(LBW + ".timestamp", 0));
+        return new PlayerWithdrawEvent(getOnlinePlayer(), (double) pConfig.getOrDefault(LBW + ".amount", 0D), Economy.byName((String) pConfig.getOrDefault(LBW + ".economy", "")), (long) pConfig.getOrDefault(LBW + ".timestamp", 0));
     }
 
     /**
@@ -342,7 +342,7 @@ public final class NovaPlayer {
      */
     @NotNull
     public PlayerDepositEvent getLastBankDeposit() {
-        return new PlayerDepositEvent(getOnlinePlayer(), (double) pConfig.getOrDefault(LBD + ".amount", 0D), Economy.getEconomy((String) pConfig.getOrDefault(LBD + ".economy", "")), (long) pConfig.getOrDefault(LBD + ".timestamp", 0));
+        return new PlayerDepositEvent(getOnlinePlayer(), (double) pConfig.getOrDefault(LBD + ".amount", 0D), Economy.byName((String) pConfig.getOrDefault(LBD + ".economy", "")), (long) pConfig.getOrDefault(LBD + ".timestamp", 0));
     }
 
     /**
@@ -412,7 +412,7 @@ public final class NovaPlayer {
         for (Map.Entry<String, Object> entry : pConfig.entrySet()) {
             if (!entry.getKey().startsWith("donated.")) continue;
 
-            Economy econ = Economy.getEconomy(entry.getKey().split("\\.")[1].toLowerCase());
+            Economy econ = Economy.byName(entry.getKey().split("\\.")[1].toLowerCase());
             if (econ == null) continue;
 
             amounts.put(econ, (double) entry.getValue());

@@ -597,7 +597,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
                     if (!global.isSet("Bank." + econ.getName())) global.set("Bank." + econ.getName(), 0);
 
                 for (String s : global.getConfigurationSection("Bank").getKeys(false))
-                    if (Economy.getEconomy(s) == null) global.set("Bank." + s, null);
+                    if (Economy.byName(s) == null) global.set("Bank." + s, null);
 
                 global.save(globalF);
             } catch (IOException e) {
@@ -750,7 +750,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
                     Map<Economy, Double> balances = new HashMap<>();
 
                     for (Map.Entry<String, Object> entry : global.getConfigurationSection("Bank").getValues(false).entrySet()) {
-                        Economy econ = Economy.getEconomy(entry.getKey());
+                        Economy econ = Economy.byName(entry.getKey());
                         if (econ == null) continue;
 
                         double amount = ((Number) entry.getValue()).doubleValue();
@@ -902,7 +902,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
                         PreparedStatement ps = db.prepareStatement("SELECT * FROM bank");
                         ResultSet rs = ps.executeQuery();
                         while (rs.next()) {
-                            Economy econ = Economy.getEconomy(UUID.fromString(rs.getString("economy")));
+                            Economy econ = Economy.byId(UUID.fromString(rs.getString("economy")));
                             double amount = rs.getDouble("amount");
 
                             amounts.put(econ, amount);
@@ -2438,7 +2438,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
     @Override
     public @NotNull Set<Economy> getWhitelistedEconomies() {
         return ImmutableSet.copyOf(config.getStringList("Market.Purchasing.WhitelistedEconomies").stream()
-                .map(Economy::getEconomy)
+                .map(Economy::byName)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet()));
     }
@@ -2456,7 +2456,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
     @Override
     public @NotNull Set<Economy> getBlacklistedEconomies() {
         return ImmutableSet.copyOf(config.getStringList("Market.Purchasing.BlacklistedEconomies").stream()
-                .map(Economy::getEconomy)
+                .map(Economy::byName)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet()));
     }

@@ -71,7 +71,7 @@ public final class TreasuryRegistry implements EconomyProvider {
         Object o = NovaConfig.loadFunctionalityFile().get("VaultEconomy", -1);
         if (o instanceof String) {
             String s = (String) o;
-            return new TreasuryCurrency(Economy.getEconomy(s));
+            return new TreasuryCurrency(Economy.byName(s));
         } else {
             Optional<Economy> first = Economy.getEconomies()
                     .stream()
@@ -84,7 +84,7 @@ public final class TreasuryRegistry implements EconomyProvider {
 
     @Override
     public Optional<Currency> findCurrency(@NotNull String identifier) {
-        return Optional.of(new TreasuryCurrency(Economy.getEconomy(identifier)));
+        return Optional.of(new TreasuryCurrency(Economy.byName(identifier)));
     }
 
     @Override

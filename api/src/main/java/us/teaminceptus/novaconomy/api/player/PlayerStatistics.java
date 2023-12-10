@@ -62,7 +62,7 @@ public final class PlayerStatistics implements ConfigurationSerializable {
 
         try {
             stats.highestBalance = (double) serial.getOrDefault("highest_balance", 0);
-            stats.highestBalanceEconomy = serial.containsKey("highest_balance_economy") ? Economy.getEconomy(UUID.fromString(serial.get("highest_balance_economy").toString())) : null;
+            stats.highestBalanceEconomy = serial.containsKey("highest_balance_economy") ? Economy.byId(UUID.fromString(serial.get("highest_balance_economy").toString())) : null;
             stats.productsPurchased = (int) serial.getOrDefault("products_purchased", 0);
             stats.moneyAdded = (double) serial.getOrDefault("money_added", 0);
             stats.totalWithdrawn = (double) serial.getOrDefault("total_withdrawn", 0);

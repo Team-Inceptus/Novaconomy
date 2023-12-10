@@ -145,27 +145,27 @@ class VaultEconomy extends AbstractEconomy {
 
     @Override
     public EconomyResponse bankBalance(String name) {
-        return new VaultEconomyResponse(0, Bank.getBalance(Economy.getEconomy(name)));
+        return new VaultEconomyResponse(0, Bank.getBalance(Economy.byName(name)));
     }
 
     @Override
     public EconomyResponse bankHas(String name, double amount) {
-        boolean has = Bank.getBalance(Economy.getEconomy(name)) == amount;
-        return new EconomyResponse(0, Bank.getBalance(Economy.getEconomy(name)), has ? EconomyResponse.ResponseType.SUCCESS : EconomyResponse.ResponseType.FAILURE, null);
+        boolean has = Bank.getBalance(Economy.byName(name)) == amount;
+        return new EconomyResponse(0, Bank.getBalance(Economy.byName(name)), has ? EconomyResponse.ResponseType.SUCCESS : EconomyResponse.ResponseType.FAILURE, null);
     }
 
     @Override
     public EconomyResponse bankWithdraw(String name, double amount) {
-        Economy econ = Economy.getEconomy(name);
+        Economy econ = Economy.byName(name);
         Bank.removeBalance(econ, amount);
-        return new VaultEconomyResponse(0, Bank.getBalance(Economy.getEconomy(name)));
+        return new VaultEconomyResponse(0, Bank.getBalance(Economy.byName(name)));
     }
 
     @Override
     public EconomyResponse bankDeposit(String name, double amount) {
-        Economy econ = Economy.getEconomy(name);
+        Economy econ = Economy.byName(name);
         Bank.addBalance(econ, amount);
-        return new VaultEconomyResponse(0, Bank.getBalance(Economy.getEconomy(name)));
+        return new VaultEconomyResponse(0, Bank.getBalance(Economy.byName(name)));
     }
 
     @Override

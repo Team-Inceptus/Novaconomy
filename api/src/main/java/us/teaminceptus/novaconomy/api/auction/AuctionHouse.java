@@ -12,13 +12,7 @@ import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.events.auction.PlayerPurchaseAuctionItemEvent;
 import us.teaminceptus.novaconomy.api.util.Price;
 
-import java.io.BufferedInputStream;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -152,7 +146,7 @@ public final class AuctionHouse {
             ItemStack item = (ItemStack) itemBis.readObject();
             itemBis.close();
 
-            Economy economy = Economy.getEconomy(UUID.fromString(rs.getString("economy")));
+            Economy economy = Economy.byId(UUID.fromString(rs.getString("economy")));
             double price = rs.getDouble("price");
             boolean buyNow = rs.getBoolean("buy_now");
             boolean loosePrice = rs.getBoolean("loose_price");

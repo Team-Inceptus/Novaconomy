@@ -211,7 +211,7 @@ public final class BusinessStatistics implements ConfigurationSerializable {
                     new Product(
                             (ItemStack) serial.get("item"),
                             new Price(
-                                    serial.containsKey("economy") ? Economy.getEconomy(UUID.fromString((String) serial.get("economy"))) : null,
+                                    serial.containsKey("economy") ? Economy.byId(UUID.fromString((String) serial.get("economy"))) : null,
                                     (double) serial.get("amount")
                             )
                     ), num
