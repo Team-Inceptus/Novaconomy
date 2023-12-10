@@ -1,26 +1,30 @@
 package us.teaminceptus.novaconomy.api.auction;
 
+import com.google.common.collect.ImmutableMap;
+import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import us.teaminceptus.novaconomy.api.util.Price;
+import us.teaminceptus.novaconomy.api.util.Product;
 
 import java.io.Serializable;
 import java.util.Date;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
 /**
  * Represents an item in the Novaconomy Auction House.
  */
-public final class AuctionItem implements Serializable {
+public final class AuctionItem extends Product implements Serializable {
 
     private static final long serialVersionUID = 6553572638722360815L;
 
     /**
      * The duration of an auction in milliseconds.
      */
-    public static final long AUCTION_DURATION = 1000 * 60 * 60 * 24 * 7; // 7 days
+    public static final long AUCTION_DURATION = 1000 * 60 * 60 * 24 * 5; // 5 days
 
     /**
      * The duration of a buy now item in milliseconds.
@@ -28,19 +32,16 @@ public final class AuctionItem implements Serializable {
     public static final long BUY_NOW_DURATION = 1000 * 60 * 60 * 24 * 5; // 3 days
 
     private final UUID uuid;
-    private final OfflinePlayer owner;
+    private final UUID owner;
     private final long postedTimestmap;
-    private final ItemStack item;
-    private final Price price;
     private final boolean buyNow;
     private final boolean loosePrice;
 
-    AuctionItem(UUID uuid, OfflinePlayer owner, long postedTimestmap, ItemStack item, Price price, boolean buyNow, boolean loosePrice) {
+    AuctionItem(UUID uuid, UUID owner, long postedTimestmap, ItemStack item, Price price, boolean buyNow, boolean loosePrice) {
+        super(item, price);
         this.uuid = uuid;
         this.owner = owner;
         this.postedTimestmap = postedTimestmap;
-        this.item = item;
-        this.price = price;
         this.buyNow = buyNow;
         this.loosePrice = loosePrice;
     }
@@ -60,16 +61,7 @@ public final class AuctionItem implements Serializable {
      */
     @NotNull
     public OfflinePlayer getOwner() {
-        return owner;
-    }
-
-    /**
-     * Gets the price of the auction item.
-     * @return The price of the auction item.
-     */
-    @NotNull
-    public Price getPrice() {
-        return price;
+        return Bukkit.getOfflinePlayer(owner);
     }
 
     /**
@@ -86,15 +78,6 @@ public final class AuctionItem implements Serializable {
      */
     public boolean isBuyNow() {
         return buyNow;
-    }
-
-    /**
-     * Gets the item being sold.
-     * @return The item being sold.
-     */
-    @NotNull
-    public ItemStack getItem() {
-        return item;
     }
 
     /**
@@ -125,15 +108,58 @@ public final class AuctionItem implements Serializable {
     }
 
     @Override
+    public Map<String, Object> serialize() {
+        return ImmutableMap.<String, Object>builder()
+                .putAll(super.serialize())
+                .put("uuid", uuid.toString())
+                .put("owner", owner.toString())
+                .put("posted", postedTimestmap)
+                .put("buyNow", buyNow)
+                .put("loose", loosePrice)
+                .build();
+    }
+
+    /**
+     * Deserializes an AuctionItem from a Map.
+     * @param map Map to deserialize from
+     * @return Deserialized AuctionItem
+     */
+    @NotNull
+    public static AuctionItem deserialize(@NotNull Map<String, Object> map) {
+        return new AuctionItem(
+                UUID.fromString((String) map.get("uuid")),
+                UUID.fromString((String) map.get("owner")),
+                (long) map.get("posted"),
+                (ItemStack) map.get("item"),
+                (Price) map.get("price"),
+                (boolean) map.get("buyNow"),
+                (boolean) map.get("loose")
+        );
+    }
+
+    @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         AuctionItem that = (AuctionItem) o;
-        return postedTimestmap == that.postedTimestmap && buyNow == that.buyNow && loosePrice == that.loosePrice && Objects.equals(uuid, that.uuid) && Objects.equals(owner, that.owner) && Objects.equals(item, that.item) && Objects.equals(price, that.price);
+        return postedTimestmap == that.postedTimestmap && buyNow == that.buyNow && loosePrice == that.loosePrice && Objects.equals(uuid, that.uuid) && Objects.equals(owner, that.owner) && super.equals(o);
     }
 
     @Override
     public int hashCode() {
         return Objects.hash(uuid);
+    }
+
+    @Override
+    public String toString() {
+        return "AuctionItem{" +
+                "uuid=" + uuid +
+                ", owner=" + getOwner() +
+                ", postedTimestmap=" + postedTimestmap +
+                ", buyNow=" + buyNow +
+                ", loosePrice=" + loosePrice +
+                ", item=" + item +
+                ", price=" + price +
+                '}';
     }
 }

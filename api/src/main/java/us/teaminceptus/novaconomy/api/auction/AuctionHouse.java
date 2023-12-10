@@ -1,6 +1,5 @@
 package us.teaminceptus.novaconomy.api.auction;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
@@ -77,7 +76,7 @@ public final class AuctionHouse {
         if (item == null) throw new IllegalArgumentException("Item cannot be null!");
         if (price == null) throw new IllegalArgumentException("Price cannot be null!");
 
-        AuctionItem auction = new AuctionItem(UUID.randomUUID(), owner, System.currentTimeMillis(), item, price, buyNow, loose);
+        AuctionItem auction = new AuctionItem(UUID.randomUUID(), owner.getUniqueId(), System.currentTimeMillis(), item, price, buyNow, loose);
         items.add(auction);
         write();
     }
@@ -197,7 +196,7 @@ public final class AuctionHouse {
 
         while (rs.next()) {
             UUID id = UUID.fromString(rs.getString("id"));
-            OfflinePlayer owner = Bukkit.getOfflinePlayer(UUID.fromString(rs.getString("owner")));
+            UUID owner = UUID.fromString(rs.getString("owner"));
             long timestamp = rs.getLong("timestamp");
 
             ByteArrayInputStream itemIs = new ByteArrayInputStream(rs.getBytes("item"));
