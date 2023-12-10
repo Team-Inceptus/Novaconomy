@@ -1,5 +1,7 @@
 package us.teaminceptus.novaconomy.api.auction;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
@@ -10,6 +12,7 @@ import org.jetbrains.annotations.NotNull;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.events.auction.PlayerPurchaseAuctionItemEvent;
+import us.teaminceptus.novaconomy.api.player.NovaPlayer;
 import us.teaminceptus.novaconomy.api.util.Price;
 
 import java.io.*;
@@ -17,10 +20,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -31,6 +31,7 @@ public final class AuctionHouse {
     private AuctionHouse() { throw new UnsupportedOperationException("Do not instantiate!"); }
 
     static final Set<AuctionItem> items = new HashSet<>();
+    static final Map<UUID, Set<Bid>> bids = new HashMap<>();
 
     // Utility
 
@@ -96,6 +97,13 @@ public final class AuctionHouse {
 
         purchaser.getInventory().addItem(auction.getItem());
 
+        Price p = auction.getPrice();
+        NovaPlayer purchaser0 = new NovaPlayer(purchaser);
+        purchaser0.remove(p);
+
+        NovaPlayer owner = new NovaPlayer(auction.getOwner());
+        owner.add(p);
+
         items.remove(auction);
         write();
 
@@ -103,19 +111,57 @@ public final class AuctionHouse {
         Bukkit.getPluginManager().callEvent(event);
     }
 
-    // I/O
-
-    private static void read() {
-        try {
-            if (NovaConfig.getConfiguration().isDatabaseEnabled()) {
-                checkTable();
-                readDB();
-            } else
-                readFile();
-        } catch (Exception e) {
-            NovaConfig.print(e);
-        }
+    /**
+     * Gets an immutable copy of the bids on an auction item.
+     * @param item The auction item to get the bids for.
+     * @return An immutable copy of the bids on the auction item.
+     */
+    @NotNull
+    public static Set<Bid> getBids(@NotNull AuctionItem item) {
+        return ImmutableSet.copyOf(bids.get(item.getUUID()));
     }
+
+    /**
+     * Gets whether the auction house item has any bids on it.
+     * @param item The auction item to check.
+     * @return Whether the auction house item has any bids on it.
+     */
+    public static boolean isBiddedOn(@NotNull AuctionItem item) {
+        if (item.isBuyNow()) return false;
+        return !bids.get(item.getUUID()).isEmpty();
+    }
+
+    /**
+     * Bids on an item in the Auction House.
+     * @param item The item to bid on.
+     * @param owner The owner of the bid.
+     * @param bid The bid to place.
+     * @return The bid that was placed.
+     */
+    @NotNull
+    public static Bid bid(@NotNull AuctionItem item, @NotNull OfflinePlayer owner, @NotNull Price bid) {
+        if (item == null) throw new IllegalArgumentException("Item cannot be null!");
+        if (owner == null) throw new IllegalArgumentException("Owner cannot be null!");
+        if (bid == null) throw new IllegalArgumentException("Bid cannot be null!");
+        if (item.isBuyNow()) throw new IllegalArgumentException("Item must not be a buy now item!");
+        if (item.isExpired()) throw new IllegalArgumentException("Item is expired!");
+        if (!items.contains(item)) throw new IllegalArgumentException("Item must be in the auction house!");
+
+        Bid b = new Bid(owner.getUniqueId(), bid.getEconomy().getUniqueId(), bid.getAmount());
+        bids.computeIfAbsent(item.getUUID(), k -> new HashSet<>()).add(b);
+        write();
+        return b;
+    }
+
+    /**
+     * Gets an immutable copy of all the auction items in the auction house.
+     * @return All Items in the auction house.
+     */
+    public static Set<AuctionItem> getItems() {
+        return ImmutableSet.copyOf(items);
+    }
+
+    // I/O
 
     private static void checkTable() throws SQLException {
         Connection db = NovaConfig.getConfiguration().getDatabaseConnection();
@@ -129,7 +175,20 @@ public final class AuctionHouse {
                 "price DOUBLE NOT NULL, " +
                 "buy_now BOOLEAN NOT NULL, " +
                 "loose_price BOOLEAN NOT NULL, " +
+                "bids MEDIUMBLOB NOT NULL, " +
                 "PRIMARY KEY (id))");
+    }
+
+    private static void read() {
+        try {
+            if (NovaConfig.getConfiguration().isDatabaseEnabled()) {
+                checkTable();
+                readDB();
+            } else
+                readFile();
+        } catch (Exception e) {
+            NovaConfig.print(e);
+        }
     }
 
     private static void readDB() throws SQLException, IOException, ReflectiveOperationException {
@@ -152,8 +211,6 @@ public final class AuctionHouse {
             boolean loosePrice = rs.getBoolean("loose_price");
 
             AuctionItem auction = new AuctionItem(id, owner, timestamp, item, new Price(economy, price), buyNow, loosePrice);
-            if (auction.isExpired()) continue;
-
             items.add(auction);
         }
 
@@ -167,13 +224,20 @@ public final class AuctionHouse {
 
         for (File f : folder.listFiles()) {
             if (f == null) continue;
+
+            if (f.getName().equals("bids.dat")) {
+                FileInputStream bidsIs = new FileInputStream(f);
+                BukkitObjectInputStream bidsBis = new BukkitObjectInputStream(new BufferedInputStream(bidsIs));
+                bids.putAll((Map<UUID, Set<Bid>>) bidsBis.readObject());
+                bidsBis.close();
+                continue;
+            }
+
             FileInputStream is = new FileInputStream(f);
             BukkitObjectInputStream bis = new BukkitObjectInputStream(new BufferedInputStream(is));
             items.addAll((Set<AuctionItem>) bis.readObject());
             bis.close();
         }
-
-        items.removeIf(AuctionItem::isExpired);
     }
 
     private static void write() {
@@ -204,10 +268,11 @@ public final class AuctionHouse {
                             "economy = ?, " +
                             "price = ?, " +
                             "buy_now = ?, " +
-                            "loose_price = ? " +
+                            "loose_price = ?, " +
+                            "bids = ? " +
                             "WHERE economy = \"" + auction.getUUID() + "\"";
                 else
-                    sql = "INSERT INTO auction VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                    sql = "INSERT INTO auction VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
                 PreparedStatement ps = db.prepareStatement(sql);
                 ps.setString(1, auction.getUUID().toString());
@@ -224,6 +289,11 @@ public final class AuctionHouse {
                 ps.setBoolean(7, auction.isBuyNow());
                 ps.setBoolean(8, auction.isLoosePrice());
 
+                ByteArrayOutputStream bidsOs = new ByteArrayOutputStream();
+                BukkitObjectOutputStream bidsBos = new BukkitObjectOutputStream(bidsOs);
+                bidsBos.writeObject(bids.get(auction.getUUID()));
+                ps.setBytes(9, bidsOs.toByteArray());
+
                 ps.executeUpdate();
                 ps.close();
             }
@@ -234,6 +304,14 @@ public final class AuctionHouse {
     private static void writeFile() throws IOException, ReflectiveOperationException {
         File folder = NovaConfig.getAuctionFolder();
         if (!folder.exists()) folder.mkdirs();
+
+        File bidsFile = new File(folder, "bids.dat");
+        if (!bidsFile.exists()) bidsFile.createNewFile();
+
+        FileOutputStream bidsOs = new FileOutputStream(bidsFile);
+        BukkitObjectOutputStream bidsBos = new BukkitObjectOutputStream(bidsOs);
+        bidsBos.writeObject(bids);
+        bidsBos.close();
 
         List<UUID> owners = items.stream()
                 .map(AuctionItem::getOwner)
@@ -279,6 +357,5 @@ public final class AuctionHouse {
             if (ownerItems == null || ownerItems.isEmpty()) f.delete();
         }
     }
-
 
 }
