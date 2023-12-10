@@ -17,7 +17,7 @@ import java.util.UUID;
 /**
  * Represents an item in the Novaconomy Auction House.
  */
-public final class AuctionItem extends Product implements Serializable {
+public final class AuctionProduct extends Product implements Serializable {
 
     private static final long serialVersionUID = 6553572638722360815L;
 
@@ -33,15 +33,15 @@ public final class AuctionItem extends Product implements Serializable {
 
     private final UUID uuid;
     private final UUID owner;
-    private final long postedTimestmap;
+    private final long postedTimestamp;
     private final boolean buyNow;
     private final boolean loosePrice;
 
-    AuctionItem(UUID uuid, UUID owner, long postedTimestmap, ItemStack item, Price price, boolean buyNow, boolean loosePrice) {
+    AuctionProduct(UUID uuid, UUID owner, long postedTimestamp, ItemStack item, Price price, boolean buyNow, boolean loosePrice) {
         super(item, price);
         this.uuid = uuid;
         this.owner = owner;
-        this.postedTimestmap = postedTimestmap;
+        this.postedTimestamp = postedTimestamp;
         this.buyNow = buyNow;
         this.loosePrice = loosePrice;
     }
@@ -85,8 +85,8 @@ public final class AuctionItem extends Product implements Serializable {
      * @return Timestamp of Posted Time.
      */
     @NotNull
-    public Date getPostedTimestmap() {
-        return new Date(postedTimestmap);
+    public Date getPostedTimestamp() {
+        return new Date(postedTimestamp);
     }
 
     /**
@@ -95,7 +95,7 @@ public final class AuctionItem extends Product implements Serializable {
      */
     @NotNull
     public Date getExpirationTimestamp() {
-        return new Date(postedTimestmap + (buyNow ? BUY_NOW_DURATION : AUCTION_DURATION));
+        return new Date(postedTimestamp + (buyNow ? BUY_NOW_DURATION : AUCTION_DURATION));
     }
 
     /**
@@ -103,7 +103,7 @@ public final class AuctionItem extends Product implements Serializable {
      * @return true if the auction item has expired, false otherwise.
      */
     public boolean isExpired() {
-        long millis = System.currentTimeMillis() - postedTimestmap;
+        long millis = System.currentTimeMillis() - postedTimestamp;
         return buyNow ? millis > BUY_NOW_DURATION : millis > AUCTION_DURATION;
     }
 
@@ -113,7 +113,7 @@ public final class AuctionItem extends Product implements Serializable {
                 .putAll(super.serialize())
                 .put("uuid", uuid.toString())
                 .put("owner", owner.toString())
-                .put("posted", postedTimestmap)
+                .put("posted", postedTimestamp)
                 .put("buyNow", buyNow)
                 .put("loose", loosePrice)
                 .build();
@@ -125,8 +125,8 @@ public final class AuctionItem extends Product implements Serializable {
      * @return Deserialized AuctionItem
      */
     @NotNull
-    public static AuctionItem deserialize(@NotNull Map<String, Object> map) {
-        return new AuctionItem(
+    public static AuctionProduct deserialize(@NotNull Map<String, Object> map) {
+        return new AuctionProduct(
                 UUID.fromString((String) map.get("uuid")),
                 UUID.fromString((String) map.get("owner")),
                 (long) map.get("posted"),
@@ -141,8 +141,8 @@ public final class AuctionItem extends Product implements Serializable {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        AuctionItem that = (AuctionItem) o;
-        return postedTimestmap == that.postedTimestmap && buyNow == that.buyNow && loosePrice == that.loosePrice && Objects.equals(uuid, that.uuid) && Objects.equals(owner, that.owner) && super.equals(o);
+        AuctionProduct that = (AuctionProduct) o;
+        return postedTimestamp == that.postedTimestamp && buyNow == that.buyNow && loosePrice == that.loosePrice && Objects.equals(uuid, that.uuid) && Objects.equals(owner, that.owner) && super.equals(o);
     }
 
     @Override
@@ -155,7 +155,7 @@ public final class AuctionItem extends Product implements Serializable {
         return "AuctionItem{" +
                 "uuid=" + uuid +
                 ", owner=" + getOwner() +
-                ", postedTimestmap=" + postedTimestmap +
+                ", postedTimestmap=" + postedTimestamp +
                 ", buyNow=" + buyNow +
                 ", loosePrice=" + loosePrice +
                 ", item=" + item +
