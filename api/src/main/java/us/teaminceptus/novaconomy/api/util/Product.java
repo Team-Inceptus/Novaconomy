@@ -10,13 +10,16 @@ import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.api.business.BusinessProduct;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 
+import java.io.Serializable;
 import java.util.Map;
 import java.util.Objects;
 
 /**
  * Represents a Sellable Product
  */
-public class Product implements ConfigurationSerializable, Comparable<Product> {
+public class Product implements ConfigurationSerializable, Comparable<Product>, Serializable {
+
+    private static final long serialVersionUID = 5404582861266017032L;
 
     /**
      * Item to sell
