@@ -16,13 +16,17 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.inventory.*;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemFlag;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.ChatPaginator;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.ModifierReader;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.SortingType;
@@ -114,6 +118,7 @@ public interface CommandWrapper {
             .put("corporationchat", asList("corpchat", "cc", "ncc", "corporationc", "corpc", "cchat"))
             .put("market", asList("novamarket", "novam", "m"))
             .put("corporationleaderboard", asList("corpleaderboard", "cleaderboard", "corpboard", "cboard"))
+            .put("nauctionhouse", asList("novaah", "ah", "auctionhouse", "auctions"))
             .build();
 
     Map<String, String> COMMAND_PERMISSION = ImmutableMap.<String, String>builder()
@@ -137,6 +142,7 @@ public interface CommandWrapper {
             .put("corporationchat", "novaconomy.user.corporation")
             .put("market", "novaconomy.user.market")
             .put("corporationleaderboard", "novaconomy.user.leaderboard")
+            .put("nauctionhouse", "novaconomy.user.auction_house")
             .build();
 
     Map<String, String> COMMAND_DESCRIPTION = ImmutableMap.<String, String>builder()
@@ -162,6 +168,7 @@ public interface CommandWrapper {
             .put("corporationchat", "Chat with your Novaconomy Corporation")
             .put("market", "View and Manage the Novaconomy Market")
             .put("corporationleaderboard", "View the top 10 corporations in various categories")
+            .put("nauctionhouse", "View the Novaconomy Auction House")
             .build();
 
     Map<String, String> COMMAND_USAGE = ImmutableMap.<String, String>builder()
@@ -187,6 +194,7 @@ public interface CommandWrapper {
             .put("corporationchat", "/cc <message>")
             .put("market", "/market <open|sell|...>")
             .put("corporationleaderboard", "/corporationleaderboard")
+            .put("nauctionhouse", "/ah [open|search|add|...]")
             .build();
 
     // Command Methods
@@ -619,7 +627,7 @@ public interface CommandWrapper {
         ));
 
         inv.setItem(12, Items.ARROW);
-        inv.setItem(13, Items.economyWheel("pay", econ, p));
+        inv.setItem(13, economyWheel("pay", econ, p));
         inv.setItem(14, Items.ARROW);
 
         for (int i = 0; i < 2; i++)
@@ -736,17 +744,13 @@ public interface CommandWrapper {
             return;
         }
 
-        Economy econ = Economy.getEconomies()
-                .stream()
-                .sorted(Economy::compareTo)
-                .collect(Collectors.toList())
-                .get(0);
+        Economy econ = Economy.first();
 
         NovaInventory inv = genGUI(36, pr.hasItemMeta() && pr.getItemMeta().hasDisplayName() ? pr.getItemMeta().getDisplayName() : capitalize(pr.getType().name().replace('_', ' ')));
         inv.setCancelled();
 
         inv.setAttribute("item", pr);
-        inv.setItem(22, Items.economyWheel("add_product", p));
+        inv.setItem(22, economyWheel("add_product", p));
 
         inv.setItem(13, builder(pr,
                 meta -> meta.setLore(Collections.singletonList(format(get("constants.price"), price, econ.getSymbol()))),
@@ -2108,7 +2112,7 @@ public interface CommandWrapper {
                 inv.setItem((j * 9) + i + 9, change);
             }
 
-        inv.setItem(31, Items.economyWheel("change_advertising", p));
+        inv.setItem(31, economyWheel("change_advertising", p));
 
         inv.setItem(39, builder(CONFIRM,
                 nbt -> {
@@ -2118,7 +2122,7 @@ public interface CommandWrapper {
                 }
         ));
 
-        Economy first = Economy.getEconomies().stream().sorted(Economy::compareTo).collect(Collectors.toList()).get(0);
+        Economy first = Economy.first();
         inv.setItem(40, Items.builder(Material.GOLD_INGOT,
                 meta -> meta.setDisplayName(GOLD + "0" + first.getSymbol())
         ));
@@ -3541,7 +3545,7 @@ public interface CommandWrapper {
             inv.setCancelled();
             for (int i = 0; i < 7; i++) inv.setItem(10 + i, GUI_BACKGROUND);
 
-            inv.setItem(12, Items.economyWheel("market_access", econ0, p));
+            inv.setItem(12, economyWheel("market_access", econ0, p));
 
             inv.setItem(14, NBTWrapper.builder(Material.DIAMOND_BLOCK,
                     meta -> {
@@ -3592,7 +3596,7 @@ public interface CommandWrapper {
                 nbt -> nbt.setID("market:sell_items")
         ));
 
-        inv.setItem(50, Items.economyWheel(p));
+        inv.setItem(50, economyWheel(p));
 
         p.openInventory(inv);
         NovaSound.BLOCK_ENDER_CHEST_OPEN.play(p);
@@ -3897,7 +3901,7 @@ public interface CommandWrapper {
             return;
         }
 
-        NovaInventory inv = InventorySelector.confirm(p, () -> {
+        NovaInventory inv = InventorySelector.confirm(p, cInv -> {
             bus.addSupplyChest(b.getLocation());
             p.sendMessage(format(getSuccess("success.business.add_supply_chest"),
                     BLUE + String.valueOf(b.getX()) + GREEN,
@@ -3972,6 +3976,65 @@ public interface CommandWrapper {
             sender.sendMessage(format(getSuccess("success.market.set_stock.multiple"), GOLD + String.valueOf(materials.size()) + GREEN, DARK_AQUA + format("%,d", amount)));
 
         NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(sender);
+    }
+
+    default void auctionHouse(Player p, @Nullable String searchQuery) {
+        if (!p.hasPermission("novaconomy.user.auction_house")) {
+            p.sendMessage(ERROR_PERMISSION);
+            return;
+        }
+
+        NovaInventory inv = Generator.generateAuctionHouse(p, SortingType.PRODUCT_NAME_ASCENDING, "").get(0);
+        p.openInventory(inv);
+        NovaSound.BLOCK_ENDER_CHEST_OPEN.play(p);
+    }
+
+    default void addAuctionItem(Player p, double amount) {
+        if (!p.hasPermission("novaconomy.user.auction_house")) {
+            p.sendMessage(ERROR_PERMISSION);
+            return;
+        }
+
+        if (Economy.getEconomies().isEmpty()) {
+            p.sendMessage(getError("error.economy.none"));
+            return;
+        }
+
+        if (amount <= 0) {
+            p.sendMessage(getError("error.argument.amount"));
+            return;
+        }
+
+        if (p.getInventory().getItemInHand() == null || p.getInventory().getItemInHand().getType() == Material.AIR) {
+            p.sendMessage(getMessage("error.argument.item"));
+            return;
+        }
+
+        ItemStack item = p.getInventory().getItemInHand().clone();
+        NovaInventory inv = genGUI(36, get("constants.auction_house.add_item"));
+        inv.setCancelled();
+
+        Economy econ = Economy.first();
+        inv.setAttribute("item", item);
+        inv.setItem(13, builder(item,
+                meta -> meta.setLore(
+                        Collections.singletonList(GOLD + format(get("constants.price"), format("%,.2f", amount), econ.getSymbol()))
+                ),
+                nbt -> nbt.set(PRICE_TAG, amount)
+        ));
+
+        inv.setItem(21, economyWheel("add_product", p));
+
+        inv.setItem(23, button(get("constants.sorting_types.auction.buy_now"), false));
+        inv.setItem(24, button(get("constants.loose_price"), false));
+
+        inv.setItem(31, builder(CONFIRM, nbt -> {
+            nbt.setID("auction:add_item");
+            nbt.set(PRICE_TAG, amount);
+        }));
+
+        p.openInventory(inv);
+        NovaSound.BLOCK_ENDER_CHEST_OPEN.play(p);
     }
 
 }

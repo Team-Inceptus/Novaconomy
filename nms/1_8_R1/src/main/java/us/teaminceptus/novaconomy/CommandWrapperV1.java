@@ -2152,6 +2152,50 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                 corporationLeaderboard(p, "ratings");
                 break;
             }
+            case "nauctionhouse": {
+                if (!(sender instanceof Player)) return false;
+                Player p = (Player) sender;
+
+                if (args.length < 1) {
+                    auctionHouse(p, null);
+                    break;
+                }
+
+                switch (args[0]) {
+                    case "open": {
+                        auctionHouse(p, null);
+                        break;
+                    }
+                    case "search": {
+                        if (args.length < 2) {
+                            p.sendMessage(getMessage("error.argument"));
+                            return false;
+                        }
+
+                        StringBuilder search = new StringBuilder();
+                        for (int i = 1; i < args.length; i++) search.append(args[i]).append(" ");
+
+                        auctionHouse(p, search.toString());
+                        break;
+                    }
+                    case "add": {
+                        if (args.length < 2) {
+                            p.sendMessage(getMessage("error.argument.amount"));
+                            return false;
+                        }
+
+                        try {
+                            addAuctionItem(p, Double.parseDouble(args[1]));
+                        } catch (NumberFormatException e) {
+                            p.sendMessage(getMessage("error.argument.amount"));
+                            return false;
+                        }
+                        break;
+                    }
+                }
+
+                break;
+            }
             default: {
                 sender.sendMessage(getMessage("error.argument"));
                 return false;

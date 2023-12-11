@@ -16,6 +16,7 @@ import org.bukkit.util.io.BukkitObjectOutputStream;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.api.NovaConfig;
+import us.teaminceptus.novaconomy.api.auction.AuctionProduct;
 import us.teaminceptus.novaconomy.api.bank.Bank;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.business.Rating;
@@ -52,6 +53,8 @@ public final class NovaPlayer {
     private static final String LBD = "last_bank_deposit";
     private final OfflinePlayer p;
 
+    private final Set<AuctionProduct> wonAuctions = new HashSet<>();
+
     private final Map<String, Object> pConfig = new HashMap<>();
 
     PlayerStatistics stats;
@@ -63,6 +66,7 @@ public final class NovaPlayer {
                 "id CHAR(36) NOT NULL," +
                 "data MEDIUMBLOB NOT NULL," +
                 "stats BLOB(65535) NOT NULL," +
+                "won_auctions MEDIUMBLOB NOT NULL," +
                 "PRIMARY KEY (id))"
         );
     }
@@ -98,6 +102,11 @@ public final class NovaPlayer {
                     BukkitObjectInputStream statsBIs = new BukkitObjectInputStream(statsIs);
                     stats = (PlayerStatistics) statsBIs.readObject();
                     statsBIs.close();
+
+                    ByteArrayInputStream wonAuctionsIs = new ByteArrayInputStream(rs.getBytes("won_auctions"));
+                    BukkitObjectInputStream wonAuctionsBIs = new BukkitObjectInputStream(wonAuctionsIs);
+                    wonAuctions.addAll((Set<AuctionProduct>) wonAuctionsBIs.readObject());
+                    wonAuctionsBIs.close();
                 }
 
                 rs.close();
@@ -118,6 +127,7 @@ public final class NovaPlayer {
             pConfig.putAll(toMap(config));
 
             stats = pConfig.containsKey("stats") ? (PlayerStatistics) pConfig.get("stats") : new PlayerStatistics(p);
+            wonAuctions.addAll((Collection<AuctionProduct>) pConfig.getOrDefault("won_auctions", new HashSet<>()));
         }
 
         this.stats = stats;
@@ -232,20 +242,26 @@ public final class NovaPlayer {
                 BukkitObjectOutputStream bOs = new BukkitObjectOutputStream(os);
                 bOs.writeObject(pConfig);
                 bOs.close();
-
                 ps.setBytes(2, os.toByteArray());
 
                 ByteArrayOutputStream statsOs = new ByteArrayOutputStream();
                 BukkitObjectOutputStream statsBos = new BukkitObjectOutputStream(statsOs);
                 statsBos.writeObject(this.stats);
                 statsBos.close();
-
                 ps.setBytes(3, statsOs.toByteArray());
+
+                ByteArrayOutputStream wonAuctionsOs = new ByteArrayOutputStream();
+                BukkitObjectOutputStream wonAuctionsBos = new BukkitObjectOutputStream(wonAuctionsOs);
+                wonAuctionsBos.writeObject(this.wonAuctions);
+                wonAuctionsBos.close();
+                ps.setBytes(4, wonAuctionsOs.toByteArray());
 
                 ps.executeUpdate();
                 ps.close();
             } else {
                 pConfig.put("stats", this.stats);
+                pConfig.put("won_auctions", this.wonAuctions);
+
                 File pFile = new File(NovaConfig.getPlayerDirectory(), p.getUniqueId().toString() + ".yml");
                 if (!pFile.exists()) pFile.createNewFile();
 
@@ -318,13 +334,22 @@ public final class NovaPlayer {
     }
 
     /**
-     * Whether this Nova Player can afford a Product.
+     * Whether this NovaPlayer can afford a Product.
      * @param p Product to buy
      * @return true if can afford, else false
      */
     public boolean canAfford(@Nullable Product p) {
+        return canAfford(p == null ? null : p.getPrice());
+    }
+
+    /**
+     * Whether this NovaPlayer can afford a Price.
+     * @param p Price to buy at
+     * @return true if can afford, else false
+     */
+    public boolean canAfford(@Nullable Price p) {
         if (p == null) return false;
-        return getBalance(p.getEconomy()) >= p.getPrice().getAmount();
+        return getBalance(p.getEconomy()) >= p.getAmount();
     }
 
     /**
@@ -779,7 +804,9 @@ public final class NovaPlayer {
      * <p>This will return {@code false} if the player does not own a corporation, business, or if the permission is null.</p>
      * @param permission
      * @return true if this player has the corporation permission, else false
+     * @deprecated Draft API
      */
+    @Deprecated
     public boolean hasPermission(@Nullable CorporationPermission permission) {
         if (permission == null) return false;
 
@@ -790,6 +817,57 @@ public final class NovaPlayer {
         if (c == null) return false;
 
         return c.hasPermission(b, permission);
+    }
+
+    /**
+     * <p>Fetches an immutable copy of all of the Auctions this player has won.</p>
+     * <p>Expired Auctions are no longer stored in the Auction House. Use {@link #getWonAuction(UUID)} for retrieval by ID.</p>
+     * @return All Won Auctions
+     */
+    @NotNull
+    public Set<AuctionProduct> getWonAuctions() {
+        return ImmutableSet.copyOf(wonAuctions);
+    }
+
+    /**
+     * Adds an Auction to this player's won auctions.
+     * @param product Auction to add
+     */
+    public void addWonAuction(@NotNull AuctionProduct product) {
+        if (product == null) throw new IllegalArgumentException("Auction cannot be null");
+        wonAuctions.add(product);
+        save();
+    }
+
+    /**
+     * Awards an auction to this player, adding it to their inventory. The player must be online.
+     * @param product Auction from {@link #getWonAuctions()} to Award
+     */
+    public void awardAuction(@NotNull AuctionProduct product) {
+        if (product == null) throw new IllegalArgumentException("Auction cannot be null");
+        if (!p.isOnline()) throw new IllegalStateException("Player is not online");
+
+        Player player = p.getPlayer();
+        if (player.getInventory().firstEmpty() == -1) {
+            player.getWorld().dropItemNaturally(player.getLocation(), product.getItem());
+        } else {
+            player.getInventory().addItem(product.getItem());
+        }
+
+        if (wonAuctions.contains(product)) {
+            wonAuctions.remove(product);
+            save();
+        }
+    }
+
+    /**
+     * Gets a won auction by its ID.
+     * @param id ID of the Auction
+     * @return Auction, or null if not found
+     */
+    @Nullable
+    public AuctionProduct getWonAuction(@NotNull UUID id) {
+        return wonAuctions.stream().filter(a -> a.getUUID().equals(id)).findFirst().orElse(null);
     }
 
     private void checkStats() {

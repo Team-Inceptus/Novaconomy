@@ -6,13 +6,13 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.enchantments.Enchantment;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import us.teaminceptus.novaconomy.abstraction.CommandWrapper;
 import us.teaminceptus.novaconomy.abstraction.NBTWrapper;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.SortingType;
@@ -30,11 +30,12 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.ECON_TAG;
 import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.TYPE_TAG;
 import static us.teaminceptus.novaconomy.abstraction.Wrapper.get;
 import static us.teaminceptus.novaconomy.abstraction.Wrapper.w;
 import static us.teaminceptus.novaconomy.util.NovaUtil.format;
-import static us.teaminceptus.novaconomy.util.NovaUtil.withSuffix;
+import static us.teaminceptus.novaconomy.util.NovaUtil.suffix;
 
 public final class Items {
 
@@ -77,6 +78,11 @@ public final class Items {
     public static final ItemStack CLOCK = checkLegacy(
             () -> new ItemStack(Material.matchMaterial("CLOCK")),
             () -> new ItemStack(Material.matchMaterial("WATCH"))
+    );
+
+    public static final ItemStack IRON_BARS = checkLegacy(
+            () -> new ItemStack(Material.matchMaterial("IRON_BARS")),
+            () -> new ItemStack(Material.matchMaterial("IRON_BARDING"))
     );
 
     public static final ItemStack CANCEL = NBTWrapper.builder(RED_WOOL,
@@ -237,6 +243,10 @@ public final class Items {
         return economyWheel(null, p);
     }
 
+    public static ItemStack economyWheel(OfflinePlayer p, Economy econ) {
+        return economyWheel(null, econ, p);
+    }
+
     public static ItemStack economyWheel(String suffix, OfflinePlayer p) {
         Economy econ = Economy.getEconomies()
                 .stream()
@@ -254,11 +264,11 @@ public final class Items {
             meta.setDisplayName(ChatColor.GOLD + econ.getName());
             if (np.getSetting(Settings.Personal.BALANCE_ON_ECONOMY_WHEEL))
                 meta.setLore(Collections.singletonList(
-                        format(ChatColor.AQUA + get("constants.balance"), ChatColor.YELLOW + withSuffix(np.getBalance(econ)) + " (" + econ.getSymbol() + ")")
+                        format(ChatColor.AQUA + get("constants.balance"), ChatColor.YELLOW + suffix(np.getBalance(econ)) + " (" + econ.getSymbol() + ")")
                 ));
         },
         nbt -> {
-                nbt.set(CommandWrapper.ECON_TAG, econ.getUniqueId());
+                nbt.set(ECON_TAG, econ.getUniqueId());
                 nbt.setID("economy:wheel" + (suffix == null ? "" : ":" + suffix));
         });
         
@@ -266,12 +276,34 @@ public final class Items {
         return economyWheel;
     }
 
+    public static ItemStack button(String name) {
+        return button(name, true);
+    }
+
+    public static ItemStack button(String name, boolean enabled) {
+        return NBTWrapper.builder(enabled ? LIME_WOOL : RED_WOOL,
+                meta -> {
+                    meta.setDisplayName(ChatColor.YELLOW + name + ": " + (enabled ? ChatColor.GREEN + get("constants.on") : ChatColor.RED + get("constants.off")));
+                    if (enabled) {
+                        meta.addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1, true);
+                        meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+                    }
+                },
+                nbt -> {
+                    nbt.setID("button");
+                    nbt.set("name", name);
+                    nbt.set("enabled", enabled);
+                }
+        );
+    }
+
     @NotNull
     public static ItemStack builder(ItemStack item, Consumer<ItemMeta> metaC) {
-        ItemMeta meta = item.hasItemMeta() ? item.getItemMeta() : Bukkit.getItemFactory().getItemMeta(item.getType());
+        ItemStack item0 = item.clone();
+        ItemMeta meta = item0.hasItemMeta() ? item0.getItemMeta() : Bukkit.getItemFactory().getItemMeta(item0.getType());
         metaC.accept(meta);
-        item.setItemMeta(meta);
-        return item;
+        item0.setItemMeta(meta);
+        return item0;
     }
 
     @NotNull

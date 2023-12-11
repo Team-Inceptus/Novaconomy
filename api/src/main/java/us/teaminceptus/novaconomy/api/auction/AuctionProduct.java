@@ -1,6 +1,7 @@
 package us.teaminceptus.novaconomy.api.auction;
 
 import com.google.common.collect.ImmutableMap;
+import org.apache.commons.lang.WordUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.inventory.ItemStack;
@@ -9,6 +10,8 @@ import us.teaminceptus.novaconomy.api.util.Price;
 import us.teaminceptus.novaconomy.api.util.Product;
 
 import java.io.Serializable;
+import java.text.SimpleDateFormat;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.Map;
 import java.util.Objects;
@@ -30,6 +33,11 @@ public final class AuctionProduct extends Product implements Serializable {
      * The duration of a buy now item in milliseconds.
      */
     public static final long BUY_NOW_DURATION = 1000 * 60 * 60 * 24 * 5; // 3 days
+
+    /**
+     * The date format for auction expiration.
+     */
+    public static final SimpleDateFormat EXPIRATION_FORMAT = new SimpleDateFormat("MMM dd, yyyy h:mm:ss a z");
 
     private final UUID uuid;
     private final UUID owner;
@@ -107,6 +115,18 @@ public final class AuctionProduct extends Product implements Serializable {
         return buyNow ? millis > BUY_NOW_DURATION : millis > AUCTION_DURATION;
     }
 
+    /**
+     * Gets the name of the auction item.
+     * @return The name of the auction item.
+     */
+    @NotNull
+    public String getItemName() {
+        if (item.hasItemMeta() && item.getItemMeta().hasDisplayName())
+            return item.getItemMeta().getDisplayName();
+
+        return WordUtils.capitalizeFully(item.getType().name().replace("_", " ").toLowerCase());
+    }
+
     @Override
     public Map<String, Object> serialize() {
         return ImmutableMap.<String, Object>builder()
@@ -117,6 +137,10 @@ public final class AuctionProduct extends Product implements Serializable {
                 .put("buyNow", buyNow)
                 .put("loose", loosePrice)
                 .build();
+    }
+
+    AuctionProduct cloneWithPrice(Price price) {
+        return new AuctionProduct(uuid, owner, postedTimestamp, item, price, buyNow, loosePrice);
     }
 
     /**
@@ -142,7 +166,7 @@ public final class AuctionProduct extends Product implements Serializable {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         AuctionProduct that = (AuctionProduct) o;
-        return postedTimestamp == that.postedTimestamp && buyNow == that.buyNow && loosePrice == that.loosePrice && Objects.equals(uuid, that.uuid) && Objects.equals(owner, that.owner) && super.equals(o);
+        return uuid.equals(that.uuid);
     }
 
     @Override

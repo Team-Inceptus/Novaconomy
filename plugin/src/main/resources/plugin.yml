@@ -171,6 +171,11 @@ permissions:
     default: true
     children:
       novaconomy.user: true
+  novaconomy.user.auction_house:
+    description: Access to view and use the auction house
+    default: true
+    children:
+      novaconomy.user: true
 
   # User Bounty
   novaconomy.user.bounty:

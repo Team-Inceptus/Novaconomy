@@ -7,10 +7,11 @@ import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.util.Price;
 
 import java.io.Serializable;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Represents a bid on an auction item.
+ * Utility class for representing a bid on an auction item.
  */
 public final class Bid implements Serializable {
 
@@ -59,5 +60,27 @@ public final class Bid implements Serializable {
     @NotNull
     public Price getPrice() {
         return new Price(getEconomy(), amount);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Bid bid = (Bid) o;
+        return Objects.equals(bidder, bid.bidder);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(bidder);
+    }
+
+    @Override
+    public String toString() {
+        return "Bid{" +
+                "bidder=" + bidder +
+                ", economy=" + economy +
+                ", amount=" + amount +
+                '}';
     }
 }

@@ -16,6 +16,8 @@ import java.util.UUID;
  */
 public final class BusinessProduct extends Product {
 
+    private static final long serialVersionUID = 7186744343709160963L;
+
     private Business business;
 
     /**

@@ -30,6 +30,7 @@ import us.teaminceptus.novaconomy.abstraction.CommandWrapper;
 import us.teaminceptus.novaconomy.abstraction.Wrapper;
 import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.NovaConfig;
+import us.teaminceptus.novaconomy.api.auction.AuctionHouse;
 import us.teaminceptus.novaconomy.api.bank.Bank;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.business.BusinessStatistics;
@@ -210,6 +211,13 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
         public void run() {
             if (!NovaConfig.getConfiguration().isInterestEnabled()) return;
             runInterest();
+        }
+    };
+
+    private static final BukkitRunnable TICK_TASK = new BukkitRunnable() {
+        @Override
+        public void run() {
+            AuctionHouse.refreshAuctionHouse(false);
         }
     };
 
@@ -879,7 +887,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
             }
 
             try (ResultSet market = meta.getTables(null, null, "market", null)) {
-                if (empty(NovaMarket.getMarketFile().list()) && market.first()) {
+                if (!NovaMarket.getMarketFile().exists() && market.first()) {
                     getLogger().warning("Converting Market to File Storage...");
                     readMarketDB();
                     writeMarketFile();
@@ -1002,9 +1010,11 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
         Business.getBusinesses();
         Corporation.getCorporations();
         Economy.getEconomies();
+        AuctionHouse.refreshAuctionHouse(true);
 
         INTEREST_RUNNABLE.runTaskTimer(this, getInterestTicks(), getInterestTicks());
         TAXES_RUNNABLE.runTaskTimer(this, getTaxesTicks(), getTaxesTicks());
+        TICK_TASK.runTaskTimer(this, 1L, 1L);
 
         for (Player p : Bukkit.getOnlinePlayers()) w.addPacketInjector(p);
 

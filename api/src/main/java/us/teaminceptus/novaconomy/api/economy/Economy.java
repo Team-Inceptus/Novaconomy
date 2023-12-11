@@ -553,6 +553,21 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
     }
 
     /**
+     * Gets the first Economy in the list of Economies.
+     * @return First Economy
+     * @throws IllegalStateException if no economies are registered
+     */
+    public static Economy first() throws IllegalStateException {
+        if (getEconomies().isEmpty()) throw new IllegalStateException("No Economies are registered");
+
+        return getEconomies()
+                .stream()
+                .sorted(Economy::compareTo)
+                .collect(Collectors.toList())
+                .get(0);
+    }
+
+    /**
      * Fetch a Builder used for creating economies
      * @return {@link Builder} Class
      */

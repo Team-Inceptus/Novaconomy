@@ -238,6 +238,7 @@ final class CommandWrapperV2 implements CommandWrapper {
         new NovaConfigCommands(this);
         new CorporationCommands(this);
         new MarketCommands(this);
+        new AuctionCommands(this);
 
         handler.registerBrigadier();
         handler.setLocale(Language.getCurrentLocale());
@@ -994,6 +995,39 @@ final class CommandWrapperV2 implements CommandWrapper {
         @Subcommand({"setstock", "stock"})
         public void setMarketStock(CommandSender sender, MaterialSelector selector, long amount) {
             wrapper.setMarketStock(sender, selector.getMaterials(), amount);
+        }
+
+    }
+
+    @Command({"nauctionhouse", "novaah", "ah", "auctionhouse", "auctions"})
+    @Usage("/ah [open|search|add|...]")
+    @Description("View the Novaconomy Auction House")
+    @CommandPermission("novaconomy.user.auction_house")
+    private static final class AuctionCommands {
+
+        private final CommandWrapperV2 wrapper;
+
+        AuctionCommands(CommandWrapperV2 wrapper) {
+            this.wrapper = wrapper;
+            handler.register(this);
+        }
+
+        @DefaultFor({"nauctionhouse", "novaah", "ah", "auctionhouse", "auctions"})
+        public void auctionHouse(Player p) {
+            wrapper.auctionHouse(p, null);
+        }
+
+        @Subcommand("open")
+        public void openAuctionHouse(Player p) { auctionHouse(p); }
+
+        @Subcommand("search")
+        public void searchAuctionHouse(Player p, String keywords) {
+            wrapper.auctionHouse(p, keywords);
+        }
+
+        @Subcommand("add")
+        public void addAuction(Player p, @Range(min = 1) double amount) {
+            wrapper.addAuctionItem(p, amount);
         }
 
     }
