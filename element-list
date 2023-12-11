@@ -1,10 +1,12 @@
 us.teaminceptus.novaconomy.api
+us.teaminceptus.novaconomy.api.auction
 us.teaminceptus.novaconomy.api.bank
 us.teaminceptus.novaconomy.api.business
 us.teaminceptus.novaconomy.api.corporation
 us.teaminceptus.novaconomy.api.economy
 us.teaminceptus.novaconomy.api.economy.market
 us.teaminceptus.novaconomy.api.events
+us.teaminceptus.novaconomy.api.events.auction
 us.teaminceptus.novaconomy.api.events.business
 us.teaminceptus.novaconomy.api.events.corporation
 us.teaminceptus.novaconomy.api.events.market
