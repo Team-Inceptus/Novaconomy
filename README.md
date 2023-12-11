@@ -7,6 +7,27 @@ With the freedom to have your own symbols, icons, conversion rates, and even int
 
 <h2 style="text-decoration: underline;">📓Changelog</h2>
 
+### 🛖 1.9.0 Update: Awesome Auctions
+- New Features
+  - **Auction House**
+    - List unlimited items for sale on the Auction House
+    - Fully usable GUI for Auction House
+    - Auction API & Events
+  - **API Overhauls**
+    - Economy API methods now use specific names
+    - Move BusinessProduct to Business Package
+  - Official Kotlin Extensions
+  - **Add 1.20.3 Support**
+  - Draft API for Corporation Ranks (fully implemented in v1.9.1)
+  - More Business Supply Options
+  - Increase Maximum Business Transaction History to 20
+  - Crowdin Integration
+- Other Improvements
+  - Gradle Updates 
+  - Deleted Objects are Removed in SQL Database
+  - Fix Temporary Copy Exceptions
+  - Use more efficient Maps for Serialization
+
 ### 💸 1.8.0 Update: Ecstatic Economy
 - New Features
   - **Unlimited Business Products**
@@ -158,15 +179,8 @@ unlimited stock and set the prices to whatever you want!
 
 -----
 ## 🔮 Future Features
-- [x] Treasury API Hook
-- [x] Bounties
-- [x] Custom Tax Events
-- [x] Player/Business Settings
-- [x] Business Advertising
-- [x] Novaconomy Market
-- [ ] Business Investing
-- [ ] Loan System
-- [ ] Auction House
+
+All Listed Features are available on our official [Trello Board](https://trello.com/b/3w4QIxpk/novaconomy).
 
 -----
 ## 💻 Novaconomy API
@@ -236,6 +250,9 @@ dependencies {
 
 -----
 ## 📷 Screenshots
+
+![Screenshot](https://media.discordapp.net/attachments/894254760075603980/1183594433678151792/2023-12-10_20.21.24.png)
+
 ![Screenshot](https://github.com/Team-Inceptus/Novaconomy/assets/54124162/710b18f9-fa24-4a1d-bdf3-f2bdafc9a124)
 
 ![Screenshot](https://github.com/Team-Inceptus/Novaconomy/assets/54124162/0bf0d340-0fcd-4049-8df5-dded4c326826)
