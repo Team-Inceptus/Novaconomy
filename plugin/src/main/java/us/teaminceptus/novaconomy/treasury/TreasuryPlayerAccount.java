@@ -42,7 +42,7 @@ final class TreasuryPlayerAccount implements PlayerAccount {
 
     @Override
     public CompletableFuture<BigDecimal> doTransaction(@NotNull EconomyTransaction trans) {
-        Economy econ = Economy.getEconomy(trans.getCurrencyId());
+        Economy econ = Economy.byName(trans.getCurrencyId());
         np.add(econ, trans.getAmount().doubleValue());
         treasuryTrans.get(this.np.getPlayer().getUniqueId()).add(trans);
 

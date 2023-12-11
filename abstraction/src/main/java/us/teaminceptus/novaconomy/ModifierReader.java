@@ -103,7 +103,7 @@ public final class ModifierReader {
             if (!Economy.exists(s1) && !Economy.exists(s2)) return null;
 
             String remove = Economy.exists(s1) ? s1 + "" : s2 + "";
-            Economy econ = Economy.exists(s1) ? Economy.getEconomy(s1) : Economy.getEconomy(s2);
+            Economy econ = Economy.exists(s1) ? Economy.bySymbol(s1) : Economy.bySymbol(s2);
             double amountD = Double.parseDouble(s.replaceAll("[" + remove + "]", ""));
             return new AbstractMap.SimpleEntry<>(econ, amountD);
         } catch (NumberFormatException e) {

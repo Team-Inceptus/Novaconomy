@@ -68,7 +68,7 @@ final class TreasuryAccount implements NonPlayerAccount, ConfigurationSerializab
         this.memberPermissions = memberPermissions;
 
         Map<Economy, Double> balEcon = new HashMap<>();
-        balances.forEach((k, v) -> balEcon.put(Economy.getEconomy(k), v));
+        balances.forEach((k, v) -> balEcon.put(Economy.byName(k), v));
         this.balances = balEcon;
     }
 
@@ -122,7 +122,7 @@ final class TreasuryAccount implements NonPlayerAccount, ConfigurationSerializab
     @Override
     public CompletableFuture<BigDecimal> doTransaction(@NotNull EconomyTransaction trans) {
         double amount = trans.getType() == EconomyTransactionType.DEPOSIT ? trans.getAmount().doubleValue() : -trans.getAmount().doubleValue();
-        Economy econ = Economy.getEconomy(trans.getCurrencyId());
+        Economy econ = Economy.byName(trans.getCurrencyId());
         balances.put(econ, balances.get(econ) + amount);
         save();
         return CompletableFuture.completedFuture(BigDecimal.valueOf(amount));

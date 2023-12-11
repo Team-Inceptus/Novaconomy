@@ -242,7 +242,7 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
      * @param name Name of the Economy
      * @see Economy#removeEconomy(Economy)
      */
-    public static void removeEconomy(@NotNull String name) { removeEconomy(getEconomy(name)); }
+    public static void removeEconomy(@NotNull String name) { removeEconomy(byName(name)); }
 
     /**
      * Remove an Economy from the Plugin
@@ -251,6 +251,9 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
      */
     public static void removeEconomy(@Nullable Economy econ) throws IllegalArgumentException {
         if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
+
+        ECONOMY_CACHE.clear();
+
         for (OfflinePlayer p : Bukkit.getOfflinePlayers()) {
             NovaPlayer np = new NovaPlayer(p);
             Map<String, Object> data = np.getPlayerData();
@@ -260,7 +263,21 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
                     .forEach(data::remove);
         }
 
-        econ.file.delete();
+        if (NovaConfig.getConfiguration().isDatabaseEnabled()) {
+            Connection db = NovaConfig.getConfiguration().getDatabaseConnection();
+
+            try {
+                PreparedStatement ps = db.prepareStatement("DELETE FROM economies WHERE id = ?");
+                ps.setString(1, econ.getUniqueId().toString());
+                ps.executeUpdate();
+                ps.close();
+            } catch (SQLException e) {
+                NovaConfig.print(e);
+            }
+        } else {
+            econ.file.delete();
+        }
+
         NovaConfig.getConfiguration().reloadHooks();
     }
 
@@ -271,7 +288,7 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
      * @throws IllegalArgumentException if name is null
      */
     @Nullable
-    public static Economy getEconomy(@NotNull String name) throws IllegalArgumentException {
+    public static Economy byName(@NotNull String name) throws IllegalArgumentException {
         if (name == null) throw new IllegalArgumentException("Name cannot be null");
 
         return Economy.getEconomies().stream()
@@ -287,7 +304,7 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
      */
     public static boolean exists(@Nullable String name) {
         if (name == null) return false;
-        return getEconomy(name) != null;
+        return byName(name) != null;
     }
 
     /**
@@ -297,7 +314,7 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
      */
     public static boolean exists(@Nullable UUID uid) {
         if (uid == null) return false;
-        return getEconomy(uid) != null;
+        return byId(uid) != null;
     }
 
     /**
@@ -306,7 +323,7 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
      * @return true if economy exists, else false`
      */
     public static boolean exists(char c) {
-        return getEconomy(c) != null;
+        return bySymbol(c) != null;
     }
 
     /**
@@ -366,7 +383,7 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
             for (File f : files) {
                 if (f == null) continue;
                 UUID id = UUID.fromString(f.getName().replace(".yml", ""));
-                economies.add(getEconomy(id));
+                economies.add(byId(id));
             }
         }
 
@@ -468,7 +485,7 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
      * @return Economy found, or null if not found or if UUID is null
      */
     @Nullable
-    public static Economy getEconomy(@Nullable UUID uid) {
+    public static Economy byId(@Nullable UUID uid) {
         if (uid == null) return null;
 
         Economy econ = null;
@@ -530,9 +547,24 @@ public final class Economy implements ConfigurationSerializable, Comparable<Econ
      * @return Economy found, or null if not found
      */
     @Nullable
-    public static Economy getEconomy(char symbol) {
+    public static Economy bySymbol(char symbol) {
         for (Economy econ : Economy.getEconomies()) if (econ.getSymbol() == symbol) return econ;
         return null;
+    }
+
+    /**
+     * Gets the first Economy in the list of Economies.
+     * @return First Economy
+     * @throws IllegalStateException if no economies are registered
+     */
+    public static Economy first() throws IllegalStateException {
+        if (getEconomies().isEmpty()) throw new IllegalStateException("No Economies are registered");
+
+        return getEconomies()
+                .stream()
+                .sorted(Economy::compareTo)
+                .collect(Collectors.toList())
+                .get(0);
     }
 
     /**

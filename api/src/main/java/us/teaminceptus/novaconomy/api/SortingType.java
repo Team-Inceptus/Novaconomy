@@ -3,10 +3,12 @@ package us.teaminceptus.novaconomy.api;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.jetbrains.annotations.NotNull;
+import us.teaminceptus.novaconomy.api.auction.AuctionProduct;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.corporation.CorporationInvite;
 import us.teaminceptus.novaconomy.api.economy.Economy;
-import us.teaminceptus.novaconomy.api.util.BusinessProduct;
+import us.teaminceptus.novaconomy.api.business.BusinessProduct;
+import us.teaminceptus.novaconomy.api.util.Product;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -61,27 +63,29 @@ public interface SortingType<T> extends Comparator<T> {
      */
     SortingType<Business> BUSINESS_CREATION_DATE_DESCENDING = BUSINESS_CREATION_DATE_ASCENDING.reversed();
 
-    // Business Products
+    // Products
 
     /**
      * Sorts a product by its name in ascending order.
      */
-    SortingType<BusinessProduct> PRODUCT_NAME_ASCENDING = (p1, p2) -> p1.getItem().getType().name().compareTo(p1.getItem().getType().name());
+    SortingType<Product> PRODUCT_NAME_ASCENDING = (p1, p2) -> p1.getItem().getType().name().compareTo(p1.getItem().getType().name());
 
     /**
      * Sorts a product by its name in descending order.
      */
-    SortingType<BusinessProduct> PRODUCT_NAME_DESCENDING = PRODUCT_NAME_ASCENDING.reversed();
+    SortingType<Product> PRODUCT_NAME_DESCENDING = PRODUCT_NAME_ASCENDING.reversed();
 
     /**
      * Sorts a product by its price in ascending order.
      */
-    SortingType<BusinessProduct> PRODUCT_PRICE_ASCENDING = (p1, p2) -> p2.getPrice().compareTo(p1.getPrice());
+    SortingType<Product> PRODUCT_PRICE_ASCENDING = (p1, p2) -> p2.getPrice().compareTo(p1.getPrice());
 
     /**
      * Sorts a product by its price in descending order.
      */
-    SortingType<BusinessProduct> PRODUCT_PRICE_DESCENDING = PRODUCT_PRICE_ASCENDING.reversed();
+    SortingType<Product> PRODUCT_PRICE_DESCENDING = PRODUCT_PRICE_ASCENDING.reversed();
+
+    // Business Products
 
     /**
      * Sorts a business product by its stock in ascending order.
@@ -108,6 +112,28 @@ public interface SortingType<T> extends Comparator<T> {
      * Sorts a business product by its purchase popularity in descending order.
      */
     SortingType<BusinessProduct> PRODUCT_POPULARITY_DESCENDING = PRODUCT_POPULARITY_ASCENDING.reversed();
+
+    // Auction Products
+
+    /**
+     * Sorts an auction product by its posted date in ascending order.
+     */
+    SortingType<AuctionProduct> AUCTION_POSTED_DATE_ASCENDING = (p1, p2) -> p1.getPostedTimestamp().compareTo(p2.getPostedTimestamp());
+
+    /**
+     * Sorts an auction product by its posted date in descending order.
+     */
+    SortingType<AuctionProduct> AUCTION_POSTED_DATE_DESCENDING = AUCTION_POSTED_DATE_ASCENDING.reversed();
+
+    /**
+     * Sorts an auction product by whether it is a buy now item.
+     */
+    SortingType<AuctionProduct> AUCTION_BUY_NOW = (p1, p2) -> Boolean.compare(p1.isBuyNow(), p2.isBuyNow());
+
+    /**
+     * Sorts an auction product by whether it is not a buy now item.
+     */
+    SortingType<AuctionProduct> AUCTION_NON_BUY_NOW = AUCTION_BUY_NOW.reversed();
 
     // Corporation Invites
 
@@ -248,9 +274,9 @@ public interface SortingType<T> extends Comparator<T> {
      */
     @NotNull
     @SuppressWarnings("unchecked")
-    static <T> SortingType<T>[] values(@NotNull Class<T> clazz) {
+    static <T> SortingType<? super T>[] values(@NotNull Class<T> clazz) {
         try {
-            List<SortingType<T>> values = new ArrayList<>();
+            List<SortingType<? super T>> values = new ArrayList<>();
 
             for (Field f : SortingType.class.getDeclaredFields()) {
                 if (!Modifier.isStatic(f.getModifiers())) continue;
@@ -260,8 +286,8 @@ public interface SortingType<T> extends Comparator<T> {
 
                 ParameterizedType type = (ParameterizedType) f.getGenericType();
                 Class<?> fClass = (Class<?>) type.getActualTypeArguments()[0];
-                if (clazz.isAssignableFrom(fClass))
-                    values.add((SortingType<T>) f.get(null));
+                if (fClass.isAssignableFrom(clazz))
+                    values.add((SortingType<? super T>) f.get(null));
             }
 
             return values.toArray(new SortingType[0]);

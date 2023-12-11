@@ -8,7 +8,6 @@ import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.api.economy.Economy;
-import us.teaminceptus.novaconomy.api.util.BusinessProduct;
 import us.teaminceptus.novaconomy.api.util.Price;
 import us.teaminceptus.novaconomy.api.util.Product;
 
@@ -211,7 +210,7 @@ public final class BusinessStatistics implements ConfigurationSerializable {
                     new Product(
                             (ItemStack) serial.get("item"),
                             new Price(
-                                    serial.containsKey("economy") ? Economy.getEconomy(UUID.fromString((String) serial.get("economy"))) : null,
+                                    serial.containsKey("economy") ? Economy.byId(UUID.fromString((String) serial.get("economy"))) : null,
                                     (double) serial.get("amount")
                             )
                     ), num

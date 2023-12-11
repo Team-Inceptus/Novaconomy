@@ -47,7 +47,7 @@ public class VaultRegistry {
         if (o instanceof Integer) return null;
 
         Economy first = Economy.getEconomies().stream().sorted(Comparator.comparing(Economy::getName)).collect(Collectors.toList()).get(0);
-        return Economy.getEconomy(NovaConfig.loadFunctionalityFile().getString("VaultEconomy", first.getName()));
+        return Economy.byName(NovaConfig.loadFunctionalityFile().getString("VaultEconomy", first.getName()));
     }
 
     private static void inject() {

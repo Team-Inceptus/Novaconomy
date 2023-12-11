@@ -1,12 +1,13 @@
-package us.teaminceptus.novaconomy.api.util;
+package us.teaminceptus.novaconomy.api.business;
 
+import com.google.common.collect.ImmutableMap;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.economy.Economy;
+import us.teaminceptus.novaconomy.api.util.Price;
+import us.teaminceptus.novaconomy.api.util.Product;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -14,6 +15,8 @@ import java.util.UUID;
  * Represents a Product owned by a Business
  */
 public final class BusinessProduct extends Product {
+
+    private static final long serialVersionUID = 7186744343709160963L;
 
     private Business business;
 
@@ -97,9 +100,10 @@ public final class BusinessProduct extends Product {
 
     @Override
     public Map<String, Object> serialize() {
-        return new HashMap<String, Object>(super.serialize()) {{
-            put("business", business.getUniqueId().toString());
-        }};
+        return ImmutableMap.<String, Object>builder()
+                .putAll(super.serialize())
+                .put("business", business.getUniqueId().toString())
+                .build();
     }
 
     /**

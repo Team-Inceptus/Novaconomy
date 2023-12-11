@@ -86,9 +86,19 @@ public class BusinessSupplyEvent extends BusinessEvent implements Cancellable {
     public enum Interval {
 
         /**
-         * Every Day (24 hours)
+         * Every 10 Minutes
          */
-        DAY(3600 * 24 * 20),
+        TEN_MINUTES(600 * 20),
+
+        /**
+         * Every 20 Minutes / Every MC Day
+         */
+        TWENTY_MINUTES(1200 * 20),
+
+        /**
+         * Every 30 Minutes
+         */
+        THIRTY_MINUTES(1800 * 20),
 
         /**
          * Every Hour
@@ -96,9 +106,24 @@ public class BusinessSupplyEvent extends BusinessEvent implements Cancellable {
         HOUR(3600 * 20),
 
         /**
-         * Every 20 Minutes / Every MC Day
+         * Every 2 Hours
          */
-        TWENTY_MINUTES(1200 * 20),
+        TWO_HOURS(2 * 3600 * 20),
+
+        /**
+         * Every 4 Hours
+         */
+        FOUR_HOURS(4 * 3600 * 20),
+
+        /**
+         * Every 12 Hours
+         */
+        TWELVE_HOURS(12 * 3600 * 20),
+
+        /**
+         * Every Day (24 hours)
+         */
+        DAY(3600 * 24 * 20),
 
         ;
 

@@ -64,7 +64,7 @@ public final class Bank {
         ResultSet rs = db.createStatement().executeQuery("SELECT * FROM bank");
 
         while (rs.next()) {
-            Economy econ = Economy.getEconomy(UUID.fromString(rs.getString("economy")));
+            Economy econ = Economy.byId(UUID.fromString(rs.getString("economy")));
             double amount = rs.getDouble("amount");
 
             bankBalances.put(econ, amount);

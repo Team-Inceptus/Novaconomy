@@ -1,5 +1,6 @@
 package us.teaminceptus.novaconomy.api.util;
 
+import com.google.common.collect.ImmutableMap;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -10,7 +11,6 @@ import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -37,7 +37,7 @@ public final class Price implements ConfigurationSerializable, Comparable<Price>
     public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
         this.amount = in.readDouble();
         String s = (String) in.readObject();
-        this.econ = s.isEmpty() ? null : Economy.getEconomy(UUID.fromString(s));
+        this.econ = s.isEmpty() ? null : Economy.byId(UUID.fromString(s));
     }
 
     // Other
@@ -210,10 +210,12 @@ public final class Price implements ConfigurationSerializable, Comparable<Price>
 
     @Override
     public Map<String, Object> serialize() {
-        return new HashMap<String, Object>() {{
-            put("amount", amount);
-            if (econ != null) put("economy", econ.getUniqueId().toString());
-        }};
+        ImmutableMap.Builder<String, Object> builder = ImmutableMap.<String, Object>builder()
+                .put("amount", amount);
+
+        if (econ != null) builder.put("economy", econ.getUniqueId().toString());
+
+        return builder.build();
     }
 
     /**
@@ -228,8 +230,8 @@ public final class Price implements ConfigurationSerializable, Comparable<Price>
         if (!serial.containsKey("economy")) return new Price((double) serial.get("amount"));
 
         String econInfo = (String) serial.get("economy");
-        if (econInfo.length() == 36) return new Price(Economy.getEconomy(UUID.fromString(econInfo)), (double) serial.get("amount"));
-        else return new Price(Economy.getEconomy(econInfo), (double) serial.get("amount"));
+        if (econInfo.length() == 36) return new Price(Economy.byId(UUID.fromString(econInfo)), (double) serial.get("amount"));
+        else return new Price(Economy.byName(econInfo), (double) serial.get("amount"));
     }
 
     @Override

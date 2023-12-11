@@ -30,6 +30,7 @@ import us.teaminceptus.novaconomy.abstraction.CommandWrapper;
 import us.teaminceptus.novaconomy.abstraction.Wrapper;
 import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.NovaConfig;
+import us.teaminceptus.novaconomy.api.auction.AuctionHouse;
 import us.teaminceptus.novaconomy.api.bank.Bank;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.business.BusinessStatistics;
@@ -51,7 +52,7 @@ import us.teaminceptus.novaconomy.api.player.Bounty;
 import us.teaminceptus.novaconomy.api.player.NovaPlayer;
 import us.teaminceptus.novaconomy.api.player.PlayerStatistics;
 import us.teaminceptus.novaconomy.api.settings.Settings;
-import us.teaminceptus.novaconomy.api.util.BusinessProduct;
+import us.teaminceptus.novaconomy.api.business.BusinessProduct;
 import us.teaminceptus.novaconomy.api.util.Price;
 import us.teaminceptus.novaconomy.api.util.Product;
 import us.teaminceptus.novaconomy.essentialsx.EssentialsListener;
@@ -210,6 +211,13 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
         public void run() {
             if (!NovaConfig.getConfiguration().isInterestEnabled()) return;
             runInterest();
+        }
+    };
+
+    private static final BukkitRunnable TICK_TASK = new BukkitRunnable() {
+        @Override
+        public void run() {
+            AuctionHouse.refreshAuctionHouse(false);
         }
     };
 
@@ -597,7 +605,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
                     if (!global.isSet("Bank." + econ.getName())) global.set("Bank." + econ.getName(), 0);
 
                 for (String s : global.getConfigurationSection("Bank").getKeys(false))
-                    if (Economy.getEconomy(s) == null) global.set("Bank." + s, null);
+                    if (Economy.byName(s) == null) global.set("Bank." + s, null);
 
                 global.save(globalF);
             } catch (IOException e) {
@@ -750,7 +758,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
                     Map<Economy, Double> balances = new HashMap<>();
 
                     for (Map.Entry<String, Object> entry : global.getConfigurationSection("Bank").getValues(false).entrySet()) {
-                        Economy econ = Economy.getEconomy(entry.getKey());
+                        Economy econ = Economy.byName(entry.getKey());
                         if (econ == null) continue;
 
                         double amount = ((Number) entry.getValue()).doubleValue();
@@ -879,7 +887,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
             }
 
             try (ResultSet market = meta.getTables(null, null, "market", null)) {
-                if (empty(NovaMarket.getMarketFile().list()) && market.first()) {
+                if (!NovaMarket.getMarketFile().exists() && market.first()) {
                     getLogger().warning("Converting Market to File Storage...");
                     readMarketDB();
                     writeMarketFile();
@@ -902,7 +910,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
                         PreparedStatement ps = db.prepareStatement("SELECT * FROM bank");
                         ResultSet rs = ps.executeQuery();
                         while (rs.next()) {
-                            Economy econ = Economy.getEconomy(UUID.fromString(rs.getString("economy")));
+                            Economy econ = Economy.byId(UUID.fromString(rs.getString("economy")));
                             double amount = rs.getDouble("amount");
 
                             amounts.put(econ, amount);
@@ -1002,9 +1010,11 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
         Business.getBusinesses();
         Corporation.getCorporations();
         Economy.getEconomies();
+        AuctionHouse.refreshAuctionHouse(true);
 
         INTEREST_RUNNABLE.runTaskTimer(this, getInterestTicks(), getInterestTicks());
         TAXES_RUNNABLE.runTaskTimer(this, getTaxesTicks(), getTaxesTicks());
+        TICK_TASK.runTaskTimer(this, 1L, 1L);
 
         for (Player p : Bukkit.getOnlinePlayers()) w.addPacketInjector(p);
 
@@ -2438,7 +2448,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
     @Override
     public @NotNull Set<Economy> getWhitelistedEconomies() {
         return ImmutableSet.copyOf(config.getStringList("Market.Purchasing.WhitelistedEconomies").stream()
-                .map(Economy::getEconomy)
+                .map(Economy::byName)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet()));
     }
@@ -2456,7 +2466,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
     @Override
     public @NotNull Set<Economy> getBlacklistedEconomies() {
         return ImmutableSet.copyOf(config.getStringList("Market.Purchasing.BlacklistedEconomies").stream()
-                .map(Economy::getEconomy)
+                .map(Economy::byName)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet()));
     }

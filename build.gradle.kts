@@ -1,6 +1,7 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 plugins {
+    kotlin("jvm") version "1.9.21"
     id("org.sonarqube") version "4.0.0.2929"
     id("com.github.johnrengelman.shadow") version "8.1.1" apply false
 
@@ -11,7 +12,7 @@ plugins {
 }
 
 val pGroup = "us.teaminceptus.novaconomy"
-val pVersion = "1.8.3-SNAPSHOT"
+val pVersion = "1.9.0-SNAPSHOT"
 val pAuthor = "Team-Inceptus"
 
 sonarqube {
@@ -96,8 +97,10 @@ subprojects {
     apply<JacocoPlugin>()
     apply(plugin = "org.sonarqube")
     apply(plugin = "com.github.johnrengelman.shadow")
+    apply(plugin = "org.jetbrains.kotlin.jvm")
 
     dependencies {
+        compileOnly(kotlin("stdlib"))
         compileOnly("org.jetbrains:annotations:24.1.0")
 
         testImplementation("org.spigotmc:spigot-api:1.8-R0.1-SNAPSHOT")
@@ -112,10 +115,21 @@ subprojects {
     }
 
     tasks {
+        assemble {
+            dependsOn(compileKotlin)
+        }
+
         compileJava {
             options.encoding = "UTF-8"
             options.isWarnings = false
             options.compilerArgs.addAll(listOf("-Xlint:all", "-Xlint:-processing"))
+        }
+
+        compileKotlin {
+            kotlinOptions {
+                jvmTarget = jvmVersion.toString()
+                freeCompilerArgs = listOf("-Xjvm-default=all")
+            }
         }
 
         jacocoTestReport {

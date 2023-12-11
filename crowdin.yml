@@ -1,0 +1,4 @@
+commit_message: "[ci skip]"
+files:
+  - source: /api/src/main/resources/lang/novaconomy.properties
+    translation: /api/src/main/resources/lang/novaconomy_%two_letters_code%.properties

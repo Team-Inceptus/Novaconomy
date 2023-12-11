@@ -414,6 +414,15 @@ public interface NovaConfig  {
     }
 
     /**
+     * Gets the folder where all Auction Data is stored.
+     * @return Auction Data Folder
+     */
+    @NotNull
+    static File getAuctionFolder() {
+        return new File(getDataFolder(), "auctions");
+    }
+
+    /**
      * Represents a Custom Tax Event in the configuration
      */
     final class CustomTaxEvent {

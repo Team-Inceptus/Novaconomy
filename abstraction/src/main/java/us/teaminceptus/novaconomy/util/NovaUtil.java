@@ -54,15 +54,6 @@ public final class NovaUtil {
 
     private NovaUtil() {}
 
-    public static String suffix(double number){
-        if (number >= 1_000_000_000_000L) return format("%.2fT", number / 1_000_000_000_000L);
-        if (number >= 1_000_000_000) return format("%.2fB", number / 1_000_000_000);
-        if (number >= 1_000_000) return format("%.2fM", number / 1_000_000);
-        if (number >= 1_000) return format("%.2fK", number / 1_000);
-
-        return format("%,.2f", number);
-    }
-
     public static void sync(Runnable r) {
         new BukkitRunnable() {
             @Override
@@ -161,8 +152,8 @@ public final class NovaUtil {
 
     private static final char[] SUFFIXES = "KMBTQEXSON".toCharArray();
 
-    public static String withSuffix(double num) {
-        if (num < 0) return "-" + withSuffix(-num);
+    public static String suffix(double num) {
+        if (num < 0) return "-" + suffix(-num);
         if (num < 1000) return format("%,.2f", num);
 
         int index = (int) (Math.log10(num) / 3);

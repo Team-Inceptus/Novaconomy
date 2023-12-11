@@ -1,5 +1,6 @@
 package us.teaminceptus.novaconomy.api.player;
 
+import com.google.common.collect.ImmutableMap;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
@@ -7,7 +8,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -93,13 +93,12 @@ public final class Bounty implements ConfigurationSerializable, Comparable<Bount
 
     @Override
     public Map<String, Object> serialize() {
-        Bounty b = this;
-        return new HashMap<String, Object>() {{
-            put("owner", b.owner.getPlayer().getUniqueId().toString());
-            put("target", b.target.getUniqueId().toString());
-            put("amount", b.amount);
-            put("economy", b.econ.getUniqueId().toString());
-        }};
+        return ImmutableMap.<String, Object>builder()
+                .put("owner", owner.getUniqueId().toString())
+                .put("target", target.getUniqueId().toString())
+                .put("amount", amount)
+                .put("economy", econ.getUniqueId().toString())
+                .build();
     }
 
     private void save() {
@@ -122,7 +121,7 @@ public final class Bounty implements ConfigurationSerializable, Comparable<Bount
 
         try {
             OfflinePlayer owner = Bukkit.getOfflinePlayer(UUID.fromString((String) serialize.get("owner")));
-            Economy econ = Economy.getEconomy(UUID.fromString((String) serialize.get("economy")));
+            Economy econ = Economy.byId(UUID.fromString((String) serialize.get("economy")));
             OfflinePlayer target = Bukkit.getOfflinePlayer(UUID.fromString((String) serialize.get("target")));
             return new Bounty(owner, econ, (double) serialize.get("amount"), target);
         } catch (ClassCastException | NullPointerException e) {

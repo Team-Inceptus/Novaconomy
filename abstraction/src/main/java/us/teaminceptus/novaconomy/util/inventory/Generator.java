@@ -14,10 +14,15 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.util.ChatPaginator;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.abstraction.NBTWrapper;
 import us.teaminceptus.novaconomy.abstraction.NovaInventory;
+import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.SortingType;
+import us.teaminceptus.novaconomy.api.auction.AuctionHouse;
+import us.teaminceptus.novaconomy.api.auction.AuctionProduct;
+import us.teaminceptus.novaconomy.api.auction.Bid;
 import us.teaminceptus.novaconomy.api.bank.Bank;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.business.Rating;
@@ -30,13 +35,16 @@ import us.teaminceptus.novaconomy.api.economy.market.Receipt;
 import us.teaminceptus.novaconomy.api.events.business.BusinessAdvertiseEvent;
 import us.teaminceptus.novaconomy.api.player.NovaPlayer;
 import us.teaminceptus.novaconomy.api.settings.Settings;
-import us.teaminceptus.novaconomy.api.util.BusinessProduct;
+import us.teaminceptus.novaconomy.api.business.BusinessProduct;
+import us.teaminceptus.novaconomy.api.util.Price;
 
 import java.lang.reflect.Method;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.*;
@@ -50,6 +58,7 @@ import static us.teaminceptus.novaconomy.util.inventory.Items.*;
 public final class Generator {
 
     public static final int GUI_SPACE = 28;
+    public static final String STORED = "stored";
 
     private Generator() {
     }
@@ -66,7 +75,7 @@ public final class Generator {
         return genGUI("", size, name);
     }
 
-    public static List<NovaInventory> generateBusinessData(Business b, Player viewer, boolean advertising, SortingType<BusinessProduct> sorter) {
+    public static List<NovaInventory> generateBusinessData(Business b, Player viewer, boolean advertising, SortingType<? super BusinessProduct> sorter) {
         List<NovaInventory> invs = new ArrayList<>();
         int limit = ((b.getProducts().size() - 1) / 26) + 1;
         for (int i = 0; i < limit; i++) {
@@ -77,7 +86,7 @@ public final class Generator {
 
             inv.setAttribute("business", b.getUniqueId());
             inv.setAttribute("sorting_type", BusinessProduct.class);
-            inv.setAttribute("sorting_function", (Function<SortingType<BusinessProduct>, NovaInventory>) s ->
+            inv.setAttribute("sorting_function", (Function<SortingType<? super BusinessProduct>, NovaInventory>) s ->
                     generateBusinessData(b, viewer, advertising, s).get(fI));
 
             inv.setItem(18, sorter(sorter));
@@ -1157,10 +1166,10 @@ public final class Generator {
 
             if (limit > 1) {
                 if (i > 0)
-                    inv.setItem(47, Items.prev("stored"));
+                    inv.setItem(47, Items.prev(STORED));
 
                 if (i < (limit - 1))
-                    inv.setItem(53, Items.next("stored"));
+                    inv.setItem(53, Items.next(STORED));
             }
 
             invs.add(inv);
@@ -1168,6 +1177,238 @@ public final class Generator {
 
         if (limit > 1)
             for (NovaInventory inv : invs) inv.setAttribute("invs", invs);
+
+        return invs;
+    }
+
+    public static List<NovaInventory> generateAuctionHouse(@NotNull OfflinePlayer viewer, @NotNull SortingType<? super AuctionProduct> sortingType, @NotNull String searchQuery) {
+        return generateAuctionHouse(viewer, sortingType, searchQuery, a -> !a.isExpired());
+    }
+
+    public static List<NovaInventory> generateAuctionHouse(@NotNull OfflinePlayer viewer, @NotNull SortingType<? super AuctionProduct> sortingType, @NotNull String searchQuery, @NotNull Predicate<AuctionProduct> internal) {
+        List<NovaInventory> invs = new ArrayList<>();
+        NovaPlayer np = new NovaPlayer(viewer);
+
+        List<AuctionProduct> items = AuctionHouse.getProducts()
+                .stream()
+                .filter(internal)
+                .filter(a -> {
+                    if (searchQuery.isEmpty()) return true;
+
+                    ItemStack item = a.getItem();
+                    String display = item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : "";
+
+                    AtomicBoolean contains = new AtomicBoolean(false);
+
+                    for (String s : searchQuery.split("\\s")) {
+                        if (item.getType().name().toLowerCase().contains(s.toLowerCase())) contains.compareAndSet(false, true);
+                        if (display.toLowerCase().contains(s.toLowerCase())) contains.compareAndSet(false, true);
+                    }
+
+                    return contains.get();
+                })
+                .sorted(sortingType)
+                .collect(Collectors.toList());
+
+        int limit = (items.size() / GUI_SPACE) + 1;
+
+        for (int i = 0; i < limit; i++) {
+            NovaInventory inv = genGUI(54, get("constants.auction_house") + " | " + format(get("constants.page"), i + 1));
+            inv.setCancelled();
+            inv.setAttribute("auction:search_query", searchQuery);
+
+            inv.setItem(4, createPlayerHead(viewer));
+
+            if (searchQuery.isEmpty())
+                inv.setItem(6, builder(OAK_SIGN,
+                        meta -> meta.setDisplayName(ChatColor.YELLOW + get("constants.search")),
+                        nbt -> nbt.setID("auction_house:search")
+
+                ));
+            else
+                inv.setItem(6, builder(RED_WOOL,
+                        meta -> {
+                            meta.setDisplayName(ChatColor.RED + get("constants.clear_search"));
+                            meta.setLore(Collections.singletonList(ChatColor.YELLOW + "\"" + searchQuery + "\""));
+                        },
+                        nbt -> {
+                            nbt.setID("auction_house:search");
+                            nbt.set("clear", true);
+                        }
+                ));
+
+            inv.setItem(7, builder(Material.PAPER,
+                    meta -> meta.setDisplayName(ChatColor.GREEN + get("constants.jump_to_page")),
+                    nbt -> nbt.setID("auction_house:jump_page")
+            ));
+
+            final int fI = i;
+            inv.setAttribute("sorting_type", AuctionProduct.class);
+            inv.setAttribute("sorting_function", (Function<SortingType<? super AuctionProduct>, NovaInventory>) s ->
+                    generateAuctionHouse(viewer, s, searchQuery).get(fI));
+
+            inv.setItem(18, Items.sorter(sortingType));
+
+            List<AuctionProduct> products = items.subList(i * GUI_SPACE, Math.min(items.size(), (i + 1) * GUI_SPACE));
+            products.forEach(a -> {
+                boolean loose = a.isLoosePrice();
+                Price price = !a.isBuyNow() && !AuctionHouse.getBids(a).isEmpty() ? AuctionHouse.getTopBid(a).getPrice() : a.getPrice();
+
+                inv.addItem(builder(a.getItem(),
+                        meta -> meta.setLore(Arrays.asList(
+                                (loose ? ChatColor.AQUA : ChatColor.GOLD) + price.toString() + (loose ? "(" + get("constants.loose_price") + ")" : ""),
+                                ChatColor.GREEN + formatTimeAgo(a.getPostedTimestamp().getTime()),
+                                a.isBuyNow() ? ChatColor.DARK_PURPLE + get("constants.sorting_types.auction.buy_now") : "",
+                                " ",
+                                ChatColor.YELLOW + get("constants.right_click_info"),
+                                ChatColor.YELLOW + get("constants.auction_house.left_click")
+                        )),
+                        nbt -> {
+                            nbt.setID("auction:click");
+                            nbt.set(PRODUCT_TAG, a.getUUID());
+                        })
+                );
+            });
+
+            if (!AuctionHouse.getBidsBy(viewer).isEmpty())
+                inv.setItem(49, builder(Material.GOLD_INGOT,
+                        meta -> meta.setDisplayName(ChatColor.GOLD + get("constants.auction_house.my_bids")),
+                        nbt -> {
+                            nbt.setID("auction_house:my_bids");
+                            nbt.set("bidder", viewer.getUniqueId());
+                        }
+                ));
+
+            if (!AuctionHouse.getProducts(viewer).isEmpty())
+                inv.setItem(50, builder(Material.IRON_DOOR,
+                        meta -> meta.setDisplayName(ChatColor.LIGHT_PURPLE + get("constants.auction_house.my_auctions")),
+                        nbt -> {
+                            nbt.setID("auction_house:my_auctions");
+                            nbt.set("owner", viewer.getUniqueId());
+                        }
+                ));
+
+            if (!np.getWonAuctions().isEmpty())
+                inv.setItem(51, builder(Material.CHEST,
+                        meta -> meta.setDisplayName(ChatColor.YELLOW + get("constants.auction_house.won_auctions")),
+                        nbt -> {
+                            nbt.setID("auction_house:won_auctions");
+                            nbt.set("owner", viewer.getUniqueId());
+                        }
+                ));
+
+
+            if (limit > 1) {
+                if (i > 0)
+                    inv.setItem(47, Items.prev(STORED));
+
+                if (i < (limit - 1))
+                    inv.setItem(53, Items.next(STORED));
+            }
+
+            invs.add(inv);
+        }
+
+        if (limit > 1)
+            for (NovaInventory inv : invs) inv.setAttribute("invs", invs);
+
+        return invs;
+    }
+
+    public static NovaInventory generateAuctionInfo(@NotNull OfflinePlayer viewer, @NotNull AuctionProduct a, @Nullable String searchQuery) {
+        NovaInventory inv = genGUI(45, get("constants.auction_house"));
+        inv.setCancelled();
+        inv.setAttribute("auction:search_query", searchQuery);
+
+        inv.setItem(4, createPlayerHead(viewer));
+
+        SimpleDateFormat format = new SimpleDateFormat(AuctionProduct.EXPIRATION_FORMAT.toPattern(), Language.getCurrentLocale());
+        inv.setItem(13, Items.builder(a.getItem(),
+                meta -> meta.setLore(Arrays.asList(
+                        ChatColor.LIGHT_PURPLE + "ID: " + a.getUUID().toString().replace("-", ""),
+                        " ",
+                        ChatColor.RED + format(ChatColor.RED + get("constants.expires_on"), format.format(a.getExpirationTimestamp())),
+                        ChatColor.YELLOW + a.getPrice().toString(),
+                        ChatColor.GOLD + formatTimeAgo(a.getPostedTimestamp().getTime())
+                ))
+        ));
+
+        if (!a.isBuyNow() && !AuctionHouse.getBids(a).isEmpty()) {
+            Bid top = AuctionHouse.getTopBid(a);
+            inv.setItem(30, Items.builder(Material.CHEST,
+                    meta -> {
+                        meta.setDisplayName(ChatColor.YELLOW + get("constants.top_bid"));
+                        meta.setLore(Collections.singletonList(
+                                ChatColor.AQUA + top.getBidder().getName() + " | " + ChatColor.GOLD + top.getPrice()
+                        ));
+                    }
+            ));
+        }
+
+        if (a.getOwner().equals(viewer)) {
+            inv.setItem(31, builder(Material.REDSTONE_BLOCK,
+                    meta -> meta.setDisplayName(ChatColor.RED + get("constants.remove_item")),
+                    nbt -> {
+                        nbt.setID("auction:remove_item");
+                        nbt.set(PRODUCT_TAG, a.getUUID());
+                    })
+            );
+
+            inv.setItem(32, builder(IRON_BARS,
+                    meta -> meta.setDisplayName(ChatColor.YELLOW + get("constants.auction_house.end_auction")),
+                    nbt -> {
+                        nbt.setID("auction:end");
+                        nbt.set(PRODUCT_TAG, a.getUUID());
+                    })
+            );
+        }
+
+        inv.setItem(38, builder(BACK, nbt -> nbt.setID("auction_house")));
+
+        return inv;
+    }
+
+    public static List<NovaInventory> generateWonAuctions(@NotNull Player p) {
+        NovaPlayer np = new NovaPlayer(p);
+
+        List<NovaInventory> invs = new ArrayList<>();
+        List<AuctionProduct> wonProducts = np.getWonAuctions().stream()
+                .sorted(Comparator.comparing(AuctionProduct::getExpirationTimestamp))
+                .collect(Collectors.toList());
+
+        int limit = (wonProducts.size() / GUI_SPACE) + 1;
+
+        for (int i = 0; i < limit; i++) {
+            List<AuctionProduct> pageProducts = wonProducts.subList(i * GUI_SPACE, Math.min(wonProducts.size(), (i + 1) * GUI_SPACE));
+            NovaInventory won = genGUI(54, get("constants.auction_house.won_auctions"));
+            won.setCancelled();
+            won.setAttribute("page", i);
+
+            for (AuctionProduct product : pageProducts)
+                won.addItem(builder(product.getItem(),
+                        meta -> meta.setLore(Arrays.asList(
+                                ChatColor.GOLD + format(get("constants.price"), format("%,.2f", product.getPrice().getAmount()), product.getPrice().getEconomy().getSymbol()),
+                                " ",
+                                ChatColor.YELLOW + get("constants.click_to_claim")
+                        )), nbt -> {
+                            nbt.setID("auction:claim");
+                            nbt.set(PRODUCT_TAG, product.getUUID());
+                        })
+                );
+
+            if (limit > 1) {
+                if (i > 0)
+                    won.setItem(47, Items.prev(STORED));
+
+                if (i < (limit - 1))
+                    won.setItem(53, Items.next(STORED));
+            }
+
+            invs.add(won);
+        }
+
+        if (limit > 1)
+            invs.forEach(i -> i.setAttribute("invs", invs));
 
         return invs;
     }

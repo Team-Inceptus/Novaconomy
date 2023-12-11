@@ -1,7 +1,7 @@
 package us.teaminceptus.novaconomy.api.events.business;
 
 import org.jetbrains.annotations.NotNull;
-import us.teaminceptus.novaconomy.api.util.BusinessProduct;
+import us.teaminceptus.novaconomy.api.business.BusinessProduct;
 
 /**
  * Called when a Business Product is removed

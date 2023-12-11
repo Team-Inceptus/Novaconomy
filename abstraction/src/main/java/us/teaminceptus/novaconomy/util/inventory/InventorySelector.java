@@ -26,15 +26,15 @@ public final class InventorySelector {
     private InventorySelector() { throw new UnsupportedOperationException(); }
 
 
-    public static NovaInventory confirm(Player p, Runnable confirm) {
-        return confirm(p, confirm, () -> {
+    public static NovaInventory confirm(Player p, Consumer<NovaInventory> confirm) {
+        return confirm(p, confirm, inv -> {
             p.closeInventory();
             NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
         });
     }
 
     @NotNull
-    public static NovaInventory confirm(Player p, Runnable confirm, Runnable cancel) {
+    public static NovaInventory confirm(Player p, Consumer<NovaInventory> confirm, Consumer<NovaInventory> cancel) {
         NovaInventory inv = genGUI("confirm_menu", 27, get("constants.are_you_sure"));
         inv.setCancelled();
 

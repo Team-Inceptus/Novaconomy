@@ -6,7 +6,7 @@ import org.bukkit.inventory.ItemStack;
 import us.teaminceptus.novaconomy.abstraction.NBTWrapper;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.economy.Economy;
-import us.teaminceptus.novaconomy.api.util.BusinessProduct;
+import us.teaminceptus.novaconomy.api.business.BusinessProduct;
 import us.teaminceptus.novaconomy.api.util.Product;
 
 import java.nio.ByteBuffer;
@@ -150,7 +150,7 @@ final class NBTWrapper1_8_R2 extends NBTWrapper {
         long eF = ebb.getLong();
         long eS = ebb.getLong();
 
-        Economy econ = Economy.getEconomy(new UUID(eF, eS));
+        Economy econ = Economy.byId(new UUID(eF, eS));
         ItemStack item = CraftItemStack.asBukkitCopy(net.minecraft.server.v1_8_R2.ItemStack.createStack(productT.getCompound("item")));
 
         Product p = new Product(item, econ, amount);

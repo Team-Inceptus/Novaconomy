@@ -1,5 +1,5 @@
 name: Novaconomy
-version: 1.8.3
+version: 1.9.0
 description: ${project.description}
 author: Team Inceptus
 load: POSTWORLD
@@ -168,6 +168,11 @@ permissions:
       novaconomy.user: true
   novaconomy.user.stats:
     description: Access to view self and others statistics
+    default: true
+    children:
+      novaconomy.user: true
+  novaconomy.user.auction_house:
+    description: Access to view and use the auction house
     default: true
     children:
       novaconomy.user: true

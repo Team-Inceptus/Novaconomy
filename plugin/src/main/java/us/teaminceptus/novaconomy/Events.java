@@ -93,7 +93,7 @@ final class Events implements Listener {
 
         NBTWrapper nbt = of(item);
 
-        Economy econ = Economy.getEconomy(nbt.getUUID(ECON_TAG));
+        Economy econ = Economy.byId(nbt.getUUID(ECON_TAG));
         double amount = nbt.getDouble(AMOUNT_TAG);
 
         np.add(econ, amount);

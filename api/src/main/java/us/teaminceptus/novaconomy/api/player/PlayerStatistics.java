@@ -1,6 +1,7 @@
 package us.teaminceptus.novaconomy.api.player;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
@@ -16,6 +17,11 @@ import java.util.*;
  * Represents NovaPlayer Statistics
  */
 public final class PlayerStatistics implements ConfigurationSerializable {
+
+    /**
+     * The maximum length of a player's transaction history.
+     */
+    public static final int MAX_TRANSACTION_HISTORY = 20;
 
     private final OfflinePlayer player;
 
@@ -56,7 +62,7 @@ public final class PlayerStatistics implements ConfigurationSerializable {
 
         try {
             stats.highestBalance = (double) serial.getOrDefault("highest_balance", 0);
-            stats.highestBalanceEconomy = serial.containsKey("highest_balance_economy") ? Economy.getEconomy(UUID.fromString(serial.get("highest_balance_economy").toString())) : null;
+            stats.highestBalanceEconomy = serial.containsKey("highest_balance_economy") ? Economy.byId(UUID.fromString(serial.get("highest_balance_economy").toString())) : null;
             stats.productsPurchased = (int) serial.getOrDefault("products_purchased", 0);
             stats.moneyAdded = (double) serial.getOrDefault("money_added", 0);
             stats.totalWithdrawn = (double) serial.getOrDefault("total_withdrawn", 0);
@@ -159,8 +165,8 @@ public final class PlayerStatistics implements ConfigurationSerializable {
     }
 
     /**
-     * Fetches an immutable version of the last 10 transactions this Player has made.
-     * @return Last 10 transactions this Player has made
+     * Fetches an immutable version of the last transactions this Player has made.
+     * @return Last transactions this Player has made according to {@link #MAX_TRANSACTION_HISTORY}
      */
     @NotNull
     public List<BusinessStatistics.Transaction> getTransactionHistory() {
@@ -174,25 +180,33 @@ public final class PlayerStatistics implements ConfigurationSerializable {
     public void setTransactionHistory(@NotNull List<BusinessStatistics.Transaction> history) {
         if (history == null) return;
         this.transactionHistory.clear();
-        this.transactionHistory.addAll(history.subList(0, Math.min(history.size(), 10)));
+        this.transactionHistory.addAll(history.subList(0, Math.min(history.size(), MAX_TRANSACTION_HISTORY)));
+    }
+
+    /**
+     * Clears the transaction history for this Player.
+     */
+    public void clearTransactionHistory() {
+        this.transactionHistory.clear();
     }
 
     @NotNull
     @Override
     public Map<String, Object> serialize() {
-        return new HashMap<String, Object>() {{
-            put("player", player.getUniqueId().toString());
-            put("highest_balance", highestBalance);
-            put("products_purchased", productsPurchased);
-            put("money_added", moneyAdded);
-            put("total_withdrawn", totalWithdrawn);
-            put("total_bounties_created", totalBountiesCreated);
-            put("total_bounties_had", totalBountiesHad);
-            put("transaction_history", transactionHistory);
-            put("total_shares_purchased", totalSharesPurchased);
-            put("total_money_spent", totalMoneySpent);
+        ImmutableMap.Builder<String, Object> builder = ImmutableMap.<String, Object>builder()
+                .put("player", player.getUniqueId().toString())
+                .put("highest_balance", highestBalance)
+                .put("products_purchased", productsPurchased)
+                .put("money_added", moneyAdded)
+                .put("total_withdrawn", totalWithdrawn)
+                .put("total_bounties_created", totalBountiesCreated)
+                .put("total_bounties_had", totalBountiesHad)
+                .put("transaction_history", transactionHistory)
+                .put("total_shares_purchased", totalSharesPurchased)
+                .put("total_money_spent", totalMoneySpent);
 
-            if (highestBalanceEconomy != null) put("highest_balance_economy", highestBalanceEconomy.getUniqueId().toString());
-        }};
+        if (highestBalanceEconomy != null) builder.put("highest_balance_economy", highestBalanceEconomy.getUniqueId().toString());
+
+        return builder.build();
     }
 }

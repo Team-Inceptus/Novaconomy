@@ -2,6 +2,33 @@
 
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
+val versions = listOf(
+    "1_8_R1",
+    "1_8_R2",
+    "1_8_R3",
+    "1_9_R1",
+    "1_9_R2",
+    "1_10_R1",
+    "1_11_R1",
+    "1_12_R1",
+    "1_13_R1",
+    "1_13_R2",
+    "1_14_R1",
+    "1_15_R1",
+    "1_16_R1",
+    "1_16_R2",
+    "1_16_R3",
+    "1_17_R1",
+    "1_18_R1",
+    "1_18_R2",
+    "1_19_R1",
+    "1_19_R2",
+    "1_19_R3",
+    "1_20_R1",
+    "1_20_R2",
+    "1_20_R3"
+)
+
 dependencies {
     // Spigot
     compileOnly("org.spigotmc:spigot-api") {
@@ -21,53 +48,21 @@ dependencies {
     compileOnly("net.essentialsx:EssentialsX:2.20.1")
 
     // API
-
-    listOf(
-        "api",
-        "abstract",
-        "1_8_R1",
-        "1_8_R2",
-        "1_8_R3",
-        "1_9_R1",
-        "1_9_R2",
-        "1_10_R1",
-        "1_11_R1",
-        "1_12_R1",
-        "1_13_R1",
-        "1_13_R2",
-        "1_14_R1",
-        "1_15_R1",
-        "1_16_R1",
-        "1_16_R2",
-        "1_16_R3",
-        "1_17_R1",
-        "1_18_R1",
-        "1_18_R2",
-        "1_19_R1",
-        "1_19_R2",
-        "1_19_R3",
-        "1_20_R1",
-        "1_20_R2"
-    ).forEach { api(project(":novaconomy-$it")) }
+    api(project(":novaconomy-api"))
+    api(project(":novaconomy-abstract"))
+    versions.forEach { api(project(":novaconomy-$it")) }
 }
 
 tasks {
+    compileJava {
+        versions.subList(versions.indexOf("1_18_R1"), versions.size).forEach { dependsOn(project(":novaconomy-$it").tasks["assemble"]) }
+    }
+
     register("sourcesJar", Jar::class.java) {
         dependsOn("classes")
         archiveClassifier.set("sources")
 
         from(sourceSets["main"].allSource)
-    }
-
-    compileJava {
-        listOf(
-            "1_18_R1",
-            "1_18_R2",
-            "1_19_R1",  
-            "1_19_R2",
-            "1_19_R3",
-            "1_20_R1"
-        ).forEach { dependsOn(":novaconomy-$it:remap") }
     }
 
     withType<ProcessResources> {
