@@ -172,7 +172,6 @@ subprojects {
                     "Implementation-Vendor" to pAuthor
                 )
             }
-            exclude("META-INF", "META-INF/**")
 
             relocate("revxrsal.commands", "us.teaminceptus.novaconomy.shaded.lamp")
             relocate("org.bstats", "us.teaminceptus.novaconomy.shaded.bstats")
