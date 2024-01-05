@@ -804,9 +804,7 @@ public final class NovaPlayer {
      * <p>This will return {@code false} if the player does not own a corporation, business, or if the permission is null.</p>
      * @param permission
      * @return true if this player has the corporation permission, else false
-     * @deprecated Draft API
      */
-    @Deprecated
     public boolean hasPermission(@Nullable CorporationPermission permission) {
         if (permission == null) return false;
 

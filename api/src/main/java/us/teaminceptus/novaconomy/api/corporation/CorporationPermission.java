@@ -2,9 +2,7 @@ package us.teaminceptus.novaconomy.api.corporation;
 
 /**
  * Represents a permission in a Corporation.
- * @deprecated Draft API
  */
-@Deprecated
 public enum CorporationPermission {
 
     /**

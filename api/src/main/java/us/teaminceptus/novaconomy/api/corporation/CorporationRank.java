@@ -16,9 +16,7 @@ import java.util.stream.Collectors;
 
 /**
  * Represents a rank in a Corporation.
- * @deprecated Draft API
  */
-@Deprecated
 public final class CorporationRank implements Serializable, ConfigurationSerializable {
 
     private static final long serialVersionUID = 5906646942872358140L;
