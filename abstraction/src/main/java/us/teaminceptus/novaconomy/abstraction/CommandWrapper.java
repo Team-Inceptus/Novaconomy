@@ -296,7 +296,7 @@ public interface CommandWrapper {
             return;
         }
 
-        if (np.getBalance(from) < amount) {
+        if (!np.canAfford(from, amount, NovaConfig.getConfiguration().getWhenNegativeAllowConvertBalances())) {
             p.sendMessage(format(getMessage("error.economy.invalid_amount"), RED + get("constants.convert")));
             return;
         }
@@ -567,7 +567,7 @@ public interface CommandWrapper {
         }
 
         NovaPlayer nt = new NovaPlayer(p);
-        if (take && nt.getBalance(econ) < amount) {
+        if (take && !nt.canAfford(econ, amount, NovaConfig.getConfiguration().getWhenNegativeAllowCreateChecks())) {
             p.sendMessage(format(getMessage("error.economy.invalid_amount"), get("constants.purchase")));
             return;
         }
@@ -909,7 +909,7 @@ public interface CommandWrapper {
 
     default void bankDeposit(Player p, double amount, Economy econ) {
         NovaPlayer np = new NovaPlayer(p);
-        if (np.getBalance(econ) < amount) {
+        if (!np.canAfford(econ, amount, NovaConfig.getConfiguration().getWhenNegativeAllowPayBanks())) {
             p.sendMessage(format(getMessage("error.economy.invalid_amount"), get("constants.bank.deposit")));
             return;
         }
@@ -1015,7 +1015,7 @@ public interface CommandWrapper {
         }
 
         NovaPlayer np = new NovaPlayer(p);
-        if (np.getBalance(econ) < amount) {
+        if (!np.canAfford(econ, amount, NovaConfig.getConfiguration().getWhenNegativeAllowCreateBounties())) {
             p.sendMessage(format(getMessage("error.economy.invalid_amount"), get("constants.place_bounty")));
             return;
         }

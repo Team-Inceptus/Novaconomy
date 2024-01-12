@@ -22,7 +22,6 @@ import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.SortingType;
 import us.teaminceptus.novaconomy.api.auction.AuctionHouse;
 import us.teaminceptus.novaconomy.api.auction.AuctionProduct;
-import us.teaminceptus.novaconomy.api.auction.Bid;
 import us.teaminceptus.novaconomy.api.bank.Bank;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.business.BusinessProduct;
@@ -48,7 +47,6 @@ import us.teaminceptus.novaconomy.api.util.Price;
 import us.teaminceptus.novaconomy.api.util.Product;
 import us.teaminceptus.novaconomy.util.NovaSound;
 import us.teaminceptus.novaconomy.util.NovaUtil;
-import us.teaminceptus.novaconomy.util.inventory.Generator;
 import us.teaminceptus.novaconomy.util.inventory.InventorySelector;
 import us.teaminceptus.novaconomy.util.inventory.Items;
 
@@ -128,7 +126,7 @@ final class GUIManager implements Listener {
         ItemStack econWheel = inv.getItem(31);
         Economy econ = getEconomy(econWheel);
 
-        if (add && np.getBalance(econ) < amount) {
+        if (add && !np.canAfford(econ, amount)) {
             p.sendMessage(format(getMessage("error.economy.invalid_amount"), get("constants.deposit")));
             return;
         }
@@ -256,17 +254,17 @@ final class GUIManager implements Listener {
 
                 BusinessProduct pr = (BusinessProduct) getProduct(item);
 
-                if (np.getBalance(pr.getEconomy()) < pr.getPrice().getAmount()) {
+                if (!np.canAfford(pr, NovaConfig.getConfiguration().getWhenNegativeAllowPurchaseProducts())) {
                     p.sendMessage(format(get("error.economy.invalid_amount"), get("constants.purchase")));
                     return;
                 }
 
-                NovaInventory purchaseGUI = genGUI(27, NovaUtil.capitalize(get("constants.purchase")) + " \"" + ChatColor.RESET + name + ChatColor.RESET + "\"?");
-                purchaseGUI.setCancelled();
+                NovaInventory purchase = genGUI(27, NovaUtil.capitalize(get("constants.purchase")) + " \"" + ChatColor.RESET + name + ChatColor.RESET + "\"?");
+                purchase.setCancelled();
 
-                for (int i = 10; i < 17; i++) purchaseGUI.setItem(i, GUI_BACKGROUND);
+                for (int i = 10; i < 17; i++) purchase.setItem(i, GUI_BACKGROUND);
 
-                purchaseGUI.setItem(13, item);
+                purchase.setItem(13, item);
 
                 for (int j = 0; j < 2; j++)
                     for (int i = 0; i < 3; i++) {
@@ -283,17 +281,11 @@ final class GUIManager implements Listener {
                                 }
                         );
 
-                        purchaseGUI.setItem(add ? 13 + (i + 1) : 13 - (i + 1), amountI);
+                        purchase.setItem(add ? 13 + (i + 1) : 13 - (i + 1), amountI);
                     }
 
-                if (np.getBalance(pr.getEconomy()) < pr.getPrice().getAmount())
-                    purchaseGUI.setItem(21, invalid(get("constants.purchase")));
-                else
-                    purchaseGUI.setItem(21, yes("buy_product", nbt -> nbt.set(PRODUCT_TAG, pr)));
-
-                inv.setAttribute(PRODUCT_TAG, pr);
-
-                purchaseGUI.setItem(23, cancel("no_product", nbt -> nbt.set(BUSINESS_TAG, pr.getBusiness().getUniqueId())));
+                purchase.setItem(21, yes("buy_product", nbt -> nbt.set(PRODUCT_TAG, pr)));
+                purchase.setItem(23, cancel("no_product", nbt -> nbt.set(BUSINESS_TAG, pr.getBusiness().getUniqueId())));
 
                 ItemStack amountPane = builder(item.getType(),
                         meta -> {
@@ -301,9 +293,9 @@ final class GUIManager implements Listener {
                             meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES);
                         }, nbt -> nbt.set(AMOUNT_TAG, 1)
                 );
-                purchaseGUI.setItem(22, amountPane);
+                purchase.setItem(22, amountPane);
 
-                p.openInventory(purchaseGUI);
+                p.openInventory(purchase);
                 NovaSound.BLOCK_CHEST_OPEN.playFailure(p);
             })
             .put("product:amount", (e, inv) -> {
@@ -326,7 +318,9 @@ final class GUIManager implements Listener {
 
                 BusinessProduct pr = (BusinessProduct) getProduct(item);
 
-                if (np.getBalance(pr.getEconomy()) < pr.getPrice().getAmount() * newA)
+                double price = pr.getPrice().getAmount() * newA;
+
+                if (!np.canAfford(pr.getEconomy(), price, NovaConfig.getConfiguration().getWhenNegativeAllowPurchaseProducts()))
                     inv.setItem(21, invalid(get("constants.purchase")));
                 else
                     inv.setItem(21, yes("buy_product", nbt -> nbt.set(PRODUCT_TAG, pr)));
@@ -414,12 +408,6 @@ final class GUIManager implements Listener {
                 NovaPlayer np = new NovaPlayer(p);
                 BusinessProduct bP = (BusinessProduct) getProduct(item);
 
-                if (!np.canAfford(bP)) {
-                    p.sendMessage(format(get("error.economy.invalid_amount"), get("constants.purchase")));
-                    p.closeInventory();
-                    return;
-                }
-
                 ItemStack product = bP.getItem();
                 int size = Math.min((int) of(inv.getItem(22)).getDouble(AMOUNT_TAG), bP.getBusiness().getTotalStock(product));
                 product.setAmount(size);
@@ -427,7 +415,7 @@ final class GUIManager implements Listener {
                 Economy econ = bP.getEconomy();
                 double amount = bP.getPrice().getAmount() * size;
 
-                if (np.getBalance(econ) < amount) {
+                if (!np.canAfford(econ, amount, NovaConfig.getConfiguration().getWhenNegativeAllowPurchaseProducts())) {
                     p.sendMessage(format(get("error.economy.invalid_amount"), get("constants.purchase")));
                     p.closeInventory();
                     return;
@@ -596,7 +584,7 @@ final class GUIManager implements Listener {
                 }
 
                 double take = getAmount(takeItem);
-                if (np.getBalance(takeEcon) < take) {
+                if (!np.canAfford(takeEcon, take, NovaConfig.getConfiguration().getWhenNegativeAllowConvertBalances())) {
                     p.closeInventory();
                     p.sendMessage(format(getError("error.economy.invalid_amount"), get("constants.convert")));
                     NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(e.getWhoClicked());
@@ -1075,7 +1063,9 @@ final class GUIManager implements Listener {
                 ItemStack currentAmountO = inv.getItem(40);
                 double amount = getAmount(currentAmountO);
 
-                if (np.getBalance(econ) < amount) amount = np.getBalance(econ);
+                if (!np.canAfford(econ, amount, NovaConfig.getConfiguration().getWhenNegativeAllowPayPlayers()))
+                    amount = np.getBalance(econ);
+
                 final double fAmount = amount;
 
                 ItemStack currentAmount = builder(currentAmountO,
@@ -1148,14 +1138,13 @@ final class GUIManager implements Listener {
                     return;
                 }
 
-                if (np.getBalance(econ) < amount) {
+                if (!np.canAfford(econ, amount, NovaConfig.getConfiguration().getWhenNegativeAllowPayPlayers())) {
                     p.sendMessage(getMessage("error.economy.invalid_amount_pay"));
                     NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
                     return;
                 }
 
                 double bal = nt.getBalance(econ);
-
                 PlayerPayEvent event = new PlayerPayEvent(target, p, econ, amount, bal, bal + amount);
                 Bukkit.getPluginManager().callEvent(event);
 
@@ -1539,8 +1528,9 @@ final class GUIManager implements Listener {
                 ItemStack productI = inv.getItem(12).clone();
                 Material product = productI.getType();
                 int amount = productI.getAmount();
+                double price = NovaConfig.getMarket().getPrice(product, econ) * amount;
 
-                if (np.getBalance(econ) < NovaConfig.getMarket().getPrice(product, econ) * amount) {
+                if (!np.canAfford(econ, price, NovaConfig.getConfiguration().getWhenNegativeAllowPurchaseMarket())) {
                     p.sendMessage(getError("error.market.not_enough_money"));
                     p.closeInventory();
                     NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
@@ -1567,7 +1557,7 @@ final class GUIManager implements Listener {
                 Economy econ = getEconomy(inv.getItem(12));
 
                 double price = NovaConfig.getMarket().getMarketMembershipCost(econ);
-                if (np.getBalance(econ) < price) {
+                if (!np.canAfford(econ, price, NovaConfig.getConfiguration().getWhenNegativeAllowPurchaseMarket())) {
                     p.sendMessage(getError("error.market.membership_cost"));
                     p.closeInventory();
                     NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
@@ -1746,7 +1736,7 @@ final class GUIManager implements Listener {
                             price = new Price(econ, amount);
                         }
 
-                        if (!np.canAfford(price)) {
+                        if (!np.canAfford(price, NovaConfig.getConfiguration().getWhenNegativeAllowPurchaseAuction())) {
                             p.sendMessage(format(getError("error.economy.invalid_amount"), get("constants.purchase")));
                             NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
                             return;
@@ -1980,7 +1970,7 @@ final class GUIManager implements Listener {
                     return;
                 }
 
-                if (!np.canAfford(product.getPrice())) {
+                if (!np.canAfford(product.getPrice(), NovaConfig.getConfiguration().getWhenNegativeAllowPurchaseAuction())) {
                     p.sendMessage(format(getError("error.economy.invalid_amount"), get("constants.claim")));
                     NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
                     return;

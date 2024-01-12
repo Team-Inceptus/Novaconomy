@@ -1,5 +1,6 @@
 package us.teaminceptus.novaconomy.api;
 
+import com.google.common.collect.ImmutableMap;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
@@ -211,6 +212,28 @@ public interface NovaConfig  {
         if (!config.isDouble("MaxConvertAmount") && !config.isInt("MaxConvertAmount")) config.set("MaxConvertAmount", -1);
         if (!config.isConfigurationSection("EconomyMaxConvertAmounts")) config.createSection("EconomyMaxConvertAmounts");
         if (!config.isSet("VaultEconomy")) config.set("VaultEconomy", -1);
+
+        if (!config.isConfigurationSection("NegativeBalances")) config.createSection("NegativeBalances");
+        if (!config.isBoolean("NegativeBalances.Enabled")) config.set("NegativeBalances.Enabled", false);
+        if (!config.isDouble("NegativeBalances.MaxNegativeBalance") && !config.isInt("NegativeBalances.MaxNegativeBalance")) config.set("NegativeBalances.MaxNegativeBalance", -100.0);
+        if (!config.isBoolean("NegativeBalances.IncludeZero")) config.set("NegativeBalances.IncludeZero", true);
+        if (!config.isList("NegativeBalances.BypassMax")) config.set("NegativeBalances.BypassMax", Arrays.asList("OPS"));
+
+        if (!config.isConfigurationSection("NegativeBalances.WhenNegative")) config.createSection("NegativeBalances.WhenNegative");
+        ImmutableMap.<String, Boolean>builder()
+                .put("PurchaseProducts", false)
+                .put("PurchaseMarket", true)
+                .put("PurchaseBusiness", false)
+                .put("PurchaseAuction", false)
+                .put("PayPlayers", true)
+                .put("PayBanks", true)
+                .put("CreateChecks", false)
+                .put("CreateBounties", false)
+                .put("ConvertBalance", false)
+                .build()
+                .forEach((s, v) -> {
+                    if (!config.isBoolean("NegativeBalances.WhenNegative." + s)) config.set("NegativeBalances.WhenNegative." + s, v);
+                });
 
         if (!config.isConfigurationSection("Essentials")) config.createSection("Essentials");
         
@@ -1141,5 +1164,146 @@ public interface NovaConfig  {
      * @return true if enabled, else false
      */
     boolean isBusinessIncomeTaxIgnoring(@NotNull Business b);
+
+    /**
+     * Gets whether negative player balances are enabled.
+     * @return true if enabled, else false
+     */
+    boolean isNegativeBalancesEnabled();
+
+    /**
+     * Sets whether negative player balances are enabled.
+     * @param enabled true if enabled, else false
+     */
+    void setNegativeBalancesEnabled(boolean enabled);
+
+    /**
+     * Fetches the maximum negative balance a player can have, as a negative number.
+     * @return Maximum negative balance
+     */
+    double getMaxNegativeBalance();
+
+    /**
+     * Sets the maximum negative balance a player can have.
+     * @param max Maximum negative balance
+     * @throws IllegalArgumentException if max is not negative
+     */
+    void setMaxNegativeBalance(double max) throws IllegalArgumentException;
+
+    /**
+     * Fetches whether negative balances include a balance of zero.
+     * @return true if enabled, else false
+     */
+    boolean isNegativeBalancesIncludeZero();
+
+    /**
+     * Sets whether negative balances include a balance of zero.
+     * @param include true if enabled, else false
+     */
+    void setNegativeBalancesIncludeZero(boolean include);
+
+    /**
+     * Fetches whether those with negative balances are allowed to purchase business products.
+     * @return true if enabled, else false
+     */
+    boolean getWhenNegativeAllowPurchaseProducts();
+
+    /**
+     * Sets whether those with negative balances are allowed to purchase business products.
+     * @param allow true if enabled, else false
+     */
+    void setWhenNegativeAllowPurchaseProducts(boolean allow);
+
+    /**
+     * Fetches whether those with negative balances are allowed to purchase market items or a market membership.
+     * @return true if enabled, else false
+     */
+    boolean getWhenNegativeAllowPurchaseMarket();
+
+    /**
+     * Sets whether those with negative balances are allowed to purchase market items or a market membership.
+     * @param allow true if enabled, else false
+     */
+    void setWhenNegativeAllowPurchaseMarket(boolean allow);
+
+    /**
+     * Fetches whether those with negative balances are allowed to purchase auction items.
+     * @return true if enabled, else false
+     */
+    boolean getWhenNegativeAllowPurchaseAuction();
+
+    /**
+     * Sets whether those with negative balances are allowed to purchase auction items.
+     * @param allow true if enabled, else false
+     */
+    void setWhenNegativeAllowPurchaseAuction(boolean allow);
+
+    /**
+     * Fetches whether those with negative balances are allowed to pay other players.
+     * @return true if enabled, else false
+     */
+    boolean getWhenNegativeAllowPayPlayers();
+
+    /**
+     * Sets whether those with negative balances are allowed to pay other players.
+     * @param allow true if enabled, else false
+     */
+    void setWhenNegativeAllowPayPlayers(boolean allow);
+
+    /**
+     * Fetches whether those with negative balances are allowed to pay banks.
+     * @return true if enabled, else false
+     */
+    boolean getWhenNegativeAllowPayBanks();
+
+    /**
+     * Sets whether those with negative balances are allowed to pay banks.
+     * @param allow true if enabled, else false
+     */
+    void setWhenNegativeAllowPayBanks(boolean allow);
+
+    /**
+     * Fetches whether those with negative balances are allowed to create checks.
+     * @return true if enabled, else false
+     */
+    boolean getWhenNegativeAllowCreateChecks();
+
+    /**
+     * Sets whether those with negative balances are allowed to create checks.
+     * @param allow true if enabled, else false
+     */
+    void setWhenNegativeAllowCreateChecks(boolean allow);
+
+    /**
+     * Fetches whether those with negative balances are allowed to create bounties.
+     * @return true if enabled, else false
+     */
+    boolean getWhenNegativeAllowCreateBounties();
+
+    /**
+     * Sets whether those with negative balances are allowed to create bounties.
+     * @param allow true if enabled, else false
+     */
+    void setWhenNegativeAllowCreateBounties(boolean allow);
+
+    /**
+     * Fetches whether those with negative balances are allowed to convert balances using the balance in debt.
+     * @return true if enabled, else false
+     */
+    boolean getWhenNegativeAllowConvertBalances();
+
+    /**
+     * Sets whether those with negative balances are allowed to convert balances using the balance in debt.
+     * @param allow true if enabled, else false
+     */
+    void setWhenNegativeAllowConvertBalances(boolean allow);
+
+    /**
+     * Whether this player can bypass the maximum negative balance.
+     * @param p Player to test against
+     * @return true if they can, else false
+     */
+    boolean canBypassMaxNegativeAmount(@NotNull OfflinePlayer p);
+
 
 }

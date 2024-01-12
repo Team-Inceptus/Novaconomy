@@ -369,6 +369,8 @@ final class Events implements Listener {
         }
 
         for (Economy econ : Economy.getEconomies()) {
+            if (np.isInDebt(econ)) continue;
+
             double ogAmount = np.getBalance(econ) / divider;
             double amount = Double.isNaN(ogAmount) ? 0 : ogAmount;
             lost.add(callRemoveBalanceEvent(p, econ, amount));

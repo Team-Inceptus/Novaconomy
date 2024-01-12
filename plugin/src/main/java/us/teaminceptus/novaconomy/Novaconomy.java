@@ -140,11 +140,11 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
             String dec;
             String k = "CommandVersion";
 
-            if (funcConfig.isInt(k)) {
-                int i = funcConfig.getInt(k, 3);
+            if (functionality.isInt(k)) {
+                int i = functionality.getInt(k, 3);
                 dec = i > 2 || i < 1 ? "auto" : String.valueOf(i);
             } else
-                dec = !funcConfig.getString(k, "auto").equalsIgnoreCase("auto") ? "auto" : funcConfig.getString(k, "auto");
+                dec = !functionality.getString(k, "auto").equalsIgnoreCase("auto") ? "auto" : functionality.getString(k, "auto");
 
             int tempV;
             try {
@@ -311,8 +311,9 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
                 missedMap.put(np, new HashMap<>());
                 for (Economy econ : previousBals.get(np).keySet()) {
                     double amount = amounts.get(np).get(econ);
+                    boolean canAfford = np.canAfford(econ, amount, NovaConfig.getConfiguration().getWhenNegativeAllowPayBanks());
 
-                    if (np.getBalance(econ) < amount) {
+                    if (!canAfford) {
                         Map<Economy, Double> newMap = new HashMap<>(missedMap.get(np));
                         newMap.put(econ, amount);
                         missedMap.put(np, newMap);
@@ -320,8 +321,8 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 
                         PlayerMissTaxEvent event2 = new PlayerMissTaxEvent(np.getPlayer(), amount - np.getBalance(econ), econ);
                         Bukkit.getPluginManager().callEvent(event2);
-                    } else np.deposit(econ, amount);
-
+                    } else
+                        np.deposit(econ, amount);
                 }
             }
             sendTaxNotifications(previousBals.keySet(), missedMap);
@@ -429,7 +430,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
         });
     }
 
-    private static FileConfiguration funcConfig;
+    private static FileConfiguration functionality;
 
     static final List<Class<? extends ConfigurationSerializable>> SERIALIZABLE = ImmutableList.<Class<? extends ConfigurationSerializable>>builder()
             .add(Economy.class)
@@ -973,7 +974,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
     @Override
     public void onEnable() {
         saveDefaultConfig();
-        funcConfig = NovaConfig.loadFunctionalityFile();
+        functionality = NovaConfig.loadFunctionalityFile();
 
         config = getConfig();
         interest = config.getConfigurationSection("Interest");
@@ -1190,9 +1191,9 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 
     @Override
     public double getMaxConvertAmount(Economy econ) {
-        if (funcConfig.getConfigurationSection("EconomyMaxConvertAmounts").contains(econ.getName()))
-            return funcConfig.getDouble("EconomyMaxConvertAmounts." + econ.getName());
-        return funcConfig.getDouble("MaxConvertAmount", -1);
+        if (functionality.getConfigurationSection("EconomyMaxConvertAmounts").contains(econ.getName()))
+            return functionality.getDouble("EconomyMaxConvertAmounts." + econ.getName());
+        return functionality.getDouble("MaxConvertAmount", -1);
     }
 
     @Override
@@ -2261,7 +2262,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 
         double price = getPrice(m, econ) * amount;
         if (price <= 0) throw new IllegalArgumentException("Price must be positive");
-        if (np.getBalance(econ) < price) throw new IllegalArgumentException("Insufficient funds");
+        if (!np.canAfford(econ, price, NovaConfig.getConfiguration().getWhenNegativeAllowPurchaseMarket())) throw new IllegalArgumentException("Insufficient funds");
 
         Receipt r = new Receipt(m, price / amount, amount, buyer);
         PlayerMarketPurchaseEvent event = new PlayerMarketPurchaseEvent(buyer, r);
@@ -2503,6 +2504,134 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
                 .collect(Collectors.toList())
         );
         saveConfig();
+    }
+
+    @Override
+    public boolean isNegativeBalancesEnabled() {
+        return functionality.getBoolean("NegativeBalances.Enabled", false);
+    }
+
+    @Override
+    public void setNegativeBalancesEnabled(boolean enabled) {
+        functionality.set("NegativeBalances.Enabled", enabled);
+        saveConfig();
+    }
+
+    @Override
+    public double getMaxNegativeBalance() {
+        return functionality.getDouble("NegativeBalances.MaxNegativeBalance", -100.0);
+    }
+
+    @Override
+    public void setMaxNegativeBalance(double max) throws IllegalArgumentException {
+        if (max >= 0) throw new IllegalArgumentException("Max negative balance must be negative");
+
+        functionality.set("NegativeBalances.MaxNegativeBalance", max);
+        saveConfig();
+    }
+
+    @Override
+    public boolean isNegativeBalancesIncludeZero() {
+        return functionality.getBoolean("NegativeBalances.IncludeZero", true);
+    }
+
+    @Override
+    public void setNegativeBalancesIncludeZero(boolean include) {
+        functionality.set("NegativeBalances.IncludeZero", include);
+        saveConfig();
+    }
+
+    @Override
+    public boolean getWhenNegativeAllowPurchaseProducts() {
+        return functionality.getBoolean("NegativeBalances.WhenNegative.PurchaseProducts", false);
+    }
+
+    @Override
+    public void setWhenNegativeAllowPurchaseProducts(boolean allow) {
+        functionality.set("NegativeBalances.WhenNegative.PurchaseProducts", allow);
+        saveConfig();
+    }
+
+    @Override
+    public boolean getWhenNegativeAllowPurchaseMarket() {
+        return functionality.getBoolean("NegativeBalances.WhenNegative.PurchaseMarket", true);
+    }
+
+    @Override
+    public void setWhenNegativeAllowPurchaseMarket(boolean allow) {
+        functionality.set("NegativeBalances.WhenNegative.PurchaseMarket", allow);
+        saveConfig();
+    }
+
+    @Override
+    public boolean getWhenNegativeAllowPurchaseAuction() {
+        return functionality.getBoolean("NegativeBalances.WhenNegative.PurchaseAuction", false);
+    }
+
+    @Override
+    public void setWhenNegativeAllowPurchaseAuction(boolean allow) {
+        functionality.set("NegativeBalances.WhenNegative.PurchaseAuction", allow);
+        saveConfig();
+    }
+
+    @Override
+    public boolean getWhenNegativeAllowPayPlayers() {
+        return functionality.getBoolean("NegativeBalances.WhenNegative.PayPlayers", false);
+    }
+
+    @Override
+    public void setWhenNegativeAllowPayPlayers(boolean allow) {
+        functionality.set("NegativeBalances.WhenNegative.PayPlayers", allow);
+        saveConfig();
+    }
+
+    @Override
+    public boolean getWhenNegativeAllowPayBanks() {
+        return functionality.getBoolean("NegativeBalances.WhenNegative.PayBanks", false);
+    }
+
+    @Override
+    public void setWhenNegativeAllowPayBanks(boolean allow) {
+        functionality.set("NegativeBalances.WhenNegative.PayBanks", allow);
+        saveConfig();
+    }
+
+    @Override
+    public boolean getWhenNegativeAllowCreateChecks() {
+        return functionality.getBoolean("NegativeBalances.WhenNegative.CreateChecks", false);
+    }
+
+    @Override
+    public void setWhenNegativeAllowCreateChecks(boolean allow) {
+        functionality.set("NegativeBalances.WhenNegative.CreateChecks", allow);
+        saveConfig();
+    }
+
+    @Override
+    public boolean getWhenNegativeAllowCreateBounties() {
+        return functionality.getBoolean("NegativeBalances.WhenNegative.CreateBounties", false);
+    }
+
+    @Override
+    public void setWhenNegativeAllowCreateBounties(boolean allow) {
+        functionality.set("NegativeBalances.WhenNegative.CreateBounties", allow);
+        saveConfig();
+    }
+
+    @Override
+    public boolean getWhenNegativeAllowConvertBalances() {
+        return functionality.getBoolean("NegativeBalances.WhenNegative.ConvertBalance", false);
+    }
+
+    @Override
+    public void setWhenNegativeAllowConvertBalances(boolean allow) {
+        functionality.set("NegativeBalances.WhenNegative.ConvertBalance", allow);
+        saveConfig();
+    }
+
+    @Override
+    public boolean canBypassMaxNegativeAmount(@NotNull OfflinePlayer p) {
+        return isIncludedIn(functionality.getStringList("NegativeBalances.BypassMax"), p);
     }
 
 }
