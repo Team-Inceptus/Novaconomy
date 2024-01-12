@@ -11,7 +11,6 @@ import us.teaminceptus.novaconomy.api.util.Product;
 
 import java.io.Serializable;
 import java.text.SimpleDateFormat;
-import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.Map;
 import java.util.Objects;
