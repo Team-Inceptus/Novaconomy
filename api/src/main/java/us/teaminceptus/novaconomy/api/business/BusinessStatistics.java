@@ -1,6 +1,5 @@
 package us.teaminceptus.novaconomy.api.business;
 
-import com.avaje.ebean.Transaction;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import org.bukkit.Bukkit;
