@@ -15,7 +15,6 @@ import us.teaminceptus.novaconomy.api.player.NovaPlayer;
 
 import static us.teaminceptus.novaconomy.abstraction.Wrapper.getMessage;
 
-@SuppressWarnings("deprecation")
 public final class EssentialsListener implements Listener {
 
     // private final Novaconomy plugin;
@@ -38,13 +37,13 @@ public final class EssentialsListener implements Listener {
         Player p = e.getAffected().getBase();
         NovaPlayer np = new NovaPlayer(p);
 
-        if (np.getBalance(econ) < amount) {
+        if (!np.canAfford(econ, amount, true)) {
             e.setCancelled(true);
             p.sendMessage(getMessage("error.economy.invalid_amount.essentials.nick"));
             return;
         }
 
-        np.withdraw(econ, amount);
+        np.remove(econ, amount);
     }
 
     @EventHandler
@@ -60,13 +59,13 @@ public final class EssentialsListener implements Listener {
         Player p = e.getUser().getBase();
         NovaPlayer np = new NovaPlayer(p);
 
-        if (np.getBalance(econ) < amount) {
+        if (!np.canAfford(econ, amount, true)) {
             e.setCancelled(true);
             p.sendMessage(getMessage("error.economy.invalid_amount.essentials.warp"));
             return;
         }
 
-        np.withdraw(econ, amount);
+        np.remove(econ, amount);
     }
 
     @EventHandler
@@ -82,13 +81,13 @@ public final class EssentialsListener implements Listener {
         Player p = e.getTeleportee().getBase();
         NovaPlayer np = new NovaPlayer(p);
 
-        if (np.getBalance(econ) < amount) {
+        if (!np.canAfford(econ, amount, true)) {
             e.setCancelled(true);
             p.sendMessage(getMessage("error.economy.invalid_amount.essentials.teleport"));
             return;
         }
 
-        np.withdraw(econ, amount);
+        np.remove(econ, amount);
     }
 
 
