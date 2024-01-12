@@ -247,6 +247,8 @@ public interface CommandWrapper {
         NovaConfig.reloadRunnables();
         NovaConfig.loadFunctionalityFile();
 
+        ModifierReader.LOADED_MODIFIERS.clear();
+
         try {
             Method loadFiles = NovaConfig.getPlugin().getClass().getDeclaredMethod("loadFiles");
             loadFiles.setAccessible(true);

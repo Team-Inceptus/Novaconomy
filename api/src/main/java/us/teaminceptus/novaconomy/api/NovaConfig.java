@@ -296,6 +296,9 @@ public interface NovaConfig  {
         if (!nc.isBoolean("FarmingIncrease")) nc.set("FarmingIncrease", true);
         if (!nc.isInt("FarmingIncreaseChance")) nc.set("FarmingIncreaseChance", 40);
 
+        if (!nc.isBoolean("BuildingIncrease")) nc.set("BuildingIncrease", true);
+        if (!nc.isInt("BuildingIncreaseChance")) nc.set("BuildingIncreaseChance", 10);
+
         if (!nc.isBoolean("DeathDecrease")) nc.set("DeathDecrease", true);
         if (!nc.isDouble("DeathDivider") && !(nc.isInt("DeathDivider"))) nc.set("DeathDivider", 2);
 
@@ -304,6 +307,7 @@ public interface NovaConfig  {
         if (!nc.isConfigurationSection("Modifiers.Fishing")) nc.createSection("Modifiers.Fishing");
         if (!nc.isConfigurationSection("Modifiers.Mining")) nc.createSection("Modifiers.Mining");
         if (!nc.isConfigurationSection("Modifiers.Farming")) nc.createSection("Modifiers.Farming");
+        if (!nc.isConfigurationSection("Modifiers.Building")) nc.createSection("Modifiers.Building");
         if (!nc.isConfigurationSection("Modifiers.Death")) nc.createSection("Modifiers.Death");
 
         // Interest
@@ -665,6 +669,12 @@ public interface NovaConfig  {
     boolean hasFarmingIncrease();
 
     /**
+     * Fetch if Building Increase is enabled.
+     * @return true if enabled, else false
+     */
+    boolean hasBuildingIncrease();
+
+    /**
      * Fetch the Interest Multiplier
      * @return Multiplier applied when using interest
      */
@@ -701,6 +711,12 @@ public interface NovaConfig  {
     int getFarmingChance();
 
     /**
+     * Fetch whether building increases money.
+     * @return Chance of building increase
+     */
+    int getBuildingChance();
+
+    /**
      * Sets the chance of killing something increasing your money.
      * @param chance New Chance
      */
@@ -725,6 +741,12 @@ public interface NovaConfig  {
     void setFarmingChance(int chance);
 
     /**
+     * Sets the chance of building something to increase your money.
+     * @param chance New Chance
+     */
+    void setBuildingChance(int chance);
+
+    /**
      * Sets whether or not farming should increase money.
      * @param increase Whether farming should increase money
      */
@@ -741,6 +763,12 @@ public interface NovaConfig  {
      * @param increase Whether killing something should increase money
      */
     void setKillIncrease(boolean increase);
+
+    /**
+     * Sets whether or not building should increase money.
+     * @param increase Whether building should increase money
+     */
+    void setBuildingIncrease(boolean increase);
 
     /**
      * Sets whether or not dying should decrease money.

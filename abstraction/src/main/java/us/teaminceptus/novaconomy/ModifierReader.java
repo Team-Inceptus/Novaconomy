@@ -15,7 +15,11 @@ public final class ModifierReader {
 
     private ModifierReader() {}
 
+    public static final Map<String, Map<String, Set<Entry<Economy, Double>>>> LOADED_MODIFIERS = new HashMap<>();
+
     public static Map<String, Map<String, Set<Entry<Economy, Double>>>> getAllModifiers() throws IllegalArgumentException {
+        if (!LOADED_MODIFIERS.isEmpty()) return LOADED_MODIFIERS;
+
         Map<String, Map<String, Set<Entry<Economy, Double>>>> mods = new HashMap<>();
         FileConfiguration config = NovaConfig.getPlugin().getConfig();
 
@@ -52,7 +56,8 @@ public final class ModifierReader {
             });
         }
 
-        return mods;
+        LOADED_MODIFIERS.putAll(mods);
+        return LOADED_MODIFIERS;
     }
 
     public static Map<String, Set<Entry<Economy, Double>>> getModifier(String mod) {

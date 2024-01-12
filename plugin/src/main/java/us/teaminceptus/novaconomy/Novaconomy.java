@@ -33,6 +33,7 @@ import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.auction.AuctionHouse;
 import us.teaminceptus.novaconomy.api.bank.Bank;
 import us.teaminceptus.novaconomy.api.business.Business;
+import us.teaminceptus.novaconomy.api.business.BusinessProduct;
 import us.teaminceptus.novaconomy.api.business.BusinessStatistics;
 import us.teaminceptus.novaconomy.api.business.Rating;
 import us.teaminceptus.novaconomy.api.corporation.Corporation;
@@ -52,7 +53,6 @@ import us.teaminceptus.novaconomy.api.player.Bounty;
 import us.teaminceptus.novaconomy.api.player.NovaPlayer;
 import us.teaminceptus.novaconomy.api.player.PlayerStatistics;
 import us.teaminceptus.novaconomy.api.settings.Settings;
-import us.teaminceptus.novaconomy.api.business.BusinessProduct;
 import us.teaminceptus.novaconomy.api.util.Price;
 import us.teaminceptus.novaconomy.api.util.Product;
 import us.teaminceptus.novaconomy.essentialsx.EssentialsListener;
@@ -66,8 +66,8 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.sql.*;
-import java.util.*;
 import java.util.Date;
+import java.util.*;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -1011,6 +1011,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
         Corporation.getCorporations();
         Economy.getEconomies();
         AuctionHouse.refreshAuctionHouse(true);
+        ModifierReader.getAllModifiers();
 
         INTEREST_RUNNABLE.runTaskTimer(this, getInterestTicks(), getInterestTicks());
         TAXES_RUNNABLE.runTaskTimer(this, getTaxesTicks(), getTaxesTicks());
@@ -1059,6 +1060,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
             return count.get();
         }));
         metrics.addCustomChart(new SimplePie("mysql_enabled", () -> String.valueOf(NovaConfig.getConfiguration().isDatabaseEnabled())));
+        metrics.addCustomChart(new SingleLineChart("auction_items", () -> AuctionHouse.getProducts().size()));
 
         getLogger().info("Loaded Dependencies...");
 
@@ -1631,6 +1633,11 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
     }
 
     @Override
+    public boolean hasBuildingIncrease() {
+        return ncauses.getBoolean("BuildingIncrease", true);
+    }
+
+    @Override
     public double getInterestMultiplier() {
         return interest.getDouble("ValueMultiplier", 1.03D);
     }
@@ -1662,6 +1669,11 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
     }
 
     @Override
+    public int getBuildingChance() {
+        return ncauses.getInt("BuildingIncreaseChance");
+    }
+
+    @Override
     public void setKillChance(int chance) {
         ncauses.set("KillIncreaseChance", chance);
         saveConfig();
@@ -1686,6 +1698,12 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
     }
 
     @Override
+    public void setBuildingChance(int chance) {
+        ncauses.set("BuildingIncreaseChance", chance);
+        saveConfig();
+    }
+
+    @Override
     public void setFarmingIncrease(boolean increase) {
         ncauses.set("FarmingIncrease", increase);
         saveConfig();
@@ -1700,6 +1718,12 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
     @Override
     public void setKillIncrease(boolean increase) {
         ncauses.set("KillIncrease", increase);
+        saveConfig();
+    }
+
+    @Override
+    public void setBuildingIncrease(boolean increase) {
+        ncauses.set("BuildingIncrease", increase);
         saveConfig();
     }
 
