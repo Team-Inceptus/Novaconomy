@@ -111,6 +111,20 @@ public enum CorporationAchievement {
 
         return c.getAverageRating() / 4D;
     }),
+
+    /**
+     * The achievement for reaching a collective 50, 150, or 250 Products.
+     */
+    TOO_MANY(Material.IRON_SWORD, 3, "constants.corporation.achievement.too_many", 75000, (c, level) -> {
+        int products = c.getAllProducts().size();
+
+        switch (level) {
+            case 0: return products / 50D;
+            case 1: return products / 150D;
+            case 2: return products / 250D;
+            default: return 1D;
+        }
+    }),
     
     ;
 
