@@ -458,8 +458,13 @@ public interface CommandWrapper {
 
         NovaPlayer nt = new NovaPlayer(target);
 
-        if (balance <= 0) {
+        if (balance < 0 && !NovaConfig.getConfiguration().isNegativeBalancesEnabled()) {
             sender.sendMessage(getMessage("error.argument.amount"));
+            return;
+        }
+
+        if (balance < NovaConfig.getConfiguration().getMaxNegativeBalance()) {
+            sender.sendMessage(format(getError("error.economy.min_balance"), format("%,.2f", NovaConfig.getConfiguration().getMaxNegativeBalance()) + econ.getSymbol()));
             return;
         }
 
@@ -1709,6 +1714,11 @@ public interface CommandWrapper {
         Business b = Business.byOwner(p);
         if (name.isEmpty()) {
             p.sendMessage(getMessage("error.argument.empty"));
+            return;
+        }
+
+        if (name.length() > Business.MAX_NAME_LENGTH) {
+            p.sendMessage(getMessage("error.business.name_length"));
             return;
         }
 
