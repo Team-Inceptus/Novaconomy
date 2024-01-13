@@ -788,10 +788,13 @@ public final class Generator {
 
             List<Economy> elist = new ArrayList<>(econs.subList(i * GUI_SPACE, Math.min((i + 1) * GUI_SPACE, econs.size())));
             elist.forEach(econ -> {
+                double balance = np.getBalance(econ);
+                boolean debt = balance < 0 || (balance == 0 && NovaConfig.getConfiguration().isNegativeBalancesIncludeZero());
+
                 ItemStack item = econ.getIcon().clone();
                 ItemMeta eMeta = item.getItemMeta();
                 eMeta.setLore(Collections.singletonList(
-                        ChatColor.GOLD + format("%,.2f", np.getBalance(econ)) + econ.getSymbol()
+                        (debt ? ChatColor.RED : ChatColor.GOLD) + format("%,.2f", balance) + econ.getSymbol()
                 ));
                 item.setItemMeta(eMeta);
                 inv.addItem(item);
