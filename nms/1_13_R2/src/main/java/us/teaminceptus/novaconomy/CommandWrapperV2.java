@@ -17,6 +17,7 @@ import revxrsal.commands.bukkit.BukkitCommandActor;
 import revxrsal.commands.bukkit.BukkitCommandHandler;
 import revxrsal.commands.bukkit.annotation.CommandPermission;
 import revxrsal.commands.exception.CommandErrorException;
+import us.teaminceptus.novaconomy.NovaAnnotationReplacer.BalanceToRange;
 import us.teaminceptus.novaconomy.abstraction.CommandWrapper;
 import us.teaminceptus.novaconomy.abstraction.Wrapper;
 import us.teaminceptus.novaconomy.api.Language;
@@ -229,6 +230,8 @@ final class CommandWrapperV2 implements CommandWrapper {
                             .map(Corporation::getName)
                             .collect(Collectors.toList());
                 });
+
+        handler.registerAnnotationReplacer(Balance.class, new BalanceToRange());
 
         handler.register(this);
         new EconomyCommands(this);
@@ -576,7 +579,7 @@ final class CommandWrapperV2 implements CommandWrapper {
 
         @Subcommand({"setbalance", "setbal"})
         @CommandPermission("novaconomy.economy.setbalance")
-        public void setBalance(CommandSender sender, Economy economy, Player target, @Range(min = 0) double amount) {
+        public void setBalance(CommandSender sender, Economy economy, Player target, @Balance double amount) {
             wrapper.setBalance(sender, economy, target, amount);
         }
 

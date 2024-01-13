@@ -179,7 +179,7 @@ public final class BusinessStatistics implements ConfigurationSerializable {
         @Override
         public Map<String, Object> serialize() {
             ImmutableMap.Builder<String, Object> builder = ImmutableMap.<String, Object>builder()
-                    .put("buyer", buyer)
+                    .put("buyer", buyer.toString())
                     .put("timestamp", timestamp);
 
             if (product != null) builder.put("item", product.getItem());
