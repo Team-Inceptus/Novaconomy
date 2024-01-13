@@ -17,6 +17,7 @@ import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.business.Business;
+import us.teaminceptus.novaconomy.api.business.BusinessProduct;
 import us.teaminceptus.novaconomy.api.business.Rating;
 import us.teaminceptus.novaconomy.api.events.corporation.CorporationAwardAchievementEvent;
 import us.teaminceptus.novaconomy.api.events.corporation.CorporationBanEvent;
@@ -845,6 +846,17 @@ public final class Corporation {
 
         memberRanks.put(child.getUniqueId(), rank.getIdentifier());
         saveCorporation();
+    }
+
+    /**
+     * Gets all of the products in this Corporation.
+     * @return Corporation Products
+     */
+    @NotNull
+    public Set<BusinessProduct> getAllProducts() {
+        return children.stream()
+                .flatMap(b -> b.getProducts().stream())
+                .collect(Collectors.toSet());
     }
 
     @Override
