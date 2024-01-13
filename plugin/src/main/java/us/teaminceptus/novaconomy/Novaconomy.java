@@ -618,7 +618,6 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
         loadLegacyBusinesses();
 
         loadMarket();
-        NovaConfig.loadConfig();
     }
 
     private void convertToDatabase() {
@@ -975,12 +974,11 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
     public void onEnable() {
         saveDefaultConfig();
         functionality = NovaConfig.loadFunctionalityFile();
-
-        config = getConfig();
+        config = NovaConfig.loadConfig();
         interest = config.getConfigurationSection("Interest");
         ncauses = config.getConfigurationSection("NaturalCauses");
 
-        getLogger().info("Loading More Files...");
+        getLogger().info("Loaded Configuration...");
         switch (conversion) {
             case DATABASE_TO_FILES:
                 convertToFiles();

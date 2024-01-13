@@ -43,6 +43,7 @@ import us.teaminceptus.novaconomy.util.NovaUtil;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -546,11 +547,8 @@ final class Events implements Listener {
                 if (!keyed.isInstance(b.getType())) break;
 
                 String name = f.getName();
-                if (name.startsWith("ENTITY_TYPES")) continue;
-                if (name.startsWith("REGISTRY")) continue;
-
+                if (name.startsWith("ENTITY_TYPES") || name.startsWith("REGISTRY")) continue;
                 if (!tag.isAssignableFrom(f.getType())) continue;
-
                 if (!entry.containsKey(name)) continue;
 
                 Method isTagged = tag.getDeclaredMethod("isTagged", keyed);
@@ -561,7 +559,7 @@ final class Events implements Listener {
 
                 if ((boolean) isTagged.invoke(tagObj, b.getType())) return name;
             }
-        } catch (ClassNotFoundException | NoSuchMethodException | ClassCastException ignored) {
+        } catch (ClassNotFoundException | NoSuchMethodException | InvocationTargetException | ClassCastException ignored) {
         } catch (Exception err) {
             NovaConfig.print(err);
         }
@@ -593,7 +591,7 @@ final class Events implements Listener {
                 if ((boolean) isTagged.invoke(tagObj, b.getType()))
                     if (isIgnored(p, name)) return true;
             }
-        } catch (ClassNotFoundException | NoSuchMethodException | ClassCastException ignored) {
+        } catch (ClassNotFoundException | NoSuchMethodException | InvocationTargetException | ClassCastException ignored) {
         } catch (Exception err) {
             NovaConfig.print(err);
         }
