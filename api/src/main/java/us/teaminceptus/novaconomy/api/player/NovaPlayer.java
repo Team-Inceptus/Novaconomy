@@ -127,7 +127,7 @@ public final class NovaPlayer {
             pConfig.putAll(toMap(config));
 
             stats = pConfig.containsKey("stats") ? (PlayerStatistics) pConfig.get("stats") : new PlayerStatistics(p);
-            wonAuctions.addAll((Collection<AuctionProduct>) pConfig.getOrDefault("won_auctions", new HashSet<>()));
+            wonAuctions.addAll((Collection<AuctionProduct>) pConfig.getOrDefault("won_auctions", new ArrayList<>()));
         }
 
         this.stats = stats;
@@ -201,7 +201,8 @@ public final class NovaPlayer {
      * @throws IllegalArgumentException if economy is null
      */
     public void setBalance(@NotNull Economy econ, double newBal) throws IllegalArgumentException {
-        if (newBal < 0) throw new IllegalArgumentException("Balance cannot be negative");
+        if (newBal < 0 && !NovaConfig.getConfiguration().isNegativeBalancesEnabled()) throw new IllegalArgumentException("Balance cannot be negative");
+        if (newBal < NovaConfig.getConfiguration().getMaxNegativeBalance()) throw new IllegalArgumentException("Balance cannot be less than the max negative balance (" + NovaConfig.getConfiguration().getMaxNegativeBalance() + ")");
         if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
 
         checkStats();
@@ -260,7 +261,7 @@ public final class NovaPlayer {
                 ps.close();
             } else {
                 pConfig.put("stats", this.stats);
-                pConfig.put("won_auctions", this.wonAuctions);
+                pConfig.put("won_auctions", new ArrayList<>(this.wonAuctions));
 
                 File pFile = new File(NovaConfig.getPlayerDirectory(), p.getUniqueId().toString() + ".yml");
                 if (!pFile.exists()) pFile.createNewFile();
