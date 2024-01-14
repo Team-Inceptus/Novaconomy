@@ -233,7 +233,7 @@ class AdventureMessageHandler implements MessageHandler {
     @Override
     public void sendRaw(CommandSender sender, String[] messages) {
         sendComponents(sender, Arrays.stream(messages)
-                .map(LEGACY_SERIALIZER::deserialize)
+                .map(AdventureMessageHandler::fromLegacy)
                 .toArray(Component[]::new));
     }
 
