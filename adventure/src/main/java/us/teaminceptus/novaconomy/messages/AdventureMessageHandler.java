@@ -12,6 +12,7 @@ import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
@@ -21,10 +22,13 @@ import org.bukkit.plugin.Plugin;
 import us.teaminceptus.novaconomy.abstraction.NBTWrapper;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.corporation.Corporation;
+import us.teaminceptus.novaconomy.api.player.NovaPlayer;
+import us.teaminceptus.novaconomy.api.settings.Settings;
 import us.teaminceptus.novaconomy.api.util.Product;
 
 import java.util.Arrays;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static us.teaminceptus.novaconomy.abstraction.Wrapper.r;
@@ -60,8 +64,9 @@ class AdventureMessageHandler implements MessageHandler {
                     .stream()
                     .map(p -> {
                         String name = p.getName();
+                        String displayName = PlainTextComponentSerializer.plainText().serialize(p.displayName());
                         return TextReplacementConfig.builder()
-                                .matchLiteral(name)
+                                .match(Pattern.compile(name + "|" + displayName, Pattern.LITERAL))
                                 .replacement(Component.text(name)
                                         .hoverEvent(HoverEvent.showEntity(Key.key("minecraft:player"), p.getUniqueId()))
                                         .clickEvent(ClickEvent.callback(audience -> {
@@ -117,6 +122,16 @@ class AdventureMessageHandler implements MessageHandler {
             )
             .build();
 
+    private static boolean advancedText(CommandSender sender) {
+        if (sender instanceof Player) {
+            Player p = (Player) sender;
+            NovaPlayer np = new NovaPlayer(p);
+            return np.getSetting(Settings.Personal.ADVANCED_TEXT);
+        }
+
+        return true;
+    }
+
     private static Component fromLegacy(String legacy) {
         Component base = LEGACY_SERIALIZER.deserialize(legacy);
 
@@ -127,8 +142,9 @@ class AdventureMessageHandler implements MessageHandler {
         return base;
     }
 
-    private Component prefix() {
+    private Component prefix(CommandSender sender) {
         Component prefix = fromLegacy(MessageHandler.prefix());
+        if (!advancedText(sender))
 
         return prefix
                 .hoverEvent(HoverEvent.showText(
@@ -139,6 +155,8 @@ class AdventureMessageHandler implements MessageHandler {
 
     @SuppressWarnings("PatternValidation")
     private static Component map(CommandSender sender, Component component, String key, Object[] args) {
+        if (!advancedText(sender)) return component;
+
         if (MessageHandler.ERROR_EXAMPLES.containsKey(key)) {
             Component text = fromLegacy(EXAMPLE_COLORS[r.nextInt(EXAMPLE_COLORS.length)] + format(get("constants.example"), ChatColor.GOLD + MessageHandler.ERROR_EXAMPLES.get(key).get()));
             component = component.hoverEvent(HoverEvent.showText(text));
@@ -210,19 +228,19 @@ class AdventureMessageHandler implements MessageHandler {
     @Override
     public void sendMessage(CommandSender sender, String key, Object... args) {
         Component message = map(sender, fromLegacy(format(get(key), args)), key, args);
-        sendComponents(sender, prefix(), message);
+        sendComponents(sender, prefix(sender), message);
     }
 
     @Override
     public void sendError(CommandSender sender, String key, Object... args) {
         Component message = map(sender, fromLegacy(ChatColor.RED + format(get(key), args)), key, args);
-        sendComponents(sender, prefix(), message);
+        sendComponents(sender, prefix(sender), message);
     }
 
     @Override
     public void sendSuccess(CommandSender sender, String key, Object... args) {
         Component message = map(sender, fromLegacy(ChatColor.GREEN + format(get(key), args)), key, args);
-        sendComponents(sender, prefix(), message);
+        sendComponents(sender, prefix(sender), message);
     }
 
     @Override
@@ -239,7 +257,7 @@ class AdventureMessageHandler implements MessageHandler {
 
     @Override
     public void sendRawMessage(CommandSender sender, String message) {
-        sender.sendMessage(prefix().append(fromLegacy(message)));
+        sendComponents(sender, prefix(sender), fromLegacy(message));
     }
 
     private void sendComponents(CommandSender sender, Component... components) {
