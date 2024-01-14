@@ -1897,6 +1897,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 
             // Plants / Decor
             .put("grass", 2.1)
+            .put("short_grass", 2.1)
             .put("tall_grass", 3.4)
             .put("fern", 2.1)
             .put("large_fern", 3.4)
