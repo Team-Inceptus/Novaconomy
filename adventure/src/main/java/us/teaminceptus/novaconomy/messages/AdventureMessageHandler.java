@@ -23,9 +23,6 @@ import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.corporation.Corporation;
 import us.teaminceptus.novaconomy.api.util.Product;
 
-import java.nio.charset.StandardCharsets;
-import java.time.Duration;
-import java.time.temporal.TemporalAmount;
 import java.util.Arrays;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
