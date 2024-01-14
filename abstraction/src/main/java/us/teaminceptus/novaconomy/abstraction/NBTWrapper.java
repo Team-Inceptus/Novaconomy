@@ -72,6 +72,8 @@ public abstract class NBTWrapper {
         return item;
     }
 
+    public abstract String getFullTag();
+
     public abstract String getString(String key);
 
     public abstract void set(String key, String value);

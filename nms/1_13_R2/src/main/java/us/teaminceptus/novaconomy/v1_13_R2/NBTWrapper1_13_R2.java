@@ -20,6 +20,12 @@ final class NBTWrapper1_13_R2 extends NBTWrapper {
     }
 
     @Override
+    public String getFullTag() {
+        net.minecraft.server.v1_13_R2.ItemStack nmsitem = CraftItemStack.asNMSCopy(item);
+        return nmsitem.getOrCreateTag().toString();
+    }
+
+    @Override
     public String getString(String key) {
         net.minecraft.server.v1_13_R2.ItemStack nmsitem = CraftItemStack.asNMSCopy(item);
         NBTTagCompound tag = nmsitem.getOrCreateTag();
