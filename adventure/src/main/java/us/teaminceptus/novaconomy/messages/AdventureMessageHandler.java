@@ -132,8 +132,9 @@ class AdventureMessageHandler implements MessageHandler {
         return true;
     }
 
-    private static Component fromLegacy(String legacy) {
+    private static Component fromLegacy(CommandSender sender, String legacy) {
         Component base = LEGACY_SERIALIZER.deserialize(legacy);
+        if (!advancedText(sender)) return base;
 
         for (TextReplacementConfig replacer : TEXT_REPLACERS.get()) {
             base = base.replaceText(replacer);
@@ -143,8 +144,8 @@ class AdventureMessageHandler implements MessageHandler {
     }
 
     private Component prefix(CommandSender sender) {
-        Component prefix = fromLegacy(MessageHandler.prefix());
-        if (!advancedText(sender))
+        Component prefix = fromLegacy(sender, MessageHandler.prefix());
+        if (!advancedText(sender)) return prefix;
 
         return prefix
                 .hoverEvent(HoverEvent.showText(
@@ -158,7 +159,7 @@ class AdventureMessageHandler implements MessageHandler {
         if (!advancedText(sender)) return component;
 
         if (MessageHandler.ERROR_EXAMPLES.containsKey(key)) {
-            Component text = fromLegacy(EXAMPLE_COLORS[r.nextInt(EXAMPLE_COLORS.length)] + format(get("constants.example"), ChatColor.GOLD + MessageHandler.ERROR_EXAMPLES.get(key).get()));
+            Component text = fromLegacy(sender, EXAMPLE_COLORS[r.nextInt(EXAMPLE_COLORS.length)] + format(get("constants.example"), ChatColor.GOLD + MessageHandler.ERROR_EXAMPLES.get(key).get()));
             component = component.hoverEvent(HoverEvent.showText(text));
         }
 
@@ -220,44 +221,44 @@ class AdventureMessageHandler implements MessageHandler {
 
     @Override
     public void send(CommandSender sender, String key, Object... args) {
-        Component message = map(sender, fromLegacy(format(get(key), args)), key, args);
+        Component message = map(sender, fromLegacy(sender, format(get(key), args)), key, args);
 
         sender.sendMessage(message);
     }
 
     @Override
     public void sendMessage(CommandSender sender, String key, Object... args) {
-        Component message = map(sender, fromLegacy(format(get(key), args)), key, args);
+        Component message = map(sender, fromLegacy(sender, format(get(key), args)), key, args);
         sendComponents(sender, prefix(sender), message);
     }
 
     @Override
     public void sendError(CommandSender sender, String key, Object... args) {
-        Component message = map(sender, fromLegacy(ChatColor.RED + format(get(key), args)), key, args);
+        Component message = map(sender, fromLegacy(sender, ChatColor.RED + format(get(key), args)), key, args);
         sendComponents(sender, prefix(sender), message);
     }
 
     @Override
     public void sendSuccess(CommandSender sender, String key, Object... args) {
-        Component message = map(sender, fromLegacy(ChatColor.GREEN + format(get(key), args)), key, args);
+        Component message = map(sender, fromLegacy(sender, ChatColor.GREEN + format(get(key), args)), key, args);
         sendComponents(sender, prefix(sender), message);
     }
 
     @Override
     public void sendRaw(CommandSender sender, String message) {
-        sender.sendMessage(fromLegacy(message));
+        sender.sendMessage(fromLegacy(sender, message));
     }
 
     @Override
     public void sendRaw(CommandSender sender, String[] messages) {
         sendComponents(sender, Arrays.stream(messages)
-                .map(AdventureMessageHandler::fromLegacy)
+                .map(m -> fromLegacy(sender, m))
                 .toArray(Component[]::new));
     }
 
     @Override
     public void sendRawMessage(CommandSender sender, String message) {
-        sendComponents(sender, prefix(sender), fromLegacy(message));
+        sendComponents(sender, prefix(sender), fromLegacy(sender, message));
     }
 
     private void sendComponents(CommandSender sender, Component... components) {
