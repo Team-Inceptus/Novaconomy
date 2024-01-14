@@ -13,7 +13,7 @@ import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.player.NovaPlayer;
 
-import static us.teaminceptus.novaconomy.abstraction.Wrapper.getMessage;
+import static us.teaminceptus.novaconomy.messages.MessageHandler.*;
 
 public final class EssentialsListener implements Listener {
 
@@ -39,7 +39,7 @@ public final class EssentialsListener implements Listener {
 
         if (!np.canAfford(econ, amount, true)) {
             e.setCancelled(true);
-            p.sendMessage(getMessage("error.economy.invalid_amount.essentials.nick"));
+            messages.sendMessage(p, "error.economy.invalid_amount.essentials.nick");
             return;
         }
 
@@ -61,7 +61,7 @@ public final class EssentialsListener implements Listener {
 
         if (!np.canAfford(econ, amount, true)) {
             e.setCancelled(true);
-            p.sendMessage(getMessage("error.economy.invalid_amount.essentials.warp"));
+            messages.sendMessage(p, "error.economy.invalid_amount.essentials.warp");
             return;
         }
 
@@ -83,7 +83,7 @@ public final class EssentialsListener implements Listener {
 
         if (!np.canAfford(econ, amount, true)) {
             e.setCancelled(true);
-            p.sendMessage(getMessage("error.economy.invalid_amount.essentials.teleport"));
+            messages.sendMessage(p, "error.economy.invalid_amount.essentials.teleport");
             return;
         }
 

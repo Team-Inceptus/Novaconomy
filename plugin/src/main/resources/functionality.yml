@@ -5,6 +5,7 @@
 # Represents Core Functionality Settings
 
 # Override the Command Version.
+# -- REQUIRES A RESTART OF THE SERVER WHEN CHANGED --
 #
 # Use 1 for normal command support (supports all versions)
 # Use 2 for brigader support (colored inputs, supports 1.13.2+)
@@ -12,6 +13,17 @@
 #
 # If a version is invalid or not supported, it will default to auto
 CommandVersion: auto
+
+# Overrides the current Message Handler.
+# -- REQUIRES A RESTART OF THE SERVER WHEN CHANGED --
+#
+# Use BUKKIT for the Bukkit Message Handler (basic strings), used for Bukkit Servers
+# Use SPIGOT for the Spigot Message Handler (components, hover, some click), used for Spigot Servers
+# Use ADVENTURE for the Adventure Message Handler (more advanced components, hover, click), used for Paper Servers on 1.16.5+
+# Use auto to automatically recognize
+#
+# If a version is invalid or not supported, it will default to Bukkit
+MessageHandler: auto
 
 # Negative Balance Configuration
 NegativeBalances:
@@ -45,7 +57,7 @@ NegativeBalances:
     # Whether a player can purchase auction items while in debt.
     PurchaseAuction: false
 
-    # Whether a player can purchase lottery tickets while in debt.
+    # Whether a player can pay other players while in debt.
     PayPlayers: true
 
     # Whether a player can pay into a bank balance while in debt.

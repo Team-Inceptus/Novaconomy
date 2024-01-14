@@ -52,10 +52,11 @@ import java.util.stream.Collectors;
 import static us.teaminceptus.novaconomy.Novaconomy.isIgnored;
 import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.AMOUNT_TAG;
 import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.ECON_TAG;
-import static us.teaminceptus.novaconomy.abstraction.NBTWrapper.of;
-import static us.teaminceptus.novaconomy.abstraction.Wrapper.*;
+import static us.teaminceptus.novaconomy.abstraction.NBTWrapper.*;
+import static us.teaminceptus.novaconomy.abstraction.Wrapper.r;
+import static us.teaminceptus.novaconomy.abstraction.Wrapper.w;
 import static us.teaminceptus.novaconomy.api.corporation.CorporationAchievement.*;
-import static us.teaminceptus.novaconomy.util.NovaUtil.format;
+import static us.teaminceptus.novaconomy.messages.MessageHandler.*;
 
 final class Events implements Listener {
 
@@ -141,7 +142,7 @@ final class Events implements Listener {
             if (broadcast)
                 Bukkit.broadcastMessage(format(get("success.bounty.broadcast"), kName, tName, format("%,.2f", b.getAmount()) + b.getEconomy().getSymbol()));
             else if (owner.isOnline())
-                owner.getPlayer().sendMessage(format(getMessage("success.bounty.redeem"), kName, tName));
+                messages.sendMessage(owner.getPlayer(), "success.bounty.redeem", kName, tName);
 
             amount.addAndGet(b.getAmount());
             bountyCount.incrementAndGet();
@@ -162,7 +163,7 @@ final class Events implements Listener {
         }
 
         if (!broadcast)
-            killer.sendMessage(format(getMessage("success.bounty.claim"), bountyCount.get(), tName));
+            messages.sendMessage(killer, "success.bounty.claim", bountyCount.get(), tName);
     }
 
     @EventHandler
@@ -377,7 +378,7 @@ final class Events implements Listener {
             lost.add(callRemoveBalanceEvent(p, econ, amount));
         }
 
-        if (np.hasNotifications()) p.sendMessage(String.join("\n", lost.toArray(new String[0])));
+        messages.sendRawNotification(p, String.join("\n", lost.toArray(new String[0])));
     }
 
     // Corporation Leveling

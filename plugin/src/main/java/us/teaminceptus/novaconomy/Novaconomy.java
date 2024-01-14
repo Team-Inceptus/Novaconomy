@@ -27,7 +27,6 @@ import org.bukkit.util.io.BukkitObjectOutputStream;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.abstraction.CommandWrapper;
-import us.teaminceptus.novaconomy.abstraction.Wrapper;
 import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.auction.AuctionHouse;
@@ -76,7 +75,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static us.teaminceptus.novaconomy.abstraction.Wrapper.*;
-import static us.teaminceptus.novaconomy.util.NovaUtil.format;
+import static us.teaminceptus.novaconomy.messages.MessageHandler.*;
 
 /**
  * Class representing this Plugin
@@ -102,16 +101,6 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
     static String prefix;
 
     static File marketFile;
-
-
-    /**
-     * Performs an API request to turn an OfflinePlayer's name to an OfflinePlayer object.
-     * @param name OfflinePlayer Name
-     * @return OfflinePlayer Object
-     */
-    public static OfflinePlayer getPlayer(String name) {
-        return Wrapper.getPlayer(name);
-    }
 
     public static boolean isIgnored(Player p, String s) {
         AtomicBoolean state = new AtomicBoolean();
@@ -201,8 +190,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
                 i++;
             }
 
-            if (np.isOnline() && np.hasNotifications())
-                np.getOnlinePlayer().sendMessage(format(getMessage("notification.interest"), i + " ", i == 1 ? get("constants.economy") : get("constants.economies")));
+            messages.sendNotification(np.getPlayer(), "notification.interest", i + " ", i == 1 ? get("constants.economy") : get("constants.economies"));
         }
     }
 
@@ -331,15 +319,16 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 
     private static void sendTaxNotifications(Collection<NovaPlayer> players, Map<NovaPlayer, Map<Economy, Double>> missedMap) {
         for (NovaPlayer np : players) {
-            if (!np.getPlayer().isOnline()) continue;
-            if (!np.hasNotifications()) continue;
             int j = missedMap.get(np).size();
             int i = Economy.getTaxableEconomies().size() - j;
+
+            OfflinePlayer p = np.getPlayer();
+
             if (j > 0)
-                np.getOnlinePlayer().sendMessage(format(getMessage("notification.tax.missed"), j + " ", j == 1 ? get("constants.economy") : get("constants.economies")));
+                messages.sendNotification(p, "notification.tax.missed", j + " ", j == 1 ? get("constants.economy") : get("constants.economies"));
 
             if (i > 0)
-                np.getOnlinePlayer().sendMessage(format(getMessage("notification.tax"), i + " ", i == 1 ? get("constants.economy") : get("constants.economies")));
+                messages.sendNotification(p, "notification.tax", i + " ", i == 1 ? get("constants.economy") : get("constants.economies"));
         }
     }
 
@@ -1037,7 +1026,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
                 .setNotifyOpsOnJoin(true)
                 .setSupportLink("https://discord.gg/WVFNWEvuqX")
                 .setChangelogLink("https://github.com/Team-Inceptus/Novaconomy/releases/")
-                .setUserAgent("Team-Inceptus/Novaconomy UpdateChecker")
+                .setUserAgent(USER_AGENT)
                 .setColoredConsoleOutput(true)
                 .setDonationLink("https://www.patreon.com/gamercoder215")
                 .setNotifyRequesters(true)

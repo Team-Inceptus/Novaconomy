@@ -49,6 +49,7 @@ dependencies {
 
     // API
     api(project(":novaconomy-api"))
+    api(project(":novaconomy-adventure"))
     api(project(":novaconomy-abstract"))
     versions.forEach { api(project(":novaconomy-$it")) }
 }

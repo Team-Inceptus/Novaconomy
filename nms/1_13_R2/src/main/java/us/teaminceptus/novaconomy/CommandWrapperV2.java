@@ -16,10 +16,8 @@ import revxrsal.commands.autocomplete.SuggestionProvider;
 import revxrsal.commands.bukkit.BukkitCommandActor;
 import revxrsal.commands.bukkit.BukkitCommandHandler;
 import revxrsal.commands.bukkit.annotation.CommandPermission;
-import revxrsal.commands.exception.CommandErrorException;
 import us.teaminceptus.novaconomy.NovaAnnotationReplacer.BalanceToRange;
 import us.teaminceptus.novaconomy.abstraction.CommandWrapper;
-import us.teaminceptus.novaconomy.abstraction.Wrapper;
 import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.business.Business;
@@ -27,6 +25,7 @@ import us.teaminceptus.novaconomy.api.corporation.Corporation;
 import us.teaminceptus.novaconomy.api.corporation.CorporationInvite;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.util.NovaSound;
+import us.teaminceptus.novaconomy.util.NovaUtil;
 import us.teaminceptus.novaconomy.util.command.MaterialSelector;
 
 import java.util.ArrayList;
@@ -36,8 +35,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-import static us.teaminceptus.novaconomy.abstraction.Wrapper.*;
-import static us.teaminceptus.novaconomy.util.NovaUtil.format;
+import static us.teaminceptus.novaconomy.abstraction.Wrapper.w;
+import static us.teaminceptus.novaconomy.messages.MessageHandler.messages;
 
 final class CommandWrapperV2 implements CommandWrapper {
 
@@ -52,48 +51,47 @@ final class CommandWrapperV2 implements CommandWrapper {
             if (param.hasAnnotation(Length.class)) {
                 int length = param.getAnnotation(Length.class).value();
                 if (value.length() > length)
-                    throw new CommandErrorException(format(getError("error.argument.length"), length));
+                    throw new TranslatableErrorException("error.argument.length", length);
             }
         });
 
-        handler.registerValueResolver(Economy.class, ctx -> {
-                String s = ctx.popForParameter();
-                Economy econ;
-
-                if (s.isEmpty() || s == null) econ = Economy.getEconomies()
-                        .stream()
-                        .sorted(Economy::compareTo)
-                        .collect(Collectors.toList())
-                        .get(0);
-                else econ = Economy.byName(s);
-
-                if (econ == null) throw new CommandErrorException(getMessage("error.argument.economy"));
-                return econ;
-            }).registerValueResolver(Business.class, ctx -> {
-                Business b = Business.byName(ctx.popForParameter());
-                if (b == null) throw new CommandErrorException(getMessage("error.argument.business"));
-                return b;
-            }).registerValueResolver(Material.class, ctx -> {
-                Material m = Material.matchMaterial(ctx.popForParameter());
-                if (m == null) throw new CommandErrorException(getMessage("error.argument.icon"));
-                if (!m.isItem()) throw new CommandErrorException(getMessage("error.argument.icon"));
-                if (m == Material.AIR) throw new CommandErrorException(getMessage("error.argument.icon"));
-                return m;
-            }).registerValueResolver(OfflinePlayer.class, ctx -> {
+        handler.registerValueResolver(OfflinePlayer.class, ctx -> {
                 String value = ctx.popForParameter();
                 if (value.equalsIgnoreCase("me")) return ((BukkitCommandActor) ctx.actor()).requirePlayer();
-                OfflinePlayer p = Wrapper.getPlayer(value);
-                if (p == null) throw new CommandErrorException(getMessage("error.argument.player"));
+                OfflinePlayer p = NovaUtil.getPlayer(value);
+                if (p == null) throw new TranslatableErrorException("error.argument.player");
                 return p;
-            }).registerValueResolver(Corporation.class, ctx -> {
-                Corporation c = Corporation.byName(ctx.popForParameter());
-                if (c == null) throw new CommandErrorException(getError("error.argument.corporation"));
-                return c;
-            }).registerValueResolver(MaterialSelector.class, ctx -> {
-                MaterialSelector selector = MaterialSelector.of(ctx.popForParameter());
-                if (selector == null) throw new CommandErrorException(getError("error.argument.item"));
-                return selector;
-            });
+        }).registerValueResolver(Material.class, ctx -> {
+            Material m = Material.matchMaterial(ctx.popForParameter());
+            if (!w.isItem(m))
+                throw new TranslatableErrorException("error.argument.item");
+
+            return m;
+        }).registerValueResolver(Economy.class, ctx -> {
+            Economy econ = Economy.byName(ctx.popForParameter());
+            if (econ == null)
+                throw new TranslatableErrorException("error.argument.economy");
+
+            return econ;
+        }).registerValueResolver(Business.class, ctx -> {
+            Business b = Business.byName(ctx.popForParameter());
+            if (b == null)
+                throw new TranslatableErrorException("error.argument.business");
+
+            return b;
+        }).registerValueResolver(Corporation.class, ctx -> {
+            Corporation c = Corporation.byName(ctx.popForParameter());
+            if (c == null)
+                throw new TranslatableErrorException("error.argument.corporation");
+
+            return c;
+        }).registerValueResolver(MaterialSelector.class, ctx -> {
+            MaterialSelector selector = MaterialSelector.of(ctx.popForParameter());
+            if (selector == null)
+                throw new TranslatableErrorException("error.argument.item");
+
+            return selector;
+        });
 
         handler.getAutoCompleter()
                 .registerParameterSuggestions(Economy.class, SuggestionProvider.map(Economy::getEconomies, Economy::getName))
@@ -144,7 +142,7 @@ final class CommandWrapperV2 implements CommandWrapper {
                     return !b.isOwner(p) && !Business.byOwner(p).isBlacklisted(b);
                 }).map(Business::getName).collect(Collectors.toList()))
 
-                .registerSuggestion("blacklisted", (args, sender, cmd) -> Business.byOwner(Wrapper.getPlayer(sender.getName())).getBlacklist().stream().map(Business::getName).collect(Collectors.toList()))
+                .registerSuggestion("blacklisted", (args, sender, cmd) -> Business.byOwner(NovaUtil.getPlayer(sender.getName())).getBlacklist().stream().map(Business::getName).collect(Collectors.toList()))
                 .registerSuggestion("natural_causes",
                 "enchant_bonus", "max_increase", "kill_increase", "kill_increase_chance", "kill_increase_indirect", "fishing_increase",
                 "fishing_increase_chance", "mining_increase", "mining_increase_chance", "farming_increase", "farming_increase_chance",
@@ -244,6 +242,10 @@ final class CommandWrapperV2 implements CommandWrapper {
         new AuctionCommands(this);
 
         handler.registerBrigadier();
+        try {
+            Class.forName("net.kyori.adventure.text.Component");
+            handler.enableAdventure();
+        } catch (ClassNotFoundException ignored) {}
         handler.setLocale(Language.getCurrentLocale());
 
         plugin.getLogger().info("Loaded Command Version v2 (1.13.2+)");
@@ -253,7 +255,7 @@ final class CommandWrapperV2 implements CommandWrapper {
 
     private boolean economyCount(Player p) {
         if (Economy.getEconomies().isEmpty()) {
-            p.sendMessage(getMessage("error.economy.none"));
+            messages.sendMessage(p, "error.economy.none");
             return false;
         }
 
@@ -944,7 +946,8 @@ final class CommandWrapperV2 implements CommandWrapper {
         @Subcommand({"setrestock", "restock"})
         @AutoComplete("enabled|disabled")
         public void setMarketRestockEnabled(CommandSender sender, @Single String enabled) {
-            if (!enabled.equalsIgnoreCase("enabled") && !enabled.equalsIgnoreCase("disabled")) throw new CommandErrorException(get("error.argument"));
+            if (!enabled.equalsIgnoreCase("enabled") && !enabled.equalsIgnoreCase("disabled"))
+                throw new TranslatableErrorException("error.argument");
             wrapper.setMarketRestockEnabled(sender, enabled.equalsIgnoreCase("enabled"));
         }
 
@@ -966,7 +969,8 @@ final class CommandWrapperV2 implements CommandWrapper {
         @Subcommand({"setdepositenabled", "depositenabled"})
         @AutoComplete("enabled|disabled")
         public void setMarketDepositEnabled(CommandSender sender, @Single String enabled) {
-            if (!enabled.equalsIgnoreCase("enabled") && !enabled.equalsIgnoreCase("disabled")) throw new CommandErrorException(get("error.argument"));
+            if (!enabled.equalsIgnoreCase("enabled") && !enabled.equalsIgnoreCase("disabled"))
+                throw new TranslatableErrorException("error.argument");
             wrapper.setMarketDepositEnabled(sender, enabled.equalsIgnoreCase("enabled"));
         }
 

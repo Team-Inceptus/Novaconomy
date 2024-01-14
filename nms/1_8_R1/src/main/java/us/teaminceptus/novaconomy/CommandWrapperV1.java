@@ -14,6 +14,7 @@ import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.corporation.Corporation;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.util.NovaSound;
+import us.teaminceptus.novaconomy.util.NovaUtil;
 import us.teaminceptus.novaconomy.util.command.MaterialSelector;
 
 import java.lang.reflect.Constructor;
@@ -22,8 +23,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import static us.teaminceptus.novaconomy.abstraction.Wrapper.getMessage;
-import static us.teaminceptus.novaconomy.util.NovaUtil.format;
+import static us.teaminceptus.novaconomy.messages.MessageHandler.*;
 
 final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
 
@@ -65,7 +65,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
 
     private boolean economyCount(CommandSender sender) {
         if (Economy.getEconomies().isEmpty()) {
-            sender.sendMessage(getMessage("error.economy.none"));
+            messages.sendMessage(sender, "error.economy.none");
             return false;
         }
 
@@ -96,48 +96,48 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
 
                 try {
                     if (args.length < 1) {
-                        p.sendMessage(getMessage("error.economy.transfer_from"));
+                        messages.sendMessage(p, "error.economy.transfer_from");
                         return false;
                     }
 
                     if (!Economy.exists(args[0])) {
-                        p.sendMessage(getMessage("error.economy.transfer_from"));
+                        messages.sendMessage(p, "error.economy.transfer_from");
                         return false;
                     }
 
                     Economy from = Economy.byName(args[0]);
 
                     if (!from.isConvertable()) {
-                        p.sendMessage(format(getMessage("error.economy.transfer_not_convertable"), from.getName()));
+                        messages.sendMessage(p, "error.economy.transfer_not_convertable", from.getName());
                         return false;
                     }
 
                     if (args.length < 2) {
-                        p.sendMessage(getMessage("error.economy.transfer_to"));
+                        messages.sendMessage(p, "error.economy.transfer_to");
                         return false;
                     }
 
                     if (!Economy.exists(args[1])) {
-                        p.sendMessage(getMessage("error.economy.transfer_to"));
+                        messages.sendMessage(p, "error.economy.transfer_to");
                         return false;
                     }
 
                     Economy to = Economy.byName(args[1]);
 
                     if (!to.isConvertable()) {
-                        p.sendMessage(format(getMessage("error.economy.transfer_not_convertable"), to.getName()));
+                        messages.sendMessage(p, "error.economy.transfer_not_convertable", to.getName());
                         return false;
                     }
 
                     if (args.length < 3) {
-                        p.sendMessage(getMessage("error.economy.transfer_amount"));
+                        messages.sendMessage(p, "error.economy.transfer_amount");
                         return false;
                     }
 
                     double amount = Double.parseDouble(args[2]);
                     convert(p, from, to, amount);
                 } catch (NumberFormatException e) {
-                    p.sendMessage(getMessage("error.economy.transfer_amount"));
+                    messages.sendMessage(p, "error.economy.transfer_amount");
                     return false;
                 }
                 break;
@@ -148,14 +148,14 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
 
                 try {
                     if (args.length < 1) {
-                        p.sendMessage(getMessage("error.economy.transfer_amount"));
+                        messages.sendMessage(p, "error.economy.transfer_amount");
                         return false;
                     }
 
                     double amount = Double.parseDouble(args[0]);
                     exchange(p, amount);
                 } catch (NumberFormatException e) {
-                    p.sendMessage(getMessage("error.economy.transfer_amount"));
+                    messages.sendMessage(p, "error.economy.transfer_amount");
                     return false;
                 }
                 break;
@@ -166,12 +166,12 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                 if (!economyCount(p)) return false;
 
                 if (args.length < 1) {
-                    p.sendMessage(getMessage("error.argument.player"));
+                    messages.sendMessage(p, "error.argument.player");
                     return false;
                 }
 
                 if (Bukkit.getPlayer(args[0]) == null) {
-                    p.sendMessage(getMessage("error.argument.player"));
+                    messages.sendMessage(p, "error.argument.player");
                     return false;
                 }
 
@@ -183,7 +183,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                     econ = Economy.byName(args[1]);
 
                     if (econ == null) {
-                        p.sendMessage(getMessage("error.argument.economy"));
+                        messages.sendMessage(p, "error.argument.economy");
                         return false;
                     }
                 }
@@ -193,7 +193,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                 if (args.length >= 3) try {
                     amount = Double.parseDouble(args[2]);
                 } catch (NumberFormatException e) {
-                    p.sendMessage(getMessage("error.argument.pay_amount"));
+                    messages.sendMessage(p, "error.argument.pay_amount");
                     return false;
                 }
 
@@ -202,7 +202,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
             }
             case "economy": {
                 if (args.length < 1) {
-                    sender.sendMessage(getMessage("error.argument"));
+                    messages.sendMessage(sender, "error.argument");
                     return false;
                 }
 
@@ -210,26 +210,26 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                     case "create": {
                         try {
                             if (args.length < 2) {
-                                sender.sendMessage(getMessage("error.argument.name"));
+                                messages.sendMessage(sender, "error.argument.name");
                                 return false;
                             }
 
                             String name = args[1];
 
                             if (args.length < 3) {
-                                sender.sendMessage(getMessage("error.argument.symbol"));
+                                messages.sendMessage(sender, "error.argument.symbol");
                                 return false;
                             }
 
                             if (args[2].length() > 1) {
-                                sender.sendMessage(getMessage("error.argument.symbol"));
+                                messages.sendMessage(sender, "error.argument.symbol");
                                 return false;
                             }
 
                             char symbol = args[2].charAt(0);
 
                             if (args.length < 4) {
-                                sender.sendMessage(getMessage("error.argument.icon"));
+                                messages.sendMessage(sender, "error.argument.icon");
                                 return false;
                             }
 
@@ -240,7 +240,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                             if (args.length >= 5) try {
                                 scale = Double.parseDouble(args[4]);
                             } catch (NumberFormatException e) {
-                                sender.sendMessage(getMessage("error.argument.scale"));
+                                messages.sendMessage(sender, "error.argument.scale");
                                 return false;
                             }
 
@@ -248,7 +248,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
 
                             if (args.length >= 6) {
                                 if (!(args[5].equalsIgnoreCase("true")) && !(args[5].equalsIgnoreCase("false"))) {
-                                    sender.sendMessage(getMessage("error.argument.bool"));
+                                    messages.sendMessage(sender, "error.argument.bool");
                                     return false;
                                 }
 
@@ -259,7 +259,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
 
                             if (args.length >= 7) {
                                 if (!(args[6].equalsIgnoreCase("true")) && !(args[6].equalsIgnoreCase("false"))) {
-                                    sender.sendMessage(getMessage("error.argument.bool"));
+                                    messages.sendMessage(sender, "error.argument.bool");
                                     return false;
                                 }
 
@@ -268,19 +268,19 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
 
                             createEconomy(sender, name, symbol, icon, scale, naturalIncrease, clickableReward);
                         } catch (IllegalArgumentException e) {
-                            sender.sendMessage(getMessage("error.argument"));
+                            messages.sendMessage(sender, "error.argument");
                             return false;
                         }
                         break;
                     }
                     case "delete": {
                         if (args.length < 2) {
-                            sender.sendMessage(getMessage("error.argument.economy"));
+                            messages.sendMessage(sender, "error.argument.economy");
                             return false;
                         }
 
                         if (!Economy.exists(args[1])) {
-                            sender.sendMessage(getMessage("error.economy.inexistent"));
+                            messages.sendMessage(sender, "error.economy.inexistent");
                             return false;
                         }
 
@@ -290,12 +290,12 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                     }
                     case "info": {
                         if (args.length < 2) {
-                            sender.sendMessage(getMessage("error.argument.economy"));
+                            messages.sendMessage(sender, "error.argument.economy");
                             return false;
                         }
 
                         if (!Economy.exists(args[1])) {
-                            sender.sendMessage(getMessage("error.economy.inexistent"));
+                            messages.sendMessage(sender, "error.economy.inexistent");
                             return false;
                         }
 
@@ -312,31 +312,31 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                     case "setbal": {
                         try {
                             if (args.length < 2) {
-                                sender.sendMessage(getMessage("error.argument.economy"));
+                                messages.sendMessage(sender, "error.argument.economy");
                                 return false;
                             }
 
                             if (!Economy.exists(args[1])) {
-                                sender.sendMessage(getMessage("error.economy.inexistent"));
+                                messages.sendMessage(sender, "error.economy.inexistent");
                                 return false;
                             }
 
                             Economy econ = Economy.byName(args[1]);
 
                             if (args.length < 3) {
-                                sender.sendMessage(getMessage("error.argument.player"));
+                                messages.sendMessage(sender, "error.argument.player");
                                 return false;
                             }
 
                             if (Bukkit.getPlayer(args[2]) == null) {
-                                sender.sendMessage(getMessage("error.argument.player"));
+                                messages.sendMessage(sender, "error.argument.player");
                                 return false;
                             }
 
                             Player target = Bukkit.getPlayer(args[2]);
 
                             if (args.length < 4) {
-                                sender.sendMessage(getMessage("error.argument.amount"));
+                                messages.sendMessage(sender, "error.argument.amount");
                                 return false;
                             }
 
@@ -346,19 +346,19 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                             else if (args[0].startsWith("remove")) removeBalance(sender, econ, target, amount);
                             else if (args[0].startsWith("set")) setBalance(sender, econ, target, amount);
                         } catch (NumberFormatException e) {
-                            sender.sendMessage(getMessage("error.argument.amount"));
+                            messages.sendMessage(sender, "error.argument.amount");
                             return false;
                         }
                         break;
                     }
                     case "interest": {
                         if (args.length < 2) {
-                            sender.sendMessage(getMessage("error.argument"));
+                            messages.sendMessage(sender, "error.argument");
                             return false;
                         }
 
                         if (!args[1].equalsIgnoreCase("enable") && !args[1].equalsIgnoreCase("disable")) {
-                            sender.sendMessage(getMessage("error.argument"));
+                            messages.sendMessage(sender, "error.argument");
                             return false;
                         }
 
@@ -371,12 +371,12 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         if (!economyCount(p)) return false;
 
                         if (args.length < 2) {
-                            sender.sendMessage(getMessage("error.argument.economy"));
+                            messages.sendMessage(sender, "error.argument.economy");
                             return false;
                         }
 
                         if (!Economy.exists(args[1])) {
-                            sender.sendMessage(getMessage("error.economy.inexistent"));
+                            messages.sendMessage(sender, "error.economy.inexistent");
                             return false;
                         }
 
@@ -384,7 +384,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
 
                         try {
                             if (args.length < 3) {
-                                sender.sendMessage(getMessage("error.argument.amount"));
+                                messages.sendMessage(sender, "error.argument.amount");
                                 return false;
                             }
 
@@ -392,7 +392,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
 
                             createCheck(p, econ, amount, false);
                         } catch (NumberFormatException e) {
-                            sender.sendMessage(getMessage("error.argument.amount"));
+                            messages.sendMessage(sender, "error.argument.amount");
                             return false;
                         }
 
@@ -405,12 +405,12 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         if (!economyCount(sender)) return false;
 
                         if (args.length < 2) {
-                            sender.sendMessage(getMessage("error.argument.economy"));
+                            messages.sendMessage(sender, "error.argument.economy");
                             return false;
                         }
 
                         if (!Economy.exists(args[1])) {
-                            sender.sendMessage(getMessage("error.economy.inexistent"));
+                            messages.sendMessage(sender, "error.economy.inexistent");
                             return false;
                         }
 
@@ -418,46 +418,46 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
 
                         try {
                             if (args.length < 3) {
-                                sender.sendMessage(getMessage("error.argument.amount"));
+                                messages.sendMessage(sender, "error.argument.amount");
                                 return false;
                             }
 
                             int data = Integer.parseInt(args[2]);
                             setEconomyModel(sender, econ, data);
                         } catch (NumberFormatException e) {
-                            sender.sendMessage(getMessage("error.argument.amount"));
+                            messages.sendMessage(sender, "error.argument.amount");
                             return false;
                         }
                         break;
                     }
                     case "seticon": case "icon": {
                         if (!sender.hasPermission("novaconomy.economy.create")) {
-                            sender.sendMessage(getMessage("error.permission.argument"));
+                            messages.sendMessage(sender, "error.permission.argument");
                             return false;
                         }
                         if (!economyCount(sender)) return false;
 
                         if (args.length < 2) {
-                            sender.sendMessage(getMessage("error.argument.economy"));
+                            messages.sendMessage(sender, "error.argument.economy");
                             return false;
                         }
 
                         if (!Economy.exists(args[1])) {
-                            sender.sendMessage(getMessage("error.economy.inexistent"));
+                            messages.sendMessage(sender, "error.economy.inexistent");
                             return false;
                         }
 
                         Economy econ = Economy.byName(args[1]);
 
                         if (args.length < 3) {
-                            sender.sendMessage(getMessage("error.argument.icon"));
+                            messages.sendMessage(sender, "error.argument.icon");
                             return false;
                         }
 
                         Material m = Material.matchMaterial(args[2]);
 
                         if (m == null) {
-                            sender.sendMessage(getMessage("error.argument.icon"));
+                            messages.sendMessage(sender, "error.argument.icon");
                             return false;
                         }
 
@@ -469,18 +469,18 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                     case "conversionscale":
                     case "scale": {
                         if (!sender.hasPermission("novaconomy.economy.create")) {
-                            sender.sendMessage(getMessage("error.permission.argument"));
+                            messages.sendMessage(sender, "error.permission.argument");
                             return false;
                         }
                         if (!economyCount(sender)) return false;
 
                         if (args.length < 2) {
-                            sender.sendMessage(getMessage("error.argument.economy"));
+                            messages.sendMessage(sender, "error.argument.economy");
                             return false;
                         }
 
                         if (!Economy.exists(args[1])) {
-                            sender.sendMessage(getMessage("error.economy.inexistent"));
+                            messages.sendMessage(sender, "error.economy.inexistent");
                             return false;
                         }
 
@@ -488,14 +488,14 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
 
                         try {
                             if (args.length < 3) {
-                                sender.sendMessage(getMessage("error.argument.amount"));
+                                messages.sendMessage(sender, "error.argument.amount");
                                 return false;
                             }
 
                             double scale = Double.parseDouble(args[2]);
                             setEconomyScale(sender, econ, scale);
                         } catch (NumberFormatException e) {
-                            sender.sendMessage(getMessage("error.argument.amount"));
+                            messages.sendMessage(sender, "error.argument.amount");
                             return false;
                         }
                         break;
@@ -505,30 +505,30 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                     case "natural":
                     case "naturalincrease": {
                         if (!sender.hasPermission("novaconomy.economy.create")) {
-                            sender.sendMessage(getMessage("error.permission.argument"));
+                            messages.sendMessage(sender, "error.permission.argument");
                             return false;
                         }
                         if (!economyCount(sender)) return false;
 
                         if (args.length < 2) {
-                            sender.sendMessage(getMessage("error.argument.economy"));
+                            messages.sendMessage(sender, "error.argument.economy");
                             return false;
                         }
 
                         if (!Economy.exists(args[1])) {
-                            sender.sendMessage(getMessage("error.economy.inexistent"));
+                            messages.sendMessage(sender, "error.economy.inexistent");
                             return false;
                         }
 
                         Economy econ = Economy.byName(args[1]);
 
                         if (args.length < 3) {
-                            sender.sendMessage(getMessage("error.argument.bool"));
+                            messages.sendMessage(sender, "error.argument.bool");
                             return false;
                         }
 
                         if (!args[2].equalsIgnoreCase("true") && !args[2].equalsIgnoreCase("false")) {
-                            sender.sendMessage(getMessage("error.argument.bool"));
+                            messages.sendMessage(sender, "error.argument.bool");
                             return false;
                         }
 
@@ -539,25 +539,25 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                     case "setname":
                     case "name": {
                         if (!sender.hasPermission("novaconomy.economy.create")) {
-                            sender.sendMessage(getMessage("error.permission.argument"));
+                            messages.sendMessage(sender, "error.permission.argument");
                             return false;
                         }
                         if (!economyCount(sender)) return false;
 
                         if (args.length < 2) {
-                            sender.sendMessage(getMessage("error.argument.economy"));
+                            messages.sendMessage(sender, "error.argument.economy");
                             return false;
                         }
 
                         if (!Economy.exists(args[1])) {
-                            sender.sendMessage(getMessage("error.economy.inexistent"));
+                            messages.sendMessage(sender, "error.economy.inexistent");
                             return false;
                         }
 
                         Economy econ = Economy.byName(args[1]);
 
                         if (args.length < 3) {
-                            sender.sendMessage(getMessage("error.argument.name"));
+                            messages.sendMessage(sender, "error.argument.name");
                             return false;
                         }
 
@@ -568,30 +568,30 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                     case "setclickable":
                     case "clickablereward": {
                         if (!sender.hasPermission("novaconomy.economy.create")) {
-                            sender.sendMessage(getMessage("error.permission.argument"));
+                            messages.sendMessage(sender, "error.permission.argument");
                             return false;
                         }
                         if (!economyCount(sender)) return false;
 
                         if (args.length < 2) {
-                            sender.sendMessage(getMessage("error.argument.economy"));
+                            messages.sendMessage(sender, "error.argument.economy");
                             return false;
                         }
 
                         if (!Economy.exists(args[1])) {
-                            sender.sendMessage(getMessage("error.economy.inexistent"));
+                            messages.sendMessage(sender, "error.economy.inexistent");
                             return false;
                         }
 
                         Economy econ = Economy.byName(args[1]);
 
                         if (args.length < 3) {
-                            sender.sendMessage(getMessage("error.argument.bool"));
+                            messages.sendMessage(sender, "error.argument.bool");
                             return false;
                         }
 
                         if (!args[2].equalsIgnoreCase("true") && !args[2].equalsIgnoreCase("false")) {
-                            sender.sendMessage(getMessage("error.argument.bool"));
+                            messages.sendMessage(sender, "error.argument.bool");
                             return false;
                         }
 
@@ -602,31 +602,31 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                     case "setconvertable":
                     case "convertable": {
                         if (!sender.hasPermission("novaconomy.economy.create")) {
-                            sender.sendMessage(getMessage("error.permission.argument"));
+                            messages.sendMessage(sender, "error.permission.argument");
                             return false;
                         }
 
                         if (!economyCount(sender)) return false;
 
                         if (args.length < 2) {
-                            sender.sendMessage(getMessage("error.argument.economy"));
+                            messages.sendMessage(sender, "error.argument.economy");
                             return false;
                         }
 
                         if (!Economy.exists(args[1])) {
-                            sender.sendMessage(getMessage("error.economy.inexistent"));
+                            messages.sendMessage(sender, "error.economy.inexistent");
                             return false;
                         }
 
                         Economy econ = Economy.byName(args[1]);
 
                         if (args.length < 3) {
-                            sender.sendMessage(getMessage("error.argument.bool"));
+                            messages.sendMessage(sender, "error.argument.bool");
                             return false;
                         }
 
                         if (!args[2].equalsIgnoreCase("true") && !args[2].equalsIgnoreCase("false")) {
-                            sender.sendMessage(getMessage("error.argument.bool"));
+                            messages.sendMessage(sender, "error.argument.bool");
                             return false;
                         }
 
@@ -636,7 +636,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         break;
                     }
                     default: {
-                        sender.sendMessage(getMessage("error.argument"));
+                        messages.sendMessage(sender, "error.argument");
                         return false;
                     }
                 }
@@ -644,7 +644,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
             }
             case "business": {
                 if (args.length < 1) {
-                    sender.sendMessage(getMessage("error.argument"));
+                    messages.sendMessage(sender, "error.argument");
                     return false;
                 }
 
@@ -660,12 +660,12 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         Player p = (Player) sender;
 
                         if (args.length < 2) {
-                            sender.sendMessage(getMessage("error.argument.business"));
+                            messages.sendMessage(sender, "error.argument.business");
                             return false;
                         }
 
                         if (Business.byName(args[1]) == null) {
-                            sender.sendMessage(getMessage("error.business.inexistent"));
+                            messages.sendMessage(sender, "error.business.inexistent");
                             return false;
                         }
 
@@ -678,24 +678,24 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         Player p = (Player) sender;
 
                         if (args.length < 2) {
-                            sender.sendMessage(getMessage("error.argument.name"));
+                            messages.sendMessage(sender, "error.argument.name");
                             return false;
                         }
 
                         if (args.length < 3) {
-                            sender.sendMessage(getMessage("error.argument.icon"));
+                            messages.sendMessage(sender, "error.argument.icon");
                             return false;
                         }
 
                         Material icon = Material.matchMaterial(args[2]);
 
                         if (icon == null) {
-                            sender.sendMessage(getMessage("error.argument.icon"));
+                            messages.sendMessage(sender, "error.argument.icon");
                             return false;
                         }
 
                         if (!w.isItem(icon)) {
-                            sender.sendMessage(getMessage("error.argument.icon"));
+                            messages.sendMessage(sender, "error.argument.icon");
                             return false;
                         }
 
@@ -707,7 +707,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         Player p = (Player) sender;
 
                         if (args.length < 2) {
-                            sender.sendMessage(getMessage("error.argument.amount"));
+                            messages.sendMessage(sender, "error.argument.amount");
                             return false;
                         }
 
@@ -715,7 +715,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                             double amount = Double.parseDouble(args[1]);
                             addProduct(p, amount);
                         } catch (IllegalArgumentException e) {
-                            sender.sendMessage(getMessage("error.argument.amount"));
+                            messages.sendMessage(sender, "error.argument.amount");
                             return false;
                         }
                         break;
@@ -725,7 +725,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         Player p = (Player) sender;
 
                         if (!p.hasPermission("novaconomy.user.business.resources")) {
-                            sender.sendMessage(getMessage("error.permission.argument"));
+                            messages.sendMessage(sender, "error.permission.argument");
                             return false;
                         }
 
@@ -746,12 +746,12 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                     }
                     case "remove": {
                         if (args.length < 2) {
-                            sender.sendMessage(getMessage("error.argument.business"));
+                            messages.sendMessage(sender, "error.argument.business");
                             return false;
                         }
 
                         if (Business.byName(args[1]) == null) {
-                            sender.sendMessage(getMessage("error.business.inexistent"));
+                            messages.sendMessage(sender, "error.business.inexistent");
                             return false;
                         }
 
@@ -765,7 +765,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         Player p = (Player) sender;
 
                         if (!p.hasPermission("novaconomy.user.business.home")) {
-                            sender.sendMessage(getMessage("error.permission.argument"));
+                            messages.sendMessage(sender, "error.permission.argument");
                             return false;
                         }
 
@@ -777,7 +777,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         Player p = (Player) sender;
 
                         if (!Business.exists(p)) {
-                            sender.sendMessage(getMessage("error.business.not_an_owner"));
+                            messages.sendMessage(sender, "error.business.not_an_owner");
                             return false;
                         }
 
@@ -789,14 +789,14 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         Player p = (Player) sender;
 
                         if (args.length < 1) {
-                            sender.sendMessage(getMessage("error.argument.player"));
+                            messages.sendMessage(sender, "error.argument.player");
                             return false;
                         }
 
-                        OfflinePlayer target = Wrapper.getPlayer(args[0]);
+                        OfflinePlayer target = NovaUtil.getPlayer(args[0]);
 
                         if (target == null) {
-                            sender.sendMessage(getMessage("error.argument.player"));
+                            messages.sendMessage(sender, "error.argument.player");
                             return false;
                         }
 
@@ -808,7 +808,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         Player p = (Player) sender;
 
                         if (!p.hasPermission("novaconomy.user.business.discover")) {
-                            sender.sendMessage(getMessage("error.permission.argument"));
+                            messages.sendMessage(sender, "error.permission.argument");
                             return false;
                         }
 
@@ -830,7 +830,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         Player p = (Player) sender;
 
                         if (args.length < 2) {
-                            sender.sendMessage(getMessage("error.argument.amount"));
+                            messages.sendMessage(sender, "error.argument.amount");
                             return false;
                         }
 
@@ -838,7 +838,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                             double amount = Double.parseDouble(args[1]);
 
                             if (amount <= 0) {
-                                sender.sendMessage(getMessage("error.argument.amount"));
+                                messages.sendMessage(sender, "error.argument.amount");
                                 return false;
                             }
 
@@ -847,14 +847,14 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                                 econ = Economy.byName(args[2]);
 
                                 if (econ == null) {
-                                    sender.sendMessage(getMessage("error.argument.economy"));
+                                    messages.sendMessage(sender, "error.argument.economy");
                                     return false;
                                 }
                             }
 
                             editPrice(p, amount, econ);
                         } catch (NumberFormatException e) {
-                            sender.sendMessage(getMessage("error.argument.amount"));
+                            messages.sendMessage(sender, "error.argument.amount");
                             return false;
                         }
 
@@ -865,7 +865,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         Player p = (Player) sender;
 
                         if (args.length < 2) {
-                            sender.sendMessage(getMessage("error.argument.name"));
+                            messages.sendMessage(sender, "error.argument.name");
                             return false;
                         }
 
@@ -877,19 +877,19 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         Player p = (Player) sender;
 
                         if (args.length < 2) {
-                            sender.sendMessage(getMessage("error.argument.icon"));
+                            messages.sendMessage(sender, "error.argument.icon");
                             return false;
                         }
 
                         Material icon = Material.matchMaterial(args[1]);
 
                         if (icon == null) {
-                            sender.sendMessage(getMessage("error.argument.icon"));
+                            messages.sendMessage(sender, "error.argument.icon");
                             return false;
                         }
 
                         if (!w.isItem(icon)) {
-                            sender.sendMessage(getMessage("error.argument.icon"));
+                            messages.sendMessage(sender, "error.argument.icon");
                             return false;
                         }
 
@@ -920,7 +920,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                             }
                             case "add": {
                                 if (args.length < 3) {
-                                    sender.sendMessage(getMessage("error.argument.keywords"));
+                                    messages.sendMessage(sender, "error.argument.keywords");
                                     return false;
                                 }
 
@@ -931,7 +931,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                             case "remove":
                             case "delete": {
                                 if (args.length < 3) {
-                                    sender.sendMessage(getMessage("error.argument.keywords"));
+                                    messages.sendMessage(sender, "error.argument.keywords");
                                     return false;
                                 }
 
@@ -940,7 +940,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                                 break;
                             }
                             default: {
-                                sender.sendMessage(getMessage("error.argument"));
+                                messages.sendMessage(sender, "error.argument");
                                 break;
                             }
                         }
@@ -972,7 +972,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                                 break;
                             }
                             default: {
-                                p.sendMessage(getMessage("error.argument"));
+                                messages.sendMessage(p, "error.argument");
                                 return false;
                             }
                         }
@@ -994,14 +994,14 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         switch (args[1].toLowerCase()) {
                             case "add": {
                                 if (args.length < 3) {
-                                    p.sendMessage(getMessage("error.argument.business"));
+                                    messages.sendMessage(p, "error.argument.business");
                                     return false;
                                 }
 
                                 Business b = Business.byName(args[2]);
 
                                 if (b == null) {
-                                    p.sendMessage(getMessage("error.argument.business"));
+                                    messages.sendMessage(p, "error.argument.business");
                                     return false;
                                 }
 
@@ -1011,14 +1011,14 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                             case "remove":
                             case "delete": {
                                 if (args.length < 3) {
-                                    p.sendMessage(getMessage("error.argument.business"));
+                                    messages.sendMessage(p, "error.argument.business");
                                     return false;
                                 }
 
                                 Business b = Business.byName(args[2]);
 
                                 if (b == null) {
-                                    p.sendMessage(getMessage("error.argument.business"));
+                                    messages.sendMessage(p, "error.argument.business");
                                     return false;
                                 }
 
@@ -1043,20 +1043,20 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         Player p = (Player) sender;
 
                         if (args.length < 2) {
-                            p.sendMessage(getMessage("error.argument"));
+                            messages.sendMessage(p, "error.argument");
                             return false;
                         }
 
                         switch (args[1].toLowerCase()) {
                             case "accept": {
                                 if (args.length < 3) {
-                                    p.sendMessage(getMessage("error.argument.corporation"));
+                                    messages.sendMessage(p, "error.argument.corporation");
                                     return false;
                                 }
 
                                 Corporation c = Corporation.byName(args[2]);
                                 if (c == null) {
-                                    p.sendMessage(getMessage("error.argument.corporation"));
+                                    messages.sendMessage(p, "error.argument.corporation");
                                     return false;
                                 }
 
@@ -1065,13 +1065,13 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                             }
                             case "decline": {
                                 if (args.length < 3) {
-                                    p.sendMessage(getMessage("error.argument.corporation"));
+                                    messages.sendMessage(p, "error.argument.corporation");
                                     return false;
                                 }
 
                                 Corporation c = Corporation.byName(args[2]);
                                 if (c == null) {
-                                    p.sendMessage(getMessage("error.argument.corporation"));
+                                    messages.sendMessage(p, "error.argument.corporation");
                                     return false;
                                 }
 
@@ -1087,14 +1087,14 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         Player p = (Player) sender;
 
                         if (args.length < 2) {
-                            p.sendMessage(getMessage("error.argument.corporation"));
+                            messages.sendMessage(p, "error.argument.corporation");
                             return false;
                         }
 
                         Corporation c = Corporation.byName(args[1]);
 
                         if (c == null) {
-                            p.sendMessage(getMessage("error.argument.corporation"));
+                            messages.sendMessage(p, "error.argument.corporation");
                             return false;
                         }
 
@@ -1133,7 +1133,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         break;
                     }
                     default: {
-                        sender.sendMessage(getMessage("error.argument"));
+                        messages.sendMessage(sender, "error.argument");
                         return false;
                     }
                 }
@@ -1141,7 +1141,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
             }
             case "bank": {
                 if (args.length < 1) {
-                    sender.sendMessage(getMessage("error.argument"));
+                    messages.sendMessage(sender, "error.argument");
                     return false;
                 }
 
@@ -1158,26 +1158,26 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
 
                         try {
                             if (args.length < 2) {
-                                sender.sendMessage(getMessage("error.argument.amount"));
+                                messages.sendMessage(sender, "error.argument.amount");
                                 return false;
                             }
                             double amount = Double.parseDouble(args[1]);
 
                             if (args.length < 3) {
-                                sender.sendMessage(getMessage("error.argument.economy"));
+                                messages.sendMessage(sender, "error.argument.economy");
                                 return false;
                             }
 
                             Economy econ = Economy.byName(args[2]);
                             if (econ == null) {
-                                sender.sendMessage(getMessage("error.economy.inexistent"));
+                                messages.sendMessage(sender, "error.economy.inexistent");
                                 return false;
                             }
 
                             bankDeposit(p, amount, econ);
                             return true;
                         } catch (NumberFormatException e) {
-                            sender.sendMessage(getMessage("error.argument.amount"));
+                            messages.sendMessage(sender, "error.argument.amount");
                             return false;
                         }
                     }
@@ -1187,31 +1187,31 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
 
                         try {
                             if (args.length < 2) {
-                                sender.sendMessage(getMessage("error.argument.amount"));
+                                messages.sendMessage(sender, "error.argument.amount");
                                 return false;
                             }
                             double amount = Double.parseDouble(args[1]);
 
                             if (args.length < 3) {
-                                sender.sendMessage(getMessage("error.argument.economy"));
+                                messages.sendMessage(sender, "error.argument.economy");
                                 return false;
                             }
 
                             Economy econ = Economy.byName(args[2]);
                             if (econ == null) {
-                                sender.sendMessage(getMessage("error.economy.inexistent"));
+                                messages.sendMessage(sender, "error.economy.inexistent");
                                 return false;
                             }
 
                             bankWithdraw(p, amount, econ);
                             return true;
                         } catch (NumberFormatException e) {
-                            sender.sendMessage(getMessage("error.argument.amount"));
+                            messages.sendMessage(sender, "error.argument.amount");
                             return false;
                         }
                     }
                     default: {
-                        sender.sendMessage(getMessage("error.argument"));
+                        messages.sendMessage(sender, "error.argument");
                         return false;
                     }
                 }
@@ -1222,31 +1222,31 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
 
                 try {
                     if (args.length < 1) {
-                        sender.sendMessage(getMessage("error.argument.economy"));
+                        messages.sendMessage(sender, "error.argument.economy");
                         return false;
                     }
                     Economy econ = Economy.byName(args[0]);
 
                     if (econ == null) {
-                        sender.sendMessage(getMessage("error.economy.inexistent"));
+                        messages.sendMessage(sender, "error.economy.inexistent");
                         return false;
                     }
 
                     if (args.length < 2) {
-                        sender.sendMessage(getMessage("error.argument.amount"));
+                        messages.sendMessage(sender, "error.argument.amount");
                         return false;
                     }
 
                     double amount = Double.parseDouble(args[1]);
                     if (amount < 1) {
-                        p.sendMessage(getMessage("error.argument.amount"));
+                        messages.sendMessage(p, "error.argument.amount");
                         return false;
                     }
 
                     createCheck(p, econ, amount, true);
                     return true;
                 } catch (NumberFormatException e) {
-                    sender.sendMessage(getMessage("error.argument.amount"));
+                    messages.sendMessage(sender, "error.argument.amount");
                     return false;
                 }
             }
@@ -1258,7 +1258,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                 if (args.length > 0) {
                     econ = Economy.byName(args[0]);
                     if (econ == null) {
-                        sender.sendMessage(getMessage("error.economy.inexistent"));
+                        messages.sendMessage(sender, "error.economy.inexistent");
                         return false;
                     }
                 }
@@ -1271,7 +1271,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                 Player p = (Player) sender;
 
                 if (args.length < 1) {
-                    sender.sendMessage(getMessage("error.argument"));
+                    messages.sendMessage(sender, "error.argument");
                     return false;
                 }
 
@@ -1280,38 +1280,38 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         case "add":
                         case "create": {
                             if (args.length < 2) {
-                                sender.sendMessage(getMessage("error.argument.player"));
+                                messages.sendMessage(sender, "error.argument.player");
                                 return false;
                             }
 
-                            OfflinePlayer target = Wrapper.getPlayer(args[1]);
+                            OfflinePlayer target = NovaUtil.getPlayer(args[1]);
 
                             if (target == null) {
-                                sender.sendMessage(getMessage("error.argument.player"));
+                                messages.sendMessage(sender, "error.argument.player");
                                 return false;
                             }
 
                             if (args.length < 3) {
-                                sender.sendMessage(getMessage("error.argument.economy"));
+                                messages.sendMessage(sender, "error.argument.economy");
                                 return false;
                             }
 
                             Economy econ = Economy.byName(args[2]);
 
                             if (econ == null) {
-                                sender.sendMessage(getMessage("error.economy.inexistent"));
+                                messages.sendMessage(sender, "error.economy.inexistent");
                                 return false;
                             }
 
                             if (args.length < 4) {
-                                sender.sendMessage(getMessage("error.argument.amount"));
+                                messages.sendMessage(sender, "error.argument.amount");
                                 return false;
                             }
 
                             double amount = Double.parseDouble(args[3]);
 
                             if (amount <= 0) {
-                                sender.sendMessage(getMessage("error.argument.amount"));
+                                messages.sendMessage(sender, "error.argument.amount");
                                 return false;
                             }
 
@@ -1321,14 +1321,14 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         case "remove":
                         case "delete": {
                             if (args.length < 2) {
-                                sender.sendMessage(getMessage("error.argument.player"));
+                                messages.sendMessage(sender, "error.argument.player");
                                 return false;
                             }
 
-                            OfflinePlayer target = Wrapper.getPlayer(args[1]);
+                            OfflinePlayer target = NovaUtil.getPlayer(args[1]);
 
                             if (target == null) {
-                                sender.sendMessage(getMessage("error.argument.player"));
+                                messages.sendMessage(sender, "error.argument.player");
                                 return false;
                             }
 
@@ -1344,18 +1344,18 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                             break;
                         }
                         default: {
-                            sender.sendMessage(getMessage("error.argument"));
+                            messages.sendMessage(sender, "error.argument");
                             return false;
                         }
                     }
                 } catch (NumberFormatException e) {
-                    sender.sendMessage(getMessage("error.argument.amount"));
+                    messages.sendMessage(sender, "error.argument.amount");
                     return false;
                 }
             }
             case "taxevent": {
                 if (args.length < 1) {
-                    sender.sendMessage(getMessage("error.argument.event"));
+                    messages.sendMessage(sender, "error.argument.event");
                     return false;
                 }
 
@@ -1373,7 +1373,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                 if (args.length < 1) settings(p, null);
                 else {
                     if (!args[0].equalsIgnoreCase("business") && !args[0].equalsIgnoreCase("personal")) {
-                        p.sendMessage(getMessage("error.argument"));
+                        messages.sendMessage(p, "error.argument");
                         return false;
                     }
 
@@ -1386,12 +1386,12 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                 Player p = (Player) sender;
 
                 if (args.length < 1) {
-                    sender.sendMessage(getMessage("error.argument.business"));
+                    messages.sendMessage(sender, "error.argument.business");
                     return false;
                 }
 
                 if (!Business.exists(args[0])) {
-                    sender.sendMessage(getMessage("error.business.inexistent"));
+                    messages.sendMessage(sender, "error.business.inexistent");
                     return false;
                 }
 
@@ -1408,9 +1408,9 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                 OfflinePlayer target = p;
 
                 if (args.length > 1) {
-                    target = Wrapper.getPlayer(args[0]);
+                    target = NovaUtil.getPlayer(args[0]);
                     if (target == null) {
-                        sender.sendMessage(getMessage("error.argument.player"));
+                        messages.sendMessage(sender, "error.argument.player");
                         return false;
                     }
                 }
@@ -1420,7 +1420,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
             }
             case "novaconfig": {
                 if (args.length < 1) {
-                    sender.sendMessage(getMessage("error.argument"));
+                    messages.sendMessage(sender, "error.argument");
                     return false;
                 }
 
@@ -1435,14 +1435,14 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                     case "naturalc":
                     case "ncauses": {
                         if (args.length < 2) {
-                            sender.sendMessage(getMessage("error.argument"));
+                            messages.sendMessage(sender, "error.argument");
                             return false;
                         }
 
                         switch (args[1].toLowerCase()) {
                             case "view": {
                                 if (args.length < 3) {
-                                    sender.sendMessage(getMessage("error.argument.config"));
+                                    messages.sendMessage(sender, "error.argument.config");
                                     return false;
                                 }
 
@@ -1451,12 +1451,12 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                             }
                             case "set": {
                                 if (args.length < 3) {
-                                    sender.sendMessage(getMessage("error.argument.config"));
+                                    messages.sendMessage(sender, "error.argument.config");
                                     return false;
                                 }
 
                                 if (args.length < 4) {
-                                    sender.sendMessage(getMessage("error.argument"));
+                                    messages.sendMessage(sender, "error.argument");
                                     return false;
                                 }
 
@@ -1466,24 +1466,24 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                             case "modifier":
                             case "mod": {
                                 if (args.length < 3) {
-                                    sender.sendMessage(getMessage("error.argument"));
+                                    messages.sendMessage(sender, "error.argument");
                                     return false;
                                 }
 
                                 switch (args[2].toLowerCase()) {
                                     case "add": {
                                         if (args.length < 4) {
-                                            sender.sendMessage(getMessage("error.argument.config"));
+                                            messages.sendMessage(sender, "error.argument.config");
                                             break;
                                         }
 
                                         if (args.length < 5) {
-                                            sender.sendMessage(getMessage("error.argument.config"));
+                                            messages.sendMessage(sender, "error.argument.config");
                                             break;
                                         }
 
                                         if (args.length < 6) {
-                                            sender.sendMessage(getMessage("error.argument"));
+                                            messages.sendMessage(sender, "error.argument");
                                             break;
                                         }
 
@@ -1496,12 +1496,12 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                                     case "remove":
                                     case "delete": {
                                         if (args.length < 4) {
-                                            sender.sendMessage(getMessage("error.argument.config"));
+                                            messages.sendMessage(sender, "error.argument.config");
                                             break;
                                         }
 
                                         if (args.length < 5) {
-                                            sender.sendMessage(getMessage("error.argument.config"));
+                                            messages.sendMessage(sender, "error.argument.config");
                                             break;
                                         }
 
@@ -1510,12 +1510,12 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                                     }
                                     case "view": {
                                         if (args.length < 4) {
-                                            sender.sendMessage(getMessage("error.argument.config"));
+                                            messages.sendMessage(sender, "error.argument.config");
                                             break;
                                         }
 
                                         if (args.length < 5) {
-                                            sender.sendMessage(getMessage("error.argument.config"));
+                                            messages.sendMessage(sender, "error.argument.config");
                                             break;
                                         }
 
@@ -1533,14 +1533,14 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                     case "defaultecon":
                     case "defaulteconomy": {
                         if (args.length < 2) {
-                            sender.sendMessage(getMessage("error.argument.economy"));
+                            messages.sendMessage(sender, "error.argument.economy");
                             return false;
                         }
 
                         Economy econ = Economy.byName(args[1]);
 
                         if (econ == null) {
-                            sender.sendMessage(getMessage("error.economy.inexistent"));
+                            messages.sendMessage(sender, "error.economy.inexistent");
                             return false;
                         }
 
@@ -1580,21 +1580,21 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         Player p = (Player) sender;
 
                         if (args.length < 2) {
-                            p.sendMessage(getMessage("error.argument.name"));
+                            messages.sendMessage(p, "error.argument.name");
                             return false;
                         }
 
                         String name = args[1];
 
                         if (args.length < 3) {
-                            p.sendMessage(getMessage("error.argument.icon"));
+                            messages.sendMessage(p, "error.argument.icon");
                             return false;
                         }
 
                         Material icon = Material.matchMaterial(args[2]);
 
                         if (icon == null) {
-                            p.sendMessage(getMessage("error.argument.icon"));
+                            messages.sendMessage(p, "error.argument.icon");
                             return false;
                         }
 
@@ -1606,13 +1606,13 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         Player p = (Player) sender;
 
                         if (args.length < 2) {
-                            p.sendMessage(getMessage("error.argument.corporation"));
+                            messages.sendMessage(p, "error.argument.corporation");
                             return false;
                         }
 
                         Corporation c = Corporation.byName(args[1]);
                         if (c == null) {
-                            p.sendMessage(getMessage("error.corporation.inexistent"));
+                            messages.sendMessage(p, "error.corporation.inexistent");
                             return false;
                         }
 
@@ -1635,7 +1635,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         Player p = (Player) sender;
 
                         if (args.length < 2) {
-                            p.sendMessage(getMessage("error.argument"));
+                            messages.sendMessage(p, "error.argument");
                             return false;
                         }
 
@@ -1651,13 +1651,13 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         Player p = (Player) sender;
 
                         if (args.length < 2) {
-                            p.sendMessage(getMessage("error.argument.icon"));
+                            messages.sendMessage(p, "error.argument.icon");
                             return false;
                         }
 
                         Material icon = Material.matchMaterial(args[1]);
                         if (icon == null) {
-                            p.sendMessage(getMessage("error.argument.icon"));
+                            messages.sendMessage(p, "error.argument.icon");
                             return false;
                         }
 
@@ -1678,7 +1678,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         Player p = (Player) sender;
 
                         if (args.length < 2) {
-                            p.sendMessage(getMessage("error.argument.name"));
+                            messages.sendMessage(p, "error.argument.name");
                             return false;
                         }
 
@@ -1716,14 +1716,14 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         Player p = (Player) sender;
 
                         if (args.length < 2) {
-                            p.sendMessage(getMessage("error.argument.business"));
+                            messages.sendMessage(p, "error.argument.business");
                             return false;
                         }
 
                         Business b = Business.byName(args[1]);
 
                         if (b == null) {
-                            p.sendMessage(getMessage("error.business.inexistent"));
+                            messages.sendMessage(p, "error.business.inexistent");
                             return false;
                         }
 
@@ -1735,19 +1735,19 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                     case "experience":
                     case "exp": {
                         if (args.length < 2) {
-                            sender.sendMessage(getMessage("error.argument.corporation"));
+                            messages.sendMessage(sender, "error.argument.corporation");
                             return false;
                         }
 
                         Corporation c = Corporation.byName(args[1]);
 
                         if (c == null) {
-                            sender.sendMessage(getMessage("error.corporation.inexistent"));
+                            messages.sendMessage(sender, "error.corporation.inexistent");
                             return false;
                         }
 
                         if (args.length < 3) {
-                            sender.sendMessage(getMessage("error.argument.amount"));
+                            messages.sendMessage(sender, "error.argument.amount");
                             return false;
                         }
 
@@ -1755,7 +1755,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         try {
                             exp = Double.parseDouble(args[1]);
                         } catch (NumberFormatException e) {
-                            sender.sendMessage(getMessage("error.argument.amount"));
+                            messages.sendMessage(sender, "error.argument.amount");
                             return false;
                         }
 
@@ -1765,19 +1765,19 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                     case "addexperience":
                     case "addexp": {
                         if (args.length < 2) {
-                            sender.sendMessage(getMessage("error.argument.corporation"));
+                            messages.sendMessage(sender, "error.argument.corporation");
                             return false;
                         }
 
                         Corporation c = Corporation.byName(args[1]);
 
                         if (c == null) {
-                            sender.sendMessage(getMessage("error.corporation.inexistent"));
+                            messages.sendMessage(sender, "error.corporation.inexistent");
                             return false;
                         }
 
                         if (args.length < 3) {
-                            sender.sendMessage(getMessage("error.argument.amount"));
+                            messages.sendMessage(sender, "error.argument.amount");
                             return false;
                         }
 
@@ -1785,7 +1785,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         try {
                             exp = Double.parseDouble(args[1]);
                         } catch (NumberFormatException e) {
-                            sender.sendMessage(getMessage("error.argument.amount"));
+                            messages.sendMessage(sender, "error.argument.amount");
                             return false;
                         }
 
@@ -1795,19 +1795,19 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                     case "removeexperience":
                     case "removeexp": {
                         if (args.length < 2) {
-                            sender.sendMessage(getMessage("error.argument.corporation"));
+                            messages.sendMessage(sender, "error.argument.corporation");
                             return false;
                         }
 
                         Corporation c = Corporation.byName(args[1]);
 
                         if (c == null) {
-                            sender.sendMessage(getMessage("error.corporation.inexistent"));
+                            messages.sendMessage(sender, "error.corporation.inexistent");
                             return false;
                         }
 
                         if (args.length < 3) {
-                            sender.sendMessage(getMessage("error.argument.amount"));
+                            messages.sendMessage(sender, "error.argument.amount");
                             return false;
                         }
 
@@ -1815,7 +1815,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         try {
                             exp = Double.parseDouble(args[1]);
                         } catch (NumberFormatException e) {
-                            sender.sendMessage(getMessage("error.argument.amount"));
+                            messages.sendMessage(sender, "error.argument.amount");
                             return false;
                         }
 
@@ -1824,19 +1824,19 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                     }
                     case "setlevel": {
                         if (args.length < 2) {
-                            sender.sendMessage(getMessage("error.argument.corporation"));
+                            messages.sendMessage(sender, "error.argument.corporation");
                             return false;
                         }
 
                         Corporation c = Corporation.byName(args[1]);
 
                         if (c == null) {
-                            sender.sendMessage(getMessage("error.corporation.inexistent"));
+                            messages.sendMessage(sender, "error.corporation.inexistent");
                             return false;
                         }
 
                         if (args.length < 3) {
-                            sender.sendMessage(getMessage("error.argument.integer"));
+                            messages.sendMessage(sender, "error.argument.integer");
                             return false;
                         }
 
@@ -1844,12 +1844,12 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         try {
                             level = Integer.parseInt(args[1]);
                         } catch (NumberFormatException e) {
-                            sender.sendMessage(getMessage("error.argument.integer"));
+                            messages.sendMessage(sender, "error.argument.integer");
                             return false;
                         }
 
                         if (level < 1 || level > Corporation.MAX_LEVEL) {
-                            sender.sendMessage(getMessage("error.argument.integer"));
+                            messages.sendMessage(sender, "error.argument.integer");
                             return false;
                         }
 
@@ -1893,7 +1893,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         break;
                     }
                     default: {
-                        sender.sendMessage(getMessage("error.argument"));
+                        messages.sendMessage(sender, "error.argument");
                         return false;
                     }
                 }
@@ -1917,7 +1917,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
             }
             case "market": {
                 if (args.length < 1) {
-                    sender.sendMessage(getMessage("error.argument"));
+                    messages.sendMessage(sender, "error.argument");
                     return false;
                 }
 
@@ -1938,18 +1938,18 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                     case "setplayeraccess":
                     case "setaccess": {
                         if (args.length < 2) {
-                            sender.sendMessage(getMessage("error.argument.player"));
+                            messages.sendMessage(sender, "error.argument.player");
                             return false;
                         }
 
-                        OfflinePlayer target = Wrapper.getPlayer(args[1]);
+                        OfflinePlayer target = NovaUtil.getPlayer(args[1]);
                         if (target == null) {
-                            sender.sendMessage(getMessage("error.argument.player"));
+                            messages.sendMessage(sender, "error.argument.player");
                             return false;
                         }
 
                         if (args.length < 3) {
-                            sender.sendMessage(getMessage("error.argument.boolean"));
+                            messages.sendMessage(sender, "error.argument.boolean");
                             return false;
                         }
 
@@ -1968,18 +1968,18 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                     case "setprice":
                     case "price": {
                         if (args.length < 2) {
-                            sender.sendMessage(getMessage("error.argument.item"));
+                            messages.sendMessage(sender, "error.argument.item");
                             return false;
                         }
 
                         Material m = Material.matchMaterial(args[1]);
                         if (m == null) {
-                            sender.sendMessage(getMessage("error.argument.item"));
+                            messages.sendMessage(sender, "error.argument.item");
                             return false;
                         }
 
                         if (args.length < 3) {
-                            sender.sendMessage(getMessage("error.argument.amount"));
+                            messages.sendMessage(sender, "error.argument.amount");
                             return false;
                         }
 
@@ -1987,7 +1987,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                             double price = Double.parseDouble(args[2]);
                             setMarketPrice(sender, m, price);
                         } catch (NumberFormatException e) {
-                            sender.sendMessage(getMessage("error.argument.amount"));
+                            messages.sendMessage(sender, "error.argument.amount");
                             return false;
                         }
                         break;
@@ -1995,13 +1995,13 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                     case "setrestock":
                     case "restock": {
                         if (args.length < 2) {
-                            sender.sendMessage(getMessage("error.argument"));
+                            messages.sendMessage(sender, "error.argument");
                             return false;
                         }
 
                         String enabled = args[1];
                         if (!enabled.equalsIgnoreCase("enabled") && !enabled.equalsIgnoreCase("disabled")) {
-                            sender.sendMessage(getMessage("error.argument"));
+                            messages.sendMessage(sender, "error.argument");
                             return false;
                         }
 
@@ -2011,7 +2011,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                     case "setrestockinterval":
                     case "restockinterval": {
                         if (args.length < 2) {
-                            sender.sendMessage(getMessage("error.argument.amount"));
+                            messages.sendMessage(sender, "error.argument.amount");
                             return false;
                         }
 
@@ -2019,7 +2019,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                             long interval = Long.parseLong(args[1]);
                             setMarketRestockInterval(sender, interval);
                         } catch (NumberFormatException e) {
-                            sender.sendMessage(getMessage("error.argument.amount"));
+                            messages.sendMessage(sender, "error.argument.amount");
                             return false;
                         }
                         break;
@@ -2027,7 +2027,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                     case "setmaxpurchases":
                     case "maxpurchases": {
                         if (args.length < 2) {
-                            sender.sendMessage(getMessage("error.argument.amount"));
+                            messages.sendMessage(sender, "error.argument.amount");
                             return false;
                         }
 
@@ -2035,7 +2035,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                             long max = Long.parseLong(args[1]);
                             setMarketMaxPurchases(sender, max);
                         } catch (NumberFormatException e) {
-                            sender.sendMessage(getMessage("error.argument.amount"));
+                            messages.sendMessage(sender, "error.argument.amount");
                             return false;
                         }
                         break;
@@ -2043,13 +2043,13 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                     case "setdepositenabled":
                     case "depositenabled": {
                         if (args.length < 2) {
-                            sender.sendMessage(getMessage("error.argument"));
+                            messages.sendMessage(sender, "error.argument");
                             return false;
                         }
 
                         String enabled = args[1];
                         if (!enabled.equalsIgnoreCase("enabled") && !enabled.equalsIgnoreCase("disabled")) {
-                            sender.sendMessage(getMessage("error.argument"));
+                            messages.sendMessage(sender, "error.argument");
                             return false;
                         }
 
@@ -2059,7 +2059,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                     case "setmembershipcost":
                     case "membershipcost": {
                         if (args.length < 2) {
-                            sender.sendMessage(getMessage("error.argument.amount"));
+                            messages.sendMessage(sender, "error.argument.amount");
                             return false;
                         }
 
@@ -2067,7 +2067,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                             double cost = Double.parseDouble(args[1]);
                             setMarketMembershipCost(sender, cost);
                         } catch (NumberFormatException e) {
-                            sender.sendMessage(getMessage("error.argument.amount"));
+                            messages.sendMessage(sender, "error.argument.amount");
                             return false;
                         }
                         break;
@@ -2075,7 +2075,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                     case "setsellpercentage":
                     case "sellpercentage": {
                         if (args.length < 2) {
-                            sender.sendMessage(getMessage("error.argument.amount"));
+                            messages.sendMessage(sender, "error.argument.amount");
                             return false;
                         }
 
@@ -2083,7 +2083,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                             double percentage = Double.parseDouble(args[1]);
                             setMarketSellPercentage(sender, percentage);
                         } catch (NumberFormatException e) {
-                            sender.sendMessage(getMessage("error.argument.amount"));
+                            messages.sendMessage(sender, "error.argument.amount");
                             return false;
                         }
                         break;
@@ -2092,12 +2092,12 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                     case "setmarketenabled":
                     case "marketenabled": {
                         if (args.length < 2) {
-                            sender.sendMessage(getMessage("error.argument.bool"));
+                            messages.sendMessage(sender, "error.argument.bool");
                             return false;
                         }
 
                         if (!args[1].equalsIgnoreCase("true") && !args[1].equalsIgnoreCase("false")) {
-                            sender.sendMessage(getMessage("error.argument.bool"));
+                            messages.sendMessage(sender, "error.argument.bool");
                             return false;
                         }
 
@@ -2115,18 +2115,18 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                     case "setstock":
                     case "stock": {
                         if (args.length < 2) {
-                            sender.sendMessage(getMessage("error.argument.item"));
+                            messages.sendMessage(sender, "error.argument.item");
                             return false;
                         }
 
                         MaterialSelector selector = MaterialSelector.of(args[1]);
                         if (selector == null) {
-                            sender.sendMessage(getMessage("error.argument.item"));
+                            messages.sendMessage(sender, "error.argument.item");
                             return false;
                         }
 
                         if (args.length < 3) {
-                            sender.sendMessage(getMessage("error.argument.amount"));
+                            messages.sendMessage(sender, "error.argument.amount");
                             return false;
                         }
 
@@ -2134,13 +2134,13 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                             long amount = Long.parseLong(args[2]);
                             setMarketStock(sender, selector.getMaterials(), amount);
                         } catch (NumberFormatException e) {
-                            sender.sendMessage(getMessage("error.argument.amount"));
+                            messages.sendMessage(sender, "error.argument.amount");
                             return false;
                         }
                         break;
                     }
                     default: {
-                        sender.sendMessage(getMessage("error.argument"));
+                        messages.sendMessage(sender, "error.argument");
                         return false;
                     }
                 }
@@ -2168,7 +2168,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                     }
                     case "search": {
                         if (args.length < 2) {
-                            p.sendMessage(getMessage("error.argument"));
+                            messages.sendMessage(p, "error.argument");
                             return false;
                         }
 
@@ -2180,14 +2180,14 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                     }
                     case "add": {
                         if (args.length < 2) {
-                            p.sendMessage(getMessage("error.argument.amount"));
+                            messages.sendMessage(p, "error.argument.amount");
                             return false;
                         }
 
                         try {
                             addAuctionItem(p, Double.parseDouble(args[1]));
                         } catch (NumberFormatException e) {
-                            p.sendMessage(getMessage("error.argument.amount"));
+                            messages.sendMessage(p, "error.argument.amount");
                             return false;
                         }
                         break;
@@ -2197,7 +2197,7 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                 break;
             }
             default: {
-                sender.sendMessage(getMessage("error.argument"));
+                messages.sendMessage(sender, "error.argument");
                 return false;
             }
         }

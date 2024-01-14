@@ -59,10 +59,10 @@ import java.util.stream.Collectors;
 
 import static us.teaminceptus.novaconomy.Novaconomy.getCommandWrapper;
 import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.*;
+import static us.teaminceptus.novaconomy.abstraction.NBTWrapper.*;
 import static us.teaminceptus.novaconomy.abstraction.NBTWrapper.builder;
-import static us.teaminceptus.novaconomy.abstraction.NBTWrapper.of;
 import static us.teaminceptus.novaconomy.abstraction.Wrapper.*;
-import static us.teaminceptus.novaconomy.util.NovaUtil.format;
+import static us.teaminceptus.novaconomy.messages.MessageHandler.*;
 import static us.teaminceptus.novaconomy.util.inventory.Generator.*;
 import static us.teaminceptus.novaconomy.util.inventory.InventorySelector.confirm;
 import static us.teaminceptus.novaconomy.util.inventory.Items.*;
@@ -127,7 +127,7 @@ final class GUIManager implements Listener {
         Economy econ = getEconomy(econWheel);
 
         if (add && !np.canAfford(econ, amount)) {
-            p.sendMessage(format(getMessage("error.economy.invalid_amount"), get("constants.deposit")));
+            messages.sendMessage(p, "error.economy.invalid_amount", get("constants.deposit"));
             return;
         }
 
@@ -136,11 +136,11 @@ final class GUIManager implements Listener {
         if (add) {
             np.remove(econ, amount);
             b.addAdvertisingBalance(amount, econ);
-            p.sendMessage(format(getMessage("success.business.advertising_deposit"), msg, b.getName()));
+            messages.sendMessage(p, "success.business.advertising_deposit", msg, b.getName());
         } else {
             np.add(econ, amount);
             b.removeAdvertisingBalance(amount, econ);
-            p.sendMessage(format(getMessage("success.business.advertising_withdraw"), msg, b.getName()));
+            messages.sendMessage(p, "success.business.advertising_withdraw", msg, b.getName());
         }
 
         p.closeInventory();
@@ -248,14 +248,14 @@ final class GUIManager implements Listener {
                 String name = item.hasItemMeta() && item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : NovaUtil.capitalize(item.getType().name().replace('_', ' '));
 
                 if (!of(item).getBoolean("product:in_stock")) {
-                    p.sendMessage(format(get("error.business.not_in_stock"), name));
+                    messages.send(p, "error.business.not_in_stock", name);
                     return;
                 }
 
                 BusinessProduct pr = (BusinessProduct) getProduct(item);
 
                 if (!np.canAfford(pr, NovaConfig.getConfiguration().getWhenNegativeAllowPurchaseProducts())) {
-                    p.sendMessage(format(get("error.economy.invalid_amount"), get("constants.purchase")));
+                    messages.send(p, "error.economy.invalid_amount", get("constants.purchase"));
                     return;
                 }
 
@@ -334,7 +334,7 @@ final class GUIManager implements Listener {
                 ItemStack item = e.getCurrentItem();
                 Business b = getBusiness(item);
 
-                p.sendMessage(get("cancel.business.purchase"));
+                messages.send(p, "cancel.business.purchase");
                 p.openInventory(generateBusinessData(b, p, true, SortingType.PRODUCT_NAME_ASCENDING).get(0));
                 NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
 
@@ -401,7 +401,7 @@ final class GUIManager implements Listener {
                 Player p = (Player) e.getWhoClicked();
 
                 if (p.getInventory().firstEmpty() == -1) {
-                    p.sendMessage(get("error.player.full_inventory"));
+                    messages.send(p, "error.player.full_inventory");
                     return;
                 }
 
@@ -416,7 +416,7 @@ final class GUIManager implements Listener {
                 double amount = bP.getPrice().getAmount() * size;
 
                 if (!np.canAfford(econ, amount, NovaConfig.getConfiguration().getWhenNegativeAllowPurchaseProducts())) {
-                    p.sendMessage(format(get("error.economy.invalid_amount"), get("constants.purchase")));
+                    messages.send(p, "error.economy.invalid_amount", get("constants.purchase"));
                     p.closeInventory();
                     return;
                 }
@@ -451,7 +451,7 @@ final class GUIManager implements Listener {
 
                 String material = product.hasItemMeta() && product.getItemMeta().hasDisplayName() ? product.getItemMeta().getDisplayName() : NovaUtil.capitalize(product.getType().name().replace('_', ' '));
 
-                p.sendMessage(format(get("success.business.purchase"), material, bP.getBusiness().getName()));
+                messages.send(p, "success.business.purchase", material, bP.getBusiness().getName());
                 p.closeInventory();
                 NovaSound.ENTITY_ARROW_HIT_PLAYER.play(p);
 
@@ -474,7 +474,7 @@ final class GUIManager implements Listener {
                 if (owner.isOnline() && owner.hasNotifications()) {
                     String name = p.getDisplayName() == null ? p.getName() : p.getDisplayName();
                     Player bOwner = owner.getOnlinePlayer();
-                    bOwner.sendMessage(format(get("notification.business.purchase"), name, material));
+                    messages.sendNotification(bOwner, "notification.business.purchase", name, material);
                     NovaSound.ENTITY_ARROW_HIT_PLAYER.play(bOwner, 1F, 2F);
                 }
 
@@ -501,7 +501,7 @@ final class GUIManager implements Listener {
                     b.addProduct(added);
 
                     String name = product.hasItemMeta() && product.getItemMeta().hasDisplayName() ? product.getItemMeta().getDisplayName() : NovaUtil.capitalize(product.getType().name().replace('_', ' '));
-                    p.sendMessage(format(getMessage("success.business.add_product"), name));
+                    messages.sendMessage(p, "success.business.add_product", name);
                     p.closeInventory();
                 }
             })
@@ -534,7 +534,7 @@ final class GUIManager implements Listener {
                     else p.getInventory().addItem(i);
                 });
 
-                p.sendMessage(format(getMessage("success.business.add_resource"), b.getName()));
+                messages.sendMessage(p, "success.business.add_resource", b.getName());
                 p.closeInventory();
 
                 BusinessStockEvent event = new BusinessStockEvent(b, p, extra, resources);
@@ -556,7 +556,7 @@ final class GUIManager implements Listener {
                 b.removeResource(stock);
                 String name = product.hasItemMeta() && product.getItemMeta().hasDisplayName() ? product.getItemMeta().getDisplayName() : NovaUtil.capitalize(product.getType().name().replace('_', ' '));
 
-                p.sendMessage(format(get("success.business.remove_product"), name, b.getName()));
+                messages.send(p, "success.business.remove_product", name, b.getName());
 
                 stock.forEach(i -> {
                     if (p.getInventory().firstEmpty() == -1) p.getWorld().dropItemNaturally(p.getLocation(), i);
@@ -578,7 +578,7 @@ final class GUIManager implements Listener {
                 Economy takeEcon = getEconomy(takeItem);
                 if (!takeEcon.isConvertable()) {
                     p.closeInventory();
-                    p.sendMessage(format(getError("error.economy.transfer_not_convertable"), takeEcon.getName()));
+                    messages.sendError(p, "error.economy.transfer_not_convertable", takeEcon.getName());
                     NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(e.getWhoClicked());
                     return;
                 }
@@ -586,14 +586,14 @@ final class GUIManager implements Listener {
                 double take = getAmount(takeItem);
                 if (!np.canAfford(takeEcon, take, NovaConfig.getConfiguration().getWhenNegativeAllowConvertBalances())) {
                     p.closeInventory();
-                    p.sendMessage(format(getError("error.economy.invalid_amount"), get("constants.convert")));
+                    messages.sendError(p, "error.economy.invalid_amount", get("constants.convert"));
                     NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(e.getWhoClicked());
                     return;
                 }
 
                 double max = NovaConfig.getConfiguration().getMaxConvertAmount(takeEcon);
                 if (max >= 0 && take > max) {
-                    p.sendMessage(format(getMessage("error.economy.transfer_max"), format("%,.2f", max) + takeEcon.getSymbol(), format("%,.2f", take) + takeEcon.getSymbol()));
+                    messages.sendMessage(p, "error.economy.transfer_max", format("%,.2f", max) + takeEcon.getSymbol(), format("%,.2f", take) + takeEcon.getSymbol());
                     p.closeInventory();
                     return;
                 }
@@ -602,7 +602,7 @@ final class GUIManager implements Listener {
                 Economy giveEcon = getEconomy(giveItem);
                 if (!giveEcon.isConvertable()) {
                     p.closeInventory();
-                    p.sendMessage(format(getError("error.economy.transfer_not_convertable"), giveEcon.getName()));
+                    messages.sendError(p, "error.economy.transfer_not_convertable", giveEcon.getName());
                     NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(e.getWhoClicked());
                     return;
                 }
@@ -621,7 +621,7 @@ final class GUIManager implements Listener {
 
                 NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
                 p.closeInventory();
-                p.sendMessage(format(getMessage("success.economy.convert"), format("%,.2f", take) + takeEcon.getSymbol(), format("%,.2f", give) + giveEcon.getSymbol()));
+                messages.sendMessage(p, "success.economy.convert", format("%,.2f", take) + takeEcon.getSymbol(), format("%,.2f", give) + giveEcon.getSymbol());
             })
             .put("no:close", (e, inv) -> {
                 e.getWhoClicked().closeInventory();
@@ -788,21 +788,21 @@ final class GUIManager implements Listener {
                 Business b = getBusiness(item);
 
                 if (anonymous) {
-                    p.sendMessage(get("plugin.prefix") + ChatColor.RED + get("constants.business.anonymous_home"));
+                    messages.sendError(p, "constants.business.anonymous_home");
                     return;
                 }
 
                 if (!b.hasHome()) {
-                    p.sendMessage(b.isOwner(p) ? getMessage("error.business.no_home") : format(getMessage("error.business.no_home_user"), b.getName()));
+                    messages.sendRawMessage(p, b.isOwner(p) ? get("error.business.no_home") : format(get("error.business.no_home_user"), b.getName()));
                     return;
                 }
 
                 if (b.getHome().distanceSquared(p.getLocation()) < 16) {
-                    p.sendMessage(getMessage("error.business.too_close_home"));
+                    messages.sendMessage(p, "error.business.too_close_home");
                     return;
                 }
 
-                p.sendMessage(ChatColor.DARK_AQUA + get("constants.teleporting"));
+                messages.sendRaw(p, ChatColor.DARK_AQUA + get("constants.teleporting"));
 
                 BusinessTeleportHomeEvent event = new BusinessTeleportHomeEvent(p, b);
                 Bukkit.getPluginManager().callEvent(event);
@@ -823,7 +823,7 @@ final class GUIManager implements Listener {
                 boolean anonymous = of(item).getBoolean("anonymous");
 
                 if (anonymous) {
-                    p.sendMessage(get("plugin.prefix") + ChatColor.RED + get("constants.business.anonymous_statistics"));
+                    messages.sendError(p, "constants.business.anonymous_statistics");
                     return;
                 }
 
@@ -881,7 +881,7 @@ final class GUIManager implements Listener {
                 if (!event.isCancelled()) {
                     np.setRating(event.getRating());
                     p.closeInventory();
-                    p.sendMessage(format(getMessage("success.business.rate"), b.getName(), rating));
+                    messages.sendMessage(p, "success.business.rate", b.getName(), rating);
                     NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
                 }
             })
@@ -915,7 +915,7 @@ final class GUIManager implements Listener {
                 b.getProduct(pr.getItem()).setPrice(new Price(econ, price));
 
                 String display = pr.getItem().hasItemMeta() && pr.getItem().getItemMeta().hasDisplayName() ? pr.getItem().getItemMeta().getDisplayName() : NovaUtil.capitalize(pr.getItem().getType().name().replace('_', ' '));
-                p.sendMessage(format(getMessage("success.business.edit_price"), display, format("%,.2f", price) + econ.getSymbol()));
+                messages.sendMessage(p, "success.business.edit_price", display, format("%,.2f", price) + econ.getSymbol());
                 p.closeInventory();
             })
             .put("player_stats", (e, inv) -> {
@@ -1139,7 +1139,7 @@ final class GUIManager implements Listener {
                 }
 
                 if (!np.canAfford(econ, amount, NovaConfig.getConfiguration().getWhenNegativeAllowPayPlayers())) {
-                    p.sendMessage(getMessage("error.economy.invalid_amount_pay"));
+                    messages.sendMessage(p, "error.economy.invalid_amount_pay");
                     NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
                     return;
                 }
@@ -1162,7 +1162,7 @@ final class GUIManager implements Listener {
                 String amountS = format("%,.2f", amount) + econ.getSymbol();
                 String gameName = p.getDisplayName() == null ? p.getName() : p.getDisplayName();
 
-                target.sendMessage(format(getMessage("success.economy.receive"), amountS, gameName));
+                messages.sendMessage(target, "success.economy.receive", amountS, gameName);
                 w.sendActionbar(target, format(get("success.economy.receive_actionbar"), amountS, gameName));
             })
             .put("corporation:hq", (e, inv) -> {
@@ -1171,13 +1171,13 @@ final class GUIManager implements Listener {
                 Corporation c = getCorporation(item);
 
                 if (c.getHeadquarters() == null) {
-                    p.sendMessage(getError("error.corporation.no_hq"));
+                    messages.sendError(p, "error.corporation.no_hq");
                     NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
                     return;
                 }
 
                 if (!c.getSetting(Settings.Corporation.PUBLIC_HEADQUARTERS) && !c.getMembers().contains(p)) {
-                    p.sendMessage(getError("error.corporation.private_hq"));
+                    messages.sendError(p, "error.corporation.private_hq");
                     NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
                     return;
                 }
@@ -1189,7 +1189,7 @@ final class GUIManager implements Listener {
 
                 if (!event.isCancelled()) {
                     p.teleport(event.getLocation());
-                    p.sendMessage(ChatColor.AQUA + get("constants.teleporting"));
+                    messages.sendRaw(p, ChatColor.AQUA + get("constants.teleporting"));
                     NovaSound.ENTITY_ENDERMAN_TELEPORT.playSuccess(p);
                 }
             })
@@ -1211,7 +1211,7 @@ final class GUIManager implements Listener {
                 Corporation c = getCorporation(item);
 
                 if (!c.isOwner(p)) {
-                    p.sendMessage(getError("error.corporation.not_owner"));
+                    messages.sendError(p, "error.corporation.not_owner");
                     NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
                     return;
                 }
@@ -1257,13 +1257,13 @@ final class GUIManager implements Listener {
                 String desc = of(item).getString("description");
 
                 if (!c.isOwner(p)) {
-                    p.sendMessage(getError("error.corporation.not_owner"));
+                    messages.sendError(p, "error.corporation.not_owner");
                     NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
                     return;
                 }
 
                 c.setDescription(desc);
-                p.sendMessage(getSuccess("success.corporation.description"));
+                messages.sendSuccess(p, "success.corporation.description");
                 p.closeInventory();
                 NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
             })
@@ -1442,7 +1442,7 @@ final class GUIManager implements Listener {
                 long max = NovaConfig.getMarket().getMaxPurchases();
                 long purchasesLeft = max - np.getPurchases().stream().filter(Receipt::isRecent).count();
                 if (max > 0 && purchasesLeft <= 0) {
-                    p.sendMessage(getError("error.market.max_purchases"));
+                    messages.sendError(p, "error.market.max_purchases");
                     NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
                     return;
                 }
@@ -1454,7 +1454,7 @@ final class GUIManager implements Listener {
                 Material product = Material.valueOf(nbt.getString(PRODUCT_TAG));
 
                 if (NovaConfig.getMarket().getStock(product) <= 0) {
-                    p.sendMessage(getError("error.market.out_of_stock"));
+                    messages.sendError(p, "error.market.out_of_stock");
                     NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
                     return;
                 }
@@ -1496,7 +1496,7 @@ final class GUIManager implements Listener {
                         int amount = Integer.parseInt(amountS);
 
                         if (NovaConfig.getMarket().getStock(product) < amount) {
-                            p.sendMessage(getError("error.market.not_enough_stock"));
+                            messages.sendError(p, "error.market.not_enough_stock");
                             NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
                             p.openInventory(inv);
                             return;
@@ -1531,7 +1531,7 @@ final class GUIManager implements Listener {
                 double price = NovaConfig.getMarket().getPrice(product, econ) * amount;
 
                 if (!np.canAfford(econ, price, NovaConfig.getConfiguration().getWhenNegativeAllowPurchaseMarket())) {
-                    p.sendMessage(getError("error.market.not_enough_money"));
+                    messages.sendError(p, "error.market.not_enough_money");
                     p.closeInventory();
                     NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
                     return;
@@ -1545,7 +1545,7 @@ final class GUIManager implements Listener {
                     else
                         p.getInventory().addItem(new ItemStack(product, amount));
 
-                    p.sendMessage(format(getSuccess("success.market.buy_product"), ChatColor.GOLD + WordUtils.capitalizeFully(product.name().replace('_', ' '))));
+                    messages.sendSuccess(p, "success.market.buy_product", ChatColor.GOLD + WordUtils.capitalizeFully(product.name().replace('_', ' ')));
                     p.closeInventory();
                     NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
                 } catch (CancellationException ignored) {}
@@ -1558,7 +1558,7 @@ final class GUIManager implements Listener {
 
                 double price = NovaConfig.getMarket().getMarketMembershipCost(econ);
                 if (!np.canAfford(econ, price, NovaConfig.getConfiguration().getWhenNegativeAllowPurchaseMarket())) {
-                    p.sendMessage(getError("error.market.membership_cost"));
+                    messages.sendError(p, "error.market.membership_cost");
                     p.closeInventory();
                     NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
                     return;
@@ -1567,7 +1567,7 @@ final class GUIManager implements Listener {
                 np.remove(econ, price);
                 np.setMarketAccess(true);
 
-                p.sendMessage(getSuccess("success.market.membership"));
+                messages.sendSuccess(p, "success.market.membership");
                 NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
                 getCommandWrapper().openMarket(p, econ);
             })
@@ -1591,7 +1591,7 @@ final class GUIManager implements Listener {
                                 p.getInventory().addItem(i);
                         });
 
-                        p.sendMessage(format(getError("error.market.not_sold"), item.getType().name()));
+                        messages.sendError(p, "error.market.not_sold", item.getType().name());
                         p.closeInventory();
                         NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
                         return;
@@ -1607,7 +1607,7 @@ final class GUIManager implements Listener {
                     if (NovaConfig.getMarket().isSellStockEnabled())
                         items.forEach(i -> NovaConfig.getMarket().addStock(i.getType(), i.getAmount()));
 
-                    p.sendMessage(format(getSuccess("success.market.sell_items"), format("%,d", items.size())));
+                    messages.sendSuccess(p, "success.market.sell_items", format("%,d", items.size()));
                     p.closeInventory();
                     NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
                 }, cInv -> {
@@ -1737,7 +1737,7 @@ final class GUIManager implements Listener {
                         }
 
                         if (!np.canAfford(price, NovaConfig.getConfiguration().getWhenNegativeAllowPurchaseAuction())) {
-                            p.sendMessage(format(getError("error.economy.invalid_amount"), get("constants.purchase")));
+                            messages.sendError(p, "error.economy.invalid_amount", get("constants.purchase"));
                             NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
                             return;
                         }
@@ -1971,7 +1971,7 @@ final class GUIManager implements Listener {
                 }
 
                 if (!np.canAfford(product.getPrice(), NovaConfig.getConfiguration().getWhenNegativeAllowPurchaseAuction())) {
-                    p.sendMessage(format(getError("error.economy.invalid_amount"), get("constants.claim")));
+                    messages.sendError(p, "error.economy.invalid_amount", get("constants.claim"));
                     NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
                     return;
                 }

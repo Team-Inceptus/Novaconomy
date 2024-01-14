@@ -10,9 +10,8 @@ import us.teaminceptus.novaconomy.api.player.NovaPlayer;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static us.teaminceptus.novaconomy.Novaconomy.getPlayer;
+import static us.teaminceptus.novaconomy.util.NovaUtil.getPlayer;
 
-@SuppressWarnings("deprecation")
 class VaultEconomy extends AbstractEconomy {
 
     public static final EconomyResponse NO_BANKS = new EconomyResponse(0, 0, EconomyResponse.ResponseType.NOT_IMPLEMENTED, "Vault Banks are not apart of Novaconomy");

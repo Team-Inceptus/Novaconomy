@@ -208,6 +208,7 @@ public interface NovaConfig  {
         FileConfiguration config = YamlConfiguration.loadConfiguration(getFunctionalityFile());
 
         if (!config.isSet("CommandVersion")) config.set("CommandVersion", "auto");
+        if (!config.isSet("MessageHandler")) config.set("MessageHandler", "auto");
 
         if (!config.isDouble("MaxConvertAmount") && !config.isInt("MaxConvertAmount")) config.set("MaxConvertAmount", -1);
         if (!config.isConfigurationSection("EconomyMaxConvertAmounts")) config.createSection("EconomyMaxConvertAmounts");

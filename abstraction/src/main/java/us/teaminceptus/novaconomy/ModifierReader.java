@@ -11,6 +11,8 @@ import java.util.*;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
+import static us.teaminceptus.novaconomy.messages.MessageHandler.format;
+
 public final class ModifierReader {
 
     private ModifierReader() {}
@@ -118,7 +120,7 @@ public final class ModifierReader {
 
     public static String toModString(Entry<Economy, Double> entry) {
         if (entry == null) return null;
-        return NovaUtil.format("%,.0f", entry.getValue()) + entry.getKey().getSymbol();
+        return format("%,.0f", entry.getValue()) + entry.getKey().getSymbol();
     }
 
     public static List<String> toModList(List<Entry<Economy, Double>> list) {

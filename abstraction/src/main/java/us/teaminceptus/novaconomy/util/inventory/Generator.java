@@ -52,6 +52,8 @@ import static us.teaminceptus.novaconomy.abstraction.NBTWrapper.builder;
 import static us.teaminceptus.novaconomy.abstraction.NBTWrapper.of;
 import static us.teaminceptus.novaconomy.abstraction.Wrapper.*;
 import static us.teaminceptus.novaconomy.api.corporation.Corporation.toExperience;
+import static us.teaminceptus.novaconomy.messages.MessageHandler.format;
+import static us.teaminceptus.novaconomy.messages.MessageHandler.get;
 import static us.teaminceptus.novaconomy.util.NovaUtil.*;
 import static us.teaminceptus.novaconomy.util.inventory.Items.*;
 
