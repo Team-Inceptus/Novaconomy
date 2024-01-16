@@ -38,6 +38,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static us.teaminceptus.novaconomy.api.corporation.CorporationAchievement.MONOPOLY;
+import static us.teaminceptus.novaconomy.api.corporation.CorporationRank.*;
 
 /**
  * Represents a Novaconomy Corporation
@@ -196,6 +197,8 @@ public final class Corporation {
 
         children.add(b);
         childrenJoinDates.put(b.getUniqueId(), System.currentTimeMillis());
+
+        memberRanks.put(b.getUniqueId(), CorporationRank.defaultRank(this).getIdentifier());
 
         saveCorporation();
     }
@@ -600,7 +603,7 @@ public final class Corporation {
      * Invites a Business to this Corporation.
      * @param b Business to invite
      * @return CorporationInvite Object
-     * @throws IllegalArgumentException if business is null, business is already apart of this Corporation, or has already been invited
+     * @throws IllegalArgumentException if business is null, business is already apart of this Corporation, has already been invited, or is banned
      * @throws IllegalStateException if Corporation is not invite only or invite count is above {@link #MAX_INVITES}
      */
     @NotNull
@@ -610,6 +613,7 @@ public final class Corporation {
         if (isInvited(b)) throw new IllegalArgumentException("Business is already invited to this Corporation");
         if (getSetting(Settings.Corporation.JOIN_TYPE) != JoinType.INVITE_ONLY) throw new IllegalStateException("Corporation is not invite only!");
         if (invited.size() >= MAX_INVITES) throw new IllegalStateException("Corporation has reached maximum invite count of \"" + MAX_INVITES + "\"!");
+        if (isBanned(b)) throw new IllegalArgumentException("Business is banned from joining this corporation");
 
         Date d = new Date();
         invited.put(b.getUniqueId(), d.getTime());
@@ -789,7 +793,7 @@ public final class Corporation {
     }
 
     /**
-     * Gets an immutable copy of all of the ranks in this Corporation.
+     * Gets an immutable copy of all of the ranks in this Corporation. This will <strong>not</strong> include the {@linkplain #getOwnerRank() owner rank}.
      * @return Corporation Ranks
      */
     @NotNull
@@ -809,14 +813,37 @@ public final class Corporation {
     }
 
     /**
-     * Gets a corporation rank by its name.
+     * Gets a corporation rank by who has it.
      * @param child Business to get rank for
-     * @return Corporation Rank, or null if not found
+     * @return Corporation Rank, or Default Rank if not set
+     * @throws IllegalArgumentException if business is null or not a member
      */
-    public CorporationRank getRank(@NotNull Business child) {
+    @NotNull
+    public CorporationRank getRank(@NotNull Business child) throws IllegalArgumentException {
+        if (child == null) throw new IllegalArgumentException("Business cannot be null!");
         if (!children.contains(child)) throw new IllegalArgumentException("Business is not a child of this corporation!");
+        CorporationRank rank = rankById(memberRanks.get(child.getUniqueId()));
 
-        return rankById(memberRanks.get(child.getUniqueId()));
+        if (rank == null) {
+            rank = isOwner(child.getOwner()) ? CorporationRank.ownerRank(this) : CorporationRank.defaultRank(this);
+            ranks.put(rank.getIdentifier(), rank);
+            memberRanks.put(child.getUniqueId(), rank.getIdentifier());
+            saveCorporation();
+        }
+
+        return rank;
+    }
+
+    /**
+     * Gets a corporation rank by who has it.
+     * @param member Member Player to get rank for
+     * @return Corporation Rank, or Default Rank if not set
+     * @throws IllegalArgumentException if player does not own a business or not a member
+     */
+    @Nullable
+    public CorporationRank getRank(@NotNull OfflinePlayer member) throws IllegalArgumentException {
+        Business b = Business.byOwner(member);
+        return getRank(b);
     }
 
     /**
@@ -828,6 +855,7 @@ public final class Corporation {
     public boolean hasPermission(@NotNull Business child, @NotNull CorporationPermission permission) {
         if (!children.contains(child)) throw new IllegalArgumentException("Business is not a child of this corporation!");
         if (permission == null) throw new IllegalArgumentException("Permission cannot be null!");
+        if (isOwner(child.getOwner())) return true;
 
         CorporationRank rank = getRank(child);
         if (rank == null) return false;
@@ -857,6 +885,50 @@ public final class Corporation {
         return children.stream()
                 .flatMap(b -> b.getProducts().stream())
                 .collect(Collectors.toSet());
+    }
+
+    /**
+     * Gets the rank of the Corporation Owner.
+     * @return Corporation Owner Rank
+     */
+    @NotNull
+    public CorporationRank getOwnerRank() {
+        if (ranks.get(OWNER_RANK) == null) {
+            CorporationRank owner = CorporationRank.ownerRank(this);
+            ranks.put(OWNER_RANK, owner);
+
+            if (Business.exists(this.owner))
+                memberRanks.put(Business.byOwner(this.owner).getUniqueId(), OWNER_RANK);
+
+            saveCorporation();
+            return owner;
+        }
+
+        return ranks.get(OWNER_RANK);
+    }
+
+    /**
+     * Gets the default rank of the Corporation.
+     * @return Corporation Default Rank
+     */
+    @NotNull
+    public CorporationRank getDefaultRank() {
+        if (ranks.get(DEFAULT_RANK) == null) {
+            CorporationRank member = CorporationRank.defaultRank(this);
+            ranks.put(DEFAULT_RANK, member);
+            saveCorporation();
+            return member;
+        }
+
+        return ranks.get(DEFAULT_RANK);
+    }
+
+    /**
+     * Gets the maximum amount of ranks this Corporation can have.
+     * @return Maximum Ranks
+     */
+    public int getMaxRanks() {
+        return Math.min(MAX_RANK_COUNT, (getLevel() / 6) + 3);
     }
 
     @Override
@@ -1258,7 +1330,15 @@ public final class Corporation {
             c.name = name;
             c.icon = icon;
 
-            if (Business.exists(owner)) c.children.add(Business.byOwner(owner));
+            Business b = Business.byOwner(owner);
+            if (b != null) {
+                c.children.add(b);
+                c.childrenJoinDates.put(b.getUniqueId(), System.currentTimeMillis());
+
+                CorporationRank rank = CorporationRank.ownerRank(c);
+                c.ranks.put(OWNER_RANK, rank);
+                c.memberRanks.put(b.getUniqueId(), OWNER_RANK);
+            }
 
             c.saveCorporation();
 
