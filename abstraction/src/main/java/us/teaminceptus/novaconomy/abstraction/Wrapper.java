@@ -2,15 +2,12 @@ package us.teaminceptus.novaconomy.abstraction;
 
 import net.md_5.bungee.api.chat.BaseComponent;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Material;
-import org.bukkit.OfflinePlayer;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import us.teaminceptus.novaconomy.abstraction.test.TestWrapper;
-import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 
 import java.lang.reflect.Constructor;
@@ -39,8 +36,6 @@ public interface Wrapper {
     void sendActionbar(Player p, String message);
 
     void sendActionbar(Player p, BaseComponent component);
-
-    ItemStack createSkull(OfflinePlayer p);
 
     Wrapper w = getWrapper();
 

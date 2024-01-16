@@ -2,7 +2,6 @@ package us.teaminceptus.novaconomy.abstraction.test;
 
 import net.md_5.bungee.api.chat.BaseComponent;
 import org.bukkit.Material;
-import org.bukkit.OfflinePlayer;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -48,11 +47,6 @@ public final class TestWrapper implements Wrapper {
 
     @Override
     public NovaInventory createInventory(String id, String name, int size) {
-        return null;
-    }
-
-    @Override
-    public ItemStack createSkull(OfflinePlayer p) {
         return null;
     }
 

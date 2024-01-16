@@ -15,24 +15,20 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.OfflinePlayer;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.Ageable;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.type.Fire;
 import org.bukkit.craftbukkit.v1_20_R3.CraftWorld;
 import org.bukkit.craftbukkit.v1_20_R3.entity.CraftPlayer;
-import org.bukkit.craftbukkit.v1_20_R3.profile.CraftPlayerProfile;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.inventory.meta.SkullMeta;
 import us.teaminceptus.novaconomy.abstraction.NBTWrapper;
 import us.teaminceptus.novaconomy.abstraction.NovaInventory;
 import us.teaminceptus.novaconomy.abstraction.Wrapper;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 
 import java.lang.reflect.Field;
-import java.util.UUID;
 import java.util.function.Consumer;
 
 final class Wrapper1_20_R3 implements Wrapper {
@@ -48,20 +44,6 @@ final class Wrapper1_20_R3 implements Wrapper {
     @Override
     public void sendActionbar(Player p, BaseComponent component) {
         p.spigot().sendMessage(ChatMessageType.ACTION_BAR, component);
-    }
-
-    @Override
-    public org.bukkit.inventory.ItemStack createSkull(OfflinePlayer p) {
-        org.bukkit.inventory.ItemStack item = new org.bukkit.inventory.ItemStack(Material.PLAYER_HEAD);
-        SkullMeta meta = (SkullMeta) item.getItemMeta();
-        boolean n = p == null;
-
-        UUID uid = n ? UUID.randomUUID() : p.getUniqueId();
-        String name = n ? "Steve" : p.getName();
-        meta.setOwnerProfile(new CraftPlayerProfile(uid, name));
-
-        item.setItemMeta(meta);
-        return item;
     }
 
     @Override
