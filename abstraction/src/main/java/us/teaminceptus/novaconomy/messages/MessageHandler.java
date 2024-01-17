@@ -19,10 +19,7 @@ import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.player.NovaPlayer;
 
 import java.lang.reflect.Constructor;
-import java.util.AbstractMap;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -89,21 +86,25 @@ public interface MessageHandler {
     }
 
     static <T> Supplier<String> any(Supplier<T[]> array, Function<T, String> toString) {
-        return () -> Arrays.stream(array.get())
-                .map(toString)
-                .sorted(Comparator.comparingDouble(x -> r.nextDouble()))
-                .findFirst()
-                .orElse("null");
+        return () -> {
+            List<String> l = Arrays.stream(array.get())
+                    .map(toString)
+                    .collect(Collectors.toList());
+
+            return l.get(r.nextInt(l.size()));
+        };
     }
 
     static <T> Supplier<String> any(Supplier<T[]> array, Function<T, String> toString, Predicate<T> filter) {
-        return () -> Arrays.stream(array.get())
-                .filter(filter)
-                .map(toString)
-                .map(String::toLowerCase)
-                .sorted(Comparator.comparingDouble(x -> r.nextDouble()))
-                .findFirst()
-                .orElse("null");
+        return () -> {
+            List<String> l = Arrays.stream(array.get())
+                    .filter(filter)
+                    .map(toString)
+                    .map(String::toLowerCase)
+                    .collect(Collectors.toList());
+
+            return l.get(r.nextInt(l.size()));
+        };
     }
 
     ChatColor[] EXAMPLE_COLORS = new ChatColor[] {
