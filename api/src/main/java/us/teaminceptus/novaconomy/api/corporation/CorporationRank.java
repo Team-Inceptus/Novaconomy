@@ -8,6 +8,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.Serializable;
 import java.util.*;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -21,6 +22,21 @@ public final class CorporationRank implements Serializable, ConfigurationSeriali
      * The maximum length of a rank's name.
      */
     public static final int MAX_NAME_LENGTH = 36;
+
+    /**
+     * The pattern a rank's name must match.
+     */
+    public static final Pattern VALID_NAME = Pattern.compile("^[a-zA-Z0-9_\\-+#]*$");
+
+    /**
+     * The maximum length of a rank's prefix.
+     */
+    public static final int MAX_PREFIX_LENGTH = 6;
+
+    /**
+     * The pattern a rank's prefix must match.
+     */
+    public static final Pattern VALID_PREFIX = Pattern.compile("^[a-zA-Z0-9_\\-+|/#\\\\]*$");
 
     /**
      * The maximum number of ranks a Corporation can have (including the default and owner ranks).
@@ -95,8 +111,10 @@ public final class CorporationRank implements Serializable, ConfigurationSeriali
      * @throws IllegalArgumentException if the name is null or longer than {@link #MAX_NAME_LENGTH}
      */
     public void setName(@NotNull String name) throws IllegalArgumentException {
-        if (name == null) throw new IllegalArgumentException("Name cannot be null.");
+        if (name == null || name.isEmpty()) throw new IllegalArgumentException("Name cannot be null.");
         if (name.length() > MAX_NAME_LENGTH) throw new IllegalArgumentException("Name cannot be longer than " + MAX_NAME_LENGTH + " characters.");
+        if (!VALID_NAME.matcher(name).matches()) throw new IllegalArgumentException("Name must match " + VALID_NAME.pattern());
+
         checkImmutable();
 
         this.name = name;
@@ -140,6 +158,8 @@ public final class CorporationRank implements Serializable, ConfigurationSeriali
      */
     public boolean hasPermission(@NotNull CorporationPermission permission) {
         if (permission == null) throw new IllegalArgumentException("Permission cannot be null.");
+        if (identifier.equals(OWNER_RANK)) return true;
+
         return permissions.contains(permission);
     }
 
@@ -150,6 +170,8 @@ public final class CorporationRank implements Serializable, ConfigurationSeriali
      */
     public boolean hasPermissions(@NotNull Iterable<CorporationPermission> permissions) {
         if (permissions == null) throw new IllegalArgumentException("Permissions cannot be null.");
+        if (identifier.equals(OWNER_RANK)) return true;
+
         return this.permissions.containsAll(ImmutableSet.copyOf(permissions));
     }
 
@@ -242,7 +264,10 @@ public final class CorporationRank implements Serializable, ConfigurationSeriali
      * @throws IllegalArgumentException if the prefix is null
      */
     public void setPrefix(@NotNull String prefix) throws IllegalArgumentException {
-        if (prefix == null) throw new IllegalArgumentException("Prefix cannot be null.");
+        if (prefix == null || prefix.isEmpty()) throw new IllegalArgumentException("Prefix cannot be null.");
+        if (prefix.length() > MAX_PREFIX_LENGTH) throw new IllegalArgumentException("Prefix cannot be longer than " + MAX_PREFIX_LENGTH + " characters.");
+        if (!VALID_PREFIX.matcher(prefix).matches()) throw new IllegalArgumentException("Prefix must match " + VALID_PREFIX.pattern());
+
         checkImmutable();
 
         this.prefix = prefix;
@@ -279,6 +304,7 @@ public final class CorporationRank implements Serializable, ConfigurationSeriali
         checkImmutable();
 
         this.icon = icon;
+        save();
     }
 
     /**
@@ -288,6 +314,14 @@ public final class CorporationRank implements Serializable, ConfigurationSeriali
         Corporation c = getCorporation();
         c.ranks.put(identifier, this);
         c.saveCorporation();
+    }
+
+    /**
+     * Deletes this rank from the Corporation it belongs to.
+     */
+    public void delete() {
+        Corporation c = getCorporation();
+        c.deleteRank(this);
     }
 
     @Override
@@ -360,13 +394,14 @@ public final class CorporationRank implements Serializable, ConfigurationSeriali
      */
     public static CorporationRank ownerRank(@NotNull Corporation c) {
         return c.getRanks().stream()
-                .filter(r -> r.identifier == OWNER_RANK)
+                .filter(r -> r.identifier.equals(OWNER_RANK))
                 .findFirst()
                 .orElse(builder()
                         .setIdentifier(OWNER_RANK)
                         .setCorporation(c)
                         .setName("Owner")
                         .setPrefix("CEO")
+                        .setIcon(Material.EMERALD)
                         .setPriority(0)
                         .setPermissions(CorporationPermission.values())
                         .build0()
@@ -381,13 +416,14 @@ public final class CorporationRank implements Serializable, ConfigurationSeriali
     @NotNull
     public static CorporationRank defaultRank(@NotNull Corporation c) {
         return c.getRanks().stream()
-                .filter(r -> r.identifier == DEFAULT_RANK)
+                .filter(r -> r.identifier.equals(DEFAULT_RANK))
                 .findFirst()
                 .orElse(builder()
                         .setIdentifier(DEFAULT_RANK)
                         .setCorporation(c)
                         .setName("Member")
                         .setPrefix('M')
+                        .setIcon(Material.STONE)
                         .setPriority(Integer.MAX_VALUE)
                         .build0()
                 );
@@ -543,9 +579,15 @@ public final class CorporationRank implements Serializable, ConfigurationSeriali
         public CorporationRank build() throws IllegalArgumentException, IllegalStateException {
             if (priority < MIN_PRIORITY) throw new IllegalArgumentException("Priority cannot be less (higher) than " + MIN_PRIORITY + ".");
             if (priority > MAX_PRIORITY) throw new IllegalArgumentException("Priority cannot be greater (lower) than " + MAX_PRIORITY + ".");
-            if (name == null) throw new IllegalArgumentException("Name cannot be null.");
+
+            if (name == null || name.isEmpty()) throw new IllegalArgumentException("Name cannot be null.");
             if (name.length() > MAX_NAME_LENGTH) throw new IllegalArgumentException("Name cannot be longer than " + MAX_NAME_LENGTH + " characters.");
-            if (prefix == null) throw new IllegalArgumentException("Prefix cannot be null.");
+            if (!VALID_NAME.matcher(name).matches()) throw new IllegalArgumentException("Name must match " + VALID_NAME);
+
+            if (prefix == null || prefix.isEmpty()) throw new IllegalArgumentException("Prefix cannot be null.");
+            if (prefix.length() > MAX_PREFIX_LENGTH) throw new IllegalArgumentException("Prefix cannot be longer than " + MAX_PREFIX_LENGTH + " characters.");
+            if (!VALID_PREFIX.matcher(prefix).matches()) throw new IllegalArgumentException("Prefix must match " + VALID_PREFIX);
+
             if (icon == null) throw new IllegalArgumentException("Icon cannot be null.");
 
             if (corporation.getRanks().size() >= corporation.getMaxRanks()) throw new IllegalStateException("Corporation has reached its rank limit of '" + corporation.getMaxRanks() + "'");
@@ -574,6 +616,6 @@ public final class CorporationRank implements Serializable, ConfigurationSeriali
     }
 
     private static boolean immutable(CorporationRank rank) {
-        return rank.identifier == OWNER_RANK;
+        return rank.identifier.equals(OWNER_RANK);
     }
 }
