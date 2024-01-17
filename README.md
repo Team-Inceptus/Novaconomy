@@ -5,6 +5,33 @@
 Novaconomy gives you the freedom to create **multiple** economies of your own choice, just like in real life!
 With the freedom to have your own symbols, icons, conversion rates, and even interest, you'll have all you need to have a proper Economy!
 
+---
+
+## 🔮 Features
+
+**Thousands of Forms of Content**
+
+- *Fully Customizable* Multiple Economy Creation
+  - Custom Model Icons, Names, Symbols, Interest, Natural Causes, Conversionable, and more! 
+  - *Optional* support for Negative Balances!
+- *Fully Customizable* Item Market
+- *Fully Customizable* Player Businesses & Corporations
+  - Player-created Business Products, Ratings, Homes, Statistics & More!
+  - Player-created Corporations for managing Businesses' permissions, profits, achievements, and more!
+- Global Bank
+- Player-owned Bounties
+- Custom Taxing Events
+- *Fully Customizable* Auction House
+  - BIN & Bidding Auctions 
+- Per-player and Global Settings
+- Advanced & Efficient GUI Mechanics
+- Customizable Message Handler & Component Support
+- Verbose Configurations
+- **PlaceholderAPI**, **Vault**, **Treasury**, **Essentials**, and more support/integration!
+- Manually Translated in over 10 Languages
+
+---
+
 <h2 style="text-decoration: underline;">📓Changelog</h2>
 
 ### 🛖 1.9.0 Update: Awesome Auctions
