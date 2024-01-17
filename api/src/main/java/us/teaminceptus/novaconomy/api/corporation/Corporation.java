@@ -154,6 +154,22 @@ public final class Corporation {
     }
 
     /**
+     * Fetches an immutable set of the Businesses this Corporation is responsible for, who have the given rank.
+     * @param rank Rank to filter by
+     * @return Business Children with rank, or all if rank is null
+     */
+    @NotNull
+    public Set<Business> getChildren(@Nullable CorporationRank rank) {
+        if (rank == null) return getChildren();
+
+        return ImmutableSet.copyOf(
+            children.stream()
+                    .filter(b -> getRank(b).equals(rank))
+                    .collect(Collectors.toList())
+        );
+    }
+
+    /**
      * Fetches the maximum amount of Children this Corporation can hold.
      * @return Maximum Children
      */
@@ -169,6 +185,23 @@ public final class Corporation {
     public Set<OfflinePlayer> getMembers() {
         return ImmutableSet.copyOf(
             children.stream()
+                    .map(Business::getOwner)
+                    .collect(Collectors.toList())
+        );
+    }
+
+    /**
+     * Fetches an immutable map of the Business Owners this Corporation is responsible for, who have the given rank.
+     * @param rank Rank to filter by
+     * @return Business Owners with rank, or all if rank is null
+     */
+    @NotNull
+    public Set<OfflinePlayer> getMembers(@Nullable CorporationRank rank) {
+        if (rank == null) return getMembers();
+
+        return ImmutableSet.copyOf(
+            children.stream()
+                    .filter(b -> getRank(b).equals(rank))
                     .map(Business::getOwner)
                     .collect(Collectors.toList())
         );
@@ -643,7 +676,8 @@ public final class Corporation {
 
         Stream.concat(Stream.of(owner), getMembers().stream())
                 .filter(OfflinePlayer::isOnline)
-                .forEach(p -> p.getPlayer().sendMessage(sent));
+                .map(OfflinePlayer::getPlayer)
+                .forEach(p -> p.sendMessage(sent));
     }
 
     /**
@@ -793,7 +827,7 @@ public final class Corporation {
     }
 
     /**
-     * Gets an immutable copy of all of the ranks in this Corporation. This will <strong>not</strong> include the {@linkplain #getOwnerRank() owner rank}.
+     * Gets an immutable copy of all of the ranks in this Corporation.
      * @return Corporation Ranks
      */
     @NotNull
@@ -807,9 +841,23 @@ public final class Corporation {
      * @return Corporation Rank, or null if not found
      */
     @Nullable
-    public CorporationRank rankById(@NotNull UUID id) {
+    public CorporationRank getRank(@NotNull UUID id) {
         if (id == null) throw new IllegalArgumentException("UUID cannot be null!");
         return ranks.get(id);
+    }
+
+    /**
+     * Gets a corporation rank by its name.
+     * @param name Rank Name
+     * @return Corporation Rank, or null if not found
+     */
+    @Nullable
+    public CorporationRank getRank(@NotNull String name) {
+        if (name == null) throw new IllegalArgumentException("Name cannot be null!");
+        return ranks.values().stream()
+                .filter(r -> r.getName().equalsIgnoreCase(name))
+                .findFirst()
+                .orElse(null);
     }
 
     /**
@@ -822,14 +870,20 @@ public final class Corporation {
     public CorporationRank getRank(@NotNull Business child) throws IllegalArgumentException {
         if (child == null) throw new IllegalArgumentException("Business cannot be null!");
         if (!children.contains(child)) throw new IllegalArgumentException("Business is not a child of this corporation!");
-        CorporationRank rank = rankById(memberRanks.get(child.getUniqueId()));
 
-        if (rank == null) {
-            rank = isOwner(child.getOwner()) ? CorporationRank.ownerRank(this) : CorporationRank.defaultRank(this);
-            ranks.put(rank.getIdentifier(), rank);
-            memberRanks.put(child.getUniqueId(), rank.getIdentifier());
-            saveCorporation();
+        UUID rankId = memberRanks.get(child.getUniqueId());
+        CorporationRank rank = null;
+
+        if (rankId == null) {
+            rank = isOwner(child.getOwner()) ? getOwnerRank() : getDefaultRank();
+
+            if (rank.getIdentifier().equals(DEFAULT_RANK)) {
+                memberRanks.put(child.getUniqueId(), DEFAULT_RANK);
+                saveCorporation();
+            }
         }
+        else
+            rank = getRank(rankId);
 
         return rank;
     }
@@ -842,6 +896,8 @@ public final class Corporation {
      */
     @Nullable
     public CorporationRank getRank(@NotNull OfflinePlayer member) throws IllegalArgumentException {
+        if (isOwner(member)) return getOwnerRank();
+
         Business b = Business.byOwner(member);
         return getRank(b);
     }
@@ -871,6 +927,7 @@ public final class Corporation {
     public void setRank(@NotNull Business child, @NotNull CorporationRank rank) {
         if (!children.contains(child)) throw new IllegalArgumentException("Business is not a child of this corporation!");
         if (rank == null) throw new IllegalArgumentException("Rank cannot be null!");
+        if (isOwner(child.getOwner())) throw new IllegalArgumentException("Cannot set rank for corporation owner!");
 
         memberRanks.put(child.getUniqueId(), rank.getIdentifier());
         saveCorporation();
@@ -929,6 +986,33 @@ public final class Corporation {
      */
     public int getMaxRanks() {
         return Math.min(MAX_RANK_COUNT, (getLevel() / 6) + 3);
+    }
+
+    /**
+     * Deletes a rank from this Corporation.
+     * @param rank Rank to delete
+     * @return true if deleted, false otherwise
+     */
+    public boolean deleteRank(@NotNull CorporationRank rank) {
+        if (rank == null) throw new IllegalArgumentException("Rank cannot be null!");
+        return deleteRank(rank.getIdentifier());
+    }
+
+    /**
+     * Deletes a rank from this Corporation.
+     * @param rankId Rank ID to delete
+     * @return true if deleted, false otherwise
+     */
+    public boolean deleteRank(@NotNull UUID rankId) {
+        if (rankId == null) throw new IllegalArgumentException("Rank ID cannot be null!");
+        if (rankId.equals(OWNER_RANK) || rankId.equals(DEFAULT_RANK)) return false;
+
+        boolean removed = ranks.remove(rankId) != null;
+        memberRanks.replaceAll((k, v) -> v.equals(rankId) ? DEFAULT_RANK : v);
+
+        saveCorporation();
+
+        return removed;
     }
 
     @Override
@@ -1533,9 +1617,8 @@ public final class Corporation {
 
         ByteArrayInputStream childrenIs = new ByteArrayInputStream(rs.getBytes("children"));
         ObjectInputStream childrenBis = new ObjectInputStream(childrenIs);
-        c.children.addAll(
-                ((List<UUID>) childrenBis.readObject()).stream().map(Business::byId).collect(Collectors.toList())
-        );
+        List<Business> children0 = ((List<UUID>) childrenBis.readObject()).stream().map(Business::byId).collect(Collectors.toList());
+        c.children.addAll(children0);
         childrenBis.close();
 
         ByteArrayInputStream childrenJoinDatesIs = new ByteArrayInputStream(rs.getBytes("children_joindates"));
@@ -1578,6 +1661,8 @@ public final class Corporation {
         ObjectInputStream memberRanksBis = new ObjectInputStream(memberRanksIs);
         c.memberRanks.putAll((Map<UUID, UUID>) memberRanksBis.readObject());
         memberRanksBis.close();
+
+        children0.forEach(b -> c.memberRanks.putIfAbsent(b.getUniqueId(), DEFAULT_RANK));
 
         return c;
     }
@@ -1726,11 +1811,12 @@ public final class Corporation {
         if (!childrenF.exists()) childrenF.createNewFile();
 
         FileConfiguration children = YamlConfiguration.loadConfiguration(childrenF);
-        c.children.addAll(children.getStringList("children")
+        List<Business> children0 = children.getStringList("children")
                 .stream()
                 .map(UUID::fromString)
                 .map(Business::byId)
-                .collect(Collectors.toList()));
+                .collect(Collectors.toList());
+        c.children.addAll(children0);
 
         if (children.isConfigurationSection("join_dates"))
             for (Map.Entry<String, Object> entry : children.getConfigurationSection("join_dates").getValues(false).entrySet()) {
@@ -1786,6 +1872,8 @@ public final class Corporation {
 
                 c.memberRanks.put(bid, rid);
             }
+
+        children0.forEach(b -> c.memberRanks.putIfAbsent(b.getUniqueId(), DEFAULT_RANK));
 
         return c;
     }
