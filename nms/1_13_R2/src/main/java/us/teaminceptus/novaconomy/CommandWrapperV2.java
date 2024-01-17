@@ -23,6 +23,7 @@ import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.corporation.Corporation;
 import us.teaminceptus.novaconomy.api.corporation.CorporationInvite;
+import us.teaminceptus.novaconomy.api.corporation.CorporationRank;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.util.NovaSound;
 import us.teaminceptus.novaconomy.util.NovaUtil;
@@ -91,6 +92,18 @@ final class CommandWrapperV2 implements CommandWrapper {
                 throw new TranslatableErrorException("error.argument.item");
 
             return selector;
+        }).registerValueResolver(CorporationRank.class, ctx -> {
+            Player p = ctx.actor().as(BukkitCommandActor.class).requirePlayer();
+            Corporation c = Corporation.byMember(p);
+            if (c == null)
+                throw new TranslatableErrorException("error.corporation.none.member");
+
+            CorporationRank rank = c.getRank(ctx.popForParameter());
+
+            if (rank == null)
+                throw new TranslatableErrorException("error.argument.rank");
+
+            return rank;
         });
 
         handler.getAutoCompleter()
@@ -131,6 +144,18 @@ final class CommandWrapperV2 implements CommandWrapper {
 
                     return suggestions;
                 }))
+                .registerParameterSuggestions(CorporationRank.class, (args, sender, cmd) -> {
+                    Player p = sender.as(BukkitCommandActor.class).requirePlayer();
+                    Corporation c = Corporation.byMember(p);
+                    if (c == null)
+                        throw new TranslatableErrorException("error.corporation.none.member");
+
+                    return c.getRanks()
+                            .stream()
+                            .filter(r -> !r.getIdentifier().equals(CorporationRank.OWNER_RANK))
+                            .map(CorporationRank::getName)
+                            .collect(Collectors.toList());
+                })
 
                 // Suggestions
 
@@ -892,6 +917,55 @@ final class CommandWrapperV2 implements CommandWrapper {
         @Subcommand({"leaderboard", "lboard", "lb"})
         @CommandPermission("novaconomy.user.leaderboard")
         public void corporationLeaderboard(Player p) { wrapper.corporationLeaderboard(p, "ratings"); }
+
+        @Subcommand({"rank", "ranks"})
+        @DefaultFor({"corporation rank", "corporation ranks",
+                "corp rank", "corp ranks",
+                "ncorporation rank", "ncorporation ranks",
+                "ncorp rank", "ncorp ranks",
+                "c rank", "c ranks",
+                "nc rank", "nc ranks"})
+        public void openCorporationRanks(Player p) { wrapper.openCorporationRanks(p); }
+
+        @Subcommand({"rank create", "ranks create", "rank add", "ranks add"})
+        public void createCorporationRank(Player p, String name, @Range(min = CorporationRank.MIN_PRIORITY, max = CorporationRank.MAX_PRIORITY) int priority, @Default("M") String prefix, @Default("stone") Material icon) {
+            wrapper.createCorporationRank(p, name, priority, prefix, icon);
+        }
+
+        @Subcommand({"rank delete", "ranks delete", "rank remove", "ranks remove"})
+        public void deleteCorporationRank(Player p, CorporationRank rank, @Optional String confirm) {
+            wrapper.deleteCorporationRank(p, rank, "confirm".equalsIgnoreCase(confirm));
+        }
+
+        @Subcommand({"rank set", "ranks set"})
+        public void setCorporationRank(Player p, Business target, CorporationRank rank) {
+            wrapper.setCorporationRank(p, target, rank);
+        }
+
+        @Subcommand({"rank edit", "ranks edit"})
+        public void editCorporationRank(Player p, CorporationRank rank) {
+            wrapper.editCorporationRank(p, rank);
+        }
+
+        @Subcommand("ban")
+        public void corporationBan(Player p, Business target) {
+            wrapper.corporationBan(p, target);
+        }
+
+        @Subcommand("unban")
+        public void corporationUnban(Player p, Business target) {
+            wrapper.corporationUnban(p, target);
+        }
+
+        @Subcommand("kick")
+        public void corporationKick(Player p, Business target) {
+            wrapper.corporationKick(p, target);
+        }
+
+        @Subcommand("broadcast")
+        public void corporationBroadcast(Player p, String message) {
+            wrapper.broadcastCorporationMessage(p, message);
+        }
     }
 
     @Override

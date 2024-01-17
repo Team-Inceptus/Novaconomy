@@ -12,6 +12,7 @@ import us.teaminceptus.novaconomy.abstraction.Wrapper;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.corporation.Corporation;
+import us.teaminceptus.novaconomy.api.corporation.CorporationRank;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.util.NovaSound;
 import us.teaminceptus.novaconomy.util.NovaUtil;
@@ -1890,6 +1891,198 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         Player p = (Player) sender;
 
                         corporationLeaderboard(p, "ratings");
+                        break;
+                    }
+                    case "rank":
+                    case "ranks": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
+                        if (args.length < 2) {
+                            messages.sendMessage(p, "error.argument");
+                            return false;
+                        }
+
+                        Corporation c = Corporation.byMember(p);
+                        if (c == null) {
+                            messages.sendError(p, "error.corporation.none.member");
+                            return false;
+                        }
+
+                        switch (args[1]) {
+                            case "create":
+                            case "add": {
+                                if (args.length < 3) {
+                                    messages.sendMessage(p, "error.argument.name");
+                                    return false;
+                                }
+
+                                String name = args[2];
+
+                                if (args.length < 4) {
+                                    messages.sendMessage(p, "error.argument.integer");
+                                    return false;
+                                }
+
+                                int priority;
+
+                                try {
+                                    priority = Integer.parseInt(args[3]);
+                                } catch (NumberFormatException e) {
+                                    messages.sendMessage(p, "error.argument.integer");
+                                    return false;
+                                }
+
+                                if (priority < CorporationRank.MIN_PRIORITY || priority > CorporationRank.MAX_PRIORITY) {
+                                    messages.sendMessage(p, "error.argument.integer");
+                                    return false;
+                                }
+
+                                String prefix = "M";
+                                if (args.length > 4)
+                                    prefix = args[4];
+
+                                Material icon = Material.STONE;
+                                if (args.length > 5) {
+                                    icon = Material.matchMaterial(args[5]);
+
+                                    if (icon == null) {
+                                        messages.sendMessage(p, "error.argument.icon");
+                                        return false;
+                                    }
+                                }
+
+                                createCorporationRank(p, name, priority, prefix, icon);
+                                break;
+                            }
+                            case "delete":
+                            case "remove": {
+                                if (args.length < 3) {
+                                    messages.sendMessage(p, "error.argument.rank");
+                                    return false;
+                                }
+
+                                CorporationRank rank = c.getRank(args[2]);
+                                deleteCorporationRank(p, rank, args.length > 3 && args[3].equalsIgnoreCase("confirm"));
+                                break;
+                            }
+                            case "set": {
+                                if (args.length < 3) {
+                                    messages.sendMessage(p, "error.argument.business");
+                                    return false;
+                                }
+
+                                Business target = Business.byName(args[2]);
+                                if (target == null) {
+                                    messages.sendMessage(p, "error.business.inexistent");
+                                    return false;
+                                }
+
+                                if (args.length < 4) {
+                                    messages.sendMessage(p, "error.argument.rank");
+                                    return false;
+                                }
+
+                                CorporationRank rank = c.getRank(args[3]);
+                                if (rank == null) {
+                                    messages.sendMessage(p, "error.argument.rank");
+                                    return false;
+                                }
+
+                                setCorporationRank(p, target, rank);
+                                break;
+                            }
+                            case "edit": {
+                                if (args.length < 3) {
+                                    messages.sendMessage(p, "error.argument.rank");
+                                    return false;
+                                }
+
+                                CorporationRank rank = c.getRank(args[2]);
+                                if (rank == null) {
+                                    messages.sendMessage(p, "error.argument.rank");
+                                    return false;
+                                }
+
+                                editCorporationRank(p, rank);
+                                break;
+                            }
+                            default: {
+                                openCorporationRanks(p);
+                                break;
+                            }
+                        }
+
+                        break;
+                    }
+                    case "broadcast": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
+                        if (args.length < 2) {
+                            messages.sendMessage(p, "error.argument");
+                            return false;
+                        }
+
+                        StringBuilder msg = new StringBuilder();
+                        for (int i = 1; i < args.length; i++)
+                            msg.append(args[i]).append(" ");
+
+                        broadcastCorporationMessage(p, msg.toString());
+                        break;
+                    }
+                    case "ban": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
+                        if (args.length < 2) {
+                            messages.sendMessage(p, "error.argument.business");
+                            return false;
+                        }
+
+                        Business target = Business.byName(args[1]);
+                        if (target == null) {
+                            messages.sendMessage(p, "error.business.inexistent");
+                            return false;
+                        }
+
+                        corporationBan(p, target);
+                        break;
+                    }
+                    case "unban": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
+                        if (args.length < 2) {
+                            messages.sendMessage(p, "error.argument.business");
+                            return false;
+                        }
+
+                        Business target = Business.byName(args[1]);
+                        if (target == null) {
+                            messages.sendMessage(p, "error.business.inexistent");
+                            return false;
+                        }
+
+                        corporationUnban(p, target);
+                        break;
+                    }
+                    case "kick": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
+                        if (args.length < 2) {
+                            messages.sendMessage(p, "error.argument.business");
+                            return false;
+                        }
+
+                        Business target = Business.byName(args[1]);
+                        if (target == null) {
+                            messages.sendMessage(p, "error.business.inexistent");
+                            return false;
+                        }
+
+                        corporationKick(p, target);
                         break;
                     }
                     default: {

@@ -36,6 +36,8 @@ import us.teaminceptus.novaconomy.api.business.BusinessStatistics;
 import us.teaminceptus.novaconomy.api.business.Rating;
 import us.teaminceptus.novaconomy.api.corporation.Corporation;
 import us.teaminceptus.novaconomy.api.corporation.CorporationInvite;
+import us.teaminceptus.novaconomy.api.corporation.CorporationPermission;
+import us.teaminceptus.novaconomy.api.corporation.CorporationRank;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.economy.market.MarketCategory;
 import us.teaminceptus.novaconomy.api.events.CommandTaxEvent;
@@ -3232,8 +3234,15 @@ public interface CommandWrapper {
             return;
         }
 
-        if (!Corporation.exists(p)) {
-            messages.sendError(p, "error.corporation.none");
+        Corporation c = Corporation.byMember(p);
+        if (c == null) {
+            messages.sendError(p, "error.corporation.none.member");
+            return;
+        }
+
+        CorporationRank rank = c.getRank(p);
+        if (!rank.hasPermission(CorporationPermission.EDIT_DETAILS)) {
+            messages.sendError(p, "error.permission.corporation");
             return;
         }
 
@@ -3242,8 +3251,7 @@ public interface CommandWrapper {
             return;
         }
 
-        Corporation corp = Corporation.byOwner(p);
-        corp.setDescription(desc);
+        c.setDescription(desc);
         messages.sendSuccess(p, "success.corporation.description");
     }
 
@@ -3253,8 +3261,15 @@ public interface CommandWrapper {
             return;
         }
 
-        if (!Corporation.exists(p)) {
+        Corporation c = Corporation.byMember(p);
+        if (c == null) {
             messages.sendError(p, "error.corporation.none");
+            return;
+        }
+
+        CorporationRank rank = c.getRank(p);
+        if (!rank.hasPermission(CorporationPermission.EDIT_DETAILS)) {
+            messages.sendError(p, "error.permission.corporation");
             return;
         }
 
@@ -3263,8 +3278,7 @@ public interface CommandWrapper {
             return;
         }
 
-        Corporation corp = Corporation.byOwner(p);
-        corp.setIcon(icon);
+        c.setIcon(icon);
         messages.sendSuccess(p, "success.corporation.icon", GOLD + icon.name());
     }
 
@@ -3274,20 +3288,25 @@ public interface CommandWrapper {
             return;
         }
 
-        if (!Corporation.exists(p)) {
-            messages.sendError(p, "error.corporation.none");
+        Corporation c = Corporation.byMember(p);
+        if (c == null) {
+            messages.sendError(p, "error.corporation.none.member");
             return;
         }
 
-        Corporation corp = Corporation.byOwner(p);
+        CorporationRank rank = c.getRank(p);
+        if (!rank.hasPermission(CorporationPermission.EDIT_DETAILS)) {
+            messages.sendError(p, "error.permission.corporation");
+            return;
+        }
 
-        if (corp.getLevel() < 3) {
+        if (c.getLevel() < 3) {
             messages.sendError(p, "error.corporation.too_low_level");
             return;
         }
 
         Location l = p.getLocation();
-        corp.setHeadquarters(l);
+        c.setHeadquarters(l);
         messages.sendSuccess(p, "success.corporation.headquarters",
                 GOLD + String.valueOf(l.getBlockX()),
                 GOLD + String.valueOf(l.getBlockY()),
@@ -3301,8 +3320,15 @@ public interface CommandWrapper {
             return;
         }
 
-        if (!Corporation.exists(p)) {
-            messages.sendError(p, "error.corporation.none");
+        Corporation c = Corporation.byMember(p);
+        if (c == null) {
+            messages.sendError(p, "error.corporation.none.member");
+            return;
+        }
+
+        CorporationRank rank = c.getRank(p);
+        if (!rank.hasPermission(CorporationPermission.EDIT_DETAILS)) {
+            messages.sendError(p, "error.permission.corporation");
             return;
         }
 
@@ -3311,8 +3337,7 @@ public interface CommandWrapper {
             return;
         }
 
-        Corporation corp = Corporation.byOwner(p);
-        corp.setName(name);
+        c.setName(name);
         messages.sendSuccess(p, "success.corporation.name", name);
     }
 
@@ -3360,24 +3385,35 @@ public interface CommandWrapper {
             return;
         }
 
-        Corporation corp = Corporation.byOwner(p);
+        Corporation c = Corporation.byMember(p);
 
-        if (corp.getSetting(Settings.Corporation.JOIN_TYPE) != Corporation.JoinType.INVITE_ONLY) {
+        CorporationRank rank = c.getRank(p);
+        if (!rank.hasPermission(CorporationPermission.INVITE_MEMBERS)) {
+            messages.sendError(p, "error.permission.corporation");
+            return;
+        }
+
+        if (c.isBanned(b)) {
+            messages.sendError(p, "error.corporation.banned.target");
+            return;
+        }
+
+        if (c.getSetting(Settings.Corporation.JOIN_TYPE) != Corporation.JoinType.INVITE_ONLY) {
             messages.sendError(p, "error.corporation.invite_only");
             return;
         }
 
-        if (corp.getInvited().contains(b)) {
+        if (c.getInvited().contains(b)) {
             messages.sendError(p, "error.corporation.invite.already_invited");
             return;
         }
 
-        if (corp.getChildren().size() >= corp.getMaxChildren()) {
+        if (c.getChildren().size() >= c.getMaxChildren()) {
             messages.sendError(p, "error.corporation.max_children");
             return;
         }
 
-        corp.inviteBusiness(b);
+        c.inviteBusiness(b);
         messages.sendSuccess(p, "success.corporation.invite.business", GOLD + b.getName());
         NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
     }
@@ -3413,6 +3449,12 @@ public interface CommandWrapper {
         }
 
         Business b = Business.byOwner(p);
+
+        if (from.isBanned(b)) {
+            messages.sendError(p, "error.corporation.banned");
+            return;
+        }
+
         CorporationInvite invite = b.getInvites()
                 .stream()
                 .filter(i -> i.getFrom().equals(from))
@@ -3537,6 +3579,12 @@ public interface CommandWrapper {
 
         if (c.getHeadquarters() == null) {
             messages.sendError(p, "error.corporation.no_hq");
+            return;
+        }
+
+        CorporationRank rank = c.getRank(p);
+        if (!rank.hasPermission(CorporationPermission.TELEPORT_TO_HEADQUARTERS)) {
+            messages.sendError(p, "error.permission.corporation");
             return;
         }
 
@@ -4095,6 +4143,240 @@ public interface CommandWrapper {
 
         p.openInventory(inv);
         NovaSound.BLOCK_ENDER_CHEST_OPEN.play(p);
+    }
+
+    default void setCorporationRank(Player p, Business target, CorporationRank rank) {
+        Corporation c = Corporation.byMember(p);
+        if (c == null) {
+            messages.sendError(p, "error.corporation.none.member");
+            return;
+        }
+
+        CorporationRank pRank = c.getRank(p);
+
+        if (!pRank.hasPermission(CorporationPermission.CHANGE_USER_RANKS) || rank.getPriority() <= pRank.getPriority()) {
+            messages.sendError(p, "error.permission.corporation");
+            return;
+        }
+
+        if (!c.getChildren().contains(target)) {
+            messages.sendError(p, "error.corporation.not_member");
+            return;
+        }
+
+        if (c.getOwner().equals(target.getOwner())) {
+            messages.sendError(p, "error.corporation.edit_owner_permissions");
+            return;
+        }
+
+        c.setRank(target, rank);
+        messages.sendSuccess(p, "success.corporation.set_rank", GOLD + target.getName() + GREEN, GOLD + rank.getName() + GREEN);
+    }
+
+    default void createCorporationRank(Player p, String name, int priority, String prefix, Material icon) {
+        Corporation c = Corporation.byMember(p);
+        if (c == null) {
+            messages.sendError(p, "error.corporation.none.member");
+            return;
+        }
+
+        if (!CorporationRank.VALID_NAME.matcher(name).matches() || name.length() > CorporationRank.MAX_NAME_LENGTH) {
+            messages.sendError(p, "error.argument.name");
+            return;
+        }
+
+        if (!CorporationRank.VALID_PREFIX.matcher(prefix).matches() || prefix.length() > CorporationRank.MAX_PREFIX_LENGTH) {
+            messages.sendError(p, "error.argument.prefix");
+            return;
+        }
+
+        CorporationRank pRank = c.getRank(p);
+        if (!pRank.hasPermission(CorporationPermission.CREATE_RANKS) || priority <= pRank.getPriority()) {
+            messages.sendError(p, "error.permission.corporation");
+            return;
+        }
+
+        Set<CorporationRank> ranks = c.getRanks();
+
+        if (ranks.size() >= c.getMaxRanks()) {
+            messages.sendError(p, "error.corporation.max_ranks");
+            return;
+        }
+
+        if (ranks.stream().anyMatch(r -> r.getName().equalsIgnoreCase(name))) {
+            messages.sendError(p, "error.corporation.rank_exists.name");
+            return;
+        }
+
+        if (ranks.stream().anyMatch(r -> r.getPriority() == priority)) {
+            messages.sendError(p, "error.corporation.rank_exists.priority");
+            return;
+        }
+
+        CorporationRank.builder()
+                .setCorporation(c)
+                .setName(name)
+                .setPriority(priority)
+                .setPrefix(prefix)
+                .setIcon(icon)
+                .build();
+
+        messages.sendSuccess(p, "success.corporation.create_rank", GOLD + name + GREEN);
+    }
+
+    default void deleteCorporationRank(Player p, CorporationRank rank, boolean confirm) {
+        Corporation c = Corporation.byMember(p);
+        if (c == null) {
+            messages.sendError(p, "error.corporation.none.member");
+            return;
+        }
+
+        CorporationRank pRank = c.getRank(p);
+        if (!pRank.hasPermission(CorporationPermission.MANAGE_RANKS) || rank.getPriority() <= pRank.getPriority()) {
+            messages.sendError(p, "error.permission.corporation");
+            return;
+        }
+
+        if (rank.getIdentifier().equals(CorporationRank.OWNER_RANK) || rank.getIdentifier().equals(CorporationRank.DEFAULT_RANK)) {
+            NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
+            return;
+        }
+
+        if (confirm) {
+            rank.delete();
+            messages.sendSuccess(p, "success.corporation.delete_rank", GOLD + rank.getName() + GREEN);
+        } else
+            messages.sendError(p, "error.corporation.confirm_delete_rank", GOLD + rank.getName() + RED);
+    }
+
+    default void editCorporationRank(Player p, CorporationRank rank) {
+        Corporation c = Corporation.byMember(p);
+        if (c == null) {
+            messages.sendError(p, "error.corporation.none.member");
+            return;
+        }
+
+        CorporationRank pRank = c.getRank(p);
+        if (!pRank.hasPermission(CorporationPermission.MANAGE_RANKS) || rank.getPriority() <= pRank.getPriority()) {
+            messages.sendError(p, "error.permission.corporation");
+            return;
+        }
+
+        p.openInventory(Generator.generateCorporationRankEditor(p, rank));
+        NovaSound.BLOCK_ENDER_CHEST_OPEN.play(p);
+    }
+
+    default void openCorporationRanks(Player p) {
+        Corporation c = Corporation.byMember(p);
+        if (c == null) {
+            messages.sendError(p, "error.corporation.none.member");
+            return;
+        }
+
+        p.openInventory(Generator.generateCorporationRanks(p, c));
+        NovaSound.BLOCK_ENDER_CHEST_OPEN.play(p);
+    }
+
+    default void broadcastCorporationMessage(Player p, String message) {
+        Corporation c = Corporation.byMember(p);
+        if (c == null) {
+            messages.sendError(p, "error.corporation.none.member");
+            return;
+        }
+
+        CorporationRank rank = c.getRank(p);
+        if (!rank.hasPermission(CorporationPermission.BROADCAST_MESSAGES)) {
+            messages.sendError(p, "error.permission.corporation");
+            return;
+        }
+
+        c.broadcastMessage(message);
+        NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
+    }
+
+    default void corporationBan(Player p, Business target) {
+        Corporation c = Corporation.byMember(p);
+        if (c == null) {
+            messages.sendError(p, "error.corporation.none.member");
+            return;
+        }
+
+        CorporationRank rank = c.getRank(p);
+        if (!rank.hasPermission(CorporationPermission.BAN_MEMBERS)) {
+            messages.sendError(p, "error.permission.corporation");
+            return;
+        }
+
+        if (c.isBanned(target)) {
+            messages.sendError(p, "error.corporation.banned.target");
+            return;
+        }
+
+        if (c.getOwner().equals(target.getOwner())) {
+            messages.sendError(p, "error.corporation.owner_leave");
+            return;
+        }
+
+        c.ban(target);
+        if (target.getOwner().isOnline())
+            messages.sendNotification(target.getOwner(), "notification.corporation.ban", GOLD + c.getName() + RED);
+
+        NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
+    }
+
+    default void corporationUnban(Player p, Business target) {
+        Corporation c = Corporation.byMember(p);
+        if (c == null) {
+            messages.sendError(p, "error.corporation.none.member");
+            return;
+        }
+
+        CorporationRank rank = c.getRank(p);
+        if (!rank.hasPermission(CorporationPermission.BAN_MEMBERS)) {
+            messages.sendError(p, "error.permission.corporation");
+            return;
+        }
+
+        if (!c.isBanned(target)) {
+            messages.sendError(p, "error.corporation.not_banned");
+            return;
+        }
+
+        c.unban(target);
+        if (target.getOwner().isOnline())
+            messages.sendNotification(target.getOwner(), "notification.corporation.unban", GOLD + c.getName() + AQUA);
+
+        NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
+    }
+
+    default void corporationKick(Player p, Business target) {
+        Corporation c = Corporation.byMember(p);
+        if (c == null) {
+            messages.sendError(p, "error.corporation.none.member");
+            return;
+        }
+
+        CorporationRank rank = c.getRank(p);
+        if (!rank.hasPermission(CorporationPermission.KICK_MEMBERS)) {
+            messages.sendError(p, "error.permission.corporation");
+            return;
+        }
+
+        if (!c.getChildren().contains(target)) {
+            messages.sendError(p, "error.corporation.not_member");
+            return;
+        }
+
+        if (c.getOwner().equals(target.getOwner())) {
+            messages.sendError(p, "error.corporation.owner_leave");
+            return;
+        }
+
+        c.removeChild(target);
+        if (target.getOwner().isOnline())
+            messages.sendNotification(target.getOwner(), "notification.corporation.kick", GOLD + c.getName() + RED);
+
+        NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
     }
 
 }
