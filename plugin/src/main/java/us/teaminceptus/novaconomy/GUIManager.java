@@ -28,6 +28,8 @@ import us.teaminceptus.novaconomy.api.business.BusinessProduct;
 import us.teaminceptus.novaconomy.api.business.BusinessStatistics;
 import us.teaminceptus.novaconomy.api.business.Rating;
 import us.teaminceptus.novaconomy.api.corporation.Corporation;
+import us.teaminceptus.novaconomy.api.corporation.CorporationPermission;
+import us.teaminceptus.novaconomy.api.corporation.CorporationRank;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.economy.market.MarketCategory;
 import us.teaminceptus.novaconomy.api.economy.market.Receipt;
@@ -47,6 +49,7 @@ import us.teaminceptus.novaconomy.api.util.Price;
 import us.teaminceptus.novaconomy.api.util.Product;
 import us.teaminceptus.novaconomy.util.NovaSound;
 import us.teaminceptus.novaconomy.util.NovaUtil;
+import us.teaminceptus.novaconomy.util.inventory.Generator;
 import us.teaminceptus.novaconomy.util.inventory.InventorySelector;
 import us.teaminceptus.novaconomy.util.inventory.Items;
 
@@ -1210,12 +1213,6 @@ final class GUIManager implements Listener {
                 ItemStack item = e.getCurrentItem();
                 Corporation c = getCorporation(item);
 
-                if (!c.isOwner(p)) {
-                    messages.sendError(p, "error.corporation.not_owner");
-                    NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
-                    return;
-                }
-
                 p.closeInventory();
                 NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
 
@@ -1255,12 +1252,6 @@ final class GUIManager implements Listener {
                 ItemStack item = e.getCurrentItem();
                 Corporation c = getCorporation(item);
                 String desc = of(item).getString("description");
-
-                if (!c.isOwner(p)) {
-                    messages.sendError(p, "error.corporation.not_owner");
-                    NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
-                    return;
-                }
 
                 c.setDescription(desc);
                 messages.sendSuccess(p, "success.corporation.description");
@@ -1997,6 +1988,122 @@ final class GUIManager implements Listener {
                                 .anyMatch(b -> b.getBidder().equals(p))
                 ).get(0));
                 NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
+            })
+            .put("corporation:ranks", (e, inv) -> {
+                Player p = (Player) e.getWhoClicked();
+                ItemStack item = e.getCurrentItem();
+                Corporation c = getCorporation(item);
+
+                p.openInventory(generateCorporationRanks(p, c));
+                NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
+            })
+            .put("corporation:edit_rank", (e, inv) -> {
+                Player p = (Player) e.getWhoClicked();
+                ItemStack item = e.getCurrentItem();
+                Corporation c = getCorporation(item);
+                CorporationRank rank = c.getRank(of(item).getUUID("rank"));
+
+                p.openInventory(generateCorporationRankEditor(p, rank));
+                NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
+            })
+            .put("corporation:edit_rank:item", (e, inv) -> {
+                Player p = (Player) e.getWhoClicked();
+                ItemStack item = e.getCurrentItem();
+                NBTWrapper nbt = of(item);
+
+                Corporation c = getCorporation(item);
+                CorporationRank rank = c.getRank(nbt.getUUID("rank"));
+                String type = nbt.getString(TYPE_TAG);
+
+                w.sendSign(p, lines -> {
+                    String res = String.join(" ", lines).trim();
+                    if (res.isEmpty()) {
+                        p.openInventory(inv);
+                        NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
+                        return;
+                    }
+
+                    switch (type) {
+                        case "name": {
+                            if (res.length() > CorporationRank.MAX_NAME_LENGTH) {
+                                messages.sendError(p, "error.argument.length", CorporationRank.MAX_NAME_LENGTH);
+                                p.openInventory(inv);
+                                NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
+                                return;
+                            }
+
+                            if (!CorporationRank.VALID_NAME.matcher(res).matches()) {
+                                messages.sendError(p, "error.argument.name");
+                                p.openInventory(inv);
+                                NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
+                                return;
+                            }
+
+                            rank.setName(res);
+                            p.openInventory(Generator.generateCorporationRankEditor(p, rank));
+                            NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
+                            break;
+                        }
+                        case "prefix": {
+                            if (res.length() > CorporationRank.MAX_PREFIX_LENGTH) {
+                                messages.sendError(p, "error.argument.length", CorporationRank.MAX_PREFIX_LENGTH);
+                                p.openInventory(inv);
+                                NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
+                                return;
+                            }
+
+                            if (!CorporationRank.VALID_PREFIX.matcher(res).matches()) {
+                                messages.sendError(p, "error.argument.prefix");
+                                p.openInventory(inv);
+                                NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
+                                return;
+                            }
+
+                            rank.setPrefix(res);
+                            p.openInventory(Generator.generateCorporationRankEditor(p, rank));
+                            NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
+                            break;
+                        }
+                        case "icon": {
+                            Material icon = Material.matchMaterial(res);
+                            if (icon == null) {
+                                messages.sendError(p, "error.argument.icon");
+                                p.openInventory(inv);
+                                NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
+                                return;
+                            }
+
+                            rank.setIcon(icon);
+                            p.openInventory(Generator.generateCorporationRankEditor(p, rank));
+                            NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
+                            break;
+                        }
+                        default: {
+                            NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
+                            throw new AssertionError("Unknown Type: " + type);
+                        }
+                    }
+                });
+            })
+            .put("corporation:edit_rank:toggle_permission", (e, inv) -> {
+                Player p = (Player) e.getWhoClicked();
+                ItemStack item = e.getCurrentItem();
+                NBTWrapper itemNbt = of(item);
+
+                Corporation c = getCorporation(item);
+                CorporationRank rank = c.getRank(itemNbt.getUUID("rank"));
+                CorporationPermission permission = CorporationPermission.valueOf(itemNbt.getString("permission"));
+                boolean perm = !itemNbt.getBoolean("state");
+
+                if (perm) {
+                    rank.addPermission(permission);
+                    NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
+                } else {
+                    rank.removePermission(permission);
+                    NovaSound.ENTITY_ARROW_HIT_PLAYER.playFailure(p);
+                }
+
+                inv.setItem(e.getSlot(), Generator.generateCorporationPermissionNode(c, rank, permission, perm));
             })
             .build();
 
