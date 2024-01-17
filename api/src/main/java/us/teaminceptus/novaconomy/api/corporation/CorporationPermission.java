@@ -30,7 +30,7 @@ public enum CorporationPermission {
     /**
      * Permission to broadcast messages to all members of the Corporation.
      */
-    BROADCAST_MESSAGES(true),
+    BROADCAST_MESSAGES,
 
     /**
      * Permission to invite businesses to the Corporation.
@@ -43,7 +43,7 @@ public enum CorporationPermission {
     KICK_MEMBERS,
 
     /**
-     * Permission to ban members from the Corporation.
+     * Permission to ban and unban members from the Corporation.
      */
     BAN_MEMBERS,
 
