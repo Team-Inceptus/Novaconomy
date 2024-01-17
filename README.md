@@ -28,6 +28,23 @@ With the freedom to have your own symbols, icons, conversion rates, and even int
   - Fix Temporary Copy Exceptions
   - Use more efficient Maps for Serialization
 
+- **v1.9.1**
+  - **Messages Overhaul**
+    - Added support for Spigot/Paper Components
+    - Configurable Message Handlers in functionality.yml
+    - Toggleable per-player with "Advanced Text" setting
+  - **Corporation Hierarchy** 
+    - Customizable Corporation Ranks for business members
+    - Add Permissions to how to interact with their parent corporation to their ranks
+  - Update Natural Causes
+    - Add Building Natural Cause
+    - Add ModifierReader Cache for faster loading Natural Cause Modifiers 
+  - Other API & Publishing Updates
+    - Updated JavaDocs
+  - Dependency Updates
+  - Fix Essentials-related Integration Issues
+  - Fix Additional 1.20.3+ Issues
+
 ### 💸 1.8.0 Update: Ecstatic Economy
 - New Features
   - **Unlimited Business Products**
