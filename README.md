@@ -1,9 +1,8 @@
 # <img src="https://cdn.discordapp.com/attachments/894254760075603980/984954715555123281/novaconomy.png" style="height: 10%; width: 10%;"> Novaconomy
-> Customizable Economies with own symbols, names, icons and more.
+> The economy plugin as big as a size of a star.
 
 ## 💸 **Break Free from Single-Currencies.**
-Novaconomy gives you the freedom to create **multiple** economies of your own choice, just like in real life!
-With the freedom to have your own symbols, icons, conversion rates, and even interest, you'll have all you need to have a proper Economy!
+Novaconomy is an economy plugin with so many features, you'll never need another economy plugin again. Create your own currencies, businesses, corporations, as well as thousands of other things, and manage them all with our advanced and efficient mechanics.
 
 ---
 
