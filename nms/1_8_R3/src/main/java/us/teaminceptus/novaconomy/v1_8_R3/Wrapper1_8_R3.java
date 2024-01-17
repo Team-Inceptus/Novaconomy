@@ -5,14 +5,11 @@ import net.md_5.bungee.api.chat.BaseComponent;
 import net.minecraft.server.v1_8_R3.*;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.OfflinePlayer;
 import org.bukkit.block.Block;
 import org.bukkit.craftbukkit.v1_8_R3.CraftWorld;
 import org.bukkit.craftbukkit.v1_8_R3.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.material.Crops;
 import org.bukkit.scheduler.BukkitRunnable;
 import us.teaminceptus.novaconomy.abstraction.NBTWrapper;
@@ -39,16 +36,6 @@ final class Wrapper1_8_R3 implements Wrapper {
         sendActionbar(p, component.toLegacyText());
     }
 
-
-    @Override
-    public ItemStack createSkull(OfflinePlayer p) {
-        ItemStack item = new ItemStack(Material.SKULL_ITEM, 1, (short) 3);
-        SkullMeta meta = (SkullMeta) item.getItemMeta();
-        meta.setOwner(p.getName());
-        item.setItemMeta(meta);
-
-        return item;
-    }
 
     @Override
     public boolean isAgeable(Block b) {

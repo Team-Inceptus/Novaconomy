@@ -252,7 +252,7 @@ public final class AuctionHouse {
             Price price = top.getPrice();
             NovaPlayer bidder = new NovaPlayer(top.getBidder());
 
-            if (bidder.isOnline() && bidder.canAfford(price)) {
+            if (bidder.isOnline() && bidder.canAfford(price, NovaConfig.getConfiguration().getWhenNegativeAllowPurchaseAuction())) {
                 bidder.remove(price);
                 bidder.awardAuction(product);
 

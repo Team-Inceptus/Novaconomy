@@ -17,6 +17,7 @@ public class PlayerMembershipChangeEvent extends PlayerMarketEvent implements Ca
     /**
      * Constructs a PlayerMarketEvent.
      * @param player Player Involved
+     * @param oldStatus Old Player Membership Status
      */
     public PlayerMembershipChangeEvent(@Nullable OfflinePlayer player, boolean oldStatus, boolean newStatus) {
         super(player);

@@ -1,40 +1,50 @@
 package us.teaminceptus.novaconomy.util;
 
+import com.google.gson.Gson;
+import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.jetbrains.annotations.NotNull;
-import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.SortingType;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.NavigableMap;
-import java.util.TreeMap;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
 
-import static us.teaminceptus.novaconomy.abstraction.Wrapper.get;
+import static us.teaminceptus.novaconomy.abstraction.Wrapper.USER_AGENT;
+import static us.teaminceptus.novaconomy.messages.MessageHandler.format;
+import static us.teaminceptus.novaconomy.messages.MessageHandler.get;
 
 @SuppressWarnings("unchecked")
 public final class NovaUtil {
 
     private static final Map<SortingType<?>, String> SORTING_TYPE_NAMES = new HashMap<>();
 
-    private static final NavigableMap<Integer, String> ROMAN_MAP = new TreeMap<Integer, String>() {{
-        put(1000, "M");
-        put(900, "CM");
-        put(500, "D");
-        put(400, "CD");
-        put(100, "C");
-        put(90, "XC");
-        put(50, "L");
-        put(40, "XL");
-        put(10, "X");
-        put(9, "IX");
-        put(5, "V");
-        put(4, "IV");
-        put(1, "I");
-    }};
+    @SuppressWarnings("serial")
+    private static final NavigableMap<Integer, String> ROMAN_MAP = new TreeMap<Integer, String>() {
+        {
+            put(1000, "M");
+            put(900, "CM");
+            put(500, "D");
+            put(400, "CD");
+            put(100, "C");
+            put(90, "XC");
+            put(50, "L");
+            put(40, "XL");
+            put(10, "X");
+            put(9, "IX");
+            put(5, "V");
+            put(4, "IV");
+            put(1, "I");
+        }
+    };
 
     static {
         try {
@@ -100,12 +110,6 @@ public final class NovaUtil {
         return ROMAN_MAP.get(i) + toRoman(number - i);
     }
 
-    @NotNull
-    public static String format(String format, Object... args) {
-        return String.format(Language.getCurrentLocale(), format, args)
-                .replace("\u00a0", " "); // Replace non-breaking space with regular space
-    }
-
     public static String formatTimeAgo(long start) {
         long time = System.currentTimeMillis();
         long diff = time - start;
@@ -162,4 +166,59 @@ public final class NovaUtil {
         return format("%.2f%s", num / Math.pow(1000, index), suffix);
     }
 
+    public static UUID untrimUUID(String old) {
+        String p1 = old.substring(0, 8);
+        String p2 = old.substring(8, 12);
+        String p3 = old.substring(12, 16);
+        String p4 = old.substring(16, 20);
+        String p5 = old.substring(20, 32);
+
+        String newUUID = p1 + "-" + p2 + "-" + p3 + "-" + p4 + "-" + p5;
+
+        return UUID.fromString(newUUID);
+    }
+
+    public static OfflinePlayer getPlayer(String name) {
+        if (Bukkit.getPlayer(name) != null) return Bukkit.getPlayer(name);
+
+        if (Bukkit.getOnlineMode()) try {
+            URL url = new URL("https://api.mojang.com/users/profiles/minecraft/" + name);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+
+            connection.setRequestMethod("GET");
+            connection.setRequestProperty("User-Agent", USER_AGENT);
+            connection.setRequestProperty("Content-Type", "application/json");
+
+            int responseCode = connection.getResponseCode();
+
+            if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_ACCEPTED) {
+                BufferedReader input = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+                StringBuilder builder = new StringBuilder();
+                String inputLine;
+                while ((inputLine = input.readLine()) != null) builder.append(inputLine);
+
+                Gson g = new Gson();
+                return Bukkit.getOfflinePlayer(untrimUUID(g.fromJson(builder.toString(), APIPlayer.class).id));
+            }
+
+        } catch (IOException e) {
+            NovaConfig.print(e);
+        } catch (Exception e) {
+            return null;
+        }
+        else return Bukkit.getPlayer(UUID.nameUUIDFromBytes(("OfflinePlayer:" + name).getBytes(StandardCharsets.UTF_8)));
+        return null;
+    }
+
+     static class APIPlayer {
+
+        public final String name;
+        public final String id;
+
+        public APIPlayer(String name, String id) {
+            this.name = name;
+            this.id = id;
+        }
+
+    }
 }

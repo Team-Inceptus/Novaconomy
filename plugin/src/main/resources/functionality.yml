@@ -5,6 +5,7 @@
 # Represents Core Functionality Settings
 
 # Override the Command Version.
+# -- REQUIRES A RESTART OF THE SERVER WHEN CHANGED --
 #
 # Use 1 for normal command support (supports all versions)
 # Use 2 for brigader support (colored inputs, supports 1.13.2+)
@@ -12,6 +13,64 @@
 #
 # If a version is invalid or not supported, it will default to auto
 CommandVersion: auto
+
+# Overrides the current Message Handler.
+# -- REQUIRES A RESTART OF THE SERVER WHEN CHANGED --
+#
+# Use BUKKIT for the Bukkit Message Handler (basic strings), used for Bukkit Servers
+# Use SPIGOT for the Spigot Message Handler (components, hover, some click), used for Spigot Servers
+# Use ADVENTURE for the Adventure Message Handler (more advanced components, hover, click), used for Paper Servers on 1.16.5+
+# Use auto to automatically recognize
+#
+# If a version is invalid or not supported, it will default to Bukkit
+MessageHandler: auto
+
+# Negative Balance Configuration
+NegativeBalances:
+
+  # Whether negative balances are enabled
+  Enabled: false
+
+  # The maximum amount of money a player can go into debt.
+  MaxNegativeBalance: -100
+
+  # Whether having a balance of 0 is considered debt.
+  IncludeZero: true
+
+    # List of Player Names, Vault Groups, or Permissions that bypass the maximum negative balance amount.
+    # Other Valid Types:
+    # - OPS: Operators will be ignored
+    # - NONOPS: Non-Operators will be ignored
+    #
+  # Selectors like "my.plugin.permission.*" and RegEx are supported.
+  BypassMax:
+    - OPS
+
+  # Configurable actions to take when a player goes into debt.
+  WhenNegative:
+    # Whether a player can purchase business products while in debt.
+    PurchaseProducts: false
+
+    # Whether a player can purchase market products or a market membership while in debt.
+    PurchaseMarket: true
+
+    # Whether a player can purchase auction items while in debt.
+    PurchaseAuction: false
+
+    # Whether a player can pay other players while in debt.
+    PayPlayers: true
+
+    # Whether a player can pay into a bank balance while in debt.
+    PayBanks: true
+
+    # Whether a player can create checks while in debt.
+    CreateChecks: false
+
+    # Whether a player can create bounties while in debt.
+    CreateBounties: false
+
+    # Whether a player can convert money using the economy in debt.
+    ConvertBalance: false
 
 # Maximum amount of money a player can convert FROM.
 # This value does not control how much money the player will receive after converting.

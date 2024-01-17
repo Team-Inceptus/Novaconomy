@@ -12,7 +12,7 @@ plugins {
 }
 
 val pGroup = "us.teaminceptus.novaconomy"
-val pVersion = "1.9.0-SNAPSHOT"
+val pVersion = "1.9.1-SNAPSHOT"
 val pAuthor = "Team-Inceptus"
 
 sonarqube {
@@ -172,7 +172,6 @@ subprojects {
                     "Implementation-Vendor" to pAuthor
                 )
             }
-            exclude("META-INF", "META-INF/**")
 
             relocate("revxrsal.commands", "us.teaminceptus.novaconomy.shaded.lamp")
             relocate("org.bstats", "us.teaminceptus.novaconomy.shaded.bstats")

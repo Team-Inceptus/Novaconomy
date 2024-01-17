@@ -3,11 +3,13 @@ rootProject.name = "Novaconomy"
 include(":novaconomy")
 project(":novaconomy").projectDir = rootDir.resolve("plugin")
 
-include(":novaconomy-api")
-project(":novaconomy-api").projectDir = rootDir.resolve("api")
-
 include(":novaconomy-abstract")
 project(":novaconomy-abstract").projectDir = rootDir.resolve("abstraction")
+
+listOf("api", "adventure").forEach {
+    include(":novaconomy-$it")
+    project(":novaconomy-$it").projectDir = rootDir.resolve(it)
+}
 
 listOf(
     "1_8_R1",

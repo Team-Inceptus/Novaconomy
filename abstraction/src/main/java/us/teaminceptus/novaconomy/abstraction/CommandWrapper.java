@@ -36,6 +36,8 @@ import us.teaminceptus.novaconomy.api.business.BusinessStatistics;
 import us.teaminceptus.novaconomy.api.business.Rating;
 import us.teaminceptus.novaconomy.api.corporation.Corporation;
 import us.teaminceptus.novaconomy.api.corporation.CorporationInvite;
+import us.teaminceptus.novaconomy.api.corporation.CorporationPermission;
+import us.teaminceptus.novaconomy.api.corporation.CorporationRank;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.economy.market.MarketCategory;
 import us.teaminceptus.novaconomy.api.events.CommandTaxEvent;
@@ -70,18 +72,19 @@ import java.util.stream.Collectors;
 import static java.util.Arrays.asList;
 import static org.bukkit.ChatColor.*;
 import static us.teaminceptus.novaconomy.abstraction.NBTWrapper.builder;
-import static us.teaminceptus.novaconomy.abstraction.Wrapper.*;
+import static us.teaminceptus.novaconomy.abstraction.Wrapper.r;
+import static us.teaminceptus.novaconomy.abstraction.Wrapper.w;
+import static us.teaminceptus.novaconomy.messages.MessageHandler.*;
 import static us.teaminceptus.novaconomy.util.NovaUtil.capitalize;
-import static us.teaminceptus.novaconomy.util.NovaUtil.format;
 import static us.teaminceptus.novaconomy.util.inventory.Generator.*;
 import static us.teaminceptus.novaconomy.util.inventory.Items.*;
 
 @SuppressWarnings("unchecked")
 public interface CommandWrapper {
 
-    String ERROR_PERMISSION = getMessage("error.permission");
+    String ERROR_PERMISSION = "error.permission";
 
-    String ERROR_PERMISSION_ARGUMENT = getMessage("error.permission.argument");
+    String ERROR_PERMISSION_ARGUMENT = "error.permission.argument";
     String SETTING_TAG = "setting";
 
     default void loadCommands() {
@@ -214,29 +217,29 @@ public interface CommandWrapper {
         }
 
         String msg = get("constants.commands") + "\n\n" + String.join("\n", commandInfo.toArray(new String[]{}));
-        sender.sendMessage(msg);
+        messages.sendRaw(sender, msg);
     }
 
     default void balance(Player p) {
         if (!p.hasPermission("novaconomy.user.balance")) {
-            p.sendMessage(ERROR_PERMISSION);
+            messages.sendMessage(p, ERROR_PERMISSION);
             return;
         }
 
-        p.sendMessage(GREEN + get("constants.loading"));
+        messages.sendRaw(p, GREEN + get("constants.loading"));
         p.openInventory(getBalancesGUI(p, SortingType.ECONOMY_NAME_ASCENDING).get(0));
         NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
     }
 
     default void reloadConfig(CommandSender sender) {
         if (!sender.hasPermission("novaconomy.admin.config")) {
-            sender.sendMessage(ERROR_PERMISSION);
+            messages.sendMessage(sender, ERROR_PERMISSION);
             return;
         }
 
-        sender.sendMessage(get("command.reload.reloading"));
+        messages.send(sender, "command.reload.reloading");
         reloadFiles();
-        sender.sendMessage(get("command.reload.success"));
+        messages.send(sender, "command.reload.success");
     }
 
     static void reloadFiles() {
@@ -246,6 +249,8 @@ public interface CommandWrapper {
         NovaConfig.loadConfig();
         NovaConfig.reloadRunnables();
         NovaConfig.loadFunctionalityFile();
+
+        ModifierReader.LOADED_MODIFIERS.clear();
 
         try {
             Method loadFiles = NovaConfig.getPlugin().getClass().getDeclaredMethod("loadFiles");
@@ -262,40 +267,40 @@ public interface CommandWrapper {
 
     default void convert(Player p, Economy from, Economy to, double amount) {
         if (!p.hasPermission("novaconomy.user.convert")) {
-            p.sendMessage(ERROR_PERMISSION);
+            messages.sendMessage(p, ERROR_PERMISSION);
             return;
         }
 
         if (to.equals(from)) {
-            p.sendMessage(getMessage("error.economy.transfer_same"));
+            messages.sendMessage(p, "error.economy.transfer_same");
             return;
         }
 
         if (!from.isConvertable()) {
-            p.sendMessage(format(getError("error.economy.transfer_not_convertable"), from.getName()));
+            messages.sendError(p, "error.economy.transfer_not_convertable", from.getName());
             return;
         }
 
         if (!to.isConvertable()) {
-            p.sendMessage(format(getError("error.economy.transfer_not_convertable"), to.getName()));
+            messages.sendError(p, "error.economy.transfer_not_convertable", to.getName());
             return;
         }
 
         NovaPlayer np = new NovaPlayer(p);
 
         if (amount <= 0) {
-            p.sendMessage(getMessage("error.economy.transfer_amount"));
+            messages.sendMessage(p, "error.economy.transfer_amount");
             return;
         }
 
         double max = NovaConfig.getConfiguration().getMaxConvertAmount(from);
         if (max >= 0 && amount > max) {
-            p.sendMessage(format(getMessage("error.economy.transfer_max"), format("%,.2f", max) + from.getSymbol(), format("%,.2f", amount) + from.getSymbol()));
+            messages.sendMessage(p, "error.economy.transfer_max", format("%,.2f", max) + from.getSymbol(), format("%,.2f", amount) + from.getSymbol());
             return;
         }
 
-        if (np.getBalance(from) < amount) {
-            p.sendMessage(format(getMessage("error.economy.invalid_amount"), RED + get("constants.convert")));
+        if (!np.canAfford(from, amount, NovaConfig.getConfiguration().getWhenNegativeAllowConvertBalances())) {
+            messages.sendMessage(p, "error.economy.invalid_amount", RED + get("constants.convert"));
             return;
         }
 
@@ -303,12 +308,12 @@ public interface CommandWrapper {
 
         np.remove(from, amount);
         np.add(to, toBal);
-        p.sendMessage(format(getMessage("success.economy.convert"), format("%,.2f", amount) + from.getSymbol(), format("%,.2f", Math.floor(toBal * 100) / 100)) + to.getSymbol());
+        messages.sendMessage(p, "success.economy.convert", format("%,.2f", amount) + from.getSymbol(), format("%,.2f", Math.floor(toBal * 100) / 100) + to.getSymbol());
     }
 
     default void exchange(Player p, double amount) {
         if (!p.hasPermission("novaconomy.user.convert")) {
-            p.sendMessage(ERROR_PERMISSION);
+            messages.sendMessage(p, ERROR_PERMISSION);
             return;
         }
 
@@ -319,18 +324,18 @@ public interface CommandWrapper {
                 .collect(Collectors.toList());
 
         if (economies.size() < 2) {
-            p.sendMessage(getMessage("error.economy.none"));
+            messages.sendMessage(p, "error.economy.none");
             return;
         }
 
         if (amount <= 0) {
-            p.sendMessage(getMessage("error.argument.amount"));
+            messages.sendMessage(p, "error.argument.amount");
             return;
         }
 
         double max = NovaConfig.loadFunctionalityFile().getDouble("MaxConvertAmount");
         if (max >= 0 && amount > max) {
-            p.sendMessage(format(getMessage("error.economy.transfer_max"), format("%,.2f", max), format("%,.2f", amount)));
+            messages.sendMessage(p, "error.economy.transfer_max", format("%,.2f", max), format("%,.2f", amount));
             return;
         }
 
@@ -366,39 +371,39 @@ public interface CommandWrapper {
 
     default void createEconomy(CommandSender sender, String name, char symbol, Material icon, double scale, boolean naturalIncrease, boolean clickableReward) {
         if (!sender.hasPermission("novaconomy.economy.create")) {
-            sender.sendMessage(getMessage("error.permission.argument"));
+            messages.sendMessage(sender, ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
         for (Economy econ : Economy.getEconomies()) {
             if (econ.getName().equalsIgnoreCase(name)) {
-                sender.sendMessage(getMessage("error.economy.exists"));
+                messages.sendMessage(sender, "error.economy.exists");
                 return;
             }
 
             if (econ.getSymbol() == symbol) {
-                sender.sendMessage(getMessage("error.economy.symbol_exists"));
+                messages.sendMessage(sender, "error.economy.symbol_exists");
                 return;
             }
         }
 
         if (scale <= 0) {
-            sender.sendMessage(getMessage("error.argument.scale"));
+            messages.sendMessage(sender, "error.argument.scale");
             return;
         }
 
         try {
             Economy.builder().setName(name).setSymbol(symbol).setIcon(icon).setIncreaseNaturally(naturalIncrease).setConversionScale(scale).setClickableReward(clickableReward).build();
         } catch (UnsupportedOperationException e) {
-            sender.sendMessage(getMessage("error.economy.exists"));
+            messages.sendMessage(sender, "error.economy.exists");
             return;
         }
-        sender.sendMessage(getMessage("success.economy.create"));
+        messages.sendMessage(sender, "success.economy.create");
     }
 
     default void economyInfo(CommandSender sender, Economy econ) {
         if (!(sender.hasPermission("novaconomy.economy.info"))) {
-            sender.sendMessage(getMessage("error.permission.argument"));
+            messages.sendMessage(sender, ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
@@ -411,79 +416,94 @@ public interface CommandWrapper {
                 format(get("constants.economy.clickable"), econ.hasClickableReward()),
                 format(get("constants.economy.taxable"), econ.hasTax()),
         };
-        sender.sendMessage(String.join("\n", components));
+        messages.sendRaw(sender, String.join("\n", components));
     }
 
     default void addBalance(CommandSender sender, Economy econ, Player target, double add) {
         if (!sender.hasPermission("novaconomy.economy.addbalance")) {
-            sender.sendMessage(getMessage("error.permission.argument"));
+            messages.sendMessage(sender, ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
         NovaPlayer nt = new NovaPlayer(target);
 
         if (add < 0) {
-            sender.sendMessage(getMessage("error.argument.amount"));
+            messages.sendMessage(sender, "error.argument.amount");
             return;
         }
 
         nt.add(econ, add);
-        sender.sendMessage(format(getMessage("success.economy.addbalance"), format("%,.2f", add), econ.getSymbol(), target.getName()));
+        messages.sendMessage(sender, "success.economy.addbalance", format("%,.2f", add), econ.getSymbol(), target.getName());
     }
 
     default void removeBalance(CommandSender sender, Economy econ, Player target, double remove) {
         if (!sender.hasPermission("novaconomy.economy.removebalance")) {
-            sender.sendMessage(getMessage("error.permission.argument"));
+            messages.sendMessage(sender, ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
         NovaPlayer nt = new NovaPlayer(target);
 
         if (remove < 0) {
-            sender.sendMessage(getMessage("error.argument.amount"));
+            messages.sendMessage(sender, "error.argument.amount");
             return;
         }
 
         nt.remove(econ, remove);
-        sender.sendMessage(format(getMessage("success.economy.removebalance"), format("%,.2f", remove), econ.getSymbol(), target.getName()));
+        messages.sendMessage(sender, "success.economy.removebalance", format("%,.2f", remove), econ.getSymbol(), target.getName());
     }
 
     default void setBalance(CommandSender sender, Economy econ, Player target, double balance) {
         if (!sender.hasPermission("novaconomy.economy.setbalance")) {
-            sender.sendMessage(getMessage("error.permission.argument"));
+            messages.sendMessage(sender, ERROR_PERMISSION_ARGUMENT);
+            return;
+        }
+
+        if (econ == null) {
+            messages.sendMessage(sender, "error.argument.economy");
+            return;
+        }
+
+        if (target == null) {
+            messages.sendMessage(sender, "error.argument.player");
             return;
         }
 
         NovaPlayer nt = new NovaPlayer(target);
 
-        if (balance <= 0) {
-            sender.sendMessage(getMessage("error.argument.amount"));
+        if (balance < 0 && !NovaConfig.getConfiguration().isNegativeBalancesEnabled()) {
+            messages.sendMessage(sender, "error.argument.amount");
+            return;
+        }
+
+        if (balance < NovaConfig.getConfiguration().getMaxNegativeBalance()) {
+            messages.sendError(sender, "error.economy.min_balance", format("%,.2f", NovaConfig.getConfiguration().getMaxNegativeBalance()) + econ.getSymbol());
             return;
         }
 
         nt.setBalance(econ, balance);
-        sender.sendMessage(format(getMessage("success.economy.setbalance"), target.getName(), econ.getName(), format("%,.2f", balance) + econ.getSymbol()));
+        messages.sendMessage(sender, "success.economy.setbalance", target.getName(), econ.getName(), format("%,.2f", balance) + econ.getSymbol());
     }
 
     default void interest(CommandSender sender, boolean enabled) {
         if (!sender.hasPermission("novaconomy.economy.interest")) {
-            sender.sendMessage(getMessage("error.permission.argument"));
+            messages.sendMessage(sender, ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
         NovaConfig.getConfiguration().setInterestEnabled(enabled);
         String key = "success.economy." + (enabled ? "enable" : "disable") + "_interest";
-        sender.sendMessage(getMessage(key));
+        messages.sendMessage(sender, key);
     }
 
     default void balanceLeaderboard(Player p, Economy econ) {
         if (!p.hasPermission("novaconomy.user.leaderboard")) {
-            p.sendMessage(ERROR_PERMISSION);
+            messages.sendMessage(p, ERROR_PERMISSION);
             return;
         }
 
         if (Economy.getEconomies().isEmpty()) {
-            p.sendMessage(getMessage("error.economy.none"));
+            messages.sendMessage(p, "error.economy.none");
             return;
         }
 
@@ -555,50 +575,50 @@ public interface CommandWrapper {
 
     default void createCheck(Player p, Economy econ, double amount, boolean take) {
         if ((take && !p.hasPermission("novaconomy.user.check")) || (!take && !p.hasPermission("novaconomy.economy.check"))) {
-            p.sendMessage(getMessage("error.permission.argument"));
+            messages.sendMessage(p, ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
         if (amount < 1) {
-            p.sendMessage(getMessage("error.argument.amount"));
+            messages.sendMessage(p, "error.argument.amount");
             return;
         }
 
         NovaPlayer nt = new NovaPlayer(p);
-        if (take && nt.getBalance(econ) < amount) {
-            p.sendMessage(format(getMessage("error.economy.invalid_amount"), get("constants.purchase")));
+        if (take && !nt.canAfford(econ, amount, NovaConfig.getConfiguration().getWhenNegativeAllowCreateChecks())) {
+            messages.sendMessage(p, "error.economy.invalid_amount", get("constants.purchase"));
             return;
         }
 
         p.getInventory().addItem(Generator.createCheck(econ, amount));
         if (take) nt.remove(econ, amount);
 
-        p.sendMessage(format(getMessage("success.economy.check"), String.valueOf(amount), String.valueOf(econ.getSymbol())));
+        messages.sendMessage(p, "success.economy.check", String.valueOf(amount), String.valueOf(econ.getSymbol()));
     }
 
     default void removeEconomy(CommandSender sender, Economy econ) {
         if (!(sender.hasPermission("novaconomy.economy.delete"))) {
-            sender.sendMessage(getMessage("error.permission.argument"));
+            messages.sendMessage(sender, ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
         String name = econ.getName();
 
-        sender.sendMessage(format(getMessage("command.economy.delete.deleting"), name));
+        messages.sendMessage(sender, "command.economy.delete.deleting", name);
         Economy.removeEconomy(econ);
-        sender.sendMessage(format(getMessage("success.economy.delete"), name));
+        messages.sendMessage(sender, "success.economy.delete", name);
     }
 
     double[] PAY_AMOUNTS = {0.5, 1, 10, 100, 1000, 10000, 100000};
 
     default void pay(Player p, Player target, Economy economy, double amount) {
         if (!p.hasPermission("novaconomy.user.pay")) {
-            p.sendMessage(ERROR_PERMISSION);
+            messages.sendMessage(p, ERROR_PERMISSION);
             return;
         }
 
         if (target.equals(p)) {
-            p.sendMessage(getMessage("error.economy.pay_self"));
+            messages.sendMessage(p, "error.economy.pay_self");
             return;
         }
 
@@ -609,7 +629,7 @@ public interface CommandWrapper {
                 : economy;
 
         if (econ == null) {
-            p.sendMessage(getMessage("error.economy.none"));
+            messages.sendMessage(p, "error.economy.none");
             return;
         }
 
@@ -667,31 +687,31 @@ public interface CommandWrapper {
     default void deleteBusiness(Player p, boolean confirm) {
         Business b = Business.byOwner(p);
         if (b == null) {
-            p.sendMessage(getMessage("error.business.not_an_owner"));
+            messages.sendMessage(p, "error.business.not_an_owner");
             return;
         }
 
         if (confirm) Business.remove(b);
-        else p.sendMessage(format(getMessage("constants.confirm_command"), "/business delete confirm"));
+        else messages.sendMessage(p, "constants.confirm_command", "/business delete confirm");
     }
 
     default void removeBusiness(CommandSender sender, Business b, boolean confirm) {
         if (!sender.hasPermission("novaconomy.admin.delete_business")) {
-            sender.sendMessage(ERROR_PERMISSION);
+            messages.sendMessage(sender, ERROR_PERMISSION);
             return;
         }
 
         if (confirm) {
             Business.remove(b);
-            sender.sendMessage(getMessage("success.business.delete"));
+            messages.sendMessage(sender, "success.business.delete");
         } else
-            sender.sendMessage(format(getMessage("constants.confirm_command"), "/business remove <business> confirm"));
+            messages.sendMessage(sender, "constants.confirm_command", "/business remove <business> confirm");
     }
 
     default void businessInfo(Player p) {
         Business b = Business.byOwner(p);
         if (b == null) {
-            p.sendMessage(getMessage("error.business.not_an_owner"));
+            messages.sendMessage(p, "error.business.not_an_owner");
             return;
         }
         p.openInventory(generateBusinessData(b, p, false, SortingType.PRODUCT_NAME_ASCENDING).get(0));
@@ -700,7 +720,7 @@ public interface CommandWrapper {
 
     default void businessQuery(Player p, Business b) {
         if (!p.hasPermission("novaconomy.user.business.query")) {
-            p.sendMessage(getMessage("error.permission.argument"));
+            messages.sendMessage(p, ERROR_PERMISSION_ARGUMENT);
             return;
         }
         boolean notOwner = !b.isOwner(p);
@@ -719,7 +739,7 @@ public interface CommandWrapper {
 
     default void addProduct(Player p, double price) {
         if (Economy.getEconomies().isEmpty()) {
-            p.sendMessage(getMessage("error.economy.none"));
+            messages.sendMessage(p, "error.economy.none");
             return;
         }
 
@@ -727,12 +747,12 @@ public interface CommandWrapper {
         Business b = Business.byOwner(p);
 
         if (b == null) {
-            p.sendMessage(getMessage("error.business.not_an_owner"));
+            messages.sendMessage(p, "error.business.not_an_owner");
             return;
         }
 
         if (pInv.getItemInHand() == null || pInv.getItemInHand().getType() == Material.AIR) {
-            p.sendMessage(getMessage("error.argument.item"));
+            messages.sendMessage(p, "error.argument.item");
             return;
         }
 
@@ -740,7 +760,7 @@ public interface CommandWrapper {
         pr.setAmount(1);
 
         if (b.isProduct(pr)) {
-            p.sendMessage(getMessage("error.business.exists_product"));
+            messages.sendMessage(p, "error.business.exists_product");
             return;
         }
 
@@ -770,42 +790,42 @@ public interface CommandWrapper {
 
     default void createBusiness(Player p, String name, Material icon) {
         if (!p.hasPermission("novaconomy.user.business.create")) {
-            p.sendMessage(getMessage("error.permission.argument"));
+            messages.sendMessage(p, ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
         if (Business.exists(name)) {
-            p.sendMessage(getMessage("error.business.exists_name"));
+            messages.sendMessage(p, "error.business.exists_name");
             return;
         }
 
         if (Business.exists(p)) {
-            p.sendMessage(getMessage("error.business.exists"));
+            messages.sendMessage(p, "error.business.exists");
             return;
         }
 
         try {
             Business.builder().setOwner(p).setName(name).setIcon(icon).build();
-            p.sendMessage(format(getMessage("success.business.create"), name));
+            messages.sendMessage(p, "success.business.create", name);
         } catch (IllegalArgumentException e) {
-            p.sendMessage(getMessage("error.argument"));
+            messages.sendMessage(p, "error.argument");
         }
     }
 
     default void addResource(Player p) {
         if (Economy.getEconomies().isEmpty()) {
-            p.sendMessage(getMessage("error.economy.none"));
+            messages.sendMessage(p, "error.economy.none");
             return;
         }
 
         if (!p.hasPermission("novaconomy.user.business.resources")) {
-            p.sendMessage(getMessage("error.permission.argument"));
+            messages.sendMessage(p, ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
         Business b = Business.byOwner(p);
         if (b == null) {
-            p.sendMessage(getMessage("error.business.not_an_owner"));
+            messages.sendMessage(p, "error.business.not_an_owner");
             return;
         }
 
@@ -831,18 +851,18 @@ public interface CommandWrapper {
 
     default void removeProduct(Player p) {
         if (Economy.getEconomies().isEmpty()) {
-            p.sendMessage(getMessage("error.economy.none"));
+            messages.sendMessage(p, "error.economy.none");
             return;
         }
 
         Business b = Business.byOwner(p);
         if (b == null) {
-            p.sendMessage(getMessage("error.business.not_an_owner"));
+            messages.sendMessage(p, "error.business.not_an_owner");
             return;
         }
 
         if (b.getProducts().isEmpty()) {
-            p.sendMessage(getMessage("error.business.no_products"));
+            messages.sendMessage(p, "error.business.no_products");
             return;
         }
 
@@ -895,11 +915,11 @@ public interface CommandWrapper {
 
     default void bankBalances(Player p) {
         if (Economy.getEconomies().isEmpty()) {
-            p.sendMessage(getMessage("error.economy.none"));
+            messages.sendMessage(p, "error.economy.none");
             return;
         }
 
-        p.sendMessage(BLUE + get("constants.loading"));
+        messages.sendRaw(p, BLUE + get("constants.loading"));
 
         p.openInventory(getBankBalanceGUI(SortingType.ECONOMY_NAME_ASCENDING).get(0));
         NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
@@ -907,28 +927,28 @@ public interface CommandWrapper {
 
     default void bankDeposit(Player p, double amount, Economy econ) {
         NovaPlayer np = new NovaPlayer(p);
-        if (np.getBalance(econ) < amount) {
-            p.sendMessage(format(getMessage("error.economy.invalid_amount"), get("constants.bank.deposit")));
+        if (!np.canAfford(econ, amount, NovaConfig.getConfiguration().getWhenNegativeAllowPayBanks())) {
+            messages.sendMessage(p, "error.economy.invalid_amount", get("constants.bank.deposit"));
             return;
         }
 
         if (amount < NovaConfig.getConfiguration().getMinimumPayment(econ)) {
-            p.sendMessage(format(getMessage("error.bank.minimum_payment"), format("%,.2f", NovaConfig.getConfiguration().getMinimumPayment(econ)) + econ.getSymbol(), format("%,.2f", amount) + econ.getSymbol()));
+            messages.sendMessage(p, "error.bank.minimum_payment", format("%,.2f", NovaConfig.getConfiguration().getMinimumPayment(econ)) + econ.getSymbol(), format("%,.2f", amount) + econ.getSymbol());
             return;
         }
 
         np.deposit(econ, amount);
-        p.sendMessage(format(getMessage("success.bank.deposit"), amount + String.valueOf(econ.getSymbol()), econ.getName()));
+        messages.sendMessage(p, "success.bank.deposit", amount + String.valueOf(econ.getSymbol()), econ.getName());
     }
 
     default void businessHome(Player p, boolean set) {
         if (!Business.exists(p)) {
-            p.sendMessage(getMessage("error.business.not_an_owner"));
+            messages.sendMessage(p, "error.business.not_an_owner");
             return;
         }
 
         if (!p.hasPermission("novaconomy.user.business.home")) {
-            p.sendMessage(getMessage("error.permission.argument"));
+            messages.sendMessage(p, ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
@@ -936,19 +956,19 @@ public interface CommandWrapper {
         if (set) {
             Location loc = p.getLocation();
             b.setHome(loc);
-            p.sendMessage(format(getMessage("success.business.set_home"), GOLD + String.valueOf(loc.getBlockX()) + ", " + loc.getBlockY() + ", " + loc.getBlockZ()));
+            messages.sendMessage(p, "success.business.set_home", GOLD + String.valueOf(loc.getBlockX()) + ", " + loc.getBlockY() + ", " + loc.getBlockZ());
         } else {
             if (!b.hasHome()) {
-                p.sendMessage(getMessage("error.business.no_home"));
+                messages.sendMessage(p, "error.business.no_home");
                 return;
             }
 
             if (b.getHome().distanceSquared(p.getLocation()) < 16) {
-                p.sendMessage(getMessage("error.business.too_close_home"));
+                messages.sendMessage(p, "error.business.too_close_home");
                 return;
             }
 
-            p.sendMessage(DARK_AQUA + get("constants.teleporting"));
+            messages.sendRaw(p, DARK_AQUA + get("constants.teleporting"));
 
             BusinessTeleportHomeEvent event = new BusinessTeleportHomeEvent(p, b);
             Bukkit.getPluginManager().callEvent(event);
@@ -962,12 +982,12 @@ public interface CommandWrapper {
 
     default void bankWithdraw(Player p, double amount, Economy econ) {
         if (amount > NovaConfig.getConfiguration().getMaxWithdrawAmount(econ)) {
-            p.sendMessage(format(getMessage("error.bank.maximum_withdraw"), format("%,.2f", NovaConfig.getConfiguration().getMaxWithdrawAmount(econ)) + econ.getSymbol(), format("%,.2f", amount) + econ.getSymbol()));
+            messages.sendMessage(p, "error.bank.maximum_withdraw", format("%,.2f", NovaConfig.getConfiguration().getMaxWithdrawAmount(econ)) + econ.getSymbol(), format("%,.2f", amount) + econ.getSymbol());
             return;
         }
 
         if (amount > Bank.getBalance(econ)) {
-            p.sendMessage(format(getMessage("error.bank.maximum_withdraw"), format("%,.2f", Bank.getBalance(econ)) + econ.getSymbol(), format("%,.2f", amount) + econ.getSymbol()));
+            messages.sendMessage(p, "error.bank.maximum_withdraw", format("%,.2f", Bank.getBalance(econ)) + econ.getSymbol(), format("%,.2f", amount) + econ.getSymbol());
             return;
         }
 
@@ -983,66 +1003,66 @@ public interface CommandWrapper {
             timeS = format("%,d", Math.floorDiv(timeSecs, 3600L)) + get("constants.time.hour");
 
         if (time > 0) {
-            p.sendMessage(format(getMessage("error.bank.withdraw_time"), timeS));
+            messages.sendMessage(p, "error.bank.withdraw_time", timeS);
             return;
         }
 
         np.withdraw(econ, amount);
-        p.sendMessage(format(getMessage("success.bank.withdraw"), amount + String.valueOf(econ.getSymbol()), econ.getName()));
+        messages.sendMessage(p, "success.bank.withdraw", amount + String.valueOf(econ.getSymbol()), econ.getName());
     }
 
     default void createBounty(Player p, OfflinePlayer target, Economy econ, double amount) {
         if (!p.hasPermission("novaconomy.user.bounty.manage")) {
-            p.sendMessage(getMessage("error.permission.argument"));
+            messages.sendMessage(p, ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
         if (!NovaConfig.getConfiguration().hasBounties()) {
-            p.sendMessage(getMessage("error.bounty.disabled"));
+            messages.sendMessage(p, "error.bounty.disabled");
             return;
         }
 
         if (target.equals(p)) {
-            p.sendMessage(getMessage("error.bounty.self"));
+            messages.sendMessage(p, "error.bounty.self");
             return;
         }
 
         if (amount <= 0) {
-            p.sendMessage(getMessage("error.argument.amount"));
+            messages.sendMessage(p, "error.argument.amount");
             return;
         }
 
         NovaPlayer np = new NovaPlayer(p);
-        if (np.getBalance(econ) < amount) {
-            p.sendMessage(format(getMessage("error.economy.invalid_amount"), get("constants.place_bounty")));
+        if (!np.canAfford(econ, amount, NovaConfig.getConfiguration().getWhenNegativeAllowCreateBounties())) {
+            messages.sendMessage(p, "error.economy.invalid_amount", get("constants.place_bounty"));
             return;
         }
 
         try {
             Bounty.builder().setOwner(np).setAmount(amount).setTarget(target).setEconomy(econ).build();
             np.remove(econ, amount);
-            p.sendMessage(format(getMessage("success.bounty.create"), target.getName()));
+            messages.sendMessage(p, "success.bounty.create", target.getName());
 
             if (target.isOnline() && NovaConfig.getConfiguration().hasNotifications())
-                target.getPlayer().sendMessage(format(getMessage("notification.bounty"), p.getDisplayName() == null ? p.getName() : p.getDisplayName(), format("%,.2f", amount) + econ.getSymbol()));
+                messages.sendMessage(target.getPlayer(), "notification.bounty", p.getDisplayName() == null ? p.getName() : p.getDisplayName(), format("%,.2f", amount) + econ.getSymbol());
         } catch (UnsupportedOperationException e) {
-            p.sendMessage(format(getMessage("error.bounty.exists"), target.isOnline() && target.getPlayer().getDisplayName() == null ? target.getName() : target.getPlayer().getDisplayName()));
+            messages.sendMessage(p, "error.bounty.exists", target.isOnline() && target.getPlayer().getDisplayName() == null ? target.getName() : target.getPlayer().getDisplayName());
         }
     }
 
     default void deleteBounty(Player p, OfflinePlayer target) {
         if (!p.hasPermission("novaconomy.user.bounty.manage")) {
-            p.sendMessage(getMessage("error.permission.argument"));
+            messages.sendMessage(p, ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
         if (!NovaConfig.getConfiguration().hasBounties()) {
-            p.sendMessage(getMessage("error.bounty.disabled"));
+            messages.sendMessage(p, "error.bounty.disabled");
             return;
         }
 
         if (target.equals(p)) {
-            p.sendMessage(getMessage("error.bounty.self"));
+            messages.sendMessage(p, "error.bounty.self");
             return;
         }
 
@@ -1051,7 +1071,7 @@ public interface CommandWrapper {
         String key = "bounties." + target.getUniqueId();
 
         if (!data.containsKey(key)) {
-            p.sendMessage(getMessage("error.bounty.inexistent"));
+            messages.sendMessage(p, "error.bounty.inexistent");
             return;
         }
 
@@ -1059,29 +1079,29 @@ public interface CommandWrapper {
         np.add(b.getEconomy(), b.getAmount());
         data.put(key, null);
 
-        p.sendMessage(format(getMessage("success.bounty.delete"), target.getName()));
+        messages.sendMessage(p, "success.bounty.delete", target.getName());
     }
 
     default void listBounties(Player p, boolean owned) {
         if (!p.hasPermission("novaconomy.user.bounty.list")) {
-            p.sendMessage(getMessage("error.permission.argument"));
+            messages.sendMessage(p, ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
         if (!NovaConfig.getConfiguration().hasBounties()) {
-            p.sendMessage(getMessage("error.bounty.disabled"));
+            messages.sendMessage(p, "error.bounty.disabled");
             return;
         }
 
         NovaPlayer np = new NovaPlayer(p);
 
         if (owned && np.getPlayerData().keySet().stream().noneMatch(k -> k.startsWith("bounties"))) {
-            p.sendMessage(getMessage("error.bounty.none"));
+            messages.sendMessage(p, "error.bounty.none");
             return;
         }
 
         if (!owned && np.getSelfBounties().isEmpty()) {
-            p.sendMessage(getMessage("error.bounty.none.self"));
+            messages.sendMessage(p, "error.bounty.none.self");
             return;
         }
 
@@ -1141,12 +1161,12 @@ public interface CommandWrapper {
 
     default void callEvent(CommandSender sender, String event, boolean self) {
         if (!sender.hasPermission("novaconomy.admin.tax_event")) {
-            sender.sendMessage(getMessage("error.permission.argument"));
+            messages.sendMessage(sender, ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
         if (!NovaConfig.getConfiguration().hasCustomTaxes()) {
-            sender.sendMessage(getMessage("error.tax.custom_disabled"));
+            messages.sendMessage(sender, "error.tax.custom_disabled");
             return;
         }
 
@@ -1156,7 +1176,7 @@ public interface CommandWrapper {
                 .findFirst();
 
         if (!customO.isPresent()) {
-            sender.sendMessage(getMessage("error.tax.custom_inexistent"));
+            messages.sendMessage(sender, "error.tax.custom_inexistent");
             return;
         }
 
@@ -1167,7 +1187,7 @@ public interface CommandWrapper {
         NovaConfig.CustomTaxEvent custom = eventC.getEvent();
 
         if (!sender.hasPermission(custom.getPermission())) {
-            sender.sendMessage(getMessage("error.permission.tax_event"));
+            messages.sendMessage(sender, "error.permission.tax_event");
             return;
         }
 
@@ -1195,10 +1215,10 @@ public interface CommandWrapper {
                 if (deposit) prices.forEach(Bank::addBalance);
 
                 if (p.isOnline())
-                    p.getPlayer().sendMessage(translateAlternateColorCodes('&', custom.getMessage()));
+                    messages.sendRaw(p.getPlayer(), translateAlternateColorCodes('&', custom.getMessage()));
             });
 
-        sender.sendMessage(format(getMessage("success.tax.custom_event"), custom.getName()));
+        messages.sendMessage(sender, "success.tax.custom_event", custom.getName());
     }
 
     default void settings(Player p, String section) {
@@ -1288,7 +1308,7 @@ public interface CommandWrapper {
                 }
                 case BUSINESS_TAG: {
                     if (!Business.exists(p)) {
-                        p.sendMessage(getMessage("error.business.not_an_owner"));
+                        messages.sendMessage(p, "error.business.not_an_owner");
                         return;
                     }
 
@@ -1303,7 +1323,7 @@ public interface CommandWrapper {
                 }
                 case CORPORATION_TAG: {
                     if (!Corporation.exists(p)) {
-                        p.sendMessage(getError("error.corporation.none"));
+                        messages.sendError(p, "error.corporation.none");
                         return;
                     }
                     Corporation c = Corporation.byOwner(p);
@@ -1317,7 +1337,7 @@ public interface CommandWrapper {
                     break;
                 }
                 default: {
-                    p.sendMessage(getMessage("error.settings.section_inexistent"));
+                    messages.sendMessage(p, "error.settings.section_inexistent");
                     return;
                 }
             }
@@ -1333,7 +1353,7 @@ public interface CommandWrapper {
 
     default void businessStatistics(Player p, Business b) {
         if (b == null) {
-            p.sendMessage(getMessage("error.business.not_an_owner"));
+            messages.sendMessage(p, "error.business.not_an_owner");
             return;
         }
 
@@ -1505,12 +1525,12 @@ public interface CommandWrapper {
 
     default void rate(Player p, Business b, String comment) {
         if (!p.hasPermission("novaconomy.user.rate")) {
-            p.sendMessage(ERROR_PERMISSION);
+            messages.sendMessage(p, ERROR_PERMISSION);
             return;
         }
 
         if (b.isOwner(p)) {
-            p.sendMessage(getMessage("error.business.rate_self"));
+            messages.sendMessage(p, "error.business.rate_self");
             return;
         }
 
@@ -1528,7 +1548,7 @@ public interface CommandWrapper {
             timeS = format("%,d", Math.floorDiv(timeSecs, 3600L)) + get("constants.time.hour");
 
         if (time > 0) {
-            p.sendMessage(format(get("error.business.rate_time"), timeS, b.getName()));
+            messages.send(p, "error.business.rate_time", timeS, b.getName());
             return;
         }
 
@@ -1564,12 +1584,12 @@ public interface CommandWrapper {
 
     default void businessRating(Player p, OfflinePlayer target) {
         if (!Business.exists(p)) {
-            p.sendMessage(getMessage("error.business.not_an_owner"));
+            messages.sendMessage(p, "error.business.not_an_owner");
             return;
         }
 
         if (target.equals(p)) {
-            p.sendMessage(getMessage("error.business.rate_self"));
+            messages.sendMessage(p, "error.business.rate_self");
             return;
         }
 
@@ -1581,7 +1601,7 @@ public interface CommandWrapper {
                 .findFirst();
 
         if (!r.isPresent()) {
-            p.sendMessage(getMessage("error.business.no_rating"));
+            messages.sendMessage(p, "error.business.no_rating");
             return;
         }
 
@@ -1615,19 +1635,19 @@ public interface CommandWrapper {
 
     default void discoverBusinesses(Player p, String... keywords) {
         if (!p.hasPermission("novaconomy.user.business.discover")) {
-            p.sendMessage(getMessage("error.permission.argument"));
+            messages.sendMessage(p, ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
         if (!Business.exists()) {
-            p.sendMessage(getMessage("error.business.none"));
+            messages.sendMessage(p, "error.business.none");
             return;
         }
 
         NovaInventory discover = generateBusinessDiscovery(SortingType.BUSINESS_NAME_ASCENDING, keywords);
 
         if (discover == null) {
-            p.sendMessage(getMessage("error.business.none_keywords"));
+            messages.sendMessage(p, "error.business.none_keywords");
             return;
         }
 
@@ -1637,12 +1657,12 @@ public interface CommandWrapper {
 
     default void editPrice(Player p, double newPrice, Economy econ) {
         if (newPrice <= 0) {
-            p.sendMessage(getMessage("error.argument.amount"));
+            messages.sendMessage(p, "error.argument.amount");
             return;
         }
 
         if (!Business.exists(p)) {
-            p.sendMessage(getMessage("error.business.not_an_owner"));
+            messages.sendMessage(p, "error.business.not_an_owner");
             return;
         }
 
@@ -1700,86 +1720,96 @@ public interface CommandWrapper {
 
     default void setBusinessName(Player p, String name) {
         if (!Business.exists(p)) {
-            p.sendMessage(getMessage("error.business.not_an_owner"));
+            messages.sendMessage(p, "error.business.not_an_owner");
+            return;
+        }
+
+        if (name == null || name.isEmpty()) {
+            messages.sendMessage(p, "error.argument.name");
+            return;
+        }
+
+        if (name.length() > Business.MAX_NAME_LENGTH) {
+            messages.sendError(p, "error.business.name_length");
             return;
         }
 
         Business b = Business.byOwner(p);
-        if (name.isEmpty()) {
-            p.sendMessage(getMessage("error.argument.empty"));
-            return;
-        }
-
         Business other = Business.byName(name);
         if (other != null && !other.equals(b)) {
-            p.sendMessage(getMessage("error.business.exists_name"));
+            messages.sendError(p, "error.business.exists_name");
             return;
         }
 
         b.setName(name);
-        p.sendMessage(format(getMessage("success.business.set_name"), name));
+        messages.sendMessage(p, "success.business.set_name", name);
     }
 
     default void setBusinessIcon(Player p, Material icon) {
         if (!Business.exists(p)) {
-            p.sendMessage(getMessage("error.business.not_an_owner"));
+            messages.sendMessage(p, "error.business.not_an_owner");
+            return;
+        }
+
+        if (!w.isItem(icon)) {
+            messages.sendMessage(p, "error.argument.icon");
             return;
         }
 
         Business b = Business.byOwner(p);
         b.setIcon(icon);
-        p.sendMessage(format(getMessage("success.business.set_icon"), capitalize(icon.name().replace("_", " "))));
+        messages.sendMessage(p, "success.business.set_icon", capitalize(icon.name().replace("_", " ")));
     }
 
     default void setEconomyModel(CommandSender sender, Economy econ, int data) {
         if (!sender.hasPermission("novaconomy.economy.create")) {
-            sender.sendMessage(getMessage("error.permission.argument"));
+            messages.sendMessage(sender, ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
         econ.setCustomModelData(data);
-        sender.sendMessage(format(getMessage("success.economy.set_model_data"), econ.getName(), data));
+        messages.sendMessage(sender, "success.economy.set_model_data", econ.getName(), data);
     }
 
     default void setEconomyIcon(CommandSender sender, Economy econ, Material icon) {
         if (!sender.hasPermission("novaconomy.economy.create")) {
-            sender.sendMessage(getMessage("error.permission.argument"));
+            messages.sendMessage(sender, ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
         if (!w.isItem(icon)) {
-            sender.sendMessage(getMessage("error.argument.icon"));
+            messages.sendMessage(sender, "error.argument.icon");
             return;
         }
 
         econ.setIcon(icon);
-        sender.sendMessage(format(getMessage("success.economy.set_icon"), econ.getName(), capitalize(icon.name().replace("_", " "))));
+        messages.sendMessage(sender, "success.economy.set_icon", econ.getName(), capitalize(icon.name().replace("_", " ")));
     }
 
     default void setEconomyScale(CommandSender sender, Economy econ, double scale) {
         if (!sender.hasPermission("novaconomy.economy.create")) {
-            sender.sendMessage(getMessage("error.permission.argument"));
+            messages.sendMessage(sender, ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
         econ.setConversionScale(scale);
-        sender.sendMessage(format(getMessage("success.economy.set_scale"), econ.getName(), scale));
+        messages.sendMessage(sender, "success.economy.set_scale", econ.getName(), scale);
     }
 
     default void setEconomyNatural(CommandSender sender, Economy econ, boolean naturalIncrease) {
         if (!sender.hasPermission("novaconomy.economy.create")) {
-            sender.sendMessage(getMessage("error.permission.argument"));
+            messages.sendMessage(sender, ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
         econ.setIncreaseNaturally(naturalIncrease);
-        sender.sendMessage(getMessage("success.economy." + (naturalIncrease ? "enable" : "disable") + "_natural"));
+        messages.sendMessage(sender, "success.economy." + (naturalIncrease ? "enable" : "disable") + "_natural");
     }
 
     default void playerStatistics(Player p, OfflinePlayer target) {
         Player op = target.getPlayer();
         if (!p.hasPermission("novaconomy.user.stats")) {
-            op.sendMessage(ERROR_PERMISSION);
+            messages.sendMessage(p, ERROR_PERMISSION);
             return;
         }
 
@@ -1892,18 +1922,18 @@ public interface CommandWrapper {
 
     default void businessRecover(Player p) {
         if (!Business.exists(p)) {
-            p.sendMessage(getMessage("error.business.not_an_owner"));
+            messages.sendMessage(p, "error.business.not_an_owner");
             return;
         }
 
         Business b = Business.byOwner(p);
         if (b.getLeftoverStock().isEmpty()) {
-            p.sendMessage(getMessage("error.business.no_leftover_stock"));
+            messages.sendMessage(p, "error.business.no_leftover_stock");
             return;
         }
 
         if (p.getInventory().firstEmpty() == -1) {
-            p.sendMessage(getMessage("error.player.full_inventory"));
+            messages.sendMessage(p, "error.player.full_inventory");
             return;
         }
 
@@ -1927,26 +1957,26 @@ public interface CommandWrapper {
         b.removeResource(items);
         p.getInventory().addItem(items.toArray(new ItemStack[0]));
 
-        p.sendMessage(getMessage("success.business.recover"));
+        messages.sendMessage(p, "success.business.recover");
 
-        if (overflow) p.sendMessage(get("constants.business.stock_overflow"));
+        if (overflow) messages.send(p, "constants.business.stock_overflow");
     }
 
     default void listKeywords(Player p) {
         if (!p.hasPermission("novaconomy.user.business.keywords")) {
-            p.sendMessage(getMessage("error.permission.argument"));
+            messages.sendMessage(p, ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
         if (!Business.exists(p)) {
-            p.sendMessage(getMessage("error.business.not_an_owner"));
+            messages.sendMessage(p, "error.business.not_an_owner");
             return;
         }
 
         Business b = Business.byOwner(p);
 
         if (b.getKeywords().isEmpty()) {
-            p.sendMessage(getMessage("error.business.no_keywords"));
+            messages.sendMessage(p, "error.business.no_keywords");
             return;
         }
 
@@ -1954,81 +1984,81 @@ public interface CommandWrapper {
         msgs.add(DARK_PURPLE + get("constants.business.keywords"));
         for (String keyword : b.getKeywords()) msgs.add(BLUE + "- " + DARK_AQUA + keyword);
 
-        p.sendMessage(msgs.toArray(new String[0]));
+        messages.sendRaw(p, msgs);
     }
 
     default void addKeywords(Player p, String... keywords) {
         if (!p.hasPermission("novaconomy.user.business.keywords")) {
-            p.sendMessage(getMessage("error.permission.argument"));
+            messages.sendMessage(p, ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
         if (!Business.exists(p)) {
-            p.sendMessage(getMessage("error.business.not_an_owner"));
+            messages.sendMessage(p, "error.business.not_an_owner");
             return;
         }
 
         Business b = Business.byOwner(p);
 
         if (keywords == null) {
-            p.sendMessage(getMessage("error.argument.keywords"));
+            messages.sendMessage(p, "error.argument.keywords");
             return;
         }
 
         if (b.hasAnyKeywords(keywords)) {
-            p.sendMessage(getMessage("error.business.keywords_already_added"));
+            messages.sendMessage(p, "error.business.keywords_already_added");
             return;
         }
 
         if (b.getKeywords().size() + keywords.length > 10) {
-            p.sendMessage(getMessage("error.business.too_many_keywords"));
+            messages.sendMessage(p, "error.business.too_many_keywords");
             return;
         }
 
         b.addKeywords(keywords);
-        p.sendMessage(format(getMessage("success.business.add_keywords"), keywords.length));
+        messages.sendMessage(p, "success.business.add_keywords", keywords.length);
     }
 
     default void removeKeywords(Player p, String... keywords) {
         if (!p.hasPermission("novaconomy.user.business.keywords")) {
-            p.sendMessage(getMessage("error.permission.argument"));
+            messages.sendMessage(p, ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
         if (!Business.exists(p)) {
-            p.sendMessage(getMessage("error.business.not_an_owner"));
+            messages.sendMessage(p, "error.business.not_an_owner");
             return;
         }
 
         Business b = Business.byOwner(p);
 
         if (keywords == null) {
-            p.sendMessage(getMessage("error.argument.keywords"));
+            messages.sendMessage(p, "error.argument.keywords");
             return;
         }
 
         if (!b.hasAllKeywords(keywords)) {
-            p.sendMessage(getMessage("error.business.keywords_not_added"));
+            messages.sendMessage(p, "error.business.keywords_not_added");
             return;
         }
 
         b.removeKeywords(keywords);
-        p.sendMessage(format(getMessage("success.business.remove_keywords"), keywords.length));
+        messages.sendMessage(p, "success.business.remove_keywords", keywords.length);
     }
 
     default void businessAdvertising(Player p) {
         if (Economy.getEconomies().isEmpty()) {
-            p.sendMessage(getMessage("error.economy.none"));
+            messages.sendMessage(p, "error.economy.none");
             return;
         }
 
         if (!Business.exists(p)) {
-            p.sendMessage(getMessage("error.business.not_an_owner"));
+            messages.sendMessage(p, "error.business.not_an_owner");
             return;
         }
 
         if (!NovaConfig.getConfiguration().isAdvertisingEnabled()) {
-            p.sendMessage(getMessage("error.business.advertising_disabled"));
+            messages.sendMessage(p, "error.business.advertising_disabled");
             return;
         }
 
@@ -2075,17 +2105,17 @@ public interface CommandWrapper {
 
     default void businessAdvertisingChange(Player p, boolean deposit) {
         if (Economy.getEconomies().isEmpty()) {
-            p.sendMessage(getMessage("error.economy.none"));
+            messages.sendMessage(p, "error.economy.none");
             return;
         }
 
         if (!Business.exists(p)) {
-            p.sendMessage(getMessage("error.business.not_an_owner"));
+            messages.sendMessage(p, "error.business.not_an_owner");
             return;
         }
 
         if (!NovaConfig.getConfiguration().isAdvertisingEnabled()) {
-            p.sendMessage(getMessage("error.business.advertising_disabled"));
+            messages.sendMessage(p, "error.business.advertising_disabled");
             return;
         }
 
@@ -2135,27 +2165,29 @@ public interface CommandWrapper {
 
     default void setEconomyName(CommandSender sender, Economy econ, String name) {
         if (!sender.hasPermission("novaconomy.economy.create")) {
-            sender.sendMessage(getMessage("error.permission.argument"));
+            messages.sendMessage(sender, ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
-        for (Economy other : Economy.getEconomies()) {
-            if (other.equals(econ)) continue;
+        if (name == null || name.isEmpty()) {
+            messages.sendMessage(sender, "error.argument.name");
+            return;
+        }
 
-            if (other.getName().equalsIgnoreCase(name)) {
-                sender.sendMessage(getMessage("error.economy.name_exists"));
-                return;
-            }
+        Economy other = Economy.byName(name);
+        if (other != null && !other.equals(econ)) {
+            messages.sendMessage(sender, "error.economy.exists");
+            return;
         }
 
         String old = econ.getName();
         econ.setName(name);
-        sender.sendMessage(format(getMessage("success.economy.set_name"), old, name));
+        messages.sendMessage(sender, "success.economy.set_name", old, name);
     }
 
     default void listBlacklist(Player p) {
         if (!Business.exists(p)) {
-            p.sendMessage(getMessage("error.business.not_an_owner"));
+            messages.sendMessage(p, "error.business.not_an_owner");
             return;
         }
 
@@ -2163,7 +2195,7 @@ public interface CommandWrapper {
         List<Business> blacklist = b.getBlacklist();
 
         if (blacklist.isEmpty()) {
-            p.sendMessage(getMessage("error.business.no_blacklist"));
+            messages.sendMessage(p, "error.business.no_blacklist");
             return;
         }
 
@@ -2178,51 +2210,51 @@ public interface CommandWrapper {
             msgs.add(GOLD + "- " + YELLOW + other.getName());
         }
 
-        p.sendMessage(msgs.toArray(new String[0]));
+        messages.sendRaw(p, msgs);
     }
 
     default void addBlacklist(Player p, Business business) {
         if (!Business.exists(p)) {
-            p.sendMessage(getMessage("error.business.not_an_owner"));
+            messages.sendMessage(p, "error.business.not_an_owner");
             return;
         }
 
         Business b = Business.byOwner(p);
         if (b.isBlacklisted(business)) {
-            p.sendMessage(getMessage("error.business.exists_blacklist"));
+            messages.sendMessage(p, "error.business.exists_blacklist");
             return;
         }
 
         b.blacklist(business);
-        p.sendMessage(format(getMessage("success.business.add_blacklist"), business.getName()));
+        messages.sendMessage(p, "success.business.add_blacklist", business.getName());
     }
 
     default void removeBlacklist(Player p, Business business) {
         if (!Business.exists(p)) {
-            p.sendMessage(getMessage("error.business.not_an_owner"));
+            messages.sendMessage(p, "error.business.not_an_owner");
             return;
         }
 
         Business b = Business.byOwner(p);
         if (!b.isBlacklisted(business)) {
-            p.sendMessage(getMessage("error.business.not_blacklisted"));
+            messages.sendMessage(p, "error.business.not_blacklisted");
             return;
         }
 
         b.unblacklist(business);
-        p.sendMessage(format(getMessage("success.business.remove_blacklist"), business.getName()));
+        messages.sendMessage(p, "success.business.remove_blacklist", business.getName());
     }
 
     default void allBusinessRatings(Player p) {
         if (!Business.exists(p)) {
-            p.sendMessage(getMessage("error.business.not_an_owner"));
+            messages.sendMessage(p, "error.business.not_an_owner");
             return;
         }
 
         Business b = Business.byOwner(p);
 
         if (b.getRatings().isEmpty()) {
-            p.sendMessage(getMessage("error.business.no_ratings"));
+            messages.sendMessage(p, "error.business.no_ratings");
             return;
         }
 
@@ -2231,19 +2263,19 @@ public interface CommandWrapper {
 
     default void setEconomyRewardable(CommandSender sender, Economy econ, boolean rewardable) {
         if (!sender.hasPermission("novaconomy.economy.create")) {
-            sender.sendMessage(getMessage("error.permission.argument"));
+            messages.sendMessage(sender, ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
         econ.setHasClickableReward(rewardable);
-        sender.sendMessage(format(getMessage("success.economy." + (rewardable ? "enable" : "disable") + "_reward"), econ.getName()));
+        messages.sendMessage(sender, "success.economy." + (rewardable ? "enable" : "disable") + "_reward", econ.getName());
     }
 
     // Configuration Management Commands
 
     default void configNaturalCauses(CommandSender sender, String option, String value) {
         if (!sender.hasPermission("novaconomy.admin.config")) {
-            sender.sendMessage(ERROR_PERMISSION);
+            messages.sendMessage(sender, ERROR_PERMISSION);
             return;
         }
 
@@ -2253,244 +2285,244 @@ public interface CommandWrapper {
         switch (option.toLowerCase()) {
             case "enchant_bonus": {
                 if (value == null) {
-                    sender.sendMessage(format(getMessage("success.config.print_value"), "EnchantBonus", config.get("NaturalCauses.EnchantBonus")));
+                    messages.sendMessage(sender, "success.config.print_value", "EnchantBonus", config.get("NaturalCauses.EnchantBonus"));
                     return;
                 }
 
                 if (!value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false")) {
-                    sender.sendMessage(getMessage("error.argument.bool"));
+                    messages.sendMessage(sender, "error.argument.bool");
                     return;
                 }
 
                 boolean b = Boolean.parseBoolean(value);
                 config.set("NaturalCauses.EnchantBonus", b);
-                sender.sendMessage(format(getMessage("success.config.set"), "EnchantBonus", b));
+                messages.sendMessage(sender, "success.config.set", "EnchantBonus", b);
                 break;
             }
             case "max_increase": {
                 if (value == null) {
-                    sender.sendMessage(format(getMessage("success.config.print_value"), "MaxIncrease", config.get("NaturalCauses.MaxIncrease")));
+                    messages.sendMessage(sender, "success.config.print_value", "MaxIncrease", config.get("NaturalCauses.MaxIncrease"));
                     return;
                 }
 
                 try {
                     int i = Integer.parseInt(value);
                     if (i < -1) {
-                        sender.sendMessage(getMessage("error.argument.amount"));
+                        messages.sendMessage(sender, "error.argument.amount");
                         return;
                     }
 
                     config.set("NaturalCauses.MaxIncrease", i);
-                    sender.sendMessage(format(getMessage("success.config.set"), "MaxIncrease", i));
+                    messages.sendMessage(sender, "success.config.set", "MaxIncrease", i);
                 } catch (NumberFormatException e) {
-                    sender.sendMessage(getMessage("error.argument.amount"));
+                    messages.sendMessage(sender, "error.argument.amount");
                     return;
                 }
                 break;
             }
             case "kill_increase": {
                 if (value == null) {
-                    sender.sendMessage(format(getMessage("success.config.print_value"), "KillIncrease", config.get("NaturalCauses.KillIncrease")));
+                    messages.sendMessage(sender, "success.config.print_value", "KillIncrease", config.get("NaturalCauses.KillIncrease"));
                     return;
                 }
 
                 if (!value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false")) {
-                    sender.sendMessage(getMessage("error.argument.bool"));
+                    messages.sendMessage(sender, "error.argument.bool");
                     return;
                 }
 
                 boolean b = Boolean.parseBoolean(value);
                 config.set("NaturalCauses.KillIncrease", b);
-                sender.sendMessage(format(getMessage("success.config.set"), "KillIncrease", b));
+                messages.sendMessage(sender, "success.config.set", "KillIncrease", b);
                 break;
             }
             case "kill_increase_chance": {
                 if (value == null) {
-                    sender.sendMessage(format(getMessage("success.config.print_value"), "KillIncreaseChance", config.get("NaturalCauses.KillIncreaseChance")));
+                    messages.sendMessage(sender, "success.config.print_value", "KillIncreaseChance", config.get("NaturalCauses.KillIncreaseChance"));
                     return;
                 }
 
                 try {
                     int i = Integer.parseInt(value);
                     if (i < 0 || i > 100) {
-                        sender.sendMessage(getMessage("error.argument.amount"));
+                        messages.sendMessage(sender, "error.argument.amount");
                         return;
                     }
 
                     config.set("NaturalCauses.KillIncreaseChance", i);
-                    sender.sendMessage(format(getMessage("success.config.set"), "KillIncreaseChance", i));
+                    messages.sendMessage(sender, "success.config.set", "KillIncreaseChance", i);
                 } catch (NumberFormatException e) {
-                    sender.sendMessage(getMessage("error.argument.amount"));
+                    messages.sendMessage(sender, "error.argument.amount");
                     return;
                 }
                 break;
             }
             case "kill_increase_indirect": {
                 if (value == null) {
-                    sender.sendMessage(format(getMessage("success.config.print_value"), "KillIncreaseIndirect", config.get("NaturalCauses.KillIncreaseIndirect")));
+                    messages.sendMessage(sender, "success.config.print_value", "KillIncreaseIndirect", config.get("NaturalCauses.KillIncreaseIndirect"));
                     return;
                 }
 
                 if (!value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false")) {
-                    sender.sendMessage(getMessage("error.argument.bool"));
+                    messages.sendMessage(sender, "error.argument.bool");
                     return;
                 }
 
                 boolean b = Boolean.parseBoolean(value);
                 config.set("NaturalCauses.KillIncreaseIndirect", b);
-                sender.sendMessage(format(getMessage("success.config.set"), "KillIncreaseIndirect", b));
+                messages.sendMessage(sender, "success.config.set", "KillIncreaseIndirect", b);
                 break;
             }
             case "fishing_increase": {
                 if (value == null) {
-                    sender.sendMessage(format(getMessage("success.config.print_value"), "FishingIncrease", config.get("NaturalCauses.FishingIncrease")));
+                    messages.sendMessage(sender, "success.config.print_value", "FishingIncrease", config.get("NaturalCauses.FishingIncrease"));
                     return;
                 }
 
                 if (!value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false")) {
-                    sender.sendMessage(getMessage("error.argument.bool"));
+                    messages.sendMessage(sender, "error.argument.bool");
                     return;
                 }
 
                 boolean b = Boolean.parseBoolean(value);
                 config.set("NaturalCauses.FishingIncrease", b);
-                sender.sendMessage(format(getMessage("success.config.set"), "FishingIncrease", b));
+                messages.sendMessage(sender, "success.config.set", "FishingIncrease", b);
                 break;
             }
             case "fishing_increase_chance": {
                 if (value == null) {
-                    sender.sendMessage(format(getMessage("success.config.print_value"), "FishingIncreaseChance", config.get("NaturalCauses.FishingIncreaseChance")));
+                    messages.sendMessage(sender, "success.config.print_value", "FishingIncreaseChance", config.get("NaturalCauses.FishingIncreaseChance"));
                     return;
                 }
 
                 try {
                     int i = Integer.parseInt(value);
                     if (i < 0 || i > 100) {
-                        sender.sendMessage(getMessage("error.argument.amount"));
+                        messages.sendMessage(sender, "error.argument.amount");
                         return;
                     }
 
                     config.set("NaturalCauses.FishingIncreaseChance", i);
-                    sender.sendMessage(format(getMessage("success.config.set"), "FishingIncreaseChance", i));
+                    messages.sendMessage(sender, "success.config.set", "FishingIncreaseChance", i);
                 } catch (NumberFormatException e) {
-                    sender.sendMessage(getMessage("error.argument.amount"));
+                    messages.sendMessage(sender, "error.argument.amount");
                     return;
                 }
                 break;
             }
             case "farming_increase": {
                 if (value == null) {
-                    sender.sendMessage(format(getMessage("success.config.print_value"), "FarmingIncrease", config.get("NaturalCauses.FarmingIncrease")));
+                    messages.sendMessage(sender, "success.config.print_value", "FarmingIncrease", config.get("NaturalCauses.FarmingIncrease"));
                     return;
                 }
 
                 if (!value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false")) {
-                    sender.sendMessage(getMessage("error.argument.bool"));
+                    messages.sendMessage(sender, "error.argument.bool");
                     return;
                 }
 
                 boolean b = Boolean.parseBoolean(value);
                 config.set("NaturalCauses.FarmingIncrease", b);
-                sender.sendMessage(format(getMessage("success.config.set"), "FarmingIncrease", b));
+                messages.sendMessage(sender, "success.config.set", "FarmingIncrease", b);
                 break;
             }
             case "farming_increase_chance": {
                 if (value == null) {
-                    sender.sendMessage(format(getMessage("success.config.print_value"), "FarmingIncreaseChance", config.get("NaturalCauses.FarmingIncreaseChance")));
+                    messages.sendMessage(sender, "success.config.print_value", "FarmingIncreaseChance", config.get("NaturalCauses.FarmingIncreaseChance"));
                     return;
                 }
 
                 try {
                     int i = Integer.parseInt(value);
                     if (i < 0 || i > 100) {
-                        sender.sendMessage(getMessage("error.argument.amount"));
+                        messages.sendMessage(sender, "error.argument.amount");
                         return;
                     }
 
                     config.set("NaturalCauses.FarmingIncreaseChance", i);
-                    sender.sendMessage(format(getMessage("success.config.set"), "FarmingIncreaseChance", i));
+                    messages.sendMessage(sender, "success.config.set", "FarmingIncreaseChance", i);
                 } catch (NumberFormatException e) {
-                    sender.sendMessage(getMessage("error.argument.amount"));
+                    messages.sendMessage(sender, "error.argument.amount");
                     return;
                 }
                 break;
             }
             case "mining_increase": {
                 if (value == null) {
-                    sender.sendMessage(format(getMessage("success.config.print_value"), "MiningIncrease", config.get("NaturalCauses.MiningIncrease")));
+                    messages.sendMessage(sender, "success.config.print_value", "MiningIncrease", config.get("NaturalCauses.MiningIncrease"));
                     return;
                 }
 
                 if (!value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false")) {
-                    sender.sendMessage(getMessage("error.argument.bool"));
+                    messages.sendMessage(sender, "error.argument.bool");
                     return;
                 }
 
                 boolean b = Boolean.parseBoolean(value);
                 config.set("NaturalCauses.MiningIncrease", b);
-                sender.sendMessage(format(getMessage("success.config.set"), "MiningIncrease", b));
+                messages.sendMessage(sender, "success.config.set", "MiningIncrease", b);
                 break;
             }
             case "mining_increase_chance": {
                 if (value == null) {
-                    sender.sendMessage(format(getMessage("success.config.print_value"), "MiningIncreaseChance", config.get("NaturalCauses.MiningIncreaseChance")));
+                    messages.sendMessage(sender, "success.config.print_value", "MiningIncreaseChance", config.get("NaturalCauses.MiningIncreaseChance"));
                     return;
                 }
 
                 try {
                     int i = Integer.parseInt(value);
                     if (i < 0 || i > 100) {
-                        sender.sendMessage(getMessage("error.argument.amount"));
+                        messages.sendMessage(sender, "error.argument.amount");
                         return;
                     }
 
                     config.set("NaturalCauses.MiningIncreaseChance", i);
-                    sender.sendMessage(format(getMessage("success.config.set"), "MiningIncreaseChance", i));
+                    messages.sendMessage(sender, "success.config.set", "MiningIncreaseChance", i);
                 } catch (NumberFormatException e) {
-                    sender.sendMessage(getMessage("error.argument.amount"));
+                    messages.sendMessage(sender, "error.argument.amount");
                     return;
                 }
                 break;
             }
             case "death_decrease": {
                 if (value == null) {
-                    sender.sendMessage(format(getMessage("success.config.print_value"), "DeathDecrease", config.get("NaturalCauses.DeathDecrease")));
+                    messages.sendMessage(sender, "success.config.print_value", "DeathDecrease", config.get("NaturalCauses.DeathDecrease"));
                     return;
                 }
 
                 if (!value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false")) {
-                    sender.sendMessage(getMessage("error.argument.bool"));
+                    messages.sendMessage(sender, "error.argument.bool");
                     return;
                 }
 
                 boolean b = Boolean.parseBoolean(value);
                 config.set("NaturalCauses.DeathDecrease", b);
-                sender.sendMessage(format(getMessage("success.config.set"), "DeathDecrease", b));
+                messages.sendMessage(sender, "success.config.set", "DeathDecrease", b);
                 break;
             }
             case "death_divider": {
                 if (value == null) {
-                    sender.sendMessage(format(getMessage("success.config.print_value"), "DeathDivider", config.get("NaturalCauses.DeathDivider")));
+                    messages.sendMessage(sender, "success.config.print_value", "DeathDivider", config.get("NaturalCauses.DeathDivider"));
                     return;
                 }
 
                 try {
                     int i = Integer.parseInt(value);
                     if (i < 1) {
-                        sender.sendMessage(getMessage("error.argument.amount"));
+                        messages.sendMessage(sender, "error.argument.amount");
                         return;
                     }
 
                     config.set("NaturalCauses.DeathDivider", i);
-                    sender.sendMessage(format(getMessage("success.config.set"), "DeathDivider", i));
+                    messages.sendMessage(sender, "success.config.set", "DeathDivider", i);
                 } catch (NumberFormatException e) {
-                    sender.sendMessage(getMessage("error.argument.amount"));
+                    messages.sendMessage(sender, "error.argument.amount");
                     return;
                 }
                 break;
             }
             default: {
-                sender.sendMessage(getMessage("error.argument.config"));
+                messages.sendMessage(sender, "error.argument.config");
                 return;
             }
         }
@@ -2505,7 +2537,7 @@ public interface CommandWrapper {
 
     default void addCausesModifier(CommandSender sender, String type, String key, String... values) {
         if (!sender.hasPermission("novaconomy.admin.config")) {
-            sender.sendMessage(ERROR_PERMISSION);
+            messages.sendMessage(sender, ERROR_PERMISSION);
             return;
         }
 
@@ -2531,18 +2563,18 @@ public interface CommandWrapper {
             if (type.equalsIgnoreCase("death")) try {
                 divider = Double.parseDouble(v);
                 if (divider <= 0) {
-                    sender.sendMessage(getMessage("error.argument.amount"));
+                    messages.sendMessage(sender, "error.argument.amount");
                     return;
                 }
                 break;
             } catch (NumberFormatException e) {
-                sender.sendMessage(getMessage("error.argument.amount"));
+                messages.sendMessage(sender, "error.argument.amount");
                 return;
             }
             else {
                 Map.Entry<Economy, Double> mod = ModifierReader.readString(v);
                 if (mod == null) {
-                    sender.sendMessage(getMessage("error.argument.modifier"));
+                    messages.sendMessage(sender, "error.argument.modifier");
                     return;
                 }
 
@@ -2551,7 +2583,7 @@ public interface CommandWrapper {
         }
 
         if ((divider == -1 && mods.isEmpty()) || (mods == null && divider == -1)) {
-            sender.sendMessage(getMessage("error.argument.amount"));
+            messages.sendMessage(sender, "error.argument.amount");
             return;
         }
 
@@ -2564,13 +2596,13 @@ public interface CommandWrapper {
         switch (type.toLowerCase()) {
             case "mining": {
                 if (Material.matchMaterial(key) == null) {
-                    sender.sendMessage(getMessage("error.argument.block"));
+                    messages.sendMessage(sender, "error.argument.block");
                     return;
                 }
 
                 Material m = Material.matchMaterial(key);
                 if (!m.isBlock()) {
-                    sender.sendMessage(getMessage("error.argument.block"));
+                    messages.sendMessage(sender, "error.argument.block");
                     return;
                 }
 
@@ -2591,7 +2623,7 @@ public interface CommandWrapper {
                     EntityType t = EntityType.valueOf(entityName);
 
                     if (!LivingEntity.class.isAssignableFrom(t.getEntityClass()) || t == EntityType.PLAYER) {
-                        sender.sendMessage(getMessage("error.argument.entity"));
+                        messages.sendMessage(sender, "error.argument.entity");
                         return;
                     }
 
@@ -2606,7 +2638,7 @@ public interface CommandWrapper {
 
                     modConfig.set(modKey, newValue);
                 } catch (IllegalArgumentException e) {
-                    sender.sendMessage(getMessage("error.argument.entity"));
+                    messages.sendMessage(sender, "error.argument.entity");
                     return;
                 }
                 break;
@@ -2619,14 +2651,14 @@ public interface CommandWrapper {
                     etype = EntityType.valueOf(entityName);
 
                     if (!LivingEntity.class.isAssignableFrom(etype.getEntityClass()) || etype == EntityType.PLAYER || !etype.isAlive()) {
-                        sender.sendMessage(getMessage("error.argument.entity"));
+                        messages.sendMessage(sender, "error.argument.entity");
                         return;
                     }
                 } catch (IllegalArgumentException ignored) {
                 }
 
                 if (Material.matchMaterial(key) == null && etype == null) {
-                    sender.sendMessage(getMessage("error.argument.item_entity"));
+                    messages.sendMessage(sender, "error.argument.item_entity");
                     return;
                 }
 
@@ -2634,7 +2666,7 @@ public interface CommandWrapper {
                 if (etype == null) {
                     m = Material.matchMaterial(key);
                     if (!w.isItem(m)) {
-                        sender.sendMessage(getMessage("error.argument.item"));
+                        messages.sendMessage(sender, "error.argument.item");
                         return;
                     }
                 }
@@ -2655,13 +2687,13 @@ public interface CommandWrapper {
             }
             case "farming": {
                 if (Material.matchMaterial(key) == null) {
-                    sender.sendMessage(getMessage("error.argument.crop"));
+                    messages.sendMessage(sender, "error.argument.crop");
                     return;
                 }
 
                 Material m = Material.matchMaterial(key);
                 if (!w.isCrop(m)) {
-                    sender.sendMessage(getMessage("error.argument.crop"));
+                    messages.sendMessage(sender, "error.argument.crop");
                     return;
                 }
 
@@ -2682,7 +2714,7 @@ public interface CommandWrapper {
                     EntityDamageEvent.DamageCause c = EntityDamageEvent.DamageCause.valueOf(key.replace("minecraft:", "").toUpperCase());
                     modConfig.set("Death." + c.name().toLowerCase(), value);
                 } catch (IllegalArgumentException e) {
-                    sender.sendMessage(getMessage("error.argument.cause"));
+                    messages.sendMessage(sender, "error.argument.cause");
                     return;
                 }
                 break;
@@ -2696,12 +2728,12 @@ public interface CommandWrapper {
         }
         reloadFiles();
 
-        sender.sendMessage(format(getMessage("success.config.add_modifier"), type, key));
+        messages.sendMessage(sender, "success.config.add_modifier", type, key);
     }
 
     default void removeCausesModifier(CommandSender sender, String type, String key) {
         if (!sender.hasPermission("novaconomy.admin.config")) {
-            sender.sendMessage(ERROR_PERMISSION);
+            messages.sendMessage(sender, ERROR_PERMISSION);
             return;
         }
 
@@ -2712,18 +2744,18 @@ public interface CommandWrapper {
         switch (type.toLowerCase()) {
             case "mining": {
                 if (Material.matchMaterial(key) == null) {
-                    sender.sendMessage(getMessage("error.argument.block"));
+                    messages.sendMessage(sender, "error.argument.block");
                     return;
                 }
 
                 Material m = Material.matchMaterial(key);
                 if (!m.isBlock() || m == Material.AIR) {
-                    sender.sendMessage(getMessage("error.argument.block"));
+                    messages.sendMessage(sender, "error.argument.block");
                     return;
                 }
 
                 if (!modConfig.isSet("Mining." + m.name().toLowerCase())) {
-                    sender.sendMessage(getMessage("error.config.modifier_inexistent"));
+                    messages.sendMessage(sender, "error.config.modifier_inexistent");
                     return;
                 }
 
@@ -2735,18 +2767,18 @@ public interface CommandWrapper {
                     EntityType t = EntityType.valueOf(key.replace("minecraft:", "").toUpperCase());
 
                     if (!LivingEntity.class.isAssignableFrom(t.getEntityClass()) || t == EntityType.PLAYER) {
-                        sender.sendMessage(getMessage("error.argument.entity"));
+                        messages.sendMessage(sender, "error.argument.entity");
                         return;
                     }
 
                     if (!modConfig.isSet("Killing." + t.name().toLowerCase())) {
-                        sender.sendMessage(getMessage("error.config.modifier_inexistent"));
+                        messages.sendMessage(sender, "error.config.modifier_inexistent");
                         return;
                     }
 
                     modConfig.set("Killing." + t.name().toLowerCase(), null);
                 } catch (IllegalArgumentException e) {
-                    sender.sendMessage(getMessage("error.argument.entity"));
+                    messages.sendMessage(sender, "error.argument.entity");
                     return;
                 }
                 break;
@@ -2759,14 +2791,14 @@ public interface CommandWrapper {
                     etype = EntityType.valueOf(key.replace("minecraft:", "").toUpperCase());
 
                     if (!LivingEntity.class.isAssignableFrom(etype.getEntityClass()) || etype == EntityType.PLAYER || !etype.isAlive()) {
-                        sender.sendMessage(getMessage("error.argument.entity"));
+                        messages.sendMessage(sender, "error.argument.entity");
                         return;
                     }
                 } catch (IllegalArgumentException ignored) {
                 }
 
                 if (Material.matchMaterial(key) == null && etype == null) {
-                    sender.sendMessage(getMessage("error.argument.item_entity"));
+                    messages.sendMessage(sender, "error.argument.item_entity");
                     return;
                 }
 
@@ -2774,7 +2806,7 @@ public interface CommandWrapper {
                 if (etype == null) {
                     m = Material.matchMaterial(key);
                     if (!w.isItem(m)) {
-                        sender.sendMessage(getMessage("error.argument.item"));
+                        messages.sendMessage(sender, "error.argument.item");
                         return;
                     }
                 }
@@ -2782,7 +2814,7 @@ public interface CommandWrapper {
                 choice = etype == null ? m : etype;
 
                 if (!modConfig.isSet("Fishing." + choice.name().toLowerCase())) {
-                    sender.sendMessage(getMessage("error.config.modifier_inexistent"));
+                    messages.sendMessage(sender, "error.config.modifier_inexistent");
                     return;
                 }
 
@@ -2791,18 +2823,18 @@ public interface CommandWrapper {
             }
             case "farming": {
                 if (Material.matchMaterial(key) == null) {
-                    sender.sendMessage(getMessage("error.argument.crop"));
+                    messages.sendMessage(sender, "error.argument.crop");
                     return;
                 }
 
                 Material m = Material.matchMaterial(key);
                 if (!w.isCrop(m)) {
-                    sender.sendMessage(getMessage("error.argument.crop"));
+                    messages.sendMessage(sender, "error.argument.crop");
                     return;
                 }
 
                 if (!modConfig.isSet("Farming." + m.name().toLowerCase())) {
-                    sender.sendMessage(getMessage("error.config.modifier_inexistent"));
+                    messages.sendMessage(sender, "error.config.modifier_inexistent");
                     return;
                 }
 
@@ -2814,13 +2846,13 @@ public interface CommandWrapper {
                     EntityDamageEvent.DamageCause c = EntityDamageEvent.DamageCause.valueOf(key.replace("minecraft:", "").toUpperCase());
 
                     if (!modConfig.isSet("Death." + c.name().toLowerCase())) {
-                        sender.sendMessage(getMessage("error.config.modifier_inexistent"));
+                        messages.sendMessage(sender, "error.config.modifier_inexistent");
                         return;
                     }
 
                     modConfig.set("Death." + c.name().toLowerCase(), null);
                 } catch (IllegalArgumentException e) {
-                    sender.sendMessage(getMessage("error.argument.cause"));
+                    messages.sendMessage(sender, "error.argument.cause");
                     return;
                 }
                 break;
@@ -2834,12 +2866,12 @@ public interface CommandWrapper {
         }
         reloadFiles();
 
-        sender.sendMessage(format(getMessage("success.config.remove_modifier"), type + "." + key));
+        messages.sendMessage(sender, "success.config.remove_modifier", type + "." + key);
     }
 
     default void viewCausesModifier(CommandSender sender, String type, String key) {
         if (!sender.hasPermission("novaconomy.admin.config")) {
-            sender.sendMessage(ERROR_PERMISSION);
+            messages.sendMessage(sender, ERROR_PERMISSION);
             return;
         }
 
@@ -2849,22 +2881,22 @@ public interface CommandWrapper {
         switch (type.toLowerCase()) {
             case "mining": {
                 if (Material.matchMaterial(key) == null) {
-                    sender.sendMessage(getMessage("error.argument.block"));
+                    messages.sendMessage(sender, "error.argument.block");
                     return;
                 }
 
                 Material m = Material.matchMaterial(key);
                 if (!m.isBlock() || m == Material.AIR) {
-                    sender.sendMessage(getMessage("error.argument.block"));
+                    messages.sendMessage(sender, "error.argument.block");
                     return;
                 }
 
                 if (!modConfig.isSet("Mining." + m.name().toLowerCase())) {
-                    sender.sendMessage(getMessage("error.config.modifier_inexistent"));
+                    messages.sendMessage(sender, "error.config.modifier_inexistent");
                     return;
                 }
 
-                sender.sendMessage(format(getMessage("success.config.view_modifier"), type + "." + key, modConfig.get("Mining." + m.name().toLowerCase())));
+                messages.sendMessage(sender, "success.config.view_modifier", type + "." + key, modConfig.get("Mining." + m.name().toLowerCase()));
                 break;
             }
             case "killing": {
@@ -2872,18 +2904,18 @@ public interface CommandWrapper {
                     EntityType t = EntityType.valueOf(key.replace("minecraft:", "").toUpperCase());
 
                     if (!LivingEntity.class.isAssignableFrom(t.getEntityClass()) || t == EntityType.PLAYER) {
-                        sender.sendMessage(getMessage("error.argument.entity"));
+                        messages.sendMessage(sender, "error.argument.entity");
                         return;
                     }
 
                     if (!modConfig.isSet("Killing." + t.name().toLowerCase())) {
-                        sender.sendMessage(getMessage("error.config.modifier_inexistent"));
+                        messages.sendMessage(sender, "error.config.modifier_inexistent");
                         return;
                     }
 
-                    sender.sendMessage(format(getMessage("success.config.view_modifier"), type + "." + key, modConfig.get("Killing." + t.name().toLowerCase())));
+                    messages.sendMessage(sender, "success.config.view_modifier", type + "." + key, modConfig.get("Killing." + t.name().toLowerCase()));
                 } catch (IllegalArgumentException e) {
-                    sender.sendMessage(getMessage("error.argument.entity"));
+                    messages.sendMessage(sender, "error.argument.entity");
                     return;
                 }
                 break;
@@ -2896,14 +2928,14 @@ public interface CommandWrapper {
                     etype = EntityType.valueOf(key.replace("minecraft:", "").toUpperCase());
 
                     if (!LivingEntity.class.isAssignableFrom(etype.getEntityClass()) || etype == EntityType.PLAYER || !etype.isAlive()) {
-                        sender.sendMessage(getMessage("error.argument.entity"));
+                        messages.sendMessage(sender, "error.argument.entity");
                         return;
                     }
                 } catch (IllegalArgumentException ignored) {
                 }
 
                 if (Material.matchMaterial(key) == null && etype == null) {
-                    sender.sendMessage(getMessage("error.argument.item_entity"));
+                    messages.sendMessage(sender, "error.argument.item_entity");
                     return;
                 }
 
@@ -2911,7 +2943,7 @@ public interface CommandWrapper {
                 if (etype == null) {
                     m = Material.matchMaterial(key);
                     if (!w.isItem(m)) {
-                        sender.sendMessage(getMessage("error.argument.item"));
+                        messages.sendMessage(sender, "error.argument.item");
                         return;
                     }
                 }
@@ -2919,31 +2951,31 @@ public interface CommandWrapper {
                 choice = etype == null ? m : etype;
 
                 if (!modConfig.isSet("Fishing." + choice.name().toLowerCase())) {
-                    sender.sendMessage(getMessage("error.config.modifier_inexistent"));
+                    messages.sendMessage(sender, "error.config.modifier_inexistent");
                     return;
                 }
 
-                sender.sendMessage(format(getMessage("success.config.view_modifier"), type + "." + key, modConfig.get("Fishing." + choice.name().toLowerCase())));
+                messages.sendMessage(sender, "success.config.view_modifier", type + "." + key, modConfig.get("Fishing." + choice.name().toLowerCase()));
                 break;
             }
             case "farming": {
                 if (Material.matchMaterial(key) == null) {
-                    sender.sendMessage(getMessage("error.argument.crop"));
+                    messages.sendMessage(sender, "error.argument.crop");
                     return;
                 }
 
                 Material m = Material.matchMaterial(key);
                 if (!w.isCrop(m)) {
-                    sender.sendMessage(getMessage("error.argument.crop"));
+                    messages.sendMessage(sender, "error.argument.crop");
                     return;
                 }
 
                 if (!modConfig.isSet("Farming." + m.name().toLowerCase())) {
-                    sender.sendMessage(getMessage("error.config.modifier_inexistent"));
+                    messages.sendMessage(sender, "error.config.modifier_inexistent");
                     return;
                 }
 
-                sender.sendMessage(format(getMessage("success.config.view_modifier"), type + "." + key, modConfig.get("Farming." + m.name().toLowerCase())));
+                messages.sendMessage(sender, "success.config.view_modifier", type + "." + key, modConfig.get("Farming." + m.name().toLowerCase()));
                 break;
             }
             case "death": {
@@ -2951,13 +2983,13 @@ public interface CommandWrapper {
                     EntityDamageEvent.DamageCause c = EntityDamageEvent.DamageCause.valueOf(key.replace("minecraft:", "").toUpperCase());
 
                     if (!modConfig.isSet("Death." + c.name().toLowerCase())) {
-                        sender.sendMessage(getMessage("error.config.modifier_inexistent"));
+                        messages.sendMessage(sender, "error.config.modifier_inexistent");
                         return;
                     }
 
-                    sender.sendMessage(format(getMessage("success.config.view_modifier"), type + "." + key, modConfig.get("Death." + c.name().toLowerCase())));
+                    messages.sendMessage(sender, "success.config.view_modifier", type + "." + key, modConfig.get("Death." + c.name().toLowerCase()));
                 } catch (IllegalArgumentException e) {
-                    sender.sendMessage(getMessage("error.argument.cause"));
+                    messages.sendMessage(sender, "error.argument.cause");
                     return;
                 }
                 break;
@@ -2967,7 +2999,12 @@ public interface CommandWrapper {
 
     default void setDefaultEconomy(CommandSender sender, Economy econ) {
         if (!sender.hasPermission("novaconomy.admin.config")) {
-            sender.sendMessage(ERROR_PERMISSION);
+            messages.sendMessage(sender, ERROR_PERMISSION);
+            return;
+        }
+
+        if (econ == null) {
+            messages.sendMessage(sender, "error.argument.economy");
             return;
         }
 
@@ -2983,8 +3020,8 @@ public interface CommandWrapper {
         NovaConfig.getConfiguration().reloadHooks();
         reloadFiles();
 
-        if (econ != null) sender.sendMessage(format(getMessage("success.config.set"), "VaultEconomy", econ.getName()));
-        else sender.sendMessage(getMessage("success.config.reset_default_economy"));
+        if (econ != null) messages.sendMessage(sender, "success.config.set", "VaultEconomy", econ.getName());
+        else messages.sendMessage(sender, "success.config.reset_default_economy");
     }
 
     List<String> BL_CATEGORIES = asList(
@@ -3025,12 +3062,12 @@ public interface CommandWrapper {
 
     default void businessLeaderboard(Player p, String category) {
         if (!p.hasPermission("novaconomy.user.leaderboard")) {
-            p.sendMessage(ERROR_PERMISSION);
+            messages.sendMessage(p, ERROR_PERMISSION);
             return;
         }
 
         if (!Business.exists()) {
-            p.sendMessage(getMessage("error.business.none"));
+            messages.sendMessage(p, "error.business.none");
             return;
         }
 
@@ -3097,7 +3134,7 @@ public interface CommandWrapper {
 
     default void basicConfig(CommandSender sender, String key, Object value) {
         if (!sender.hasPermission("novaconomy.admin.config")) {
-            sender.sendMessage(ERROR_PERMISSION);
+            messages.sendMessage(sender, ERROR_PERMISSION);
             return;
         }
 
@@ -3112,12 +3149,12 @@ public interface CommandWrapper {
         }
         reloadFiles();
 
-        sender.sendMessage(format(getMessage("success.config.set"), key, value));
+        messages.sendMessage(sender, "success.config.set", key, value);
     }
 
     default void corporationInfo(Player p) {
         if (!Corporation.existsByMember(p)) {
-            p.sendMessage(getError("error.corporation.none"));
+            messages.sendError(p, "error.corporation.none");
             return;
         }
 
@@ -3129,7 +3166,12 @@ public interface CommandWrapper {
 
     default void queryCorporation(Player p, Corporation corp) {
         if (!p.hasPermission("novaconomy.user.corporation.query")) {
-            p.sendMessage(ERROR_PERMISSION_ARGUMENT);
+            messages.sendMessage(p, ERROR_PERMISSION_ARGUMENT);
+            return;
+        }
+
+        if (corp == null) {
+            messages.sendError(p, "error.argument.corporation");
             return;
         }
 
@@ -3139,131 +3181,169 @@ public interface CommandWrapper {
 
     default void createCorporation(Player p, String name, Material icon) {
         if (!p.hasPermission("novaconomy.user.corporation.manage")) {
-            p.sendMessage(ERROR_PERMISSION_ARGUMENT);
+            messages.sendMessage(p, ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
         if (Corporation.exists(p)) {
-            p.sendMessage(getError("error.corporation.exists"));
+            messages.sendError(p, "error.corporation.exists");
             return;
         }
 
         if (Corporation.existsByMember(p)) {
-            p.sendMessage(getError("error.corporation.exists.member"));
+            messages.sendError(p, "error.corporation.exists.member");
             return;
         }
 
         if (name.length() > Corporation.MAX_NAME_LENGTH) {
-            p.sendMessage(format(getError("error.corporation.name.too_long"), YELLOW + String.valueOf(Corporation.MAX_NAME_LENGTH) + RED));
+            messages.sendError(p, "error.corporation.name.too_long", YELLOW + String.valueOf(Corporation.MAX_NAME_LENGTH) + RED);
             return;
         }
 
         try {
             Corporation.builder().setName(name).setOwner(p).setIcon(icon).build();
         } catch (UnsupportedOperationException e) {
-            p.sendMessage(getError("error.corporation.exists.name"));
+            messages.sendError(p, "error.corporation.exists.name");
             return;
         }
 
-        p.sendMessage(format(getSuccess("success.corporation.create"), name));
+        messages.sendSuccess(p, "success.corporation.create", name);
     }
 
     default void deleteCorporation(Player p, boolean confirm) {
         if (!Corporation.exists(p)) {
-            p.sendMessage(getError("error.corporation.none"));
+            messages.sendError(p, "error.corporation.none");
             return;
         }
 
         Corporation corp = Corporation.byOwner(p);
         if (confirm) {
             corp.delete();
-            p.sendMessage(getSuccess("success.corporation.delete"));
-        } else p.sendMessage(getError("error.corporation.confirm_delete"));
+            messages.sendSuccess(p, "success.corporation.delete");
+        } else messages.sendError(p, "error.corporation.confirm_delete");
     }
 
     default void setCorporationDescription(Player p, String desc) {
         if (!p.hasPermission("novaconomy.user.corporation.manage")) {
-            p.sendMessage(ERROR_PERMISSION_ARGUMENT);
+            messages.sendMessage(p, ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
-        if (!Corporation.exists(p)) {
-            p.sendMessage(getError("error.corporation.none"));
+        if (desc == null) {
+            messages.sendError(p, "error.argument");
+            return;
+        }
+
+        Corporation c = Corporation.byMember(p);
+        if (c == null) {
+            messages.sendError(p, "error.corporation.none.member");
+            return;
+        }
+
+        CorporationRank rank = c.getRank(p);
+        if (!rank.hasPermission(CorporationPermission.EDIT_DETAILS)) {
+            messages.sendError(p, "error.permission.corporation");
             return;
         }
 
         if (desc.length() > Corporation.MAX_DESCRIPTION_LENGTH) {
-            p.sendMessage(format(getError("error.corporation.description_too_long"), YELLOW + String.valueOf(Corporation.MAX_DESCRIPTION_LENGTH) + RED));
+            messages.sendError(p, "error.corporation.description_too_long", YELLOW + String.valueOf(Corporation.MAX_DESCRIPTION_LENGTH) + RED);
             return;
         }
 
-        Corporation corp = Corporation.byOwner(p);
-        corp.setDescription(desc);
-        p.sendMessage(getSuccess("success.corporation.description"));
+        c.setDescription(desc);
+        messages.sendSuccess(p, "success.corporation.description");
     }
 
     default void setCorporationIcon(Player p, Material icon) {
         if (!p.hasPermission("novaconomy.user.corporation.manage")) {
-            p.sendMessage(ERROR_PERMISSION_ARGUMENT);
+            messages.sendMessage(p, ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
-        if (!Corporation.exists(p)) {
-            p.sendMessage(getError("error.corporation.none"));
+        Corporation c = Corporation.byMember(p);
+        if (c == null) {
+            messages.sendError(p, "error.corporation.none");
             return;
         }
 
-        Corporation corp = Corporation.byOwner(p);
-        corp.setIcon(icon);
-        p.sendMessage(format(getSuccess("success.corporation.icon"), GOLD + icon.name()));
+        CorporationRank rank = c.getRank(p);
+        if (!rank.hasPermission(CorporationPermission.EDIT_DETAILS)) {
+            messages.sendError(p, "error.permission.corporation");
+            return;
+        }
+
+        if (!w.isItem(icon)) {
+            messages.sendError(p, "error.argument.icon");
+            return;
+        }
+
+        c.setIcon(icon);
+        messages.sendSuccess(p, "success.corporation.icon", GOLD + icon.name());
     }
 
     default void setCorporationHeadquarters(Player p) {
         if (!p.hasPermission("novaconomy.user.corporation.manage")) {
-            p.sendMessage(ERROR_PERMISSION_ARGUMENT);
+            messages.sendMessage(p, ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
-        if (!Corporation.exists(p)) {
-            p.sendMessage(getError("error.corporation.none"));
+        Corporation c = Corporation.byMember(p);
+        if (c == null) {
+            messages.sendError(p, "error.corporation.none.member");
             return;
         }
 
-        Corporation corp = Corporation.byOwner(p);
+        CorporationRank rank = c.getRank(p);
+        if (!rank.hasPermission(CorporationPermission.EDIT_DETAILS)) {
+            messages.sendError(p, "error.permission.corporation");
+            return;
+        }
 
-        if (corp.getLevel() < 3) {
-            p.sendMessage(getError("error.corporation.too_low_level"));
+        if (c.getLevel() < 3) {
+            messages.sendError(p, "error.corporation.too_low_level");
             return;
         }
 
         Location l = p.getLocation();
-        corp.setHeadquarters(l);
-        p.sendMessage(format(getSuccess("success.corporation.headquarters"),
+        c.setHeadquarters(l);
+        messages.sendSuccess(p, "success.corporation.headquarters",
                 GOLD + String.valueOf(l.getBlockX()),
                 GOLD + String.valueOf(l.getBlockY()),
-                GOLD + String.valueOf(l.getBlockZ()))
+                GOLD + String.valueOf(l.getBlockZ())
         );
     }
 
     default void setCorporationName(Player p, String name) {
         if (!p.hasPermission("novaconomy.user.corporation.manage")) {
-            p.sendMessage(ERROR_PERMISSION_ARGUMENT);
+            messages.sendMessage(p, ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
-        if (!Corporation.exists(p)) {
-            p.sendMessage(getError("error.corporation.none"));
+        Corporation c = Corporation.byMember(p);
+        if (c == null) {
+            messages.sendError(p, "error.corporation.none.member");
             return;
         }
 
-        Corporation corp = Corporation.byOwner(p);
-        corp.setName(name);
-        p.sendMessage(format(getSuccess("success.corporation.name"), name));
+        CorporationRank rank = c.getRank(p);
+        if (!rank.hasPermission(CorporationPermission.EDIT_DETAILS)) {
+            messages.sendError(p, "error.permission.corporation");
+            return;
+        }
+
+        if (name == null || name.isEmpty() || name.length() > Corporation.MAX_NAME_LENGTH) {
+            messages.sendError(p, "error.argument.name");
+            return;
+        }
+
+        c.setName(name);
+        messages.sendSuccess(p, "success.corporation.name", name);
     }
 
     default void corporationAchievements(Player p) {
         if (!Corporation.exists(p)) {
-            p.sendMessage(getError("error.corporation.none"));
+            messages.sendError(p, "error.corporation.none");
             return;
         }
 
@@ -3274,7 +3354,7 @@ public interface CommandWrapper {
 
     default void corporationLeveling(Player p) {
         if (!Corporation.exists(p)) {
-            p.sendMessage(getError("error.corporation.none"));
+            messages.sendError(p, "error.corporation.none");
             return;
         }
 
@@ -3285,7 +3365,7 @@ public interface CommandWrapper {
 
     default void corporationStatistics(Player p) {
         if (!Corporation.exists(p)) {
-            p.sendMessage(getError("error.corporation.none"));
+            messages.sendError(p, "error.corporation.none");
             return;
         }
 
@@ -3296,68 +3376,85 @@ public interface CommandWrapper {
 
     default void inviteBusiness(Player p, Business b) {
         if (!Corporation.exists(p)) {
-            p.sendMessage(getError("error.corporation.none"));
+            messages.sendError(p, "error.corporation.none");
             return;
         }
 
         if (b.getParentCorporation() != null) {
-            p.sendMessage(getError("error.corporation.invite.business"));
+            messages.sendError(p, "error.corporation.invite.business");
             return;
         }
 
-        Corporation corp = Corporation.byOwner(p);
+        Corporation c = Corporation.byMember(p);
 
-        if (corp.getSetting(Settings.Corporation.JOIN_TYPE) != Corporation.JoinType.INVITE_ONLY) {
-            p.sendMessage(getError("error.corporation.invite_only"));
+        CorporationRank rank = c.getRank(p);
+        if (!rank.hasPermission(CorporationPermission.INVITE_MEMBERS)) {
+            messages.sendError(p, "error.permission.corporation");
             return;
         }
 
-        if (corp.getInvited().contains(b)) {
-            p.sendMessage(getError("error.corporation.invite.already_invited"));
+        if (c.isBanned(b)) {
+            messages.sendError(p, "error.corporation.banned.target");
             return;
         }
 
-        if (corp.getChildren().size() >= corp.getMaxChildren()) {
-            p.sendMessage(getError("error.corporation.max_children"));
+        if (c.getSetting(Settings.Corporation.JOIN_TYPE) != Corporation.JoinType.INVITE_ONLY) {
+            messages.sendError(p, "error.corporation.invite_only");
             return;
         }
 
-        corp.inviteBusiness(b);
-        p.sendMessage(format(getSuccess("success.corporation.invite.business"), GOLD + b.getName()));
+        if (c.getInvited().contains(b)) {
+            messages.sendError(p, "error.corporation.invite.already_invited");
+            return;
+        }
+
+        if (c.getChildren().size() >= c.getMaxChildren()) {
+            messages.sendError(p, "error.corporation.max_children");
+            return;
+        }
+
+        c.inviteBusiness(b);
+        messages.sendSuccess(p, "success.corporation.invite.business", GOLD + b.getName());
         NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
     }
 
     default void setCorporationExperience(@NotNull CommandSender sender, Corporation c, double exp) {
         if (!sender.hasPermission("novaconomy.admin.corporation.manage_experience")) {
-            sender.sendMessage(ERROR_PERMISSION_ARGUMENT);
+            messages.sendMessage(sender, ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
         if (exp < 1) {
-            sender.sendMessage(getError("error.argument.experience_too_low"));
+            messages.sendError(sender, "error.argument.experience_too_low");
             return;
         }
 
         if (Corporation.toLevel(exp) > Corporation.MAX_LEVEL) {
-            sender.sendMessage(getError("error.argument.experience_too_high"));
+            messages.sendError(sender, "error.argument.experience_too_high");
             return;
         }
 
         c.setExperience(exp);
-        sender.sendMessage(format(getSuccess("success.corporation.level_experience"),
+        messages.sendSuccess(sender, "success.corporation.level_experience",
                 GOLD + String.valueOf(c.getLevel()),
                 GOLD + format("%,.0f", c.getExperience())
-        ));
+        );
         NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(sender);
     }
 
     default void acceptCorporationInvite(Player p, Corporation from) {
         if (!Business.exists(p)) {
-            p.sendMessage(getMessage("error.business.none"));
+            messages.sendMessage(p, "error.business.none");
             return;
         }
 
         Business b = Business.byOwner(p);
+
+        if (from.isBanned(b)) {
+            messages.sendError(p, "error.corporation.banned");
+            return;
+        }
+
         CorporationInvite invite = b.getInvites()
                 .stream()
                 .filter(i -> i.getFrom().equals(from))
@@ -3365,29 +3462,29 @@ public interface CommandWrapper {
                 .orElse(null);
 
         if (invite == null) {
-            p.sendMessage(getError("error.corporation.invite.none"));
+            messages.sendError(p, "error.corporation.invite.none");
             return;
         }
 
         if (from.getChildren().size() >= from.getMaxChildren()) {
-            p.sendMessage(getError("error.corporation.max_children"));
+            messages.sendError(p, "error.corporation.max_children");
             return;
         }
 
         try {
             invite.accept();
         } catch (IllegalStateException ignored) {
-            p.sendMessage(getError("error.corporation.accept_invite"));
+            messages.sendError(p, "error.corporation.accept_invite");
             return;
         }
 
-        p.sendMessage(format(getSuccess("success.corporation.invite.accepted"), GOLD + from.getName()));
+        messages.sendSuccess(p, "success.corporation.invite.accepted", GOLD + from.getName());
         NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
     }
 
     default void declineCorporationInvite(Player p, Corporation from) {
         if (!Business.exists(p)) {
-            p.sendMessage(getMessage("error.business.none"));
+            messages.sendMessage(p, "error.business.none");
             return;
         }
 
@@ -3399,89 +3496,95 @@ public interface CommandWrapper {
                 .orElse(null);
 
         if (invite == null) {
-            p.sendMessage(getError("error.corporation.invite.none"));
+            messages.sendError(p, "error.corporation.invite.none");
             return;
         }
 
         try {
             invite.decline();
         } catch (IllegalStateException ignored) {
-            p.sendMessage(getError("error.corporation.decline_invite"));
+            messages.sendError(p, "error.corporation.decline_invite");
             return;
         }
 
-        p.sendMessage(format(getSuccess("success.corporation.invite.declined"), GOLD + from.getName()));
+        messages.sendSuccess(p, "success.corporation.invite.declined", GOLD + from.getName());
         NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
     }
 
     default void joinCorporation(@NotNull Player p, Corporation c) {
         if (!p.hasPermission("novaconomy.user.business.join_corporation")) {
-            p.sendMessage(ERROR_PERMISSION_ARGUMENT);
+            messages.sendMessage(p, ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
         if (!Business.exists(p)) {
-            p.sendMessage(getMessage("error.business.none"));
+            messages.sendMessage(p, "error.business.none");
             return;
         }
 
         Business b = Business.byOwner(p);
 
         if (b.getParentCorporation() != null) {
-            p.sendMessage(getError("error.business.in_corporation"));
+            messages.sendError(p, "error.business.in_corporation");
             return;
         }
 
         if (c.getChildren().size() >= c.getMaxChildren()) {
-            p.sendMessage(getError("error.corporation.max_children"));
+            messages.sendError(p, "error.corporation.max_children");
             return;
         }
 
         if (c.getSetting(Settings.Corporation.JOIN_TYPE) != Corporation.JoinType.PUBLIC) {
-            p.sendMessage(getError("error.corporation.public_only"));
+            messages.sendError(p, "error.corporation.public_only");
             return;
         }
 
         c.addChild(b);
-        c.broadcastMessage(GREEN + format(getMessage("broadcast.corporation.join"), AQUA + b.getName()));
+        c.broadcastMessage(GREEN + format(get("plugin.prefix") + get("broadcast.corporation.join"), AQUA + b.getName()));
         NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
     }
 
     default void leaveCorporation(@NotNull Player p) {
         if (!Business.exists(p)) {
-            p.sendMessage(getMessage("error.business.none"));
+            messages.sendMessage(p, "error.business.none");
             return;
         }
 
         Business b = Business.byOwner(p);
 
         if (b.getParentCorporation() == null) {
-            p.sendMessage(getError("error.business.not_in_corporation"));
+            messages.sendError(p, "error.business.not_in_corporation");
             return;
         }
 
         Corporation c = b.getParentCorporation();
 
         if (c.getOwner().equals(p)) {
-            p.sendMessage(getError("error.corporation.owner_leave"));
+            messages.sendError(p, "error.corporation.owner_leave");
             return;
         }
 
         b.leaveParentCorporation();
-        c.broadcastMessage(GREEN + format(getMessage("broadcast.corporation.leave"), AQUA + b.getName()));
+        c.broadcastMessage(GREEN + format(get("plugin.prefix") + get("broadcast.corporation.leave"), AQUA + b.getName()));
         NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
     }
 
     default void corporationHeadquarters(@NotNull Player p) {
         if (!Corporation.existsByMember(p)) {
-            p.sendMessage(getError("error.corporation.none.member"));
+            messages.sendError(p, "error.corporation.none.member");
             return;
         }
 
         Corporation c = Corporation.byMember(p);
 
         if (c.getHeadquarters() == null) {
-            p.sendMessage(getError("error.corporation.no_hq"));
+            messages.sendError(p, "error.corporation.no_hq");
+            return;
+        }
+
+        CorporationRank rank = c.getRank(p);
+        if (!rank.hasPermission(CorporationPermission.TELEPORT_TO_HEADQUARTERS)) {
+            messages.sendError(p, "error.permission.corporation");
             return;
         }
 
@@ -3490,41 +3593,41 @@ public interface CommandWrapper {
 
         if (!event.isCancelled()) {
             p.teleport(event.getLocation());
-            p.sendMessage(AQUA + get("constants.teleporting"));
+            messages.sendRaw(p, AQUA + get("constants.teleporting"));
             NovaSound.ENTITY_ENDERMAN_TELEPORT.playSuccess(p);
         }
     }
 
     default void corporationChat(@NotNull Player p, String message) {
         if (!Corporation.existsByMember(p)) {
-            p.sendMessage(getError("error.corporation.none.member"));
+            messages.sendError(p, "error.corporation.none.member");
             return;
         }
 
         Corporation c = Corporation.byMember(p);
 
         if (!c.getSetting(Settings.Corporation.CHAT)) {
-            p.sendMessage(getError("error.corporation.chat_disabled"));
+            messages.sendError(p, "error.corporation.chat_disabled");
             return;
         }
 
         for (Player m : c.getMembers().stream().filter(OfflinePlayer::isOnline).map(OfflinePlayer::getPlayer).collect(Collectors.toList()))
-            m.sendMessage(GOLD + "[" + c.getName() + "] " +
+            messages.sendRaw(m, (GOLD + "[" + c.getName() + "] " +
                     GRAY + (p.getDisplayName() == null ? p.getName() : p.getDisplayName()) + DARK_GRAY + " > " +
                     WHITE + translateAlternateColorCodes('&', message)
-            );
+            ));
     }
 
     // Market Commands
 
     default void openMarket(@NotNull Player p, @NotNull Economy econ) {
         if (!p.hasPermission("novaconomy.user.market")) {
-            p.sendMessage(ERROR_PERMISSION_ARGUMENT);
+            messages.sendMessage(p, ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
         if (!NovaConfig.getMarket().isMarketEnabled()) {
-            p.sendMessage(getError("error.market.disabled"));
+            messages.sendError(p, "error.market.disabled");
             return;
         }
 
@@ -3541,7 +3644,7 @@ public interface CommandWrapper {
 
         NovaInventory inv;
         if (!np.hasMarketAccess()) {
-            inv = Generator.genGUI(27, get("constants.market.buy_access"));
+            inv = genGUI(27, get("constants.market.buy_access"));
             inv.setCancelled();
             for (int i = 0; i < 7; i++) inv.setItem(10 + i, GUI_BACKGROUND);
 
@@ -3567,25 +3670,25 @@ public interface CommandWrapper {
 
     default void setMarketAccess(@NotNull CommandSender sender, @NotNull OfflinePlayer target, boolean access) {
         if (!sender.hasPermission("novaconomy.admin.market.manage_membership")) {
-            sender.sendMessage(ERROR_PERMISSION_ARGUMENT);
+            messages.sendMessage(sender, ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
         NovaPlayer nt = new NovaPlayer(target);
         nt.setMarketAccess(access);
 
-        sender.sendMessage(format(getSuccess("success.market." + (access ? "enable" : "disable") + "_access"), GOLD + target.getName()));
+        messages.sendSuccess(sender, "success.market." + (access ? "enable" : "disable") + "_access", GOLD + target.getName());
         NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(sender);
     }
 
     default void openSellMarket(@NotNull Player p) {
         if (!p.hasPermission("novaconomy.user.market")) {
-            p.sendMessage(ERROR_PERMISSION_ARGUMENT);
+            messages.sendMessage(p, ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
         if (!NovaConfig.getMarket().isMarketEnabled()) {
-            p.sendMessage(getError("error.market.disabled"));
+            messages.sendError(p, "error.market.disabled");
             return;
         }
 
@@ -3604,136 +3707,141 @@ public interface CommandWrapper {
 
     default void setMarketPrice(CommandSender sender, Material material, double price) {
         if (!sender.hasPermission("novaconomy.admin.market.manage")) {
-            sender.sendMessage(ERROR_PERMISSION_ARGUMENT);
+            messages.sendMessage(sender, ERROR_PERMISSION_ARGUMENT);
+            return;
+        }
+
+        if (material == null) {
+            messages.send(sender, "error.argument.item");
             return;
         }
 
         if (!NovaConfig.getMarket().getAllSold().contains(material)) {
-            sender.sendMessage(format(getError("error.market.not_sold"), material.name()));
+            messages.sendError(sender, "error.market.not_sold", material.name());
             return;
         }
 
         NovaConfig.getMarket().setPriceOverrides(material, price);
-        sender.sendMessage(format(getSuccess("success.market.set_price"), GOLD + material.name() + GREEN, GOLD + format("%,.2f", price) + GREEN));
+        messages.sendSuccess(sender, "success.market.set_price", GOLD + material.name() + GREEN, GOLD + format("%,.2f", price) + GREEN);
         NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(sender);
     }
 
     default void setMarketRestockEnabled(CommandSender sender, boolean enabled) {
         if (!sender.hasPermission("novaconomy.admin.market.manage")) {
-            sender.sendMessage(ERROR_PERMISSION_ARGUMENT);
+            messages.sendMessage(sender, ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
         NovaConfig.getMarket().setMarketRestockEnabled(enabled);
-        sender.sendMessage(getSuccess("success.market." + (enabled ? "enable" : "disable") + "_restock"));
+        messages.sendSuccess(sender, "success.market." + (enabled ? "enable" : "disable") + "_restock");
         NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(sender);
     }
 
     default void setMarketRestockInterval(CommandSender sender, long interval) {
         if (!sender.hasPermission("novaconomy.admin.market.manage")) {
-            sender.sendMessage(ERROR_PERMISSION_ARGUMENT);
+            messages.sendMessage(sender, ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
         if (interval < 1) {
-            sender.sendMessage(get("error.argument.integer"));
+            messages.send(sender, "error.argument.integer");
             return;
         }
 
         NovaConfig.getMarket().setMarketRestockInterval(interval);
-        sender.sendMessage(format(getSuccess("success.market.restock_interval"), GOLD + format("%,d", interval) + GREEN));
+        messages.sendSuccess(sender, "success.market.restock_interval", GOLD + format("%,d", interval) + GREEN);
         NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(sender);
     }
 
     default void setMarketRestockAmount(CommandSender sender, long amount) {
         if (!sender.hasPermission("novaconomy.admin.market.manage")) {
-            sender.sendMessage(ERROR_PERMISSION_ARGUMENT);
+            messages.sendMessage(sender, ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
         if (amount < 1) {
-            sender.sendMessage(get("error.argument.amount"));
+            messages.send(sender, "error.argument.amount");
             return;
         }
 
         NovaConfig.getMarket().setMarketRestockAmount(amount);
-        sender.sendMessage(format(getSuccess("success.market.restock_amount"), GOLD + format("%,d", amount) + GREEN));
+        messages.sendSuccess(sender, "success.market.restock_amount", GOLD + format("%,d", amount) + GREEN);
         NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(sender);
     }
 
     default void setMarketMaxPurchases(CommandSender sender, long maxPurchases) {
         if (!sender.hasPermission("novaconomy.admin.market.manage")) {
-            sender.sendMessage(ERROR_PERMISSION_ARGUMENT);
+            messages.sendMessage(sender, ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
         NovaConfig.getMarket().setMaxPurchases(maxPurchases);
-        sender.sendMessage(format(getSuccess("success.market.max_purchases"), GOLD + format("%,d", maxPurchases) + GREEN));
+        messages.sendSuccess(sender, "success.market.max_purchases", GOLD + format("%,d", maxPurchases) + GREEN);
         NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(sender);
     }
 
     default void setMarketDepositEnabled(CommandSender sender, boolean enabled) {
         if (!sender.hasPermission("novaconomy.admin.market.manage")) {
-            sender.sendMessage(ERROR_PERMISSION_ARGUMENT);
+            messages.sendMessage(sender, ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
         NovaConfig.getMarket().setDepositEnabled(enabled);
-        sender.sendMessage(getSuccess("success.market." + (enabled ? "enable" : "disable") + "_deposit"));
+        messages.sendSuccess(sender, "success.market." + (enabled ? "enable" : "disable") + "_deposit");
         NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(sender);
     }
 
     default void setMarketMembershipEnabled(CommandSender sender, boolean enabled) {
         if (!sender.hasPermission("novaconomy.admin.market.manage")) {
-            sender.sendMessage(ERROR_PERMISSION_ARGUMENT);
+            messages.sendMessage(sender, ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
         NovaConfig.getMarket().setMarketMembershipEnabled(enabled);
-        sender.sendMessage(getSuccess("success.market." + (enabled ? "enable" : "disable") + "_membership"));
+        messages.sendSuccess(sender, "success.market." + (enabled ? "enable" : "disable") + "_membership");
         NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(sender);
     }
 
     default void setMarketMembershipCost(CommandSender sender, double cost) {
         if (!sender.hasPermission("novaconomy.admin.market.manage")) {
-            sender.sendMessage(ERROR_PERMISSION_ARGUMENT);
+            messages.sendMessage(sender, ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
         if (cost < 0) {
-            sender.sendMessage(get("error.argument.amount"));
+            messages.send(sender, "error.argument.amount");
             return;
         }
 
         NovaConfig.getMarket().setMarketMembershipCost(cost);
-        sender.sendMessage(format(getSuccess("success.market.membership_cost"), GOLD + format("%,.2f", cost) + GREEN));
+        messages.sendSuccess(sender, "success.market.membership_cost", GOLD + format("%,.2f", cost) + GREEN);
         NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(sender);
     }
 
     default void setMarketSellPercentage(CommandSender sender, double percentage) {
         if (!sender.hasPermission("novaconomy.admin.market.manage")) {
-            sender.sendMessage(ERROR_PERMISSION_ARGUMENT);
+            messages.sendMessage(sender, ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
         if (percentage < 0 || percentage > 100) {
-            sender.sendMessage(get("error.argument.amount"));
+            messages.send(sender, "error.argument.amount");
             return;
         }
 
         NovaConfig.getMarket().setSellPercentage(percentage);
-        sender.sendMessage(format(getSuccess("success.market.sell_percentage"), GOLD + format("%,.2f", percentage) + "%" + GREEN));
+        messages.sendSuccess(sender, "success.market.sell_percentage", GOLD + format("%,.2f", percentage) + "%" + GREEN);
         NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(sender);
     }
 
     default void setMarketEnabled(CommandSender sender, boolean enabled) {
         if (!sender.hasPermission("novaconomy.admin.market.manage")) {
-            sender.sendMessage(ERROR_PERMISSION_ARGUMENT);
+            messages.sendMessage(sender, ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
         NovaConfig.getMarket().setMarketEnabled(enabled);
-        sender.sendMessage(getSuccess("success.market." + (enabled ? "enable" : "disable")));
+        messages.sendSuccess(sender, "success.market." + (enabled ? "enable" : "disable"));
         NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(sender);
     }
 
@@ -3781,12 +3889,12 @@ public interface CommandWrapper {
 
     default void corporationLeaderboard(Player p, String category) {
         if (!p.hasPermission("novaconomy.user.leaderboard")) {
-            p.sendMessage(ERROR_PERMISSION);
+            messages.sendMessage(p, ERROR_PERMISSION);
             return;
         }
 
         if (!Corporation.exists()) {
-            p.sendMessage(getMessage("error.corporation.none_exists"));
+            messages.sendMessage(p, "error.corporation.none_exists");
             return;
         }
 
@@ -3854,7 +3962,7 @@ public interface CommandWrapper {
 
     default void businessSupplyChests(Player p) {
         if (!Business.exists(p)) {
-            p.sendMessage(getMessage("error.business.not_an_owner"));
+            messages.sendMessage(p, "error.business.not_an_owner");
             return;
         }
 
@@ -3865,7 +3973,7 @@ public interface CommandWrapper {
 
     default void addBusinessSupplyChest(Player p) {
         if (!Business.exists(p)) {
-            p.sendMessage(getMessage("error.business.not_an_owner"));
+            messages.sendMessage(p, "error.business.not_an_owner");
             return;
         }
 
@@ -3873,7 +3981,7 @@ public interface CommandWrapper {
         Block b = p.getTargetBlock((HashSet<Material>) null, 5);
 
         if (!(b.getState() instanceof Chest)) {
-            p.sendMessage(getError("error.business.not_supply_chest"));
+            messages.sendError(p, "error.business.not_supply_chest");
             return;
         }
 
@@ -3892,22 +4000,22 @@ public interface CommandWrapper {
 
             return bool.get();
         })) {
-            p.sendMessage(getError("error.business.already_supply_chest"));
+            messages.sendError(p, "error.business.already_supply_chest");
             return;
         }
 
         if (Business.isSupplyClaimed(b.getLocation())) {
-            p.sendMessage(getError("error.business.supply_already_claimed"));
+            messages.sendError(p, "error.business.supply_already_claimed");
             return;
         }
 
         NovaInventory inv = InventorySelector.confirm(p, cInv -> {
             bus.addSupplyChest(b.getLocation());
-            p.sendMessage(format(getSuccess("success.business.add_supply_chest"),
+            messages.sendSuccess(p, "success.business.add_supply_chest",
                     BLUE + String.valueOf(b.getX()) + GREEN,
                     BLUE + String.valueOf(b.getY()) + GREEN,
                     BLUE + String.valueOf(b.getZ()) + GREEN
-            ));
+            );
             p.closeInventory();
         });
 
@@ -3920,41 +4028,41 @@ public interface CommandWrapper {
 
     default void businessSupply(Player p) {
         if (!Business.exists(p)) {
-            p.sendMessage(getMessage("error.business.not_an_owner"));
+            messages.sendMessage(p, "error.business.not_an_owner");
             return;
         }
 
         Business b = Business.byOwner(p);
 
         if (b.getSupplyChests().isEmpty()) {
-            p.sendMessage(getError("error.business.no_supply_chests"));
+            messages.sendError(p, "error.business.no_supply_chests");
             return;
         }
 
         b.supply();
-        p.sendMessage(getSuccess("success.business.supply"));
+        messages.sendSuccess(p, "success.business.supply");
         NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
     }
 
     default void setEconomyConvertable(CommandSender sender, Economy econ, boolean convertable) {
         if (!sender.hasPermission("novaconomy.economy.create")) {
-            sender.sendMessage(ERROR_PERMISSION_ARGUMENT);
+            messages.sendMessage(sender, ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
         if (econ == null) {
-            sender.sendMessage(getError("error.economy.none"));
+            messages.sendError(sender, "error.economy.none");
             return;
         }
 
         econ.setConvertable(convertable);
-        sender.sendMessage(format(getSuccess("success.economy." + (convertable ? "enable" : "disable") + "_convertable"), GOLD + econ.getName() + GREEN));
+        messages.sendSuccess(sender, "success.economy." + (convertable ? "enable" : "disable") + "_convertable", GOLD + econ.getName() + GREEN);
         NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(sender);
     }
 
     default void setMarketStock(CommandSender sender, Collection<Material> materials, long amount) {
         if (!sender.hasPermission("novaconomy.admin.market.manage")) {
-            sender.sendMessage(ERROR_PERMISSION_ARGUMENT);
+            messages.sendMessage(sender, ERROR_PERMISSION_ARGUMENT);
             return;
         }
 
@@ -3963,7 +4071,7 @@ public interface CommandWrapper {
                 .collect(Collectors.toList());
 
         if (materials0.isEmpty()) {
-            sender.sendMessage(getError("error.argument.item"));
+            messages.sendError(sender, "error.argument.item");
             return;
         }
 
@@ -3971,16 +4079,16 @@ public interface CommandWrapper {
 
         if (materials0.size() == 1) {
             Material m = materials0.get(0);
-            sender.sendMessage(format(getSuccess("success.market.set_stock"), GOLD + capitalize(m.name()), DARK_AQUA + format("%,d", amount)));
+            messages.sendSuccess(sender, "success.market.set_stock", GOLD + capitalize(m.name()), DARK_AQUA + format("%,d", amount));
         } else
-            sender.sendMessage(format(getSuccess("success.market.set_stock.multiple"), GOLD + String.valueOf(materials.size()) + GREEN, DARK_AQUA + format("%,d", amount)));
+            messages.sendSuccess(sender, "success.market.set_stock.multiple", GOLD + String.valueOf(materials.size()) + GREEN, DARK_AQUA + format("%,d", amount));
 
         NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(sender);
     }
 
     default void auctionHouse(Player p, @Nullable String searchQuery) {
         if (!p.hasPermission("novaconomy.user.auction_house")) {
-            p.sendMessage(ERROR_PERMISSION);
+            messages.sendMessage(p, ERROR_PERMISSION);
             return;
         }
 
@@ -3991,22 +4099,22 @@ public interface CommandWrapper {
 
     default void addAuctionItem(Player p, double amount) {
         if (!p.hasPermission("novaconomy.user.auction_house")) {
-            p.sendMessage(ERROR_PERMISSION);
+            messages.sendMessage(p, ERROR_PERMISSION);
             return;
         }
 
         if (Economy.getEconomies().isEmpty()) {
-            p.sendMessage(getError("error.economy.none"));
+            messages.sendError(p, "error.economy.none");
             return;
         }
 
         if (amount <= 0) {
-            p.sendMessage(getError("error.argument.amount"));
+            messages.sendError(p, "error.argument.amount");
             return;
         }
 
         if (p.getInventory().getItemInHand() == null || p.getInventory().getItemInHand().getType() == Material.AIR) {
-            p.sendMessage(getMessage("error.argument.item"));
+            messages.sendMessage(p, "error.argument.item");
             return;
         }
 
@@ -4035,6 +4143,240 @@ public interface CommandWrapper {
 
         p.openInventory(inv);
         NovaSound.BLOCK_ENDER_CHEST_OPEN.play(p);
+    }
+
+    default void setCorporationRank(Player p, Business target, CorporationRank rank) {
+        Corporation c = Corporation.byMember(p);
+        if (c == null) {
+            messages.sendError(p, "error.corporation.none.member");
+            return;
+        }
+
+        CorporationRank pRank = c.getRank(p);
+
+        if (!pRank.hasPermission(CorporationPermission.CHANGE_USER_RANKS) || rank.getPriority() <= pRank.getPriority()) {
+            messages.sendError(p, "error.permission.corporation");
+            return;
+        }
+
+        if (!c.getChildren().contains(target)) {
+            messages.sendError(p, "error.corporation.not_member");
+            return;
+        }
+
+        if (c.getOwner().equals(target.getOwner())) {
+            messages.sendError(p, "error.corporation.edit_owner_permissions");
+            return;
+        }
+
+        c.setRank(target, rank);
+        messages.sendSuccess(p, "success.corporation.set_rank", GOLD + target.getName() + GREEN, GOLD + rank.getName() + GREEN);
+    }
+
+    default void createCorporationRank(Player p, String name, int priority, String prefix, Material icon) {
+        Corporation c = Corporation.byMember(p);
+        if (c == null) {
+            messages.sendError(p, "error.corporation.none.member");
+            return;
+        }
+
+        if (!CorporationRank.VALID_NAME.matcher(name).matches() || name.length() > CorporationRank.MAX_NAME_LENGTH) {
+            messages.sendError(p, "error.argument.name");
+            return;
+        }
+
+        if (!CorporationRank.VALID_PREFIX.matcher(prefix).matches() || prefix.length() > CorporationRank.MAX_PREFIX_LENGTH) {
+            messages.sendError(p, "error.argument.prefix");
+            return;
+        }
+
+        CorporationRank pRank = c.getRank(p);
+        if (!pRank.hasPermission(CorporationPermission.CREATE_RANKS) || priority <= pRank.getPriority()) {
+            messages.sendError(p, "error.permission.corporation");
+            return;
+        }
+
+        Set<CorporationRank> ranks = c.getRanks();
+
+        if (ranks.size() >= c.getMaxRanks()) {
+            messages.sendError(p, "error.corporation.max_ranks");
+            return;
+        }
+
+        if (ranks.stream().anyMatch(r -> r.getName().equalsIgnoreCase(name))) {
+            messages.sendError(p, "error.corporation.rank_exists.name");
+            return;
+        }
+
+        if (ranks.stream().anyMatch(r -> r.getPriority() == priority)) {
+            messages.sendError(p, "error.corporation.rank_exists.priority");
+            return;
+        }
+
+        CorporationRank.builder()
+                .setCorporation(c)
+                .setName(name)
+                .setPriority(priority)
+                .setPrefix(prefix)
+                .setIcon(icon)
+                .build();
+
+        messages.sendSuccess(p, "success.corporation.create_rank", GOLD + name + GREEN);
+    }
+
+    default void deleteCorporationRank(Player p, CorporationRank rank, boolean confirm) {
+        Corporation c = Corporation.byMember(p);
+        if (c == null) {
+            messages.sendError(p, "error.corporation.none.member");
+            return;
+        }
+
+        CorporationRank pRank = c.getRank(p);
+        if (!pRank.hasPermission(CorporationPermission.MANAGE_RANKS) || rank.getPriority() <= pRank.getPriority()) {
+            messages.sendError(p, "error.permission.corporation");
+            return;
+        }
+
+        if (rank.getIdentifier().equals(CorporationRank.OWNER_RANK) || rank.getIdentifier().equals(CorporationRank.DEFAULT_RANK)) {
+            NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
+            return;
+        }
+
+        if (confirm) {
+            rank.delete();
+            messages.sendSuccess(p, "success.corporation.delete_rank", GOLD + rank.getName() + GREEN);
+        } else
+            messages.sendError(p, "error.corporation.confirm_delete_rank", GOLD + rank.getName() + RED);
+    }
+
+    default void editCorporationRank(Player p, CorporationRank rank) {
+        Corporation c = Corporation.byMember(p);
+        if (c == null) {
+            messages.sendError(p, "error.corporation.none.member");
+            return;
+        }
+
+        CorporationRank pRank = c.getRank(p);
+        if (!pRank.hasPermission(CorporationPermission.MANAGE_RANKS) || rank.getPriority() <= pRank.getPriority()) {
+            messages.sendError(p, "error.permission.corporation");
+            return;
+        }
+
+        p.openInventory(Generator.generateCorporationRankEditor(p, rank));
+        NovaSound.BLOCK_ENDER_CHEST_OPEN.play(p);
+    }
+
+    default void openCorporationRanks(Player p) {
+        Corporation c = Corporation.byMember(p);
+        if (c == null) {
+            messages.sendError(p, "error.corporation.none.member");
+            return;
+        }
+
+        p.openInventory(Generator.generateCorporationRanks(p, c));
+        NovaSound.BLOCK_ENDER_CHEST_OPEN.play(p);
+    }
+
+    default void broadcastCorporationMessage(Player p, String message) {
+        Corporation c = Corporation.byMember(p);
+        if (c == null) {
+            messages.sendError(p, "error.corporation.none.member");
+            return;
+        }
+
+        CorporationRank rank = c.getRank(p);
+        if (!rank.hasPermission(CorporationPermission.BROADCAST_MESSAGES)) {
+            messages.sendError(p, "error.permission.corporation");
+            return;
+        }
+
+        c.broadcastMessage(message);
+        NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
+    }
+
+    default void corporationBan(Player p, Business target) {
+        Corporation c = Corporation.byMember(p);
+        if (c == null) {
+            messages.sendError(p, "error.corporation.none.member");
+            return;
+        }
+
+        CorporationRank rank = c.getRank(p);
+        if (!rank.hasPermission(CorporationPermission.BAN_MEMBERS)) {
+            messages.sendError(p, "error.permission.corporation");
+            return;
+        }
+
+        if (c.isBanned(target)) {
+            messages.sendError(p, "error.corporation.banned.target");
+            return;
+        }
+
+        if (c.getOwner().equals(target.getOwner())) {
+            messages.sendError(p, "error.corporation.owner_leave");
+            return;
+        }
+
+        c.ban(target);
+        if (target.getOwner().isOnline())
+            messages.sendNotification(target.getOwner(), "notification.corporation.ban", GOLD + c.getName() + RED);
+
+        NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
+    }
+
+    default void corporationUnban(Player p, Business target) {
+        Corporation c = Corporation.byMember(p);
+        if (c == null) {
+            messages.sendError(p, "error.corporation.none.member");
+            return;
+        }
+
+        CorporationRank rank = c.getRank(p);
+        if (!rank.hasPermission(CorporationPermission.BAN_MEMBERS)) {
+            messages.sendError(p, "error.permission.corporation");
+            return;
+        }
+
+        if (!c.isBanned(target)) {
+            messages.sendError(p, "error.corporation.not_banned");
+            return;
+        }
+
+        c.unban(target);
+        if (target.getOwner().isOnline())
+            messages.sendNotification(target.getOwner(), "notification.corporation.unban", GOLD + c.getName() + AQUA);
+
+        NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
+    }
+
+    default void corporationKick(Player p, Business target) {
+        Corporation c = Corporation.byMember(p);
+        if (c == null) {
+            messages.sendError(p, "error.corporation.none.member");
+            return;
+        }
+
+        CorporationRank rank = c.getRank(p);
+        if (!rank.hasPermission(CorporationPermission.KICK_MEMBERS)) {
+            messages.sendError(p, "error.permission.corporation");
+            return;
+        }
+
+        if (!c.getChildren().contains(target)) {
+            messages.sendError(p, "error.corporation.not_member");
+            return;
+        }
+
+        if (c.getOwner().equals(target.getOwner())) {
+            messages.sendError(p, "error.corporation.owner_leave");
+            return;
+        }
+
+        c.removeChild(target);
+        if (target.getOwner().isOnline())
+            messages.sendNotification(target.getOwner(), "notification.corporation.kick", GOLD + c.getName() + RED);
+
+        NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
     }
 
 }

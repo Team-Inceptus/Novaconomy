@@ -32,9 +32,9 @@ import java.util.stream.Collectors;
 
 import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.ECON_TAG;
 import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.TYPE_TAG;
-import static us.teaminceptus.novaconomy.abstraction.Wrapper.get;
 import static us.teaminceptus.novaconomy.abstraction.Wrapper.w;
-import static us.teaminceptus.novaconomy.util.NovaUtil.format;
+import static us.teaminceptus.novaconomy.messages.MessageHandler.format;
+import static us.teaminceptus.novaconomy.messages.MessageHandler.get;
 import static us.teaminceptus.novaconomy.util.NovaUtil.suffix;
 
 public final class Items {
@@ -158,7 +158,7 @@ public final class Items {
 
     public static ItemStack sorter(SortingType<?> sortingType) {
         return NBTWrapper.builder(YELLOW_TERRACOTTA,
-                meta -> meta.setDisplayName(ChatColor.GREEN + NovaUtil.format(get("constants.sorting_by"), ChatColor.YELLOW + NovaUtil.getDisplayName(sortingType))),
+                meta -> meta.setDisplayName(ChatColor.GREEN + format(get("constants.sorting_by"), ChatColor.YELLOW + NovaUtil.getDisplayName(sortingType))),
                 nbt -> {
                     nbt.setID("sorter");
                     nbt.set(TYPE_TAG, NovaUtil.getId(sortingType));

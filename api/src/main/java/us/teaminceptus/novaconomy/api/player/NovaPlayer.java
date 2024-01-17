@@ -127,7 +127,7 @@ public final class NovaPlayer {
             pConfig.putAll(toMap(config));
 
             stats = pConfig.containsKey("stats") ? (PlayerStatistics) pConfig.get("stats") : new PlayerStatistics(p);
-            wonAuctions.addAll((Collection<AuctionProduct>) pConfig.getOrDefault("won_auctions", new HashSet<>()));
+            wonAuctions.addAll((Collection<AuctionProduct>) pConfig.getOrDefault("won_auctions", new ArrayList<>()));
         }
 
         this.stats = stats;
@@ -201,7 +201,8 @@ public final class NovaPlayer {
      * @throws IllegalArgumentException if economy is null
      */
     public void setBalance(@NotNull Economy econ, double newBal) throws IllegalArgumentException {
-        if (newBal < 0) throw new IllegalArgumentException("Balance cannot be negative");
+        if (newBal < 0 && !NovaConfig.getConfiguration().isNegativeBalancesEnabled()) throw new IllegalArgumentException("Balance cannot be negative");
+        if (newBal < NovaConfig.getConfiguration().getMaxNegativeBalance()) throw new IllegalArgumentException("Balance cannot be less than the max negative balance (" + NovaConfig.getConfiguration().getMaxNegativeBalance() + ")");
         if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
 
         checkStats();
@@ -260,7 +261,7 @@ public final class NovaPlayer {
                 ps.close();
             } else {
                 pConfig.put("stats", this.stats);
-                pConfig.put("won_auctions", this.wonAuctions);
+                pConfig.put("won_auctions", new ArrayList<>(this.wonAuctions));
 
                 File pFile = new File(NovaConfig.getPlayerDirectory(), p.getUniqueId().toString() + ".yml");
                 if (!pFile.exists()) pFile.createNewFile();
@@ -339,7 +340,17 @@ public final class NovaPlayer {
      * @return true if can afford, else false
      */
     public boolean canAfford(@Nullable Product p) {
-        return canAfford(p == null ? null : p.getPrice());
+        return canAfford(p, false);
+    }
+
+    /**
+     * Whether this NovaPlayer can afford a Product.
+     * @param p Product to buy
+     * @param allowDebt Whether to allow debt. This will be ignored if {@link NovaConfig#isNegativeBalancesEnabled()} returns false.
+     * @return true if can afford, else false
+     */
+    public boolean canAfford(@Nullable Product p, boolean allowDebt) {
+        return canAfford(p == null ? null : p.getPrice(), allowDebt);
     }
 
     /**
@@ -348,8 +359,68 @@ public final class NovaPlayer {
      * @return true if can afford, else false
      */
     public boolean canAfford(@Nullable Price p) {
+        return canAfford(p, false);
+    }
+
+    /**
+     * Whether this NovaPlayer can afford a Price.
+     * @param p Price to buy at
+     * @param allowDebt Whether to allow debt. This will be ignored if {@link NovaConfig#isNegativeBalancesEnabled()} returns false.
+     * @return true if can afford, else false
+     */
+    public boolean canAfford(@Nullable Price p, boolean allowDebt) {
         if (p == null) return false;
-        return getBalance(p.getEconomy()) >= p.getAmount();
+        return canAfford(p.getEconomy(), p.getAmount(), allowDebt);
+    }
+
+    /**
+     * Whether this NovaPlayer can afford an amount.
+     * @param econ Economy to use
+     * @param amount Amount to buy at
+     * @return true if can afford, else false
+     */
+    public boolean canAfford(@Nullable Economy econ, double amount) {
+        return canAfford(econ, amount, false);
+    }
+
+    /**
+     * Whether this NovaPlayer can afford an amount.
+     * @param econ Economy to use
+     * @param amount Amount to buy at
+     * @param allowDebt Whether to allow debt. This will be ignored if {@link NovaConfig#isNegativeBalancesEnabled()} returns false.
+     * @return true if can afford, else false
+     */
+    public boolean canAfford(@Nullable Economy econ, double amount, boolean allowDebt) {
+        if (econ == null) return false;
+        if (amount <= 0) return true;
+
+        double bal = getBalance(econ);
+        double result = bal - amount;
+
+        if (!NovaConfig.getConfiguration().isNegativeBalancesEnabled()) return result >= 0;
+
+        if (!allowDebt) {
+            if (isInDebt(econ)) return false;
+            return result >= 0;
+        } else {
+            double max = canBypassMaxNegativeBalance() ? Double.MIN_VALUE : NovaConfig.getConfiguration().getMaxNegativeBalance();
+            return result >= max;
+        }
+    }
+
+    /**
+     * Gets whether this NovaPlayer is currently in debt.
+     * @param econ Economy to use
+     * @return true if in debt, else false
+     */
+    public boolean isInDebt(@Nullable Economy econ) {
+        if (econ == null) return false;
+        if (!NovaConfig.getConfiguration().isNegativeBalancesEnabled()) return false;
+
+        if (NovaConfig.getConfiguration().isNegativeBalancesIncludeZero())
+            return getBalance(econ) <= 0;
+        else
+            return getBalance(econ) < 0;
     }
 
     /**
@@ -405,24 +476,27 @@ public final class NovaPlayer {
     /**
      * Deposits an amount to the global bank
      * @param econ Economy to deposit to
-     * @param firstAmount Amount to deposit
-     * @throws IllegalArgumentException if economy is null, or amount is negative
+     * @param amount Amount to deposit
+     * @throws IllegalArgumentException if economy is null, amount is negative, or cannot afford
      */
-    public void deposit(@NotNull Economy econ, double firstAmount) throws IllegalArgumentException {
+    public void deposit(@NotNull Economy econ, double amount) throws IllegalArgumentException {
         if (econ == null) throw new IllegalArgumentException("Economy cannot be null");
-        if (firstAmount < 0) throw new IllegalArgumentException("Amount cannot be negative");
+        if (amount < 0) throw new IllegalArgumentException("Amount cannot be negative");
 
-        PlayerDepositEvent event = new PlayerDepositEvent(getOnlinePlayer(), firstAmount, econ, System.currentTimeMillis());
+        if (!canAfford(econ, amount, NovaConfig.getConfiguration().getWhenNegativeAllowPayBanks()))
+            throw new IllegalArgumentException("Player cannot afford this amount");
+
+        PlayerDepositEvent event = new PlayerDepositEvent(getOnlinePlayer(), amount, econ, System.currentTimeMillis());
         Bukkit.getPluginManager().callEvent(event);
-        double amount = event.getAmount();
+        double amount0 = event.getAmount();
 
-        Bank.addBalance(econ, amount);
-        remove(econ, amount);
+        Bank.addBalance(econ, amount0);
+        remove(econ, amount0);
 
-        pConfig.put(LBW + ".amount", amount);
+        pConfig.put(LBW + ".amount", amount0);
         pConfig.put(LBW + ".economy", econ.getName());
         pConfig.put(LBW + ".timestamp", System.currentTimeMillis());
-        pConfig.put("donated." + econ.getName(), getDonatedAmount(econ) + amount);
+        pConfig.put("donated." + econ.getName(), getDonatedAmount(econ) + amount0);
         save();
     }
 
@@ -804,9 +878,7 @@ public final class NovaPlayer {
      * <p>This will return {@code false} if the player does not own a corporation, business, or if the permission is null.</p>
      * @param permission
      * @return true if this player has the corporation permission, else false
-     * @deprecated Draft API
      */
-    @Deprecated
     public boolean hasPermission(@Nullable CorporationPermission permission) {
         if (permission == null) return false;
 
@@ -868,6 +940,16 @@ public final class NovaPlayer {
     @Nullable
     public AuctionProduct getWonAuction(@NotNull UUID id) {
         return wonAuctions.stream().filter(a -> a.getUUID().equals(id)).findFirst().orElse(null);
+    }
+
+    /**
+     * Fetches whether this player can bypass the max negative balance. This will return {@code false} if {@link NovaConfig#isNegativeBalancesEnabled()} return false.
+     * @return true if this player can bypass, else false
+     */
+    public boolean canBypassMaxNegativeBalance() {
+        if (!NovaConfig.getConfiguration().isNegativeBalancesEnabled()) return false;
+
+        return NovaConfig.getConfiguration().canBypassMaxNegativeAmount(p);
     }
 
     private void checkStats() {

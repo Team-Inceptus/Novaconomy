@@ -49,13 +49,13 @@ public enum MarketCategory {
     /**
      * Consists of common outdoor decoration items and food
      */
-    DECORATIONS_FOOD(GRASS, DEAD_BUSH, VINE, SUGAR_CANE, PUMPKIN, TORCH, GLASS, CARROT,
+    DECORATIONS_FOOD(DEAD_BUSH, VINE, SUGAR_CANE, PUMPKIN, TORCH, GLASS, CARROT,
             POTATO, APPLE, BREAD, WHEAT, CACTUS, ICE, SNOW, PACKED_ICE, PRISMARINE, SEA_LANTERN,
             "tall_grass", "fern", "lily_pad", "large_fern", "lantern", "glass_pane", "glow_berries",
             "glow_lichen", "raw_beef:beef", "porkchop", "chicken:raw_chicken", "mutton", "campfire",
             "kelp", "peony", "sunflower", "poppy", "sea_pickle", "candle", "dark_prismarine", "shroomlight",
             "mycelium", "podzol", "dripleaf", "small_dripleaf", "soul_lantern", "sweet_berries", "soul_campfire",
-            "seeds:wheat_seeds", "torchflower", "bamboo_block", "pink_petals"
+            "seeds:wheat_seeds", "torchflower", "bamboo_block", "pink_petals", "grass:short_grass"
     ),
 
     /**

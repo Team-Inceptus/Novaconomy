@@ -25,17 +25,15 @@ import us.teaminceptus.novaconomy.api.auction.AuctionProduct;
 import us.teaminceptus.novaconomy.api.auction.Bid;
 import us.teaminceptus.novaconomy.api.bank.Bank;
 import us.teaminceptus.novaconomy.api.business.Business;
+import us.teaminceptus.novaconomy.api.business.BusinessProduct;
 import us.teaminceptus.novaconomy.api.business.Rating;
-import us.teaminceptus.novaconomy.api.corporation.Corporation;
-import us.teaminceptus.novaconomy.api.corporation.CorporationAchievement;
-import us.teaminceptus.novaconomy.api.corporation.CorporationInvite;
+import us.teaminceptus.novaconomy.api.corporation.*;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.economy.market.MarketCategory;
 import us.teaminceptus.novaconomy.api.economy.market.Receipt;
 import us.teaminceptus.novaconomy.api.events.business.BusinessAdvertiseEvent;
 import us.teaminceptus.novaconomy.api.player.NovaPlayer;
 import us.teaminceptus.novaconomy.api.settings.Settings;
-import us.teaminceptus.novaconomy.api.business.BusinessProduct;
 import us.teaminceptus.novaconomy.api.util.Price;
 
 import java.lang.reflect.Method;
@@ -50,8 +48,11 @@ import java.util.stream.Collectors;
 import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.*;
 import static us.teaminceptus.novaconomy.abstraction.NBTWrapper.builder;
 import static us.teaminceptus.novaconomy.abstraction.NBTWrapper.of;
-import static us.teaminceptus.novaconomy.abstraction.Wrapper.*;
+import static us.teaminceptus.novaconomy.abstraction.Wrapper.r;
+import static us.teaminceptus.novaconomy.abstraction.Wrapper.w;
 import static us.teaminceptus.novaconomy.api.corporation.Corporation.toExperience;
+import static us.teaminceptus.novaconomy.messages.MessageHandler.format;
+import static us.teaminceptus.novaconomy.messages.MessageHandler.get;
 import static us.teaminceptus.novaconomy.util.NovaUtil.*;
 import static us.teaminceptus.novaconomy.util.inventory.Items.*;
 
@@ -97,9 +98,11 @@ public final class Generator {
 
             Corporation parent = b.getParentCorporation();
             if (parent != null) {
+                CorporationRank rank = parent.getRank(b);
                 ItemStack pIcon = builder(parent.getPublicIcon(),
-                        meta -> meta.setLore(Collections.singletonList(
-                                ChatColor.GOLD + get("constants.parent_corporation")
+                        meta -> meta.setLore(Arrays.asList(
+                                ChatColor.GOLD + get("constants.parent_corporation"),
+                                ChatColor.GOLD + rank.getName()
                         )), nbt -> {
                             nbt.setID("corporation:click");
                             nbt.set(CORPORATION_TAG, parent.getUniqueId());
@@ -117,7 +120,7 @@ public final class Generator {
             inv.setItem(15, icon);
 
             boolean anonymous = !b.getSetting(Settings.Business.PUBLIC_OWNER) && !b.isOwner(viewer);
-            ItemStack owner = builder(w.createSkull(anonymous ? null : b.getOwner()),
+            ItemStack owner = builder(createPlayerHead(anonymous ? null : b.getOwner()),
                     meta -> {
                         meta.setDisplayName(anonymous ? ChatColor.AQUA + get("constants.business.anonymous") : format(get("constants.owner"), b.getOwner().getName()));
                         if (b.isOwner(viewer) && !b.getSetting(Settings.Business.PUBLIC_OWNER))
@@ -340,7 +343,8 @@ public final class Generator {
         int level = c.getLevel();
 
         if (level >= 3) {
-            if (c.getSetting(Settings.Corporation.PUBLIC_HEADQUARTERS) || c.getMembers().contains(viewer) || c.isOwner(viewer)) {
+            boolean viewerTp = c.getSetting(Settings.Corporation.PUBLIC_HEADQUARTERS) || (c.getMembers().contains(viewer) && c.getRank(viewer).hasPermission(CorporationPermission.TELEPORT_TO_HEADQUARTERS));
+            if (c.getSetting(Settings.Corporation.PUBLIC_HEADQUARTERS) || viewerTp || c.isOwner(viewer)) {
                 ItemStack hq = builder(Material.GLASS,
                         meta -> meta.setDisplayName(ChatColor.YELLOW + get("constants.corporation.headquarters")),
                         nbt -> {
@@ -350,7 +354,8 @@ public final class Generator {
                 );
                 inv.setItem(11, hq);
             }
-        } else if (c.isOwner(viewer)) inv.setItem(11, Items.LOCKED);
+        } else
+            if (c.isOwner(viewer)) inv.setItem(11, Items.LOCKED);
 
         ItemStack achievements = builder(Material.BOOK,
                 meta -> meta.setDisplayName(ChatColor.YELLOW + get("constants.corporation.achievements")),
@@ -387,6 +392,14 @@ public final class Generator {
                 }
         );
         inv.setItem(15, leveling);
+
+        ItemStack ranks = builder(Material.IRON_INGOT,
+                meta -> meta.setDisplayName(ChatColor.LIGHT_PURPLE + get("constants.ranks")),
+                nbt -> {
+                    nbt.setID("corporation:ranks");
+                    nbt.set(CORPORATION_TAG, c.getUniqueId());
+                });
+        inv.setItem(16, ranks);
 
         if (c.getSetting(Settings.Corporation.FEATURE_PRODUCTS) && !c.getChildren().isEmpty() && r.nextDouble() < 0.4) {
             List<Map.Entry<Business, BusinessProduct>> products = c.getChildren()
@@ -449,9 +462,14 @@ public final class Generator {
 
         for (int i = 0; i < children.size(); i++) {
             Business b = children.get(i);
+            CorporationRank rank = c.getRank(b);
             int index = i < 7 ? GUI_SPACE + i : 37 + i;
 
             ItemStack bIcon = builder(b.getIcon(),
+                    meta -> {
+                        meta.setDisplayName(ChatColor.YELLOW + "[" + rank.getPrefix() + "] " + meta.getDisplayName());
+                        meta.setLore(Collections.singletonList(ChatColor.GOLD + rank.getName()));
+                    },
                     nbt -> {
                         nbt.setID("business:click");
                         nbt.set(BUSINESS_TAG, b.getUniqueId());
@@ -462,24 +480,30 @@ public final class Generator {
 
         // Admin Settings
 
-        if (c.isOwner(viewer)) {
-            ItemStack editDesc = builder(Items.OAK_SIGN,
-                    meta -> meta.setDisplayName(ChatColor.YELLOW + get("constants.corporation.edit_description")),
-                    nbt -> {
-                        nbt.setID("corporation:edit_desc");
-                        nbt.set(CORPORATION_TAG, c.getUniqueId());
-                    }
-            );
-            inv.setItem(26, editDesc);
+        if (c.getMembers().contains(viewer)) {
+            CorporationRank pRank = c.getRank(viewer);
 
-            ItemStack settings = builder(Material.NETHER_STAR,
-                    meta -> meta.setDisplayName(ChatColor.GREEN + get("constants.settings.corporation")),
-                    nbt -> {
-                        nbt.setID("corporation:settings");
-                        nbt.set(CORPORATION_TAG, c.getUniqueId());
-                    }
-            );
-            inv.setItem(53, settings);
+            if (pRank.hasPermission(CorporationPermission.EDIT_DETAILS)) {
+                ItemStack editDesc = builder(Items.OAK_SIGN,
+                        meta -> meta.setDisplayName(ChatColor.YELLOW + get("constants.corporation.edit_description")),
+                        nbt -> {
+                            nbt.setID("corporation:edit_desc");
+                            nbt.set(CORPORATION_TAG, c.getUniqueId());
+                        }
+                );
+                inv.setItem(26, editDesc);
+            }
+
+            if (pRank.hasPermission(CorporationPermission.EDIT_SETTINGS)) {
+                ItemStack settings = builder(Material.NETHER_STAR,
+                        meta -> meta.setDisplayName(ChatColor.GREEN + get("constants.settings.corporation")),
+                        nbt -> {
+                            nbt.setID("corporation:settings");
+                            nbt.set(CORPORATION_TAG, c.getUniqueId());
+                        }
+                );
+                inv.setItem(53, settings);
+            }
         }
 
         return inv;
@@ -497,7 +521,7 @@ public final class Generator {
         ItemStack prev = Items.prev("corp_leveling");
 
         if (currentLevel > 1) inv.setItem(19, prev);
-        if (currentLevel < Corporation.MAX_LEVEL) inv.setItem(25, next);
+        if (currentLevel < (Corporation.MAX_LEVEL - 3)) inv.setItem(25, next);
 
         for (int i = 0; i < 7; i++) {
             int index = 10 + i;
@@ -521,8 +545,11 @@ public final class Generator {
             if (cLevel == 3)
                 lore.add(ChatColor.LIGHT_PURPLE + get("constants.corporation.headquarters"));
 
-            if (cLevel >= 5 && cLevel <= 50 && cLevel % 5 == 0)
+            if (cLevel <= 50 && cLevel % 5 == 0)
                 lore.add(ChatColor.DARK_GREEN + format(get("constants.corporation.profit_modifier"), 10 + "%"));
+
+            if (cLevel <= 54 && cLevel % 6 == 0)
+                lore.add(ChatColor.BLUE + format(get("constants.corporation.rank_slots"), 1));
 
             // Icon Setting
 
@@ -788,10 +815,13 @@ public final class Generator {
 
             List<Economy> elist = new ArrayList<>(econs.subList(i * GUI_SPACE, Math.min((i + 1) * GUI_SPACE, econs.size())));
             elist.forEach(econ -> {
+                double balance = np.getBalance(econ);
+                boolean debt = balance < 0 || (balance == 0 && NovaConfig.getConfiguration().isNegativeBalancesIncludeZero());
+
                 ItemStack item = econ.getIcon().clone();
                 ItemMeta eMeta = item.getItemMeta();
                 eMeta.setLore(Collections.singletonList(
-                        ChatColor.GOLD + format("%,.2f", np.getBalance(econ)) + econ.getSymbol()
+                        (debt ? ChatColor.RED : ChatColor.GOLD) + format("%,.2f", balance) + econ.getSymbol()
                 ));
                 item.setItemMeta(eMeta);
                 inv.addItem(item);
@@ -1411,6 +1441,173 @@ public final class Generator {
             invs.forEach(i -> i.setAttribute("invs", invs));
 
         return invs;
+    }
+
+    public static NovaInventory generateCorporationRanks(@NotNull Player p, @NotNull Corporation c) {
+        NovaInventory inv = genGUI(54, c.getName() + " | " + ChatColor.DARK_PURPLE + get("constants.ranks"));
+        inv.setCancelled();
+
+        CorporationRank pRank = c.getRank(p);
+
+        inv.setItem(3, c.getPublicIcon());
+        inv.setItem(5, Items.builder(createPlayerHead(p),
+                meta -> {
+                    meta.setDisplayName(ChatColor.AQUA + "[" + pRank.getPrefix() + "] " + p.getName());
+                    meta.setLore(Collections.singletonList(ChatColor.GOLD + pRank.getName()));
+                })
+        );
+
+        inv.setItem(10, 11, 12, 14, 15, 16, GUI_BACKGROUND);
+
+        inv.setItem(13, builder(Material.EMERALD,
+                meta -> {
+                    meta.setDisplayName(ChatColor.LIGHT_PURPLE + get("constants.corporation.owner"));
+                    meta.setLore(Collections.singletonList(ChatColor.YELLOW + c.getOwner().getName()));
+                    meta.addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1, true);
+                    meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+                }, nbt -> {
+                    nbt.setID("player_stats");
+                    nbt.set("player", c.getOwner().getUniqueId());
+                })
+        );
+
+        List<CorporationRank> ranks = c.getRanks()
+                .stream()
+                .filter(r -> !r.getIdentifier().equals(CorporationRank.OWNER_RANK))
+                .sorted(Comparator.comparingInt(CorporationRank::getPriority))
+                .collect(Collectors.toList());
+
+        for (int i = 0; i < ranks.size(); i++) {
+            int index = i < 5 ? 20 + i : 24 + i;
+            if (index == 34) index = 40;
+
+            CorporationRank rank = ranks.get(i);
+            inv.setItem(index, builder(rank.getIcon(),
+                    meta -> {
+                        meta.setDisplayName(ChatColor.YELLOW + "[" + rank.getPrefix() + "] " + rank.getName());
+                        meta.setLore(Arrays.asList(
+                                ChatColor.AQUA + format(get("constants.members"), format("%,d", c.getMembers(rank).size())),
+                                " ",
+                                ChatColor.YELLOW + get("constants.left_click_edit")
+                        ));
+                    }, nbt -> {
+                        nbt.setID("corporation:edit_rank");
+                        nbt.set(CORPORATION_TAG, c.getUniqueId());
+                        nbt.set("rank", rank.getIdentifier());
+                    })
+            );
+        }
+
+        inv.setItem(46, builder(BACK, nbt -> {
+            nbt.setID("corporation:click");
+            nbt.set(CORPORATION_TAG, c.getUniqueId());
+        }));
+
+        return inv;
+    }
+
+    public static NovaInventory generateCorporationRankEditor(@NotNull Player p, @NotNull CorporationRank rank) {
+        if (rank.getIdentifier().equals(CorporationRank.OWNER_RANK)) throw new AssertionError("Cannot edit owner rank");
+
+        Corporation c = rank.getCorporation();
+        NovaInventory inv = genGUI(54, c.getName() + " | " + ChatColor.DARK_BLUE + rank.getName());
+        inv.setCancelled();
+
+        inv.setItem(3, c.getPublicIcon());
+        inv.setItem(5, Items.builder(rank.getIcon(),
+                meta -> {
+                    meta.setDisplayName(ChatColor.YELLOW + "[" + rank.getPrefix() + "] " + rank.getName());
+                    meta.setLore(Arrays.asList(ChatColor.GOLD + format(get("constants.members"), format("%,d", c.getMembers(rank).size())) ));
+                })
+        );
+
+        // Name, Icon, Prefix
+
+        inv.setItem(17, builder(OAK_SIGN,
+                meta -> {
+                    meta.setDisplayName(ChatColor.LIGHT_PURPLE + get("constants.set_name"));
+                    meta.setLore(Collections.singletonList(ChatColor.GOLD + rank.getName()));
+                },
+                nbt -> {
+                    nbt.setID("corporation:edit_rank:item");
+                    nbt.set(CORPORATION_TAG, c.getUniqueId());
+                    nbt.set("rank", rank.getIdentifier());
+                    nbt.set(TYPE_TAG, "name");
+                })
+        );
+
+        inv.setItem(26, builder(Material.GLASS,
+                meta -> {
+                    meta.setDisplayName(ChatColor.AQUA + get("constants.set_prefix"));
+                    meta.setLore(Collections.singletonList(ChatColor.GOLD + rank.getPrefix()));
+                },
+                nbt -> {
+                    nbt.setID("corporation:edit_rank:item");
+                    nbt.set(CORPORATION_TAG, c.getUniqueId());
+                    nbt.set("rank", rank.getIdentifier());
+                    nbt.set(TYPE_TAG, "prefix");
+                })
+        );
+
+        inv.setItem(35, builder(IRON_BARS,
+                meta -> {
+                    meta.setDisplayName(ChatColor.YELLOW + get("constants.set_icon"));
+                    meta.setLore(Collections.singletonList(ChatColor.GOLD + rank.getIcon().name().toLowerCase()));
+                },
+                nbt -> {
+                    nbt.setID("corporation:edit_rank:item");
+                    nbt.set(CORPORATION_TAG, c.getUniqueId());
+                    nbt.set("rank", rank.getIdentifier());
+                    nbt.set(TYPE_TAG, "icon");
+                })
+        );
+
+
+        // Permissions
+
+        List<CorporationPermission> perms = Arrays.stream(CorporationPermission.values())
+                .sorted(Comparator.comparing(CorporationPermission::name))
+                .collect(Collectors.toList());
+
+        for (int i = 0; i < perms.size(); i++) {
+            int index = i < 7 ? 19 + i : 21 + i;
+            CorporationPermission permission = perms.get(i);
+            boolean perm = rank.hasPermission(permission);
+
+            inv.setItem(index, generateCorporationPermissionNode(c, rank, permission, perm));
+        }
+
+        inv.setItem(46, builder(BACK, nbt -> {
+            nbt.setID("corporation:ranks");
+            nbt.set(CORPORATION_TAG, c.getUniqueId());
+        }));
+
+        return inv;
+    }
+
+    public static ItemStack generateCorporationPermissionNode(Corporation c, CorporationRank rank, CorporationPermission permission, boolean perm) {
+        return builder(perm ? LIME_WOOL : RED_WOOL,
+                meta -> {
+                    String nameKey = "constants.corporation.permission." + permission.name().toLowerCase();
+
+                    meta.setDisplayName(ChatColor.YELLOW + get(nameKey) + ": " + (perm ? ChatColor.GREEN + get("constants.on") : ChatColor.RED + get("constants.off")));
+                    meta.setLore(Arrays.stream(ChatPaginator.wordWrap(get(nameKey + ".desc"), 30))
+                            .map(s -> ChatColor.GRAY + s)
+                            .collect(Collectors.toList())
+                    );
+
+                    if (perm) {
+                        meta.addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1, true);
+                        meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+                    }
+                }, nbt -> {
+                    nbt.setID("corporation:edit_rank:toggle_permission");
+                    nbt.set(CORPORATION_TAG, c.getUniqueId());
+                    nbt.set("rank", rank.getIdentifier());
+                    nbt.set("permission", permission.name());
+                    nbt.set("state", perm);
+                }
+       );
     }
 
     public static void modelData(@NotNull ItemStack item, int data) {

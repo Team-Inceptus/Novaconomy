@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 
 import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.BUSINESS_TAG;
 import static us.teaminceptus.novaconomy.abstraction.NBTWrapper.builder;
-import static us.teaminceptus.novaconomy.abstraction.Wrapper.get;
+import static us.teaminceptus.novaconomy.messages.MessageHandler.get;
 import static us.teaminceptus.novaconomy.util.inventory.Generator.GUI_SPACE;
 import static us.teaminceptus.novaconomy.util.inventory.Generator.genGUI;
 import static us.teaminceptus.novaconomy.util.inventory.Items.sorter;

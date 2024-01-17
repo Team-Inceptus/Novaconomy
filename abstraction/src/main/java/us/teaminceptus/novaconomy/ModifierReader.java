@@ -11,11 +11,17 @@ import java.util.*;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
+import static us.teaminceptus.novaconomy.messages.MessageHandler.format;
+
 public final class ModifierReader {
 
     private ModifierReader() {}
 
+    public static final Map<String, Map<String, Set<Entry<Economy, Double>>>> LOADED_MODIFIERS = new HashMap<>();
+
     public static Map<String, Map<String, Set<Entry<Economy, Double>>>> getAllModifiers() throws IllegalArgumentException {
+        if (!LOADED_MODIFIERS.isEmpty()) return LOADED_MODIFIERS;
+
         Map<String, Map<String, Set<Entry<Economy, Double>>>> mods = new HashMap<>();
         FileConfiguration config = NovaConfig.getPlugin().getConfig();
 
@@ -52,7 +58,8 @@ public final class ModifierReader {
             });
         }
 
-        return mods;
+        LOADED_MODIFIERS.putAll(mods);
+        return LOADED_MODIFIERS;
     }
 
     public static Map<String, Set<Entry<Economy, Double>>> getModifier(String mod) {
@@ -113,7 +120,7 @@ public final class ModifierReader {
 
     public static String toModString(Entry<Economy, Double> entry) {
         if (entry == null) return null;
-        return NovaUtil.format("%,.0f", entry.getValue()) + entry.getKey().getSymbol();
+        return format("%,.0f", entry.getValue()) + entry.getKey().getSymbol();
     }
 
     public static List<String> toModList(List<Entry<Economy, Double>> list) {

@@ -5,6 +5,33 @@
 Novaconomy gives you the freedom to create **multiple** economies of your own choice, just like in real life!
 With the freedom to have your own symbols, icons, conversion rates, and even interest, you'll have all you need to have a proper Economy!
 
+---
+
+## 🔮 Features
+
+**Thousands of Forms of Content**
+
+- *Fully Customizable* Multiple Economy Creation
+  - Custom Model Icons, Names, Symbols, Interest, Natural Causes, Conversionable, and more! 
+  - *Optional* support for Negative Balances!
+- *Fully Customizable* Item Market
+- *Fully Customizable* Player Businesses & Corporations
+  - Player-created Business Products, Ratings, Homes, Statistics & More!
+  - Player-created Corporations for managing Businesses' permissions, profits, achievements, and more!
+- Global Bank
+- Player-owned Bounties
+- Custom Taxing Events
+- *Fully Customizable* Auction House
+  - BIN & Bidding Auctions 
+- Per-player and Global Settings
+- Advanced & Efficient GUI Mechanics
+- Customizable Message Handler & Component Support
+- Verbose Configurations
+- **PlaceholderAPI**, **Vault**, **Treasury**, **Essentials**, and more support/integration!
+- Manually Translated in over 10 Languages
+
+---
+
 <h2 style="text-decoration: underline;">📓Changelog</h2>
 
 ### 🛖 1.9.0 Update: Awesome Auctions
@@ -27,6 +54,23 @@ With the freedom to have your own symbols, icons, conversion rates, and even int
   - Deleted Objects are Removed in SQL Database
   - Fix Temporary Copy Exceptions
   - Use more efficient Maps for Serialization
+
+- **v1.9.1**
+  - **Messages Overhaul**
+    - Added support for Spigot/Paper Components
+    - Configurable Message Handlers in functionality.yml
+    - Toggleable per-player with "Advanced Text" setting
+  - **Corporation Hierarchy** 
+    - Customizable Corporation Ranks for business members
+    - Add Permissions to how to interact with their parent corporation to their ranks
+  - Update Natural Causes
+    - Add Building Natural Cause
+    - Add ModifierReader Cache for faster loading Natural Cause Modifiers 
+  - Other API & Publishing Updates
+    - Updated JavaDocs
+  - Dependency Updates
+  - Fix Essentials-related Integration Issues
+  - Fix Additional 1.20.3+ Issues
 
 ### 💸 1.8.0 Update: Ecstatic Economy
 - New Features

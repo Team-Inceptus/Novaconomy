@@ -92,6 +92,12 @@ NaturalCauses:
   # The Chance of gaining money from mining ores (out of 100)
   MiningIncreaseChance: 30
 
+  # Whether players gain money from building
+  BuildingIncrease: true
+
+  # The Chance of gaining money from building (out of 100)
+  BuildingIncreaseChance: 10
+
   # Whether Players lose money on death
   DeathDecrease: true
 
@@ -131,6 +137,11 @@ NaturalCauses:
     # Farming Modifiers look at whatever you mined, similar to the Mining Modifiers.
     Farming: { } # Remove this when adding
     # wheat: [F10, 20$]
+
+    # Building Modifiers look at the block you placed.
+    # For all Materials: https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Material.html
+    Building: { } # Remove this when adding
+    # dirt: [G10, 20$]
 
     # Specifies special dividers based on the death cause
     # For all Causes: https://hub.spigotmc.org/javadocs/spigot/org/bukkit/event/entity/EntityDamageEvent.DamageCause.html
