@@ -104,7 +104,7 @@ subprojects {
         compileOnly("org.jetbrains:annotations:24.1.0")
 
         testImplementation("org.spigotmc:spigot-api:1.8-R0.1-SNAPSHOT")
-        testImplementation("net.md-5:bungeecord-chat:1.20-R0.1")
+        testImplementation("net.md-5:bungeecord-chat:1.20-R0.2")
         testImplementation("org.mockito:mockito-core:5.9.0")
         testImplementation("org.junit.jupiter:junit-jupiter:5.10.1")
     }
