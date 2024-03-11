@@ -190,7 +190,8 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
                 i++;
             }
 
-            messages.sendNotification(np.getPlayer(), "notification.interest", i + " ", i == 1 ? get("constants.economy") : get("constants.economies"));
+            OfflinePlayer p = np.getPlayer();
+            messages.sendNotification(p, "notification.interest", i + " ", i == 1 ? get(p, "constants.economy") : get(p, "constants.economies"));
         }
     }
 
@@ -325,10 +326,10 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
             OfflinePlayer p = np.getPlayer();
 
             if (j > 0)
-                messages.sendNotification(p, "notification.tax.missed", j + " ", j == 1 ? get("constants.economy") : get("constants.economies"));
+                messages.sendNotification(p, "notification.tax.missed", j + " ", j == 1 ? get(p, "constants.economy") : get(p, "constants.economies"));
 
             if (i > 0)
-                messages.sendNotification(p, "notification.tax", i + " ", i == 1 ? get("constants.economy") : get("constants.economies"));
+                messages.sendNotification(p, "notification.tax", i + " ", i == 1 ? get(p, "constants.economy") : get(p, "constants.economies"));
         }
     }
 

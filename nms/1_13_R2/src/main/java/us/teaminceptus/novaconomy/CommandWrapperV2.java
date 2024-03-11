@@ -52,7 +52,7 @@ final class CommandWrapperV2 implements CommandWrapper {
             if (param.hasAnnotation(Length.class)) {
                 int length = param.getAnnotation(Length.class).value();
                 if (value.length() > length)
-                    throw new TranslatableErrorException("error.argument.length", length);
+                    throw new TranslatableErrorException(actor.as(BukkitCommandActor.class).getSender(), "error.argument.length", length);
             }
         });
 
@@ -60,48 +60,48 @@ final class CommandWrapperV2 implements CommandWrapper {
                 String value = ctx.popForParameter();
                 if (value.equalsIgnoreCase("me")) return ((BukkitCommandActor) ctx.actor()).requirePlayer();
                 OfflinePlayer p = NovaUtil.getPlayer(value);
-                if (p == null) throw new TranslatableErrorException("error.argument.player");
+                if (p == null) throw new TranslatableErrorException(p, "error.argument.player");
                 return p;
         }).registerValueResolver(Material.class, ctx -> {
             Material m = Material.matchMaterial(ctx.popForParameter());
             if (!w.isItem(m))
-                throw new TranslatableErrorException("error.argument.item");
+                throw new TranslatableErrorException(ctx.actor().as(BukkitCommandActor.class).getSender(), "error.argument.item");
 
             return m;
         }).registerValueResolver(Economy.class, ctx -> {
             Economy econ = Economy.byName(ctx.popForParameter());
             if (econ == null)
-                throw new TranslatableErrorException("error.argument.economy");
+                throw new TranslatableErrorException(ctx.actor().as(BukkitCommandActor.class).getSender(), "error.argument.economy");
 
             return econ;
         }).registerValueResolver(Business.class, ctx -> {
             Business b = Business.byName(ctx.popForParameter());
             if (b == null)
-                throw new TranslatableErrorException("error.argument.business");
+                throw new TranslatableErrorException(ctx.actor().as(BukkitCommandActor.class).getSender(), "error.argument.business");
 
             return b;
         }).registerValueResolver(Corporation.class, ctx -> {
             Corporation c = Corporation.byName(ctx.popForParameter());
             if (c == null)
-                throw new TranslatableErrorException("error.argument.corporation");
+                throw new TranslatableErrorException(ctx.actor().as(BukkitCommandActor.class).getSender(), "error.argument.corporation");
 
             return c;
         }).registerValueResolver(MaterialSelector.class, ctx -> {
             MaterialSelector selector = MaterialSelector.of(ctx.popForParameter());
             if (selector == null)
-                throw new TranslatableErrorException("error.argument.item");
+                throw new TranslatableErrorException(ctx.actor().as(BukkitCommandActor.class).getSender(), "error.argument.item");
 
             return selector;
         }).registerValueResolver(CorporationRank.class, ctx -> {
             Player p = ctx.actor().as(BukkitCommandActor.class).requirePlayer();
             Corporation c = Corporation.byMember(p);
             if (c == null)
-                throw new TranslatableErrorException("error.corporation.none.member");
+                throw new TranslatableErrorException(ctx.actor().as(BukkitCommandActor.class).getSender(), "error.corporation.none.member");
 
             CorporationRank rank = c.getRank(ctx.popForParameter());
 
             if (rank == null)
-                throw new TranslatableErrorException("error.argument.rank");
+                throw new TranslatableErrorException(ctx.actor().as(BukkitCommandActor.class).getSender(), "error.argument.rank");
 
             return rank;
         });
@@ -148,7 +148,7 @@ final class CommandWrapperV2 implements CommandWrapper {
                     Player p = sender.as(BukkitCommandActor.class).requirePlayer();
                     Corporation c = Corporation.byMember(p);
                     if (c == null)
-                        throw new TranslatableErrorException("error.corporation.none.member");
+                        throw new TranslatableErrorException(p, "error.corporation.none.member");
 
                     return c.getRanks()
                             .stream()
@@ -1021,7 +1021,7 @@ final class CommandWrapperV2 implements CommandWrapper {
         @AutoComplete("enabled|disabled")
         public void setMarketRestockEnabled(CommandSender sender, @Single String enabled) {
             if (!enabled.equalsIgnoreCase("enabled") && !enabled.equalsIgnoreCase("disabled"))
-                throw new TranslatableErrorException("error.argument");
+                throw new TranslatableErrorException(sender, "error.argument");
             wrapper.setMarketRestockEnabled(sender, enabled.equalsIgnoreCase("enabled"));
         }
 
@@ -1044,7 +1044,7 @@ final class CommandWrapperV2 implements CommandWrapper {
         @AutoComplete("enabled|disabled")
         public void setMarketDepositEnabled(CommandSender sender, @Single String enabled) {
             if (!enabled.equalsIgnoreCase("enabled") && !enabled.equalsIgnoreCase("disabled"))
-                throw new TranslatableErrorException("error.argument");
+                throw new TranslatableErrorException(sender, "error.argument");
             wrapper.setMarketDepositEnabled(sender, enabled.equalsIgnoreCase("enabled"));
         }
 

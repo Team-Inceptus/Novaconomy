@@ -77,7 +77,7 @@ class SpigotMessageHandler implements MessageHandler {
         if (!advancedText(sender)) return;
 
         if (MessageHandler.ERROR_EXAMPLES.containsKey(key)) {
-            BaseComponent[] example = TextComponent.fromLegacyText(EXAMPLE_COLORS[r.nextInt(EXAMPLE_COLORS.length)] + format(get("constants.example"), ChatColor.GOLD + MessageHandler.ERROR_EXAMPLES.get(key).get()));
+            BaseComponent[] example = TextComponent.fromLegacyText(EXAMPLE_COLORS[r.nextInt(EXAMPLE_COLORS.length)] + format(sender, get(sender, "constants.example"), ChatColor.GOLD + MessageHandler.ERROR_EXAMPLES.get(key).get()));
             HoverEvent hover = new HoverEvent(HoverEvent.Action.SHOW_TEXT, example);
 
             components.forEach(c -> c.setHoverEvent(hover));
@@ -86,7 +86,7 @@ class SpigotMessageHandler implements MessageHandler {
 
     @Override
     public void send(CommandSender sender, String key, Object... args) {
-        List<BaseComponent> message = new ArrayList<>(Arrays.asList(TextComponent.fromLegacyText(format(get(key), args))));
+        List<BaseComponent> message = new ArrayList<>(Arrays.asList(TextComponent.fromLegacyText(format(sender, get(sender, key), args))));
         map(sender, message, key);
 
         sendComponents(sender, message);
@@ -94,7 +94,7 @@ class SpigotMessageHandler implements MessageHandler {
 
     @Override
     public void sendMessage(CommandSender sender, String key, Object... args) {
-        List<BaseComponent> message = new ArrayList<>(Arrays.asList(TextComponent.fromLegacyText(format(get(key), args))));
+        List<BaseComponent> message = new ArrayList<>(Arrays.asList(TextComponent.fromLegacyText(format(sender, get(sender, key), args))));
         map(sender, message, key);
 
         message.add(0, prefix(sender));
@@ -104,7 +104,7 @@ class SpigotMessageHandler implements MessageHandler {
 
     @Override
     public void sendError(CommandSender sender, String key, Object... args) {
-        List<BaseComponent> message = new ArrayList<>(Arrays.asList(TextComponent.fromLegacyText(ChatColor.RED + format(get(key), args))));
+        List<BaseComponent> message = new ArrayList<>(Arrays.asList(TextComponent.fromLegacyText(ChatColor.RED + format(sender, get(sender, key), args))));
         map(sender, message, key);
 
         message.add(0, prefix(sender));
@@ -114,7 +114,7 @@ class SpigotMessageHandler implements MessageHandler {
 
     @Override
     public void sendSuccess(CommandSender sender, String key, Object... args) {
-        List<BaseComponent> message = new ArrayList<>(Arrays.asList(TextComponent.fromLegacyText(ChatColor.GREEN + format(get(key), args))));
+        List<BaseComponent> message = new ArrayList<>(Arrays.asList(TextComponent.fromLegacyText(ChatColor.GREEN + format(sender, get(sender, key), args))));
         map(sender, message, key);
 
         message.add(0, prefix(sender));

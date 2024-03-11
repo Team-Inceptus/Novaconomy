@@ -1,6 +1,7 @@
 package us.teaminceptus.novaconomy;
 
 import org.bukkit.command.CommandSender;
+import org.bukkit.permissions.ServerOperator;
 import org.jetbrains.annotations.NotNull;
 import revxrsal.commands.bukkit.BukkitCommandActor;
 import revxrsal.commands.command.CommandActor;
@@ -15,8 +16,8 @@ class TranslatableErrorException extends SendableException {
     private final String key;
     private final Object[] args;
 
-    public TranslatableErrorException(String key, Object... args) {
-        super(format(get(key), args));
+    public TranslatableErrorException(ServerOperator sender, String key, Object... args) {
+        super(format(sender, get(sender, key), args));
 
         this.key = key;
         this.args = args;

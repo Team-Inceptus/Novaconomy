@@ -35,19 +35,19 @@ public final class InventorySelector {
 
     @NotNull
     public static NovaInventory confirm(Player p, Consumer<NovaInventory> confirm, Consumer<NovaInventory> cancel) {
-        NovaInventory inv = genGUI("confirm_menu", 27, get("constants.are_you_sure"));
+        NovaInventory inv = genGUI("confirm_menu", 27, get(p, "constants.are_you_sure"));
         inv.setCancelled();
 
         inv.setAttribute("accept_action", confirm);
         inv.setAttribute("cancel_action", cancel);
 
         inv.setItem(21, builder(Items.LIME_WOOL,
-                meta -> meta.setDisplayName(ChatColor.GREEN + get("constants.yes")),
+                meta -> meta.setDisplayName(ChatColor.GREEN + get(p, "constants.yes")),
                 nbt -> nbt.set("type", "accept"))
         );
 
         inv.setItem(23, builder(Items.RED_WOOL,
-                meta -> meta.setDisplayName(ChatColor.RED + get("constants.cancel")),
+                meta -> meta.setDisplayName(ChatColor.RED + get(p, "constants.cancel")),
                 nbt -> nbt.set("type", "cancel"))
         );
 
@@ -58,7 +58,7 @@ public final class InventorySelector {
     }
 
     public static NovaInventory selectCorporationChildren(Player p, SortingType<Business> sorter, String searchQuery, Consumer<Business> consumer) {
-        NovaInventory inv = genGUI("select_corporation_children", 54, get("constants.corporation.select_child"));
+        NovaInventory inv = genGUI("select_corporation_children", 54, get(p, "constants.corporation.select_child"));
         inv.setCancelled();
 
         Corporation c = Corporation.byOwner(p);
@@ -74,7 +74,7 @@ public final class InventorySelector {
 
         inv.setItem(9, sorter(sorter));
         inv.setItem(17, builder(Items.OAK_SIGN,
-                meta -> meta.setDisplayName(ChatColor.GREEN + get("constants.search")),
+                meta -> meta.setDisplayName(ChatColor.GREEN + get(p, "constants.search")),
                 nbt -> nbt.setID("find_child:search"))
         );
 

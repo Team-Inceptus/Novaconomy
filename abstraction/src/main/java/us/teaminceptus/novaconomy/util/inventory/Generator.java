@@ -101,7 +101,7 @@ public final class Generator {
                 CorporationRank rank = parent.getRank(b);
                 ItemStack pIcon = builder(parent.getPublicIcon(),
                         meta -> meta.setLore(Arrays.asList(
-                                ChatColor.GOLD + get("constants.parent_corporation"),
+                                ChatColor.GOLD + get(viewer, "constants.parent_corporation"),
                                 ChatColor.GOLD + rank.getName()
                         )), nbt -> {
                             nbt.setID("corporation:click");
@@ -122,9 +122,9 @@ public final class Generator {
             boolean anonymous = !b.getSetting(Settings.Business.PUBLIC_OWNER) && !b.isOwner(viewer);
             ItemStack owner = builder(createPlayerHead(anonymous ? null : b.getOwner()),
                     meta -> {
-                        meta.setDisplayName(anonymous ? ChatColor.AQUA + get("constants.business.anonymous") : format(get("constants.owner"), b.getOwner().getName()));
+                        meta.setDisplayName(anonymous ? ChatColor.AQUA + get(viewer, "constants.business.anonymous") : format(viewer, get(viewer, "constants.owner"), b.getOwner().getName()));
                         if (b.isOwner(viewer) && !b.getSetting(Settings.Business.PUBLIC_OWNER))
-                            meta.setLore(Collections.singletonList(ChatColor.YELLOW + get("constants.business.hidden")));
+                            meta.setLore(Collections.singletonList(ChatColor.YELLOW + get(viewer, "constants.business.hidden")));
                     }, nbt -> {
                         if (!anonymous) {
                             nbt.setID("player_stats");
@@ -136,9 +136,9 @@ public final class Generator {
             boolean pHome = b.getSetting(Settings.Business.PUBLIC_HOME) || b.isOwner(viewer);
             ItemStack home = builder(pHome ? (w.isLegacy() ? Material.matchMaterial("WORKBENCH") : Material.matchMaterial("CRAFTING_TABLE")) : Material.BARRIER,
                     meta -> {
-                        meta.setDisplayName(pHome ? ChatColor.AQUA + get("constants.business.home") : ChatColor.RED + get("constants.business.anonymous_home"));
+                        meta.setDisplayName(pHome ? ChatColor.AQUA + get(viewer, "constants.business.home") : ChatColor.RED + get(viewer, "constants.business.anonymous_home"));
                         if (b.isOwner(viewer) && !b.getSetting(Settings.Business.PUBLIC_HOME))
-                            meta.setLore(Collections.singletonList(ChatColor.YELLOW + get("constants.business.hidden")));
+                            meta.setLore(Collections.singletonList(ChatColor.YELLOW + get(viewer, "constants.business.hidden")));
                     }, nbt -> {
                         nbt.setID("business:home");
                         nbt.set(BUSINESS_TAG, b.getUniqueId());
@@ -150,7 +150,7 @@ public final class Generator {
             inv.setItem(12, home);
 
             ItemStack invites = builder(Material.ENCHANTED_BOOK,
-                    meta -> meta.setDisplayName(ChatColor.AQUA + get("constants.business.invites")),
+                    meta -> meta.setDisplayName(ChatColor.AQUA + get(viewer, "constants.business.invites")),
                     nbt -> {
                         nbt.setID("business:invites");
                         nbt.set(BUSINESS_TAG, b.getUniqueId());
@@ -158,12 +158,12 @@ public final class Generator {
             );
 
             ItemStack advInfo = builder(Material.BUCKET,
-                    meta -> meta.setDisplayName(ChatColor.AQUA + get("constants.business.advertising")),
+                    meta -> meta.setDisplayName(ChatColor.AQUA + get(viewer, "constants.business.advertising")),
                     nbt -> nbt.setID("business:advertising")
             );
 
             ItemStack supplyChests = builder(Material.CHEST,
-                    meta -> meta.setDisplayName(ChatColor.GOLD + get("constants.business.supply_chests")),
+                    meta -> meta.setDisplayName(ChatColor.GOLD + get(viewer, "constants.business.supply_chests")),
                     nbt -> {
                         nbt.setID("business:supply_chests");
                         nbt.set(BUSINESS_TAG, b.getUniqueId());
@@ -171,7 +171,7 @@ public final class Generator {
             );
 
             ItemStack settings = builder(Material.NETHER_STAR,
-                    meta -> meta.setDisplayName(ChatColor.GREEN + get("constants.settings.business")),
+                    meta -> meta.setDisplayName(ChatColor.GREEN + get(viewer, "constants.settings.business")),
                     nbt -> {
                         nbt.setID("business:settings");
                         nbt.set(BUSINESS_TAG, b.getUniqueId());
@@ -206,10 +206,10 @@ public final class Generator {
                             List<String> lore = meta.hasLore() ? new ArrayList<>(meta.getLore()) : new ArrayList<>();
                             lore.add(" ");
                             lore.add(
-                                    format(get("constants.price"), format("%,.2f", p.getAmount()), String.valueOf(p.getEconomy().getSymbol()))
+                                    format(viewer, get(viewer, "constants.price"), format("%,.2f", p.getAmount()), String.valueOf(p.getEconomy().getSymbol()))
                             );
                             if (!b.isInStock(item)) {
-                                lore.add(ChatColor.RED + get("constants.business.no_stock"));
+                                lore.add(ChatColor.RED + get(viewer, "constants.business.no_stock"));
                                 stock.set(false);
                             } else {
                                 AtomicInteger index = new AtomicInteger();
@@ -217,7 +217,7 @@ public final class Generator {
                                     if (item.isSimilar(res)) index.addAndGet(res.getAmount());
                                 });
 
-                                lore.add(format(get("constants.business.stock_left"), format("%,d", index.get())));
+                                lore.add(format(viewer, get(viewer, "constants.business.stock_left"), format("%,d", index.get())));
                             }
 
                             meta.setLore(lore);
@@ -250,9 +250,9 @@ public final class Generator {
             boolean pStats = b.getSetting(Settings.Business.PUBLIC_STATISTICS) || b.isOwner(viewer);
             ItemStack stats = builder(pStats ? Material.PAPER : Material.BARRIER,
                     meta -> {
-                        meta.setDisplayName(pStats ? ChatColor.AQUA + get("constants.business.statistics") : ChatColor.RED + get("constants.business.anonymous_statistics"));
+                        meta.setDisplayName(pStats ? ChatColor.AQUA + get(viewer, "constants.business.statistics") : ChatColor.RED + get(viewer, "constants.business.anonymous_statistics"));
                         if (b.isOwner(viewer) && !b.getSetting(Settings.Business.PUBLIC_STATISTICS))
-                            meta.setLore(Collections.singletonList(ChatColor.YELLOW + get("constants.business.hidden")));
+                            meta.setLore(Collections.singletonList(ChatColor.YELLOW + get(viewer, "constants.business.hidden")));
                     }, nbt -> {
                         nbt.setID("business:statistics");
                         nbt.set(BUSINESS_TAG, b.getUniqueId());
@@ -269,7 +269,7 @@ public final class Generator {
             }
 
             inv.setItem(35, Items.builder(kMaterial, meta -> {
-                meta.setDisplayName(ChatColor.YELLOW + get("constants.business.keywords"));
+                meta.setDisplayName(ChatColor.YELLOW + get(viewer, "constants.business.keywords"));
                 if (!b.getKeywords().isEmpty())
                     meta.setLore(Arrays.asList(ChatPaginator.wordWrap(ChatColor.AQUA + String.join(", ", b.getKeywords()), 30)));
             }));
@@ -281,9 +281,9 @@ public final class Generator {
 
                 ItemStack rating = Items.builder(pRating ? RATING_MATS[avgI] : Material.BARRIER,
                         meta -> {
-                            meta.setDisplayName(pRating ? ChatColor.YELLOW + format("%,.1f", avg) + "⭐" : ChatColor.RED + get("constants.business.anonymous_rating"));
+                            meta.setDisplayName(pRating ? ChatColor.YELLOW + format("%,.1f", avg) + "⭐" : ChatColor.RED + get(viewer, "constants.business.anonymous_rating"));
                             if (b.isOwner(viewer) && !b.getSetting(Settings.Business.PUBLIC_RATING))
-                                meta.setLore(Collections.singletonList(ChatColor.YELLOW + get("constants.business.hidden")));
+                                meta.setLore(Collections.singletonList(ChatColor.YELLOW + get(viewer, "constants.business.hidden")));
                         });
                 inv.setItem(44, rating);
             } else inv.setItem(44, null);
@@ -346,7 +346,7 @@ public final class Generator {
             boolean viewerTp = c.getSetting(Settings.Corporation.PUBLIC_HEADQUARTERS) || (c.getMembers().contains(viewer) && c.getRank(viewer).hasPermission(CorporationPermission.TELEPORT_TO_HEADQUARTERS));
             if (c.getSetting(Settings.Corporation.PUBLIC_HEADQUARTERS) || viewerTp || c.isOwner(viewer)) {
                 ItemStack hq = builder(Material.GLASS,
-                        meta -> meta.setDisplayName(ChatColor.YELLOW + get("constants.corporation.headquarters")),
+                        meta -> meta.setDisplayName(ChatColor.YELLOW + get(viewer, "constants.corporation.headquarters")),
                         nbt -> {
                             nbt.setID("corporation:hq");
                             nbt.set(CORPORATION_TAG, c.getUniqueId());
@@ -358,7 +358,7 @@ public final class Generator {
             if (c.isOwner(viewer)) inv.setItem(11, Items.LOCKED);
 
         ItemStack achievements = builder(Material.BOOK,
-                meta -> meta.setDisplayName(ChatColor.YELLOW + get("constants.corporation.achievements")),
+                meta -> meta.setDisplayName(ChatColor.YELLOW + get(viewer, "constants.corporation.achievements")),
                 nbt -> {
                     nbt.setID("corporation:achievements");
                     nbt.set(CORPORATION_TAG, c.getUniqueId());
@@ -367,12 +367,12 @@ public final class Generator {
         inv.setItem(12, achievements);
 
         ItemStack owner = Items.builder(createPlayerHead(c.getOwner()),
-                meta -> meta.setDisplayName(format(get("constants.owner"), c.getOwner().getName()))
+                meta -> meta.setDisplayName(format(viewer, get(viewer, "constants.owner"), c.getOwner().getName()))
         );
         inv.setItem(13, owner);
 
         ItemStack statistics = builder(Material.PAINTING,
-                meta -> meta.setDisplayName(ChatColor.YELLOW + get("constants.corporation.statistics")),
+                meta -> meta.setDisplayName(ChatColor.YELLOW + get(viewer, "constants.corporation.statistics")),
                 nbt -> {
                     nbt.setID("corporation:statistics");
                     nbt.set(CORPORATION_TAG, c.getUniqueId());
@@ -382,9 +382,9 @@ public final class Generator {
 
         ItemStack leveling = builder(Material.GOLD_BLOCK,
                 meta -> {
-                    meta.setDisplayName(ChatColor.YELLOW + format(get("constants.level"), format("%,d", c.getLevel())));
+                    meta.setDisplayName(ChatColor.YELLOW + format(viewer, get(viewer, "constants.level"), format("%,d", c.getLevel())));
                     meta.setLore(Collections.singletonList(
-                            ChatColor.GOLD + format(get("constants.experience"), format("%,.2f", c.getExperience()))
+                            ChatColor.GOLD + format(viewer, get(viewer, "constants.experience"), format("%,.2f", c.getExperience()))
                     ));
                 }, nbt -> {
                     nbt.setID("corporation:leveling");
@@ -394,7 +394,7 @@ public final class Generator {
         inv.setItem(15, leveling);
 
         ItemStack ranks = builder(Material.IRON_INGOT,
-                meta -> meta.setDisplayName(ChatColor.LIGHT_PURPLE + get("constants.ranks")),
+                meta -> meta.setDisplayName(ChatColor.LIGHT_PURPLE + get(viewer, "constants.ranks")),
                 nbt -> {
                     nbt.setID("corporation:ranks");
                     nbt.set(CORPORATION_TAG, c.getUniqueId());
@@ -426,18 +426,18 @@ public final class Generator {
                             List<String> lore = meta.hasLore() ? new ArrayList<>(meta.getLore()) : new ArrayList<>();
                             lore.addAll(Arrays.asList(
                                     " ",
-                                    ChatColor.AQUA + get("constants.featured_product"),
+                                    ChatColor.AQUA + get(viewer, "constants.featured_product"),
                                     ChatColor.DARK_AQUA + b.getName(),
                                     ChatColor.GOLD + "----------",
                                     " ",
-                                    format(get("constants.price"), format("%,.2f", p.getAmount()), String.valueOf(p.getEconomy().getSymbol()))
+                                    format(viewer, get(viewer, "constants.price"), format("%,.2f", p.getAmount()), String.valueOf(p.getEconomy().getSymbol()))
                             ));
                             AtomicInteger index = new AtomicInteger();
                             b.getResources().forEach(res -> {
                                 if (item.isSimilar(res)) index.addAndGet(res.getAmount());
                             });
 
-                            lore.add(format(get("constants.business.stock_left"), format("%,d", index.get())));
+                            lore.add(format(viewer, get(viewer, "constants.business.stock_left"), format("%,d", index.get())));
 
                             meta.setLore(lore);
                         }, nbt -> {
@@ -485,7 +485,7 @@ public final class Generator {
 
             if (pRank.hasPermission(CorporationPermission.EDIT_DETAILS)) {
                 ItemStack editDesc = builder(Items.OAK_SIGN,
-                        meta -> meta.setDisplayName(ChatColor.YELLOW + get("constants.corporation.edit_description")),
+                        meta -> meta.setDisplayName(ChatColor.YELLOW + get(viewer, "constants.corporation.edit_description")),
                         nbt -> {
                             nbt.setID("corporation:edit_desc");
                             nbt.set(CORPORATION_TAG, c.getUniqueId());
@@ -496,7 +496,7 @@ public final class Generator {
 
             if (pRank.hasPermission(CorporationPermission.EDIT_SETTINGS)) {
                 ItemStack settings = builder(Material.NETHER_STAR,
-                        meta -> meta.setDisplayName(ChatColor.GREEN + get("constants.settings.corporation")),
+                        meta -> meta.setDisplayName(ChatColor.GREEN + get(viewer, "constants.settings.corporation")),
                         nbt -> {
                             nbt.setID("corporation:settings");
                             nbt.set(CORPORATION_TAG, c.getUniqueId());
@@ -509,8 +509,8 @@ public final class Generator {
         return inv;
     }
 
-    public static NovaInventory generateCorporationLeveling(@NotNull Corporation c, int currentLevel) {
-        NovaInventory inv = genGUI(36, ChatColor.DARK_BLUE + c.getName() + " | " + get("constants.leveling"));
+    public static NovaInventory generateCorporationLeveling(@NotNull Corporation c, int currentLevel, Player viewer) {
+        NovaInventory inv = genGUI(36, ChatColor.DARK_BLUE + c.getName() + " | " + get(viewer, "constants.leveling"));
         int level = c.getLevel();
 
         inv.setCancelled();
@@ -540,16 +540,16 @@ public final class Generator {
 
             // Completed Information
 
-            lore.add((completed ? ChatColor.GREEN : ChatColor.RED) + format(get("constants.corporation.increase_children"), 5));
+            lore.add((completed ? ChatColor.GREEN : ChatColor.RED) + format(viewer, get(viewer, "constants.corporation.increase_children"), 5));
 
             if (cLevel == 3)
-                lore.add(ChatColor.LIGHT_PURPLE + get("constants.corporation.headquarters"));
+                lore.add(ChatColor.LIGHT_PURPLE + get(viewer, "constants.corporation.headquarters"));
 
             if (cLevel <= 50 && cLevel % 5 == 0)
-                lore.add(ChatColor.DARK_GREEN + format(get("constants.corporation.profit_modifier"), 10 + "%"));
+                lore.add(ChatColor.DARK_GREEN + format(viewer, get(viewer, "constants.corporation.profit_modifier"), 10 + "%"));
 
             if (cLevel <= 54 && cLevel % 6 == 0)
-                lore.add(ChatColor.BLUE + format(get("constants.corporation.rank_slots"), 1));
+                lore.add(ChatColor.BLUE + format(viewer, get(viewer, "constants.corporation.rank_slots"), 1));
 
             // Icon Setting
 
@@ -561,7 +561,7 @@ public final class Generator {
 
             icon = Items.builder(icon,
                     meta -> {
-                        meta.setDisplayName(format((completed ? ChatColor.GREEN : ChatColor.YELLOW) + get("constants.level"), format("%,d", cLevel)));
+                        meta.setDisplayName(format((completed ? ChatColor.GREEN : ChatColor.YELLOW) + get(viewer, "constants.level"), format("%,d", cLevel)));
                         if (cLevel > 1) meta.setLore(lore);
 
                         if (completed) {
@@ -582,8 +582,8 @@ public final class Generator {
         return inv;
     }
 
-    public static NovaInventory generateCorporationAchievements(Corporation c) {
-        NovaInventory inv = genGUI(54, ChatColor.DARK_BLUE + c.getName() + " | " + get("constants.achievements"));
+    public static NovaInventory generateCorporationAchievements(Corporation c, Player viewer) {
+        NovaInventory inv = genGUI(54, ChatColor.DARK_BLUE + c.getName() + " | " + get(viewer, "constants.achievements"));
         inv.setCancelled();
 
         inv.setItem(13, c.getPublicIcon());
@@ -610,11 +610,11 @@ public final class Generator {
                             int next = currentLevel + 1;
 
                             lore.add(ChatColor.YELLOW + a.getDisplayName() + " " + toRoman(next) + ":");
-                            lore.add(ChatColor.GOLD + "+" + format(get("constants.experience"), format("%,.0f", a.getExperienceReward() * next)));
+                            lore.add(ChatColor.GOLD + "+" + format(viewer, get(viewer, "constants.experience"), format("%,.0f", a.getExperienceReward() * next)));
                             lore.add(" ");
-                            lore.add(ChatColor.DARK_GREEN + format(get("constants.completed"), format("%,.1f", a.getProgress(c)) + "%"));
+                            lore.add(ChatColor.DARK_GREEN + format(viewer, get(viewer, "constants.completed"), format("%,.1f", a.getProgress(c)) + "%"));
                         } else
-                            lore.add(ChatColor.DARK_GREEN + format(get("constants.completed"), "100.0%"));
+                            lore.add(ChatColor.DARK_GREEN + format(viewer, get(viewer, "constants.completed"), "100.0%"));
 
                         meta.setLore(lore);
                     }
@@ -631,20 +631,20 @@ public final class Generator {
         return inv;
     }
 
-    public static NovaInventory generateCorporationStatistics(@NotNull Corporation c) {
-        NovaInventory inv = genGUI(45, ChatColor.DARK_BLUE + c.getName() + " | " + get("constants.statistics"));
+    public static NovaInventory generateCorporationStatistics(@NotNull Corporation c, Player viewer) {
+        NovaInventory inv = genGUI(45, ChatColor.DARK_BLUE + c.getName() + " | " + get(viewer, "constants.statistics"));
         inv.setCancelled();
 
         inv.setItem(13, c.getPublicIcon());
 
         ItemStack views = Items.builder(Material.matchMaterial("SPYGLASS") == null ? Material.COMPASS : Material.matchMaterial("SPYGLASS"),
-                meta -> meta.setDisplayName(format(get("constants.views"), format("%,d", c.getViews())))
+                meta -> meta.setDisplayName(format(viewer, get(viewer, "constants.views"), format("%,d", c.getViews())))
         );
         inv.setItem(21, views);
 
         ItemStack moneyMade = Items.builder(Material.DIAMOND,
                 meta -> {
-                    meta.setDisplayName(ChatColor.AQUA + get("constants.stats.global.total_made"));
+                    meta.setDisplayName(ChatColor.AQUA + get(viewer, "constants.stats.global.total_made"));
                     meta.setLore(Collections.singletonList(
                             ChatColor.GOLD + format("%,.2f", c.getStatistics().getTotalProfit())
                     ));
@@ -653,7 +653,7 @@ public final class Generator {
         inv.setItem(22, moneyMade);
 
         ItemStack productsSold = Items.builder(Material.matchMaterial("BUNDLE") == null ? Material.CHEST : Material.matchMaterial("BUNDLE"),
-                meta -> meta.setDisplayName(format(get("constants.stats.global.sold"), format("%,d", c.getStatistics().getTotalProductsSold())))
+                meta -> meta.setDisplayName(format(viewer, get(viewer, "constants.stats.global.sold"), format("%,d", c.getStatistics().getTotalProductsSold())))
         );
         inv.setItem(23, productsSold);
 
@@ -721,7 +721,7 @@ public final class Generator {
         int pageCount = Math.floorDiv(ratings.size() - 1, GUI_SPACE) + 1;
 
         for (int i = 0; i < pageCount; i++) {
-            NovaInventory inv = genGUI(54, ChatColor.DARK_AQUA + get("constants.business.ratings") + " - " + format(get("constants.page"), i + 1));
+            NovaInventory inv = genGUI(54, ChatColor.DARK_AQUA + get(p, "constants.business.ratings") + " - " + format(p, get(p, "constants.page"), i + 1));
             inv.setCancelled();
 
             inv.setItem(4, b.getPublicIcon());
@@ -746,7 +746,7 @@ public final class Generator {
 
                 inv.addItem(builder(createPlayerHead(anon ? null : owner),
                         meta -> {
-                            meta.setDisplayName(ChatColor.AQUA + (anon ? get("constants.business.anonymous") : owner.getName()));
+                            meta.setDisplayName(ChatColor.AQUA + (anon ? get(p, "constants.business.anonymous") : owner.getName()));
 
                             StringBuilder sBuilder = new StringBuilder();
                             for (int j = 0; j < r.getRatingLevel(); j++) sBuilder.append("⭐");
@@ -790,7 +790,7 @@ public final class Generator {
         Business randB = Business.randomAdvertisingBusiness();
 
         for (int i = 0; i < pageCount; i++) {
-            NovaInventory inv = genGUI(54, get("constants.balances") + " - " + format(get("constants.page"), i + 1));
+            NovaInventory inv = genGUI(54, get(p, "constants.balances") + " - " + format(p, get(p, "constants.page"), i + 1));
             inv.setCancelled();
 
             final int fI = i;
@@ -844,7 +844,7 @@ public final class Generator {
         return invs;
     }
 
-    public static List<NovaInventory> getBankBalanceGUI(SortingType<Economy> sorter) {
+    public static List<NovaInventory> getBankBalanceGUI(SortingType<Economy> sorter, Player viewer) {
         List<NovaInventory> invs = new ArrayList<>();
 
         ItemStack nextA = next("bank_balance");
@@ -861,13 +861,13 @@ public final class Generator {
         Business randB = Business.randomAdvertisingBusiness();
 
         for (int i = 0; i < pageCount; i++) {
-            NovaInventory inv = genGUI(54, get("constants.bank.balance") + " - " + format(get("constants.page"), i + 1));
+            NovaInventory inv = genGUI(54, get(viewer, "constants.bank.balance") + " - " + format(viewer, get(viewer, "constants.page"), i + 1));
             inv.setCancelled();
 
             final int fI = i;
             inv.setAttribute("sorting_type", Economy.class);
             inv.setAttribute("sorting_function", (Function<SortingType<Economy>, NovaInventory>) s ->
-                    getBankBalanceGUI(s).get(fI));
+                    getBankBalanceGUI(s, viewer).get(fI));
 
             inv.setItem(18, sorter(sorter));
 
@@ -891,7 +891,7 @@ public final class Generator {
                 ItemMeta iMeta = item.getItemMeta();
                 iMeta.setDisplayName(ChatColor.AQUA + format("%,.2f", Bank.getBalance(econ)) + econ.getSymbol() + " (" + econ.getName() + ")");
                 List<String> topDonors = new ArrayList<>();
-                topDonors.add(ChatColor.YELLOW + get("constants.bank.top_donors"));
+                topDonors.add(ChatColor.YELLOW + get(viewer, "constants.bank.top_donors"));
                 topDonors.add(" ");
                 List<String> topDonorsNames = NovaPlayer.getTopDonators(econ, 10).stream().map(NovaPlayer::getPlayerName).collect(Collectors.toList());
                 List<Double> topDonorsAmounts = NovaPlayer.getTopDonators(econ, 10).stream().map(n -> n.getDonatedAmount(econ)).collect(Collectors.toList());
@@ -925,8 +925,8 @@ public final class Generator {
         return invs;
     }
 
-    public static NovaInventory generateBusinessDiscovery(SortingType<Business> sorter, String... keywords) {
-        NovaInventory discover = genGUI(54, get("constants.business.discover"));
+    public static NovaInventory generateBusinessDiscovery(Player viewer, SortingType<Business> sorter, String... keywords) {
+        NovaInventory discover = genGUI(54, get(viewer, "constants.business.discover"));
         discover.setCancelled();
 
         List<Business> businesses = Business.getBusinesses()
@@ -970,8 +970,8 @@ public final class Generator {
     }
 
     @NotNull
-    public static NovaInventory generateBusinessInvites(@NotNull Business b, @NotNull SortingType<CorporationInvite> sorter) {
-        NovaInventory inv = genGUI(36, get("constants.business.invites"));
+    public static NovaInventory generateBusinessInvites(@NotNull Business b, @NotNull SortingType<CorporationInvite> sorter, Player viewer) {
+        NovaInventory inv = genGUI(36, get(viewer, "constants.business.invites"));
         inv.setCancelled();
 
         inv.setItem(19, 20, 23, 24, GUI_BACKGROUND);
@@ -988,14 +988,14 @@ public final class Generator {
 
         if (invites.isEmpty()) {
             inv.setItem(13, Items.builder(Material.PAPER,
-                    meta -> meta.setDisplayName(ChatColor.WHITE + get("constants.business.invites.none_yet"))
+                    meta -> meta.setDisplayName(ChatColor.WHITE + get(viewer, "constants.business.invites.none_yet"))
             ));
 
             inv.addItem(9, GUI_BACKGROUND);
             return inv;
         } else {
             inv.setAttribute("sorting_type", CorporationInvite.class);
-            inv.setAttribute("sorting_function", (Function<SortingType<CorporationInvite>, NovaInventory>) s -> generateBusinessInvites(b, s));
+            inv.setAttribute("sorting_function", (Function<SortingType<CorporationInvite>, NovaInventory>) s -> generateBusinessInvites(b, s, viewer));
 
             inv.setItem(18, sorter(sorter));
 
@@ -1005,10 +1005,10 @@ public final class Generator {
                         meta -> {
                             meta.setDisplayName(ChatColor.GOLD + from.getName());
                             meta.setLore(Arrays.asList(
-                                    ChatColor.AQUA + formatTimeAgo(i.getInvitedTimestamp().getTime()),
+                                    ChatColor.AQUA + formatTimeAgo(viewer, i.getInvitedTimestamp().getTime()),
                                     " ",
-                                    ChatColor.YELLOW + get("constants.business.invites.right_click_accept"),
-                                    ChatColor.YELLOW + get("constants.business.invites.left_click_decline")
+                                    ChatColor.YELLOW + get(viewer, "constants.business.invites.right_click_accept"),
+                                    ChatColor.YELLOW + get(viewer, "constants.business.invites.left_click_decline")
                             ));
                         }, nbt -> {
                             nbt.setID("business:invite");
@@ -1024,7 +1024,7 @@ public final class Generator {
     }
 
     public static NovaInventory generateMarket(@NotNull Player p, @NotNull MarketCategory category, @NotNull SortingType<Material> sorter, @NotNull Economy econ, int page) {
-        NovaInventory inv = genGUI(54, get("constants.market"));
+        NovaInventory inv = genGUI(54, get(p, "constants.market"));
         inv.setCancelled();
 
         inv.setAttribute("category", category);
@@ -1038,7 +1038,7 @@ public final class Generator {
                     meta.setDisplayName(ChatColor.DARK_PURPLE + p.getName());
                     if (max > 0 && !p.hasPermission("novaconomy.admin.market.bypass_limit")) {
                         meta.setLore(Arrays.asList(
-                                ChatColor.GREEN + format(get("constants.market.purchases_left"), ChatColor.GOLD + format("%,d", purchasesLeft))
+                                ChatColor.GREEN + format(p, get(p, "constants.market.purchases_left"), ChatColor.GOLD + format("%,d", purchasesLeft))
                         ));
                     }
                 }
@@ -1052,8 +1052,8 @@ public final class Generator {
         if (NovaConfig.getMarket().getLastRestockTimestamp() != null) {
             inv.setItem(8, Items.builder(Items.CLOCK,
                     meta -> {
-                        meta.setDisplayName(ChatColor.DARK_GREEN + get("constants.market.last_restock"));
-                        meta.setLore(Collections.singletonList(ChatColor.AQUA + formatTimeAgo(NovaConfig.getMarket().getLastRestockTimestamp().getTime())));
+                        meta.setDisplayName(ChatColor.DARK_GREEN + get(p, "constants.market.last_restock"));
+                        meta.setLore(Collections.singletonList(ChatColor.AQUA + formatTimeAgo(p, NovaConfig.getMarket().getLastRestockTimestamp().getTime())));
                     }
             ));
         }
@@ -1098,7 +1098,7 @@ public final class Generator {
 
         if (pages > 1 && page > 0)
             inv.setItem(47, builder(Items.head("arrow_left_gray"),
-                    meta -> meta.setDisplayName(ChatColor.AQUA + get("constants.prev")),
+                    meta -> meta.setDisplayName(ChatColor.AQUA + get(p, "constants.prev")),
                     nbt -> {
                         nbt.setID("market:page");
                         nbt.set("page", page - 1);
@@ -1108,7 +1108,7 @@ public final class Generator {
 
         if (pages > 1 && page < (pages - 1))
             inv.setItem(53, builder(Items.head("arrow_right_gray"),
-                    meta -> meta.setDisplayName(ChatColor.AQUA + get("constants.next")),
+                    meta -> meta.setDisplayName(ChatColor.AQUA + get(p, "constants.next")),
                     nbt -> {
                         nbt.setID("market:page");
                         nbt.set("page", page + 1);
@@ -1133,13 +1133,13 @@ public final class Generator {
                         lore.add(ChatColor.GOLD + format("%,.2f", price) + econ.getSymbol());
 
                         if (np.getPurchases(m).stream().anyMatch(Receipt::isRecent))
-                            lore.add(ChatColor.GREEN + get("constants.market.purchased_recently"));
+                            lore.add(ChatColor.GREEN + get(p, "constants.market.purchased_recently"));
 
                         lore.add(" ");
                         if (NovaConfig.getMarket().getStock(m) <= 0)
-                            lore.add(ChatColor.RED + get("constants.business.no_stock"));
+                            lore.add(ChatColor.RED + get(p, "constants.business.no_stock"));
                         else
-                            lore.add(ChatColor.LIGHT_PURPLE + format(get("constants.business.stock_left"), ChatColor.BLUE + format("%,d", NovaConfig.getMarket().getStock(m))));
+                            lore.add(ChatColor.LIGHT_PURPLE + format(p, get(p, "constants.business.stock_left"), ChatColor.BLUE + format("%,d", NovaConfig.getMarket().getStock(m))));
 
                         meta.setLore(lore);
                     },
@@ -1154,7 +1154,7 @@ public final class Generator {
         return inv;
     }
 
-    public static List<NovaInventory> generateBusinessSupplyChests(@NotNull Business business, @NotNull SortingType<Block> sorter) {
+    public static List<NovaInventory> generateBusinessSupplyChests(@NotNull Business business, @NotNull SortingType<Block> sorter, Player viewer) {
         List<NovaInventory> invs = new ArrayList<>();
 
         List<Block> blocks = business.getSupplyChests()
@@ -1166,7 +1166,7 @@ public final class Generator {
         int limit = (business.getSupplyChests().size() / GUI_SPACE) + 1;
 
         for (int i = 0; i < limit; i++) {
-            NovaInventory inv = genGUI(54, get("constants.business.supply_chests"));
+            NovaInventory inv = genGUI(54, get(viewer, "constants.business.supply_chests"));
 
             final int fI = i;
             inv.setItem(18, Items.sorter(sorter));
@@ -1174,7 +1174,7 @@ public final class Generator {
             inv.setAttribute("business", business.getUniqueId());
             inv.setAttribute("sorter", sorter);
             inv.setAttribute("sorting_type", Block.class);
-            inv.setAttribute("sorting_function", (Function<SortingType<Block>, NovaInventory>) s -> generateBusinessSupplyChests(business, s).get(fI));
+            inv.setAttribute("sorting_function", (Function<SortingType<Block>, NovaInventory>) s -> generateBusinessSupplyChests(business, s, viewer).get(fI));
 
             List<Block> chests = blocks.subList(i * GUI_SPACE, Math.min(blocks.size(), (i + 1) * GUI_SPACE));
             chests.forEach(b -> inv.addItem(NBTWrapper.builder(Material.CHEST,
@@ -1182,7 +1182,7 @@ public final class Generator {
                         meta.setDisplayName(ChatColor.BLUE + b.getWorld().getName() + ChatColor.GOLD + " | " + ChatColor.YELLOW + b.getX() + ", " + b.getY() + ", " + b.getZ());
                         meta.setLore(Arrays.asList(
                                 " ",
-                                ChatColor.YELLOW + get("constants.click_remove")
+                                ChatColor.YELLOW + get(viewer, "constants.click_remove")
                         ));
                     }, nbt -> {
                         nbt.setID("business:remove_supply_chest");
@@ -1243,7 +1243,7 @@ public final class Generator {
         int limit = (items.size() / GUI_SPACE) + 1;
 
         for (int i = 0; i < limit; i++) {
-            NovaInventory inv = genGUI(54, get("constants.auction_house") + " | " + format(get("constants.page"), i + 1));
+            NovaInventory inv = genGUI(54, get(viewer, "constants.auction_house") + " | " + format(viewer, get(viewer, "constants.page"), i + 1));
             inv.setCancelled();
             inv.setAttribute("auction:search_query", searchQuery);
 
@@ -1251,14 +1251,14 @@ public final class Generator {
 
             if (searchQuery.isEmpty())
                 inv.setItem(6, builder(OAK_SIGN,
-                        meta -> meta.setDisplayName(ChatColor.YELLOW + get("constants.search")),
+                        meta -> meta.setDisplayName(ChatColor.YELLOW + get(viewer, "constants.search")),
                         nbt -> nbt.setID("auction_house:search")
 
                 ));
             else
                 inv.setItem(6, builder(RED_WOOL,
                         meta -> {
-                            meta.setDisplayName(ChatColor.RED + get("constants.clear_search"));
+                            meta.setDisplayName(ChatColor.RED + get(viewer, "constants.clear_search"));
                             meta.setLore(Collections.singletonList(ChatColor.YELLOW + "\"" + searchQuery + "\""));
                         },
                         nbt -> {
@@ -1268,7 +1268,7 @@ public final class Generator {
                 ));
 
             inv.setItem(7, builder(Material.PAPER,
-                    meta -> meta.setDisplayName(ChatColor.GREEN + get("constants.jump_to_page")),
+                    meta -> meta.setDisplayName(ChatColor.GREEN + get(viewer, "constants.jump_to_page")),
                     nbt -> nbt.setID("auction_house:jump_page")
             ));
 
@@ -1286,12 +1286,12 @@ public final class Generator {
 
                 inv.addItem(builder(a.getItem(),
                         meta -> meta.setLore(Arrays.asList(
-                                (loose ? ChatColor.AQUA : ChatColor.GOLD) + price.toString() + (loose ? "(" + get("constants.loose_price") + ")" : ""),
-                                ChatColor.GREEN + formatTimeAgo(a.getPostedTimestamp().getTime()),
-                                a.isBuyNow() ? ChatColor.DARK_PURPLE + get("constants.sorting_types.auction.buy_now") : "",
+                                (loose ? ChatColor.AQUA : ChatColor.GOLD) + price.toString() + (loose ? "(" + get(viewer, "constants.loose_price") + ")" : ""),
+                                ChatColor.GREEN + formatTimeAgo(viewer, a.getPostedTimestamp().getTime()),
+                                a.isBuyNow() ? ChatColor.DARK_PURPLE + get(viewer, "constants.sorting_types.auction.buy_now") : "",
                                 " ",
-                                ChatColor.YELLOW + get("constants.right_click_info"),
-                                ChatColor.YELLOW + get("constants.auction_house.left_click")
+                                ChatColor.YELLOW + get(viewer, "constants.right_click_info"),
+                                ChatColor.YELLOW + get(viewer, "constants.auction_house.left_click")
                         )),
                         nbt -> {
                             nbt.setID("auction:click");
@@ -1302,7 +1302,7 @@ public final class Generator {
 
             if (!AuctionHouse.getBidsBy(viewer).isEmpty())
                 inv.setItem(49, builder(Material.GOLD_INGOT,
-                        meta -> meta.setDisplayName(ChatColor.GOLD + get("constants.auction_house.my_bids")),
+                        meta -> meta.setDisplayName(ChatColor.GOLD + get(viewer, "constants.auction_house.my_bids")),
                         nbt -> {
                             nbt.setID("auction_house:my_bids");
                             nbt.set("bidder", viewer.getUniqueId());
@@ -1311,7 +1311,7 @@ public final class Generator {
 
             if (!AuctionHouse.getProducts(viewer).isEmpty())
                 inv.setItem(50, builder(Material.IRON_DOOR,
-                        meta -> meta.setDisplayName(ChatColor.LIGHT_PURPLE + get("constants.auction_house.my_auctions")),
+                        meta -> meta.setDisplayName(ChatColor.LIGHT_PURPLE + get(viewer, "constants.auction_house.my_auctions")),
                         nbt -> {
                             nbt.setID("auction_house:my_auctions");
                             nbt.set("owner", viewer.getUniqueId());
@@ -1320,7 +1320,7 @@ public final class Generator {
 
             if (!np.getWonAuctions().isEmpty())
                 inv.setItem(51, builder(Material.CHEST,
-                        meta -> meta.setDisplayName(ChatColor.YELLOW + get("constants.auction_house.won_auctions")),
+                        meta -> meta.setDisplayName(ChatColor.YELLOW + get(viewer, "constants.auction_house.won_auctions")),
                         nbt -> {
                             nbt.setID("auction_house:won_auctions");
                             nbt.set("owner", viewer.getUniqueId());
@@ -1346,7 +1346,7 @@ public final class Generator {
     }
 
     public static NovaInventory generateAuctionInfo(@NotNull OfflinePlayer viewer, @NotNull AuctionProduct a, @Nullable String searchQuery) {
-        NovaInventory inv = genGUI(45, get("constants.auction_house"));
+        NovaInventory inv = genGUI(45, get(viewer, "constants.auction_house"));
         inv.setCancelled();
         inv.setAttribute("auction:search_query", searchQuery);
 
@@ -1357,9 +1357,9 @@ public final class Generator {
                 meta -> meta.setLore(Arrays.asList(
                         ChatColor.LIGHT_PURPLE + "ID: " + a.getUUID().toString().replace("-", ""),
                         " ",
-                        ChatColor.RED + format(ChatColor.RED + get("constants.expires_on"), format.format(a.getExpirationTimestamp())),
+                        ChatColor.RED + format(ChatColor.RED + get(viewer, "constants.expires_on"), format.format(a.getExpirationTimestamp())),
                         ChatColor.YELLOW + a.getPrice().toString(),
-                        ChatColor.GOLD + formatTimeAgo(a.getPostedTimestamp().getTime())
+                        ChatColor.GOLD + formatTimeAgo(viewer, a.getPostedTimestamp().getTime())
                 ))
         ));
 
@@ -1367,7 +1367,7 @@ public final class Generator {
             Bid top = AuctionHouse.getTopBid(a);
             inv.setItem(30, Items.builder(Material.CHEST,
                     meta -> {
-                        meta.setDisplayName(ChatColor.YELLOW + get("constants.top_bid"));
+                        meta.setDisplayName(ChatColor.YELLOW + get(viewer, "constants.top_bid"));
                         meta.setLore(Collections.singletonList(
                                 ChatColor.AQUA + top.getBidder().getName() + " | " + ChatColor.GOLD + top.getPrice()
                         ));
@@ -1377,7 +1377,7 @@ public final class Generator {
 
         if (a.getOwner().equals(viewer)) {
             inv.setItem(31, builder(Material.REDSTONE_BLOCK,
-                    meta -> meta.setDisplayName(ChatColor.RED + get("constants.remove_item")),
+                    meta -> meta.setDisplayName(ChatColor.RED + get(viewer, "constants.remove_item")),
                     nbt -> {
                         nbt.setID("auction:remove_item");
                         nbt.set(PRODUCT_TAG, a.getUUID());
@@ -1385,7 +1385,7 @@ public final class Generator {
             );
 
             inv.setItem(32, builder(IRON_BARS,
-                    meta -> meta.setDisplayName(ChatColor.YELLOW + get("constants.auction_house.end_auction")),
+                    meta -> meta.setDisplayName(ChatColor.YELLOW + get(viewer, "constants.auction_house.end_auction")),
                     nbt -> {
                         nbt.setID("auction:end");
                         nbt.set(PRODUCT_TAG, a.getUUID());
@@ -1410,16 +1410,16 @@ public final class Generator {
 
         for (int i = 0; i < limit; i++) {
             List<AuctionProduct> pageProducts = wonProducts.subList(i * GUI_SPACE, Math.min(wonProducts.size(), (i + 1) * GUI_SPACE));
-            NovaInventory won = genGUI(54, get("constants.auction_house.won_auctions"));
+            NovaInventory won = genGUI(54, get(p, "constants.auction_house.won_auctions"));
             won.setCancelled();
             won.setAttribute("page", i);
 
             for (AuctionProduct product : pageProducts)
                 won.addItem(builder(product.getItem(),
                         meta -> meta.setLore(Arrays.asList(
-                                ChatColor.GOLD + format(get("constants.price"), format("%,.2f", product.getPrice().getAmount()), product.getPrice().getEconomy().getSymbol()),
+                                ChatColor.GOLD + format(p, get(p, "constants.price"), format("%,.2f", product.getPrice().getAmount()), product.getPrice().getEconomy().getSymbol()),
                                 " ",
-                                ChatColor.YELLOW + get("constants.click_to_claim")
+                                ChatColor.YELLOW + get(p, "constants.click_to_claim")
                         )), nbt -> {
                             nbt.setID("auction:claim");
                             nbt.set(PRODUCT_TAG, product.getUUID());
@@ -1444,7 +1444,7 @@ public final class Generator {
     }
 
     public static NovaInventory generateCorporationRanks(@NotNull Player p, @NotNull Corporation c) {
-        NovaInventory inv = genGUI(54, c.getName() + " | " + ChatColor.DARK_PURPLE + get("constants.ranks"));
+        NovaInventory inv = genGUI(54, c.getName() + " | " + ChatColor.DARK_PURPLE + get(p, "constants.ranks"));
         inv.setCancelled();
 
         CorporationRank pRank = c.getRank(p);
@@ -1461,7 +1461,7 @@ public final class Generator {
 
         inv.setItem(13, builder(Material.EMERALD,
                 meta -> {
-                    meta.setDisplayName(ChatColor.LIGHT_PURPLE + get("constants.corporation.owner"));
+                    meta.setDisplayName(ChatColor.LIGHT_PURPLE + get(p, "constants.corporation.owner"));
                     meta.setLore(Collections.singletonList(ChatColor.YELLOW + c.getOwner().getName()));
                     meta.addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1, true);
                     meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
@@ -1486,9 +1486,9 @@ public final class Generator {
                     meta -> {
                         meta.setDisplayName(ChatColor.YELLOW + "[" + rank.getPrefix() + "] " + rank.getName());
                         meta.setLore(Arrays.asList(
-                                ChatColor.AQUA + format(get("constants.members"), format("%,d", c.getMembers(rank).size())),
+                                ChatColor.AQUA + format(p, get(p, "constants.members"), format("%,d", c.getMembers(rank).size())),
                                 " ",
-                                ChatColor.YELLOW + get("constants.left_click_edit")
+                                ChatColor.YELLOW + get(p, "constants.left_click_edit")
                         ));
                     }, nbt -> {
                         nbt.setID("corporation:edit_rank");
@@ -1517,7 +1517,7 @@ public final class Generator {
         inv.setItem(5, Items.builder(rank.getIcon(),
                 meta -> {
                     meta.setDisplayName(ChatColor.YELLOW + "[" + rank.getPrefix() + "] " + rank.getName());
-                    meta.setLore(Arrays.asList(ChatColor.GOLD + format(get("constants.members"), format("%,d", c.getMembers(rank).size())) ));
+                    meta.setLore(Arrays.asList(ChatColor.GOLD + format(p, get(p, "constants.members"), format("%,d", c.getMembers(rank).size())) ));
                 })
         );
 
@@ -1525,7 +1525,7 @@ public final class Generator {
 
         inv.setItem(17, builder(OAK_SIGN,
                 meta -> {
-                    meta.setDisplayName(ChatColor.LIGHT_PURPLE + get("constants.set_name"));
+                    meta.setDisplayName(ChatColor.LIGHT_PURPLE + get(p, "constants.set_name"));
                     meta.setLore(Collections.singletonList(ChatColor.GOLD + rank.getName()));
                 },
                 nbt -> {
@@ -1538,7 +1538,7 @@ public final class Generator {
 
         inv.setItem(26, builder(Material.GLASS,
                 meta -> {
-                    meta.setDisplayName(ChatColor.AQUA + get("constants.set_prefix"));
+                    meta.setDisplayName(ChatColor.AQUA + get(p, "constants.set_prefix"));
                     meta.setLore(Collections.singletonList(ChatColor.GOLD + rank.getPrefix()));
                 },
                 nbt -> {
@@ -1551,7 +1551,7 @@ public final class Generator {
 
         inv.setItem(35, builder(IRON_BARS,
                 meta -> {
-                    meta.setDisplayName(ChatColor.YELLOW + get("constants.set_icon"));
+                    meta.setDisplayName(ChatColor.YELLOW + get(p, "constants.set_icon"));
                     meta.setLore(Collections.singletonList(ChatColor.GOLD + rank.getIcon().name().toLowerCase()));
                 },
                 nbt -> {
@@ -1574,7 +1574,7 @@ public final class Generator {
             CorporationPermission permission = perms.get(i);
             boolean perm = rank.hasPermission(permission);
 
-            inv.setItem(index, generateCorporationPermissionNode(c, rank, permission, perm));
+            inv.setItem(index, generateCorporationPermissionNode(c, rank, permission, perm, p));
         }
 
         inv.setItem(46, builder(BACK, nbt -> {
@@ -1585,12 +1585,12 @@ public final class Generator {
         return inv;
     }
 
-    public static ItemStack generateCorporationPermissionNode(Corporation c, CorporationRank rank, CorporationPermission permission, boolean perm) {
+    public static ItemStack generateCorporationPermissionNode(Corporation c, CorporationRank rank, CorporationPermission permission, boolean perm, Player viewer) {
         return builder(perm ? LIME_WOOL : RED_WOOL,
                 meta -> {
                     String nameKey = "constants.corporation.permission." + permission.name().toLowerCase();
 
-                    meta.setDisplayName(ChatColor.YELLOW + get(nameKey) + ": " + (perm ? ChatColor.GREEN + get("constants.on") : ChatColor.RED + get("constants.off")));
+                    meta.setDisplayName(ChatColor.YELLOW + get(nameKey) + ": " + (perm ? ChatColor.GREEN + get(viewer, "constants.on") : ChatColor.RED + get(viewer, "constants.off")));
                     meta.setLore(Arrays.stream(ChatPaginator.wordWrap(get(nameKey + ".desc"), 30))
                             .map(s -> ChatColor.GRAY + s)
                             .collect(Collectors.toList())
