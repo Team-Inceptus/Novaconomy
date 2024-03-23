@@ -855,7 +855,7 @@ public final class Generator {
                 .sorted(sorter)
                 .collect(Collectors.toList());
 
-        int pageCount = Math.floorDiv(econs.size() - 1, GUI_SPACE);
+        int pageCount = Math.max(Math.floorDiv(econs.size() - 1, GUI_SPACE), 1);
 
         boolean ad = r.nextBoolean() && NovaConfig.getConfiguration().isAdvertisingEnabled();
         Business randB = Business.randomAdvertisingBusiness();
