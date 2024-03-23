@@ -287,7 +287,7 @@ final class Events implements Listener {
         int chance = plugin.getBuildingChance();
 
         NovaUtil.async(() -> {
-            double add = r.nextInt(2, 4) + 1;
+            double add = r.nextInt(2) + 3;
 
             if (ModifierReader.getModifier("Building") == null) return;
             Map<String, Set<Map.Entry<Economy, Double>>> entry = ModifierReader.getModifier("Building");
