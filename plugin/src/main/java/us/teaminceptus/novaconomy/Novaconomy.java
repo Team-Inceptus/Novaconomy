@@ -988,7 +988,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 
         INTEREST_RUNNABLE.runTaskTimer(this, getInterestTicks(), getInterestTicks());
         TAXES_RUNNABLE.runTaskTimer(this, getTaxesTicks(), getTaxesTicks());
-        scheduler.syncRepeating(TICK_TASK, 0L, 1L);
+        scheduler.syncRepeating(TICK_TASK, 1L, 1L);
 
         for (Player p : Bukkit.getOnlinePlayers()) w.addPacketInjector(p);
 
@@ -996,7 +996,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
                 .map(b -> new AbstractMap.SimpleEntry<>(b, 0L))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
         );
-        scheduler.asyncRepeating(AUTOMATIC_SUPPLY_RUNNABLE, 0L, 20L);
+        scheduler.asyncRepeating(AUTOMATIC_SUPPLY_RUNNABLE, 20L, 20L);
 
         getLogger().info("Loaded Core Functionality...");
 
