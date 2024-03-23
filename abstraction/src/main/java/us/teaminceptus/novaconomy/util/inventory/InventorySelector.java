@@ -2,13 +2,16 @@ package us.teaminceptus.novaconomy.util.inventory;
 
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
+import org.bukkit.util.ChatPaginator;
 import org.jetbrains.annotations.NotNull;
 import us.teaminceptus.novaconomy.abstraction.NovaInventory;
+import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.SortingType;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.corporation.Corporation;
 import us.teaminceptus.novaconomy.util.NovaSound;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -85,6 +88,30 @@ public final class InventorySelector {
                 .collect(Collectors.toList());
 
         children.forEach(b -> inv.addItem(builder(b.getIcon(), nbt -> nbt.set(BUSINESS_TAG, b.getUniqueId()) )) );
+
+        return inv;
+    }
+
+    @NotNull
+    public static NovaInventory selectLanguage(Player p, Consumer<Language> consumer) {
+        NovaInventory inv = genGUI("select_language", 36, get(p, "constants.language.select"));
+        inv.setCancelled();
+
+        inv.setAttribute("action", consumer);
+
+        for (Language l : Language.values())
+            inv.addItem(builder(Items.LIME_WOOL,
+                    meta -> {
+                        meta.setDisplayName(ChatColor.GOLD + l.getMessage("constants.language.name"));
+                        meta.setLore(Arrays.stream(ChatPaginator.wordWrap(l.getMessage("constants.language.example"), 30))
+                                .map(s -> ChatColor.GRAY + s)
+                                .collect(Collectors.toList()));
+                    },
+                    nbt -> {
+                        nbt.setID("language:option");
+                        nbt.set("language", l.getIdentifier());
+                    }
+            ));
 
         return inv;
     }

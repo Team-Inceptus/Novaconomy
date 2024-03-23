@@ -2389,6 +2389,13 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
 
                 break;
             }
+            case "nlanguage": {
+                if (!(sender instanceof Player)) return false;
+                Player p = (Player) sender;
+
+                settings(p, "language");
+                break;
+            }
             default: {
                 messages.sendMessage(sender, "error.argument");
                 return false;

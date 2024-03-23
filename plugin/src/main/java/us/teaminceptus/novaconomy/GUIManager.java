@@ -18,6 +18,7 @@ import org.bukkit.util.ChatPaginator;
 import org.jetbrains.annotations.Nullable;
 import us.teaminceptus.novaconomy.abstraction.NBTWrapper;
 import us.teaminceptus.novaconomy.abstraction.NovaInventory;
+import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.SortingType;
 import us.teaminceptus.novaconomy.api.auction.AuctionHouse;
@@ -2108,6 +2109,19 @@ final class GUIManager implements Listener {
 
                 inv.setItem(e.getSlot(), Generator.generateCorporationPermissionNode(c, rank, permission, perm, p));
             })
+            .put("language:select", (e, inv) -> {
+                Player p = (Player) e.getWhoClicked();
+
+                InventorySelector.selectLanguage(p, l -> {
+                    NovaPlayer np = new NovaPlayer(p);
+                    np.setLanguage(l);
+                    messages.sendSuccess(p, "success.language.set", ChatColor.GOLD + NovaUtil.capitalize(l.name()));
+
+                    NovaSound.BLOCK_NOTE_BLOCK_PLING.playSuccess(p);
+
+                    p.openInventory(Generator.generateLanguageSettings(p));
+                });
+            })
             .build();
 
     static final Map<String, BiConsumer<InventoryClickEvent, NovaInventory>> CLICK_INVENTORIES = ImmutableMap.<String, BiConsumer<InventoryClickEvent, NovaInventory>>builder()
@@ -2162,6 +2176,28 @@ final class GUIManager implements Listener {
                     Business b = getBusiness(item);
                     findAction.accept(b);
                     NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
+                }
+            })
+            .put("select_language", (e, inv) -> {
+                Player p = (Player) e.getWhoClicked();
+                ItemStack item = e.getCurrentItem();
+                NBTWrapper nbt = of(item);
+
+                Consumer<Language> action = inv.getAttribute("action", Consumer.class);
+
+                if (nbt.hasID()) switch (nbt.getID()) {
+                    case "language:option": {
+                        String lang = nbt.getString("language");
+                        if (lang.isEmpty()) return;
+
+                        Language l = Language.getById(lang);
+                        if (l == null) return;
+
+                        action.accept(l);
+                        break;
+                    }
+                    default:
+                        throw new UnsupportedOperationException("Unknown ID: " + nbt.getID());
                 }
             })
             .build();

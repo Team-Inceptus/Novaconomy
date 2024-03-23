@@ -176,6 +176,11 @@ permissions:
     default: true
     children:
       novaconomy.user: true
+  novaconomy.user.language:
+    description: Access to change one's own language
+    default: true
+    children:
+      novaconomy.user: true
 
   # User Bounty
   novaconomy.user.bounty:

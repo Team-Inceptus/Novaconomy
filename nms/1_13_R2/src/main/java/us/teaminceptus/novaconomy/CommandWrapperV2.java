@@ -379,6 +379,28 @@ final class CommandWrapperV2 implements CommandWrapper {
     @CommandPermission("novaconomy.user.leaderboard")
     public void businessLeaderboard(Player p) { CommandWrapper.super.businessLeaderboard(p, "ratings"); }
 
+    @Override
+    @Command({"corporationchat", "corpchat", "cc", "ncc", "corporationc", "corpc", "cchat"})
+    @Usage("/cc <message>")
+    @Description("Chat with your Novaconomy Corporation")
+    @CommandPermission("novaconomy.user.corporation")
+    public void corporationChat(Player p, String message) {
+        CommandWrapper.super.corporationChat(p, message);
+    }
+
+
+    @Command({"corporationleaderboard", "corpleaderboard", "cleaderboard", "corpboard", "cboard"})
+    @Usage("/cleaderboard [category]")
+    @Description("View the Top 10 Corporations in various categories")
+    @CommandPermission("novaconomy.user.leaderboard")
+    public void corporationLeaderboard(Player p) { CommandWrapper.super.corporationLeaderboard(p, "ratings"); }
+
+    @Command({"nlanguage", "nlang", "novalang"})
+    @Usage("/nlanguage <language>")
+    @Description("Change your Novaconomy Language")
+    @CommandPermission("novaconomy.user.language")
+    public void language(Player p) { settings(p, "language"); }
+
     @Command({"business", "nbusiness", "nb", "b"})
     @Description("Manage your Novaconomy Business")
     @Usage("/business <create|info|delete|addproduct|stock|query|...> <args...>")
@@ -967,22 +989,6 @@ final class CommandWrapperV2 implements CommandWrapper {
             wrapper.broadcastCorporationMessage(p, message);
         }
     }
-
-    @Override
-    @Command({"corporationchat", "corpchat", "cc", "ncc", "corporationc", "corpc", "cchat"})
-    @Usage("/cc <message>")
-    @Description("Chat with your Novaconomy Corporation")
-    @CommandPermission("novaconomy.user.corporation")
-    public void corporationChat(Player p, String message) {
-        CommandWrapper.super.corporationChat(p, message);
-    }
-
-
-    @Command({"corporationleaderboard", "corpleaderboard", "cleaderboard", "corpboard", "cboard"})
-    @Usage("/cleaderboard [category]")
-    @Description("View the Top 10 Corporations in various categories")
-    @CommandPermission("novaconomy.user.leaderboard")
-    public void corporationLeaderboard(Player p) { CommandWrapper.super.corporationLeaderboard(p, "ratings"); }
 
     @Command({"market", "novamarket", "novam", "m"})
     @Usage("/market <open|sell|...>")

@@ -122,6 +122,7 @@ public interface CommandWrapper {
             .put("market", asList("novamarket", "novam", "m"))
             .put("corporationleaderboard", asList("corpleaderboard", "cleaderboard", "corpboard", "cboard"))
             .put("nauctionhouse", asList("novaah", "ah", "auctionhouse", "auctions"))
+            .put("nlanguage", asList("novalang", "nlang"))
             .build();
 
     Map<String, String> COMMAND_PERMISSION = ImmutableMap.<String, String>builder()
@@ -146,6 +147,7 @@ public interface CommandWrapper {
             .put("market", "novaconomy.user.market")
             .put("corporationleaderboard", "novaconomy.user.leaderboard")
             .put("nauctionhouse", "novaconomy.user.auction_house")
+            .put("nlanguage", "novaconomy.user.language")
             .build();
 
     Map<String, String> COMMAND_DESCRIPTION = ImmutableMap.<String, String>builder()
@@ -172,6 +174,7 @@ public interface CommandWrapper {
             .put("market", "View and Manage the Novaconomy Market")
             .put("corporationleaderboard", "View the top 10 corporations in various categories")
             .put("nauctionhouse", "View the Novaconomy Auction House")
+            .put("nlanguage", "Change your Novaconomy Language")
             .build();
 
     Map<String, String> COMMAND_USAGE = ImmutableMap.<String, String>builder()
@@ -198,6 +201,7 @@ public interface CommandWrapper {
             .put("market", "/market <open|sell|...>")
             .put("corporationleaderboard", "/corporationleaderboard")
             .put("nauctionhouse", "/ah [open|search|add|...]")
+            .put("nlanguage", "/nlang")
             .build();
 
     // Command Methods
@@ -1239,6 +1243,17 @@ public interface CommandWrapper {
                     }
             );
 
+            ItemStack language = builder(OAK_SIGN,
+                    meta -> {
+                        meta.setDisplayName(YELLOW + get(p, "constants.settings.language"));
+                        meta.addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1, true);
+                        meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+                    }, nbt -> {
+                        nbt.setID(SETTING_TAG);
+                        nbt.set(SETTING_TAG, "language");
+                    }
+            );
+
             ItemStack business = builder(Material.BOOK,
                     meta -> {
                         meta.setDisplayName(YELLOW + get(p, "constants.settings.business"));
@@ -1259,7 +1274,7 @@ public interface CommandWrapper {
                         nbt.set(SETTING_TAG, CORPORATION_TAG);
                     });
 
-            settings.addItem(personal, business, corporation);
+            settings.addItem(personal, language, business, corporation);
         } else {
             BiFunction<Settings.NovaSetting<?>, Object, ItemStack> func = (sett, valueO) -> {
                 Object value = valueO == null ? sett.getDefaultValue() : valueO;
@@ -1304,6 +1319,10 @@ public interface CommandWrapper {
                         boolean value = np.getSetting(sett);
                         settings.addItem(func.apply(sett, value));
                     }
+                    break;
+                }
+                case "language": {
+                    settings = Generator.generateLanguageSettings(p);
                     break;
                 }
                 case BUSINESS_TAG: {

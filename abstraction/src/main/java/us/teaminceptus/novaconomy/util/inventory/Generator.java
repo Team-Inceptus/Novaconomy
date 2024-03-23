@@ -1610,6 +1610,35 @@ public final class Generator {
        );
     }
 
+    public static NovaInventory generateLanguageSettings(Player p) {
+        NovaInventory inv = genGUI(27, get(p, "constants.language"));
+        inv.setCancelled();
+
+        NovaPlayer np = new NovaPlayer(p);
+
+        ItemStack head = Items.builder(createPlayerHead(p), meta -> meta.setDisplayName(ChatColor.AQUA + p.getName()));
+        inv.setItem(4, head);
+
+        inv.setItem(12, Items.builder(OAK_SIGN,
+                meta -> {
+                    meta.setDisplayName(ChatColor.LIGHT_PURPLE + get(p, "constants.language.name"));
+                    meta.setLore(Arrays.stream(ChatPaginator.wordWrap(get(p, "constants.language.desc"), 30))
+                            .map(s -> ChatColor.GRAY + s)
+                            .collect(Collectors.toList()));
+                }
+        ));
+
+        inv.setItem(14, builder(CYAN_WOOL,
+                meta -> meta.setDisplayName(ChatColor.AQUA + get(p, "constants.language.select")),
+                nbt -> nbt.setID("language:select")
+        ));
+
+        inv.setItem(19, builder(BACK, nbt -> nbt.setID("back:settings")));
+        return inv;
+    }
+
+    // Utilities
+
     public static void modelData(@NotNull ItemStack item, int data) {
         ItemMeta meta = item.getItemMeta();
         try {
