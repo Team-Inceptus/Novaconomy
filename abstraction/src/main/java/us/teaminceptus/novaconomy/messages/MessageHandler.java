@@ -126,8 +126,8 @@ public interface MessageHandler {
             .put("error.argument.icon", any(Material::values, Material::toString, w::isItem))
             .put("error.argument.integer", r::nextInt)
             .put("error.argument.item", any(Material::values, Material::toString, w::isItem))
-            .put("error.argument.scale", () -> r.nextInt(10, 30) / 10.0)
-            .put("error.argument.symbol", () -> "'" + (char) r.nextInt(0x21, 0x7E) + "'")
+            .put("error.argument.scale", () -> r.nextInt(20) / 10.0)
+            .put("error.argument.symbol", () -> "'" + (char) (r.nextInt(0x7E - 0x21) + 0x21) + "'")
 
             .build()
             .entrySet()
