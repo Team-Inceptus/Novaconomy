@@ -21,6 +21,7 @@ import java.util.*;
 import static us.teaminceptus.novaconomy.abstraction.Wrapper.USER_AGENT;
 import static us.teaminceptus.novaconomy.messages.MessageHandler.format;
 import static us.teaminceptus.novaconomy.messages.MessageHandler.get;
+import static us.teaminceptus.novaconomy.scheduler.NovaScheduler.scheduler;
 
 @SuppressWarnings("unchecked")
 public final class NovaUtil {
@@ -65,21 +66,11 @@ public final class NovaUtil {
     private NovaUtil() {}
 
     public static void sync(Runnable r) {
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                r.run();
-            }
-        }.runTask(NovaConfig.getPlugin());
+        scheduler.sync(r);
     }
 
     public static void async(Runnable r) {
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                r.run();
-            }
-        }.runTaskAsynchronously(NovaConfig.getPlugin());
+        scheduler.async(r);
     }
 
     public static String getDisplayName(@NotNull SortingType<?> type) {

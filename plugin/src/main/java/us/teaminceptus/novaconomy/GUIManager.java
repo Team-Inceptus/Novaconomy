@@ -67,6 +67,7 @@ import static us.teaminceptus.novaconomy.abstraction.NBTWrapper.*;
 import static us.teaminceptus.novaconomy.abstraction.NBTWrapper.builder;
 import static us.teaminceptus.novaconomy.abstraction.Wrapper.*;
 import static us.teaminceptus.novaconomy.messages.MessageHandler.*;
+import static us.teaminceptus.novaconomy.scheduler.NovaScheduler.scheduler;
 import static us.teaminceptus.novaconomy.util.inventory.Generator.*;
 import static us.teaminceptus.novaconomy.util.inventory.InventorySelector.confirm;
 import static us.teaminceptus.novaconomy.util.inventory.Items.*;
@@ -815,7 +816,7 @@ final class GUIManager implements Listener {
                 Bukkit.getPluginManager().callEvent(event);
 
                 if (!event.isCancelled()) {
-                    p.teleport(event.getLocation());
+                    scheduler.teleport(p, event.getLocation());
                     NovaSound.ENTITY_ENDERMAN_TELEPORT.play(p, 1F, 1F);
                 }
             })
@@ -1195,7 +1196,7 @@ final class GUIManager implements Listener {
                 Bukkit.getPluginManager().callEvent(event);
 
                 if (!event.isCancelled()) {
-                    p.teleport(event.getLocation());
+                    scheduler.teleport(p, event.getLocation());
                     messages.sendRaw(p, ChatColor.AQUA + get(p, "constants.teleporting"));
                     NovaSound.ENTITY_ENDERMAN_TELEPORT.playSuccess(p);
                 }

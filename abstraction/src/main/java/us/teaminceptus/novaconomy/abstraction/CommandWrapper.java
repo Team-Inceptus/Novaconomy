@@ -75,6 +75,7 @@ import static us.teaminceptus.novaconomy.abstraction.NBTWrapper.builder;
 import static us.teaminceptus.novaconomy.abstraction.Wrapper.r;
 import static us.teaminceptus.novaconomy.abstraction.Wrapper.w;
 import static us.teaminceptus.novaconomy.messages.MessageHandler.*;
+import static us.teaminceptus.novaconomy.scheduler.NovaScheduler.scheduler;
 import static us.teaminceptus.novaconomy.util.NovaUtil.capitalize;
 import static us.teaminceptus.novaconomy.util.inventory.Generator.*;
 import static us.teaminceptus.novaconomy.util.inventory.Items.*;
@@ -978,7 +979,7 @@ public interface CommandWrapper {
             Bukkit.getPluginManager().callEvent(event);
 
             if (!event.isCancelled()) {
-                p.teleport(event.getLocation());
+                scheduler.teleport(p, event.getLocation());
                 NovaSound.ENTITY_ENDERMAN_TELEPORT.play(p, 1F, 1F);
             }
         }
@@ -3097,58 +3098,55 @@ public interface CommandWrapper {
         for (int i = 37; i < 44; i++) inv.setItem(i, LOADING);
 
         p.openInventory(inv);
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                inv.setItem(13, builder(BL_ICONS.get(category),
-                        meta -> {
-                            meta.setDisplayName(GOLD + get(p, "constants.leaderboard." + category));
-                            meta.addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1, true);
-                            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
-                        }, nbt -> {
-                            nbt.setID("business:leaderboard_category");
-                            nbt.set("category", category);
-                        }
-                ));
+        scheduler.async(() -> {
+            inv.setItem(13, builder(BL_ICONS.get(category),
+                    meta -> {
+                        meta.setDisplayName(GOLD + get(p, "constants.leaderboard." + category));
+                        meta.addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1, true);
+                        meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+                    }, nbt -> {
+                        nbt.setID("business:leaderboard_category");
+                        nbt.set("category", category);
+                    }
+            ));
 
-                List<Business> sorted = Business.getBusinesses()
-                        .stream()
-                        .sorted(BL_COMPARATORS.get(category))
+            List<Business> sorted = Business.getBusinesses()
+                    .stream()
+                    .sorted(BL_COMPARATORS.get(category))
+                    .collect(Collectors.toList());
+
+            if (category.equalsIgnoreCase("ratings"))
+                sorted = sorted.stream()
+                        .filter(b -> !b.getRatings().isEmpty())
                         .collect(Collectors.toList());
 
-                if (category.equalsIgnoreCase("ratings"))
-                    sorted = sorted.stream()
-                            .filter(b -> !b.getRatings().isEmpty())
-                            .collect(Collectors.toList());
+            Map<Integer, ItemStack> items = new HashMap<>();
+            for (int i = 0; i < 10; i++) {
+                int index = 30 + i;
+                if (i >= 3) index = 34 + i;
 
-                Map<Integer, ItemStack> items = new HashMap<>();
-                for (int i = 0; i < 10; i++) {
-                    int index = 30 + i;
-                    if (i >= 3) index = 34 + i;
-
-                    if (i >= sorted.size()) {
-                        items.put(index, null);
-                        continue;
-                    }
-
-                    Business b = sorted.get(i);
-
-                    ItemStack icon = builder(b.getPublicIcon(),
-                            meta -> meta.setLore(BL_DESC.get(category).apply(b)),
-                            nbt -> {
-                                nbt.setID("business:click");
-                                nbt.set(BUSINESS_TAG, b.getUniqueId());
-                            }
-                    );
-
-                    items.put(index, icon);
+                if (i >= sorted.size()) {
+                    items.put(index, null);
+                    continue;
                 }
 
-                items.forEach(inv::setItem);
+                Business b = sorted.get(i);
 
-                NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
+                ItemStack icon = builder(b.getPublicIcon(),
+                        meta -> meta.setLore(BL_DESC.get(category).apply(b)),
+                        nbt -> {
+                            nbt.setID("business:click");
+                            nbt.set(BUSINESS_TAG, b.getUniqueId());
+                        }
+                );
+
+                items.put(index, icon);
             }
-        }.runTaskAsynchronously(NovaConfig.getPlugin());
+
+            items.forEach(inv::setItem);
+
+            NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
+        });
     }
 
     default void basicConfig(CommandSender sender, String key, Object value) {
@@ -3611,7 +3609,7 @@ public interface CommandWrapper {
         Bukkit.getPluginManager().callEvent(event);
 
         if (!event.isCancelled()) {
-            p.teleport(event.getLocation());
+            scheduler.teleport(p, event.getLocation());
             messages.sendRaw(p, AQUA + get(p, "constants.teleporting"));
             NovaSound.ENTITY_ENDERMAN_TELEPORT.playSuccess(p);
         }
@@ -3925,58 +3923,55 @@ public interface CommandWrapper {
 
         p.openInventory(inv);
 
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                inv.setItem(13, builder(CL_ICONS.get(category),
-                        meta -> {
-                            meta.setDisplayName(GOLD + get(p, "constants.leaderboard." + category));
-                            meta.addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1, true);
-                            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
-                        }, nbt -> {
-                            nbt.setID("corporation:leaderboard_category");
-                            nbt.set("category", category);
-                        }
-                ));
+        scheduler.async(() -> {
+            inv.setItem(13, builder(CL_ICONS.get(category),
+                    meta -> {
+                        meta.setDisplayName(GOLD + get(p, "constants.leaderboard." + category));
+                        meta.addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1, true);
+                        meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+                    }, nbt -> {
+                        nbt.setID("corporation:leaderboard_category");
+                        nbt.set("category", category);
+                    }
+            ));
 
-                List<Corporation> sorted = Corporation.getCorporations()
-                        .stream()
-                        .sorted(CL_COMPARATORS.get(category))
+            List<Corporation> sorted = Corporation.getCorporations()
+                    .stream()
+                    .sorted(CL_COMPARATORS.get(category))
+                    .collect(Collectors.toList());
+
+            if (category.equalsIgnoreCase("ratings"))
+                sorted = sorted.stream()
+                        .filter(c -> !c.getAllRatings().isEmpty())
                         .collect(Collectors.toList());
 
-                if (category.equalsIgnoreCase("ratings"))
-                    sorted = sorted.stream()
-                            .filter(c -> !c.getAllRatings().isEmpty())
-                            .collect(Collectors.toList());
+            Map<Integer, ItemStack> items = new HashMap<>();
+            for (int i = 0; i < 10; i++) {
+                int index = 30 + i;
+                if (i >= 3) index = 34 + i;
 
-                Map<Integer, ItemStack> items = new HashMap<>();
-                for (int i = 0; i < 10; i++) {
-                    int index = 30 + i;
-                    if (i >= 3) index = 34 + i;
-
-                    if (i >= sorted.size()) {
-                        items.put(index, null);
-                        continue;
-                    }
-
-                    Corporation c = sorted.get(i);
-
-                    ItemStack icon = builder(c.getPublicIcon(),
-                            meta -> meta.setLore(CL_DESC.get(category).apply(c)),
-                            nbt -> {
-                                nbt.setID("corporation:click");
-                                nbt.set(CORPORATION_TAG, c.getUniqueId());
-                            }
-                    );
-
-                    items.put(index, icon);
+                if (i >= sorted.size()) {
+                    items.put(index, null);
+                    continue;
                 }
 
-                items.forEach(inv::setItem);
+                Corporation c = sorted.get(i);
 
-                NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
+                ItemStack icon = builder(c.getPublicIcon(),
+                        meta -> meta.setLore(CL_DESC.get(category).apply(c)),
+                        nbt -> {
+                            nbt.setID("corporation:click");
+                            nbt.set(CORPORATION_TAG, c.getUniqueId());
+                        }
+                );
+
+                items.put(index, icon);
             }
-        }.runTaskAsynchronously(NovaConfig.getPlugin());
+
+            items.forEach(inv::setItem);
+
+            NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
+        });
     }
 
     default void businessSupplyChests(Player p) {

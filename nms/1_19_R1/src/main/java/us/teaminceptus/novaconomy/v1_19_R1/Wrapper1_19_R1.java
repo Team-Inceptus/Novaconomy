@@ -27,6 +27,8 @@ import us.teaminceptus.novaconomy.api.NovaConfig;
 
 import java.util.function.Consumer;
 
+import static us.teaminceptus.novaconomy.scheduler.NovaScheduler.scheduler;
+
 final class Wrapper1_19_R1 implements Wrapper {
 
     @Override
@@ -107,13 +109,10 @@ final class Wrapper1_19_R1 implements Wrapper {
             return true;
         });
 
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                ClientboundBlockUpdatePacket sent3 = new ClientboundBlockUpdatePacket(pos, Blocks.AIR.defaultBlockState());
-                ((CraftPlayer) p).getHandle().connection.send(sent3);
-            }
-        }.runTaskLater(NovaConfig.getPlugin(), 2L);
+        scheduler.syncLater(() -> {
+            ClientboundBlockUpdatePacket sent3 = new ClientboundBlockUpdatePacket(pos, Blocks.AIR.defaultBlockState());
+            ((CraftPlayer) p).getHandle().connection.send(sent3);
+        }, 2L);
     }
 
 }

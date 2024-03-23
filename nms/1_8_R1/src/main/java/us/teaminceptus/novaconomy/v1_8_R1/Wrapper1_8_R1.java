@@ -21,6 +21,8 @@ import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.function.Consumer;
 
+import static us.teaminceptus.novaconomy.scheduler.NovaScheduler.scheduler;
+
 final class Wrapper1_8_R1 implements Wrapper {
 
     @Override
@@ -126,15 +128,12 @@ final class Wrapper1_8_R1 implements Wrapper {
             return true;
         });
 
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                PacketPlayOutBlockChange sent3 = new PacketPlayOutBlockChange(ws, pos);
-                sent3.block = Blocks.AIR.getBlockData();
+        scheduler.syncLater(() -> {
+            PacketPlayOutBlockChange sent3 = new PacketPlayOutBlockChange(ws, pos);
+            sent3.block = Blocks.AIR.getBlockData();
 
-                ((CraftPlayer) p).getHandle().playerConnection.sendPacket(sent3);
-            }
-        }.runTaskLater(NovaConfig.getPlugin(), 2L);
+            ((CraftPlayer) p).getHandle().playerConnection.sendPacket(sent3);
+        }, 2L);
     }
 
 }

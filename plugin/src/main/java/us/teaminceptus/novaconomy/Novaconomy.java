@@ -56,6 +56,7 @@ import us.teaminceptus.novaconomy.api.util.Price;
 import us.teaminceptus.novaconomy.api.util.Product;
 import us.teaminceptus.novaconomy.essentialsx.EssentialsListener;
 import us.teaminceptus.novaconomy.placeholderapi.Placeholders;
+import us.teaminceptus.novaconomy.scheduler.NovaScheduler;
 import us.teaminceptus.novaconomy.treasury.TreasuryRegistry;
 import us.teaminceptus.novaconomy.util.NovaUtil;
 import us.teaminceptus.novaconomy.vault.VaultRegistry;
@@ -76,6 +77,7 @@ import java.util.stream.Collectors;
 
 import static us.teaminceptus.novaconomy.abstraction.Wrapper.*;
 import static us.teaminceptus.novaconomy.messages.MessageHandler.*;
+import static us.teaminceptus.novaconomy.scheduler.NovaScheduler.scheduler;
 
 /**
  * Class representing this Plugin
@@ -203,11 +205,8 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
         }
     };
 
-    private static final BukkitRunnable TICK_TASK = new BukkitRunnable() {
-        @Override
-        public void run() {
-            AuctionHouse.refreshAuctionHouse(false);
-        }
+    private static final Runnable TICK_TASK = () -> {
+        AuctionHouse.refreshAuctionHouse(false);
     };
 
     private static void pingDB() {
@@ -224,14 +223,6 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
             NovaConfig.print(e);
         }
     }
-
-    private static final BukkitRunnable PING_DB_RUNNABLE = new BukkitRunnable() {
-        @Override
-        public void run() {
-            if (!NovaConfig.getConfiguration().isDatabaseEnabled()) return;
-            pingDB();
-        }
-    };
 
     private static void runRestock() {
         if (!NovaConfig.getMarket().isMarketEnabled() || !NovaConfig.getMarket().isMarketRestockEnabled()) return;
@@ -346,25 +337,18 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 
     private static final Map<Business, Long> AUTOMATIC_SUPPLY_COUNT = new HashMap<>();
 
-    private static final BukkitRunnable AUTOMATIC_SUPPLY_RUNNABLE = new BukkitRunnable() {
-        @Override
-        public void run() {
-            for (Business b : Business.getBusinesses()) {
-                BusinessSupplyEvent.Interval interval = b.getSetting(Settings.Business.SUPPLY_INTERVAL);
-                long count = AUTOMATIC_SUPPLY_COUNT.getOrDefault(b, 0L);
+    private static final Runnable AUTOMATIC_SUPPLY_RUNNABLE = () -> {
+        for (Business b : Business.getBusinesses()) {
+            BusinessSupplyEvent.Interval interval = b.getSetting(Settings.Business.SUPPLY_INTERVAL);
+            long count = AUTOMATIC_SUPPLY_COUNT.getOrDefault(b, 0L);
 
-                if (count <= 0) {
-                    AUTOMATIC_SUPPLY_COUNT.put(b, interval.getTicks());
-                    new BukkitRunnable() {
-                        public void run() {
-                            b.supply();
-                        }
-                    }.runTask(getPlugin(Novaconomy.class));
-                    continue;
-                }
-
-                AUTOMATIC_SUPPLY_COUNT.put(b, count - 20);
+            if (count <= 0) {
+                AUTOMATIC_SUPPLY_COUNT.put(b, interval.getTicks());
+                scheduler.sync(b::supply);
+                continue;
             }
+
+            AUTOMATIC_SUPPLY_COUNT.put(b, count - 20);
         }
     };
 
@@ -1004,7 +988,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 
         INTEREST_RUNNABLE.runTaskTimer(this, getInterestTicks(), getInterestTicks());
         TAXES_RUNNABLE.runTaskTimer(this, getTaxesTicks(), getTaxesTicks());
-        TICK_TASK.runTaskTimer(this, 1L, 1L);
+        scheduler.syncRepeating(TICK_TASK, 0L, 1L);
 
         for (Player p : Bukkit.getOnlinePlayers()) w.addPacketInjector(p);
 
@@ -1012,7 +996,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
                 .map(b -> new AbstractMap.SimpleEntry<>(b, 0L))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
         );
-        AUTOMATIC_SUPPLY_RUNNABLE.runTaskTimerAsynchronously(this, 0L, 20L);
+        scheduler.asyncRepeating(AUTOMATIC_SUPPLY_RUNNABLE, 0L, 20L);
 
         getLogger().info("Loaded Core Functionality...");
 
@@ -1062,18 +1046,11 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
 
     // Some tasks that were loaded by loadFiles or Vault are needed to be ran in onEnable
     private void loadTasks() {
-        if (isDatabaseEnabled()) {
-            PING_DB_RUNNABLE.runTaskTimerAsynchronously(this, 60 * 20, 60 * 20);
-        }
+        if (isDatabaseEnabled())
+            scheduler.asyncRepeating(NovaConfig.getConfiguration()::isDatabaseEnabled, Novaconomy::pingDB, 60 * 20, 60 * 20);
 
-        boolean scheduled = false;
-        try {
-            RESTOCK_RUNNABLE.getTaskId();
-            scheduled = true;
-        } catch (IllegalStateException ignored) {}
-
-        if (isMarketEnabled() && isMarketRestockEnabled() && !scheduled)
-            RESTOCK_RUNNABLE.runTaskTimerAsynchronously(this, getMarketRestockInterval(), getMarketRestockInterval());
+        scheduler.asyncRepeating(() -> NovaConfig.getMarket().isMarketEnabled() && NovaConfig.getMarket().isMarketRestockEnabled(),
+                Novaconomy::runRestock, getMarketRestockInterval(), getMarketRestockInterval());
     }
 
     @Override
@@ -1087,6 +1064,9 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
             disconnectDB();
             getLogger().info("Closed Database Connection...");
         }
+
+        scheduler.cancelAll();
+        getLogger().info("Cancelled Tasks...");
 
         getLogger().info("Successfully disabled Novcaonomy");
     }
@@ -1126,7 +1106,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
                 econ.saveEconomy();
             });
 
-            NovaUtil.sync(() -> {
+            scheduler.sync(() -> {
                 economies.delete();
                 getLogger().info("Migration complete!");
             });

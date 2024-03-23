@@ -5,6 +5,7 @@ author: Team Inceptus
 load: POSTWORLD
 website: "https://github.com/Team-Inceptus/Novaconomy"
 api-version: 1.13
+folia-supported: true
 main: us.teaminceptus.novaconomy.Novaconomy
 softdepend: [ PlaceholderAPI, Vault, Treasury, PlugMan, PlugManX ]
 permissions:
