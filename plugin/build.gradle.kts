@@ -52,7 +52,9 @@ dependencies {
     api(project(":novaconomy-abstract"))
 
     api(project(":novaconomy-adventure"))
-    api(project(":novaconomy-folia"))
+
+    if (JavaVersion.current().isCompatibleWith(JavaVersion.VERSION_17))
+        api(project(":novaconomy-folia"))
 
     versions.forEach {
         if (JavaVersion.current().isCompatibleWith(JavaVersion.toVersion(it.value)))

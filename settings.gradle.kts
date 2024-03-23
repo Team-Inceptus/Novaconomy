@@ -6,9 +6,14 @@ project(":novaconomy").projectDir = rootDir.resolve("plugin")
 include(":novaconomy-abstract")
 project(":novaconomy-abstract").projectDir = rootDir.resolve("abstraction")
 
-listOf("api", "adventure", "folia").forEach {
+listOf("api", "adventure").forEach {
     include(":novaconomy-$it")
     project(":novaconomy-$it").projectDir = rootDir.resolve(it)
+}
+
+if (JavaVersion.current().isCompatibleWith(JavaVersion.VERSION_17)) {
+    include(":novaconomy-folia")
+    project(":novaconomy-folia").projectDir = rootDir.resolve("folia")
 }
 
 mapOf(
