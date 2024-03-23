@@ -47,6 +47,42 @@ jobs:
       - name: Gradle Test
         run: ./gradlew test
 
+  test-server:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    needs: test
+
+    strategy:
+      matrix:
+        version: [ 1.16.5, 1.15.2, 1.14.4, 1.13.2, 1.12.2, 1.11.2, 1.10.2, 1.9.4, 1.8.8 ]
+        java-version: [ 8 ]
+        include:
+          - version: 1.19.4
+            java-version: 17
+          - version: 1.20.4
+            java-version: 17
+
+    name: Test Plugin on MC ${{ matrix.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup JDK ${{ matrix.java-version }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ matrix.java-version }}
+          distribution: 'temurin'
+          cache: 'gradle'
+      - name: Change Permissions
+        run: chmod +x ./gradlew
+      - name: Build Plugin
+        run: ./gradlew clean assemble
+      - name: Test Plugin - ${{ matrix.version }}
+        uses: GamerCoder215/TestMC@v1.0.1
+        with:
+          path: 'plugin/build/libs/novaconomy-*.jar'
+          runtime: 'paper'
+          version: ${{ matrix.version }}
+          time: 120
+
   build:
     runs-on: ubuntu-latest
     needs: setup
