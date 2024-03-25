@@ -53,6 +53,7 @@ public final class Mail implements ConfigurationSerializable {
     private final long timestamp;
 
     private boolean anonymous;
+    private boolean read;
 
     private Mail(@NotNull UUID sender, @NotNull UUID recipient, @NotNull String subject, @NotNull String message, long timestamp, boolean anonymous) {
         this.sender = sender;
@@ -195,6 +196,22 @@ public final class Mail implements ConfigurationSerializable {
      */
     public void setAnonymous(boolean anonymous) {
         this.anonymous = anonymous;
+    }
+
+    /**
+     * Gets whether this Mail object was already opened by the recipient.
+     * @return Whether mail was already opened
+     */
+    public boolean isRead() {
+        return read;
+    }
+
+    /**
+     * Sets whether this Mail object was already opened by the recipient.
+     * @param read Whether mail was already opened
+     */
+    public void setRead(boolean read) {
+        this.read = read;
     }
 
     /**
