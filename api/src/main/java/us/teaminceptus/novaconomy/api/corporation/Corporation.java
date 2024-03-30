@@ -1519,6 +1519,9 @@ public final class Corporation {
 
             if (!(rs = md.getColumns(null, null, "corporations", "member_ranks")).next())
                 db.createStatement().execute("ALTER TABLE corporations ADD COLUMN member_ranks BLOB(65535) NOT NULL");
+
+            if (!(rs = md.getColumns(null, null, "corporations", "mail")).next())
+                db.createStatement().execute("ALTER TABLE corporations ADD COLUMN mail MEDIUMBLOB NOT NULL");
         } finally {
             if (rs != null) rs.close();
         }
@@ -1568,10 +1571,11 @@ public final class Corporation {
                         "custom_model_data = ?, " +
                         "ban_list = ?, " +
                         "ranks = ?, " +
-                        "member_ranks = ?" +
+                        "member_ranks = ?, " +
+                        "mail = ? " +
                         "WHERE id = \"" + this.id + "\"";
             else
-                sql = "INSERT INTO corporations VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                sql = "INSERT INTO corporations VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         }
 
         PreparedStatement ps = db.prepareStatement(sql);
@@ -1644,6 +1648,12 @@ public final class Corporation {
         memberRanksBos.close();
         ps.setBytes(17, memberRanksOs.toByteArray());
 
+        ByteArrayOutputStream mailOs = new ByteArrayOutputStream();
+        ObjectOutputStream mailBos = new ObjectOutputStream(mailOs);
+        mailBos.writeObject(this.mail);
+        mailBos.close();
+        ps.setBytes(18, mailOs.toByteArray());
+
         ps.executeUpdate();
         ps.close();
     }
@@ -1711,6 +1721,11 @@ public final class Corporation {
         ObjectInputStream memberRanksBis = new ObjectInputStream(memberRanksIs);
         c.memberRanks.putAll((Map<UUID, UUID>) memberRanksBis.readObject());
         memberRanksBis.close();
+
+        ByteArrayInputStream mailIs = new ByteArrayInputStream(rs.getBytes("mail"));
+        ObjectInputStream mailBis = new ObjectInputStream(mailIs);
+        c.mail.addAll((List<Mail>) mailBis.readObject());
+        mailBis.close();
 
         children0.forEach(b -> c.memberRanks.putIfAbsent(b.getUniqueId(), DEFAULT_RANK));
 
@@ -1815,6 +1830,14 @@ public final class Corporation {
                 .forEach(memberRanksSection::set);
 
         ranks.save(ranksF);
+
+        // Mail
+        File mailF = new File(folder, "mail.yml");
+        if (!mailF.exists()) mailF.createNewFile();
+        FileConfiguration mail = YamlConfiguration.loadConfiguration(mailF);
+        mail.set("mail", this.mail);
+
+        mail.save(mailF);
     }
 
     @NotNull
@@ -1924,6 +1947,13 @@ public final class Corporation {
             }
 
         children0.forEach(b -> c.memberRanks.putIfAbsent(b.getUniqueId(), DEFAULT_RANK));
+
+        // Mail
+        File mailF = new File(folder, "mail.yml");
+        if (!mailF.exists()) mailF.createNewFile();
+
+        FileConfiguration mail = YamlConfiguration.loadConfiguration(mailF);
+        c.mail.addAll((List<Mail>) mail.getList("mail"));
 
         return c;
     }

@@ -14,6 +14,7 @@ import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.corporation.Corporation;
 
+import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
@@ -29,7 +30,7 @@ import java.util.stream.Collectors;
 /**
  * Represents a message to be sent to a mail receiver, such as a Business or Corporation.
  */
-public final class Mail implements ConfigurationSerializable {
+public final class Mail implements ConfigurationSerializable, Serializable {
 
     /**
      * The maximum length of a mail subject.
@@ -45,6 +46,8 @@ public final class Mail implements ConfigurationSerializable {
      * The date format for mail timestamps.
      */
     public static final String DATE_FORMAT = "MMMM d, yyyy '|' h:mm a";
+
+    private static final long serialVersionUID = 8486787868388524648L;
 
     private final UUID sender;
     private final UUID recipient;
@@ -87,6 +90,7 @@ public final class Mail implements ConfigurationSerializable {
         if (sender == null) throw new IllegalArgumentException("Sender cannot be null");
         if (recipient == null) throw new IllegalArgumentException("Recipient cannot be null");
         if (subject == null) throw new IllegalArgumentException("Subject cannot be null");
+        if (subject.length() > MAX_SUBJECT_LENGTH) throw new IllegalArgumentException("Subject length exceeds maximum length of " + MAX_SUBJECT_LENGTH + " characters");
         if (message == null) throw new IllegalArgumentException("Message cannot be null");
         if (message.length() > MAX_MESSAGE_LENGTH) throw new IllegalArgumentException("Message length exceeds maximum length of " + MAX_MESSAGE_LENGTH + " characters");
 
@@ -119,6 +123,7 @@ public final class Mail implements ConfigurationSerializable {
         if (sender == null) throw new IllegalArgumentException("Sender cannot be null");
         if (recipient == null) throw new IllegalArgumentException("Recipient cannot be null");
         if (subject == null) throw new IllegalArgumentException("Subject cannot be null");
+        if (subject.length() > MAX_SUBJECT_LENGTH) throw new IllegalArgumentException("Subject length exceeds maximum length of " + MAX_SUBJECT_LENGTH + " characters");
         if (message == null) throw new IllegalArgumentException("Message cannot be null");
         if (message.length() > MAX_MESSAGE_LENGTH) throw new IllegalArgumentException("Message length exceeds maximum length of " + MAX_MESSAGE_LENGTH + " characters");
 

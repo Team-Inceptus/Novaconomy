@@ -893,6 +893,9 @@ public final class Business implements ConfigurationSerializable {
 
             if (!(rs = md.getColumns(null, null, "businesses", "supply_chests")).next())
                 db.createStatement().execute("ALTER TABLE businesses ADD supply_chests LONGBLOB NOT NULL");
+
+            if (!(rs = md.getColumns(null, null, "businesses", "mail")).next())
+                db.createStatement().execute("ALTER TABLE businesses ADD mail MEDIUMBLOB NOT NULL");
         } finally {
             if (rs != null) rs.close();
         }
@@ -938,10 +941,11 @@ public final class Business implements ConfigurationSerializable {
                         "adbalance = ?, " +
                         "blacklist = ?, " +
                         "custom_model_data = ?, " +
-                        "supply_chests = ? " +
+                        "supply_chests = ?, " +
+                        "mail = ? " +
                         "WHERE id = \"" + this.id + "\"";
             else
-                sql = "INSERT INTO businesses VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                sql = "INSERT INTO businesses VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         }
 
         PreparedStatement ps = db.prepareStatement(sql);
@@ -1013,6 +1017,12 @@ public final class Business implements ConfigurationSerializable {
         supplyChestsBos.writeObject(this.supplyChests);
         supplyChestsBos.close();
         ps.setBytes(15, supplyChestsOs.toByteArray());
+
+        ByteArrayOutputStream mailOs = new ByteArrayOutputStream();
+        BukkitObjectOutputStream mailBos = new BukkitObjectOutputStream(mailOs);
+        mailBos.writeObject(this.mail);
+        mailBos.close();
+        ps.setBytes(16, mailOs.toByteArray());
 
         ps.executeUpdate();
         ps.close();
@@ -1088,11 +1098,17 @@ public final class Business implements ConfigurationSerializable {
         List<Location> supplyChests = (List<Location>) supplyChestsBis.readObject();
         supplyChestsBis.close();
 
+        ByteArrayInputStream mailIs = new ByteArrayInputStream(rs.getBytes("mail"));
+        BukkitObjectInputStream mailBis = new BukkitObjectInputStream(mailIs);
+        List<Mail> mail = (List<Mail>) mailBis.readObject();
+        mailBis.close();
+
         Business b = new Business(id, name, icon, owner, products, resources, stats, settings, creationDate, keywords, adBal, blacklist);
         b.setHome(home, false);
 
         b.customModelData = rs.getInt("custom_model_data");
         b.supplyChests.addAll(supplyChests);
+        b.mail.addAll(mail);
         return b;
     }
 
@@ -1199,6 +1215,15 @@ public final class Business implements ConfigurationSerializable {
         FileConfiguration suConfig = YamlConfiguration.loadConfiguration(supply);
         suConfig.set("supply_chests", this.supplyChests);
         suConfig.save(supply);
+
+        // Mail
+
+        File mailF = new File(folder, "mail.yml");
+        if (!mailF.exists()) mailF.createNewFile();
+
+        FileConfiguration mail = YamlConfiguration.loadConfiguration(mailF);
+        mail.set("mail", this.mail);
+        mail.save(mailF);
 
         // Other Information
 
@@ -1360,11 +1385,21 @@ public final class Business implements ConfigurationSerializable {
             supplyChests.addAll((List<Location>) sConfig.get("supply_chests"));
         }
 
+        // Mail
+        List<Mail> mail = new ArrayList<>();
+        File mailF = new File(folder, "mail.yml");
+        if (mailF.exists()) {
+            FileConfiguration mailConfig = YamlConfiguration.loadConfiguration(mailF);
+            mail.addAll((List<Mail>) mailConfig.getList("mail"));
+        }
+
         Business b = new Business(id, name, icon, owner, product, resources, stats, settings, creationDate, keywords, advertisingBalance, blacklist);
         b.setHome(home, false);
 
         b.customModelData = oConfig.getInt("custom_model_data");
         b.supplyChests.addAll(supplyChests);
+        b.mail.addAll(mail);
+
         return b;
     }
 
