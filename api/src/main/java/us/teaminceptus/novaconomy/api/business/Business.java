@@ -27,9 +27,11 @@ import us.teaminceptus.novaconomy.api.corporation.Corporation;
 import us.teaminceptus.novaconomy.api.corporation.CorporationInvite;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.events.business.BusinessCreateEvent;
+import us.teaminceptus.novaconomy.api.events.business.BusinessReceiveMailEvent;
 import us.teaminceptus.novaconomy.api.events.business.BusinessSupplyEvent;
 import us.teaminceptus.novaconomy.api.player.NovaPlayer;
 import us.teaminceptus.novaconomy.api.settings.Settings;
+import us.teaminceptus.novaconomy.api.util.Mail;
 import us.teaminceptus.novaconomy.api.util.Price;
 import us.teaminceptus.novaconomy.api.util.Product;
 
@@ -91,6 +93,7 @@ public final class Business implements ConfigurationSerializable {
     private final List<String> keywords = new ArrayList<>();
     private final List<UUID> blacklist = new ArrayList<>();
     private final List<Location> supplyChests = new ArrayList<>();
+    private final List<Mail> mail = new ArrayList<>();
 
     private Business(UUID uid, @NotNull String name, Material icon, OfflinePlayer owner, Collection<Product> products, Collection<ItemStack> resources,
                      BusinessStatistics stats, Map<Settings.Business<?>, Object> settings, long creationDate, List<String> keywords,
@@ -1615,6 +1618,58 @@ public final class Business implements ConfigurationSerializable {
     public Business removeAdvertisingBalance(@Nullable Price p) {
         if (p == null) return this;
         return removeAdvertisingBalance(p.getAmount() * p.getEconomy().getConversionScale());
+    }
+
+    /**
+     * Gets an immutable copy of all the mail that belongs to this Business, sorted by timestamp.
+     * @return All Mail
+     */
+    @NotNull
+    public List<Mail> getMail() {
+        return ImmutableList.copyOf(mail
+                .stream()
+                .sorted(Comparator.comparing(Mail::getTimestamp))
+                .collect(Collectors.toList()));
+    }
+
+    /**
+     * Sends mail to this Business.
+     * @param mail Mail to send
+     */
+    public void sendMail(@NotNull Mail mail) {
+        if (mail == null) throw new IllegalArgumentException("Mail cannot be null!");
+
+        this.mail.add(mail);
+
+        BusinessReceiveMailEvent event = new BusinessReceiveMailEvent(this, mail);
+        Bukkit.getPluginManager().callEvent(event);
+    }
+
+    /**
+     * Marks all mail as read.
+     */
+    public void markMailAsRead() {
+        this.mail.forEach(m -> m.setRead(true));
+    }
+
+    /**
+     * Marks mail as read.
+     * @param mail Mail to mark as read
+     */
+    public void markMailAsRead(@NotNull Mail mail) {
+        if (mail == null) throw new IllegalArgumentException("Mail cannot be null!");
+        if (!this.mail.contains(mail)) throw new IllegalArgumentException("Mail does not belong to this Corporation!");
+
+        this.mail.remove(mail);
+        mail.setRead(true);
+        this.mail.add(mail);
+    }
+
+    /**
+     * Clears all mail from this Business.
+     */
+    public void clearMail() {
+        mail.clear();
     }
 
     @Override

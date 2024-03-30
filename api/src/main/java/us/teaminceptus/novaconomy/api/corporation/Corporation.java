@@ -19,13 +19,10 @@ import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.business.BusinessProduct;
 import us.teaminceptus.novaconomy.api.business.Rating;
-import us.teaminceptus.novaconomy.api.events.corporation.CorporationAwardAchievementEvent;
-import us.teaminceptus.novaconomy.api.events.corporation.CorporationBanEvent;
-import us.teaminceptus.novaconomy.api.events.corporation.CorporationCreateEvent;
-import us.teaminceptus.novaconomy.api.events.corporation.CorporationDeleteEvent;
-import us.teaminceptus.novaconomy.api.events.corporation.CorporationKickEvent;
-import us.teaminceptus.novaconomy.api.events.corporation.CorporationUnbanEvent;
+import us.teaminceptus.novaconomy.api.events.business.BusinessReceiveMailEvent;
+import us.teaminceptus.novaconomy.api.events.corporation.*;
 import us.teaminceptus.novaconomy.api.settings.Settings;
+import us.teaminceptus.novaconomy.api.util.Mail;
 
 import java.io.*;
 import java.lang.reflect.Method;
@@ -92,6 +89,7 @@ public final class Corporation {
     private final Set<UUID> banList = new HashSet<>();
     final Map<UUID, CorporationRank> ranks = new HashMap<>();
     private final Map<UUID, UUID> memberRanks = new HashMap<>();
+    private final List<Mail> mail = new ArrayList<>();
 
     private Corporation(@NotNull UUID id, long creationDate, OfflinePlayer owner) {
         this.id = id;
@@ -872,7 +870,7 @@ public final class Corporation {
         if (!children.contains(child)) throw new IllegalArgumentException("Business is not a child of this corporation!");
 
         UUID rankId = memberRanks.get(child.getUniqueId());
-        CorporationRank rank = null;
+        CorporationRank rank;
 
         if (rankId == null) {
             rank = isOwner(child.getOwner()) ? getOwnerRank() : getDefaultRank();
@@ -1013,6 +1011,58 @@ public final class Corporation {
         saveCorporation();
 
         return removed;
+    }
+
+    /**
+     * Gets an immutable copy of all the mail that belongs to this Corporation, sorted by timestamp.
+     * @return All Mail
+     */
+    @NotNull
+    public List<Mail> getMail() {
+        return ImmutableList.copyOf(mail
+                .stream()
+                .sorted(Comparator.comparing(Mail::getTimestamp))
+                .collect(Collectors.toList()));
+    }
+
+    /**
+     * Sends mail to this Corporation.
+     * @param mail Mail to send
+     */
+    public void sendMail(@NotNull Mail mail) {
+        if (mail == null) throw new IllegalArgumentException("Mail cannot be null!");
+
+        this.mail.add(mail);
+
+        CorporationReceiveMailEvent event = new CorporationReceiveMailEvent(this, mail);
+        Bukkit.getPluginManager().callEvent(event);
+    }
+
+    /**
+     * Marks all mail as read.
+     */
+    public void markMailAsRead() {
+        this.mail.forEach(m -> m.setRead(true));
+    }
+
+    /**
+     * Marks mail as read.
+     * @param mail Mail to mark as read
+     */
+    public void markMailAsRead(@NotNull Mail mail) {
+        if (mail == null) throw new IllegalArgumentException("Mail cannot be null!");
+        if (!this.mail.contains(mail)) throw new IllegalArgumentException("Mail does not belong to this Corporation!");
+
+        this.mail.remove(mail);
+        mail.setRead(true);
+        this.mail.add(mail);
+    }
+
+    /**
+     * Clears all mail from this Corporation.
+     */
+    public void clearMail() {
+        mail.clear();
     }
 
     @Override

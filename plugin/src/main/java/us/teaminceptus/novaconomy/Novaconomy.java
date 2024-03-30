@@ -52,6 +52,7 @@ import us.teaminceptus.novaconomy.api.player.Bounty;
 import us.teaminceptus.novaconomy.api.player.NovaPlayer;
 import us.teaminceptus.novaconomy.api.player.PlayerStatistics;
 import us.teaminceptus.novaconomy.api.settings.Settings;
+import us.teaminceptus.novaconomy.api.util.Mail;
 import us.teaminceptus.novaconomy.api.util.Price;
 import us.teaminceptus.novaconomy.api.util.Product;
 import us.teaminceptus.novaconomy.essentialsx.EssentialsListener;
@@ -418,6 +419,7 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
             .add(Rating.class)
             .add(PlayerStatistics.class)
             .add(CorporationInvite.class)
+            .add(Mail.class)
             .build();
 
     private void loadAddons() {
