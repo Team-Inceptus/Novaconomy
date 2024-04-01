@@ -8,6 +8,7 @@ import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.corporation.CorporationInvite;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.business.BusinessProduct;
+import us.teaminceptus.novaconomy.api.util.Mail;
 import us.teaminceptus.novaconomy.api.util.Product;
 
 import java.lang.reflect.Field;
@@ -226,6 +227,43 @@ public interface SortingType<T> extends Comparator<T> {
      * Sorts a block by its location (excluding world) in descending order.
      */
     SortingType<Block> BLOCK_LOCATION_DESCENDING = BLOCK_LOCATION_ASCENDING.reversed();
+
+    // Mail
+
+    /**
+     * Sorts a mail by its date in ascending order.
+     */
+    SortingType<Mail> MAIL_DATE_ASCENDING = (m1, m2) -> m1.getTimestamp().compareTo(m2.getTimestamp());
+
+    /**
+     * Sorts a mail by its date in descending order.
+     */
+    SortingType<Mail> MAIL_DATE_DESCENDING = MAIL_DATE_ASCENDING.reversed();
+
+    /**
+     * Sorts a mail by its sender's name in ascending order.
+     */
+    SortingType<Mail> MAIL_SENDER_ASCENDING = (m1, m2) -> m1.getSender().getName().compareTo(m2.getSender().getName());
+
+    /**
+     * Sorts a mail by its sender's name in descending order.
+     */
+    SortingType<Mail> MAIL_SENDER_DESCENDING = MAIL_SENDER_ASCENDING.reversed();
+
+    /**
+     * Sorts a mail by whether it is anonymous.
+     */
+    SortingType<Mail> MAIL_ANONYMOUS = (m1, m2) -> Boolean.compare(m1.isAnonymous(), m2.isAnonymous());
+
+    /**
+     * Sorts a mail by whether it is read.
+     */
+    SortingType<Mail> MAIL_READ = (m1, m2) -> Boolean.compare(m1.isRead(), m2.isRead());
+
+    /**
+     * Sorts a mail by whether it is unread.
+     */
+    SortingType<Mail> MAIL_UNREAD = MAIL_READ.reversed();
 
     @Override
     default SortingType<T> reversed() {
