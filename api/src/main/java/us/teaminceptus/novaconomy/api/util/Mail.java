@@ -49,6 +49,7 @@ public final class Mail implements ConfigurationSerializable, Serializable {
 
     private static final long serialVersionUID = 8486787868388524648L;
 
+    private final UUID uniqueId;
     private final UUID sender;
     private final UUID recipient;
     private final String subject;
@@ -58,7 +59,8 @@ public final class Mail implements ConfigurationSerializable, Serializable {
     private boolean anonymous;
     private boolean read;
 
-    private Mail(@NotNull UUID sender, @NotNull UUID recipient, @NotNull String subject, @NotNull String message, long timestamp, boolean anonymous) {
+    private Mail(@NotNull UUID uniqueId, @NotNull UUID sender, @NotNull UUID recipient, @NotNull String subject, @NotNull String message, long timestamp, boolean anonymous) {
+        this.uniqueId = uniqueId;
         this.sender = sender;
         this.recipient = recipient;
         this.subject = subject;
@@ -94,6 +96,7 @@ public final class Mail implements ConfigurationSerializable, Serializable {
         if (message == null) throw new IllegalArgumentException("Message cannot be null");
         if (message.length() > MAX_MESSAGE_LENGTH) throw new IllegalArgumentException("Message length exceeds maximum length of " + MAX_MESSAGE_LENGTH + " characters");
 
+        this.uniqueId = UUID.randomUUID();
         this.sender = sender.getUniqueId();
         this.recipient = recipient.getUniqueId();
         this.subject = subject;
@@ -127,11 +130,21 @@ public final class Mail implements ConfigurationSerializable, Serializable {
         if (message == null) throw new IllegalArgumentException("Message cannot be null");
         if (message.length() > MAX_MESSAGE_LENGTH) throw new IllegalArgumentException("Message length exceeds maximum length of " + MAX_MESSAGE_LENGTH + " characters");
 
+        this.uniqueId = UUID.randomUUID();
         this.sender = sender.getUniqueId();
         this.recipient = recipient.getUniqueId();
         this.subject = subject;
         this.message = Base64.getEncoder().encodeToString(message.getBytes(StandardCharsets.UTF_8));
         this.timestamp = timestamp == null ? System.currentTimeMillis() : timestamp.getTime();
+    }
+
+    /**
+     * Gets the ID of the Mail message.
+     * @return Mail ID
+     */
+    @NotNull
+    public UUID getUniqueId() {
+        return uniqueId;
     }
 
     /**
@@ -220,7 +233,7 @@ public final class Mail implements ConfigurationSerializable, Serializable {
     }
 
     /**
-     * Gets the display name for the sender, depending on whether it is anonymous or not.
+     * Gets the display name for the sender. It will return {@code "???"} if the mail is anonymous.
      * @return Sender Name
      */
     @NotNull
@@ -258,12 +271,12 @@ public final class Mail implements ConfigurationSerializable, Serializable {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Mail mail = (Mail) o;
-        return timestamp == mail.timestamp && anonymous == mail.anonymous && Objects.equals(sender, mail.sender) && Objects.equals(recipient, mail.recipient) && Objects.equals(message, mail.message);
+        return uniqueId == mail.uniqueId;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(sender, recipient, message, timestamp, anonymous);
+        return Objects.hash(uniqueId);
     }
 
     @Override
@@ -274,6 +287,7 @@ public final class Mail implements ConfigurationSerializable, Serializable {
     @Override
     public Map<String, Object> serialize() {
         return ImmutableMap.<String, Object>builder()
+                .put("id", uniqueId.toString())
                 .put("sender", sender.toString())
                 .put("recipient", recipient.toString())
                 .put("message", message)
@@ -291,6 +305,7 @@ public final class Mail implements ConfigurationSerializable, Serializable {
      */
     @NotNull
     public static Mail deserialize(@NotNull Map<String, Object> serialized) {
+        UUID id = UUID.fromString((String) serialized.get("id"));
         UUID sender = UUID.fromString((String) serialized.get("sender"));
         UUID recipient = UUID.fromString((String) serialized.get("recipient"));
         String message = (String) serialized.get("message");
@@ -298,6 +313,6 @@ public final class Mail implements ConfigurationSerializable, Serializable {
         long timestamp = (long) serialized.get("timestamp");
         boolean anonymous = (boolean) serialized.get("anonymous");
 
-        return new Mail(sender, recipient, message, subject, timestamp, anonymous);
+        return new Mail(id, sender, recipient, message, subject, timestamp, anonymous);
     }
 }
