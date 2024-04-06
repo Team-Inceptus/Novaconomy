@@ -35,12 +35,12 @@ public final class Mail implements ConfigurationSerializable, Serializable {
     /**
      * The maximum length of a mail subject.
      */
-    public static final int MAX_SUBJECT_LENGTH = 32;
+    public static final int MAX_SUBJECT_LENGTH = 16;
 
     /**
      * The maximum length of a mail message.
      */
-    public static final int MAX_MESSAGE_LENGTH = 100_000;
+    public static final int MAX_MESSAGE_LENGTH = 102_400;
 
     /**
      * The date format for mail timestamps.
@@ -251,6 +251,7 @@ public final class Mail implements ConfigurationSerializable, Serializable {
         ItemStack item = new ItemStack(Material.WRITTEN_BOOK);
         BookMeta meta = (BookMeta) item.getItemMeta();
         meta.setAuthor(getSenderName());
+        meta.setDisplayName(ChatColor.LIGHT_PURPLE + "" + ChatColor.BOLD + getSubject());
         meta.setTitle(getSubject());
 
         List<String> pages = Arrays.stream(toString().split("(?<=\\G.{798})"))
