@@ -291,6 +291,9 @@ permissions:
     children:
       novaconomy.user: true
 
-  
-  
-    
+  # User Mail
+  novaconomy.user.mail:
+    description: Access to all Novaconomy Mail User Actions and Commands
+    default: true
+    children:
+      novaconomy.user: true
