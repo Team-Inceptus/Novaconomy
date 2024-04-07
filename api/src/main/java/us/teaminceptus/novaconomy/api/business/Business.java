@@ -1390,7 +1390,7 @@ public final class Business implements ConfigurationSerializable {
         File mailF = new File(folder, "mail.yml");
         if (mailF.exists()) {
             FileConfiguration mailConfig = YamlConfiguration.loadConfiguration(mailF);
-            mail.addAll((List<Mail>) mailConfig.getList("mail"));
+            mail.addAll((List<Mail>) mailConfig.getList("mail", new ArrayList<>()));
         }
 
         Business b = new Business(id, name, icon, owner, product, resources, stats, settings, creationDate, keywords, advertisingBalance, blacklist);
@@ -1668,6 +1668,19 @@ public final class Business implements ConfigurationSerializable {
     }
 
     /**
+     * Gets a mail object by its unique ID.
+     * @param id Mail ID
+     * @return Mail, or null if not found
+     */
+    @NotNull
+    public Mail getMail(@NotNull UUID id) {
+        return mail.stream()
+                .filter(m -> m.getUniqueId().equals(id))
+                .findFirst()
+                .orElse(null);
+    }
+
+    /**
      * Sends mail to this Business.
      * @param mail Mail to send
      */
@@ -1675,6 +1688,7 @@ public final class Business implements ConfigurationSerializable {
         if (mail == null) throw new IllegalArgumentException("Mail cannot be null!");
 
         this.mail.add(mail);
+        saveBusiness();
 
         BusinessReceiveMailEvent event = new BusinessReceiveMailEvent(this, mail);
         Bukkit.getPluginManager().callEvent(event);
@@ -1685,6 +1699,7 @@ public final class Business implements ConfigurationSerializable {
      */
     public void markMailAsRead() {
         this.mail.forEach(m -> m.setRead(true));
+        saveBusiness();
     }
 
     /**
@@ -1698,6 +1713,16 @@ public final class Business implements ConfigurationSerializable {
         this.mail.remove(mail);
         mail.setRead(true);
         this.mail.add(mail);
+
+        saveBusiness();
+    }
+
+    /**
+     * Marks mail as read.
+     * @param id ID of Mail to mark as read
+     */
+    public void markMailAsRead(@NotNull UUID id) {
+        markMailAsRead(getMail(id));
     }
 
     /**
@@ -1705,6 +1730,7 @@ public final class Business implements ConfigurationSerializable {
      */
     public void clearMail() {
         mail.clear();
+        saveBusiness();
     }
 
     @Override

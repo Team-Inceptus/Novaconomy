@@ -19,7 +19,6 @@ import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.business.BusinessProduct;
 import us.teaminceptus.novaconomy.api.business.Rating;
-import us.teaminceptus.novaconomy.api.events.business.BusinessReceiveMailEvent;
 import us.teaminceptus.novaconomy.api.events.corporation.*;
 import us.teaminceptus.novaconomy.api.settings.Settings;
 import us.teaminceptus.novaconomy.api.util.Mail;
@@ -1026,6 +1025,19 @@ public final class Corporation {
     }
 
     /**
+     * Gets a mail object by its unique ID.
+     * @param id Mail ID
+     * @return Mail, or null if not found
+     */
+    @NotNull
+    public Mail getMail(@NotNull UUID id) {
+        return mail.stream()
+                .filter(m -> m.getUniqueId().equals(id))
+                .findFirst()
+                .orElse(null);
+    }
+
+    /**
      * Sends mail to this Corporation.
      * @param mail Mail to send
      */
@@ -1033,6 +1045,7 @@ public final class Corporation {
         if (mail == null) throw new IllegalArgumentException("Mail cannot be null!");
 
         this.mail.add(mail);
+        saveCorporation();
 
         CorporationReceiveMailEvent event = new CorporationReceiveMailEvent(this, mail);
         Bukkit.getPluginManager().callEvent(event);
@@ -1043,6 +1056,7 @@ public final class Corporation {
      */
     public void markMailAsRead() {
         this.mail.forEach(m -> m.setRead(true));
+        saveCorporation();
     }
 
     /**
@@ -1056,6 +1070,15 @@ public final class Corporation {
         this.mail.remove(mail);
         mail.setRead(true);
         this.mail.add(mail);
+        saveCorporation();
+    }
+
+    /**
+     * Marks mail as read.
+     * @param id ID of Mail to mark as read
+     */
+    public void markMailAsRead(@NotNull UUID id) {
+        markMailAsRead(getMail(id));
     }
 
     /**
@@ -1063,6 +1086,7 @@ public final class Corporation {
      */
     public void clearMail() {
         mail.clear();
+        saveCorporation();
     }
 
     @Override
@@ -1953,7 +1977,7 @@ public final class Corporation {
         if (!mailF.exists()) mailF.createNewFile();
 
         FileConfiguration mail = YamlConfiguration.loadConfiguration(mailF);
-        c.mail.addAll((List<Mail>) mail.getList("mail"));
+        c.mail.addAll((List<Mail>) mail.getList("mail", new ArrayList<>()));
 
         return c;
     }
