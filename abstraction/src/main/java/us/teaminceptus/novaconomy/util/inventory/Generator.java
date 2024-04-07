@@ -34,6 +34,7 @@ import us.teaminceptus.novaconomy.api.economy.market.Receipt;
 import us.teaminceptus.novaconomy.api.events.business.BusinessAdvertiseEvent;
 import us.teaminceptus.novaconomy.api.player.NovaPlayer;
 import us.teaminceptus.novaconomy.api.settings.Settings;
+import us.teaminceptus.novaconomy.api.util.Mail;
 import us.teaminceptus.novaconomy.api.util.Price;
 
 import java.lang.reflect.Method;
@@ -41,6 +42,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -78,7 +80,7 @@ public final class Generator {
 
     public static List<NovaInventory> generateBusinessData(Business b, Player viewer, boolean advertising, SortingType<? super BusinessProduct> sorter) {
         List<NovaInventory> invs = new ArrayList<>();
-        int limit = ((b.getProducts().size() - 1) / 26) + 1;
+        int limit = Math.max(((b.getProducts().size() - 1) / 26) + 1, 1);
         for (int i = 0; i < limit; i++) {
             final int fI = i;
 
@@ -1634,6 +1636,77 @@ public final class Generator {
         ));
 
         inv.setItem(19, builder(BACK, nbt -> nbt.setID("back:settings")));
+        return inv;
+    }
+
+    public static List<NovaInventory> generateMailbox(Object owner, SortingType<? super Mail> sorter, Player viewer) {
+        List<NovaInventory> invs = new ArrayList<>();
+
+        List<Mail> mail = owner instanceof Business ? ((Business) owner).getMail() : ((Corporation) owner).getMail();
+        String name = owner instanceof Business ? ((Business) owner).getName() : ((Corporation) owner).getName();
+        ItemStack icon = owner instanceof Business ? ((Business) owner).getPublicIcon() : ((Corporation) owner).getPublicIcon();
+
+        int limit = Math.max(((mail.size() - 1) / 26) + 1, 1);
+        for (int i = 0; i < limit; i++) {
+            final int fI = i;
+
+            NovaInventory inv = genGUI(54, name + " | " + get(viewer, "constants.mailbox"));
+            inv.setCancelled();
+
+            inv.setAttribute("sorting_type", Mail.class);
+            inv.setAttribute("sorting_function", (Function<SortingType<? super Mail>, NovaInventory>)
+                    s -> generateMailbox(owner, s, viewer).get(fI));
+
+            inv.setItem(4, icon);
+            inv.setItem(18, sorter(sorter));
+
+            List<Mail> mailS = mail.stream()
+                    .sorted(sorter)
+                    .collect(Collectors.toList())
+                    .subList(i * 26, Math.min((i + 1) * 26, mail.size()));
+
+            for (Mail m : mailS)
+                inv.addItem(builder(m.generateBook(),
+                        meta -> {
+                            List<String> lore = new ArrayList<>(meta.getLore());
+                            lore.add(0, m.isRead() ? ChatColor.GRAY + get(viewer, "constants.sorting_types.mail.read") : ChatColor.GOLD + get(viewer, "constants.sorting_types.mail.unread"));
+                        },
+                        nbt -> {
+                            nbt.setID("mail:view");
+                            nbt.set("mail_id", m.getUniqueId());
+                        })
+                );
+
+            if (limit > 1) {
+                if (i > 0)
+                    inv.setItem(47, Items.prev(STORED));
+
+                if (i < (limit - 1))
+                    inv.setItem(53, Items.next(STORED));
+            }
+
+            invs.add(inv);
+        }
+
+        if (limit > 1)
+            for (NovaInventory inv : invs) inv.setAttribute("invs", invs);
+
+        return invs;
+    }
+
+    public static NovaInventory confirmMail(@NotNull Mail mail, @NotNull Player viewer, @NotNull Runnable send) {
+        NovaInventory inv = genGUI(27, get(viewer, "constants.are_you_sure"));
+        inv.setCancelled();
+
+        inv.setAttribute("mail", mail);
+        inv.setAttribute("send", send);
+
+        inv.setItem(4, createPlayerHead(viewer));
+        inv.setItem(13, mail.generateBook());
+
+        inv.setItem(21, builder(CONFIRM, nbt -> nbt.setID("mail:confirm")));
+        inv.setItem(23, CANCEL);
+
         return inv;
     }
 
