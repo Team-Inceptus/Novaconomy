@@ -42,6 +42,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -87,7 +88,7 @@ public final class Generator {
             NovaInventory inv = genGUI(54, ChatColor.GOLD + b.getName());
             inv.setCancelled();
 
-            inv.setAttribute("business", b.getUniqueId());
+            inv.setAttribute(BUSINESS_TAG, b.getUniqueId());
             inv.setAttribute("sorting_type", BusinessProduct.class);
             inv.setAttribute("sorting_function", (Function<SortingType<? super BusinessProduct>, NovaInventory>) s ->
                     generateBusinessData(b, viewer, advertising, s).get(fI));
@@ -151,6 +152,17 @@ public final class Generator {
             home.setItemMeta(hMeta);
             inv.setItem(12, home);
 
+            Material mailboxM = Material.matchMaterial("CHEST_MINECART");
+            if (mailboxM == null) mailboxM = Material.matchMaterial("STORAGE_MINECART");
+            ItemStack mailbox = builder(mailboxM,
+                    meta -> meta.setDisplayName(ChatColor.AQUA + get(viewer, "constants.mailbox")),
+                    nbt -> {
+                        nbt.setID("mail:mailbox");
+                        nbt.set(TYPE_TAG, BUSINESS_TAG);
+                        nbt.set(BUSINESS_TAG, b.getUniqueId());
+                    }
+            );
+
             ItemStack invites = builder(Material.ENCHANTED_BOOK,
                     meta -> meta.setDisplayName(ChatColor.AQUA + get(viewer, "constants.business.invites")),
                     nbt -> {
@@ -181,6 +193,7 @@ public final class Generator {
             );
 
             if (b.isOwner(viewer)) {
+                inv.setItem(16, mailbox);
                 inv.setItem(17, invites);
                 inv.setItem(26, advInfo);
                 inv.setItem(27, supplyChests);
@@ -402,6 +415,19 @@ public final class Generator {
                     nbt.set(CORPORATION_TAG, c.getUniqueId());
                 });
         inv.setItem(16, ranks);
+
+        Material mailboxM = Material.matchMaterial("CHEST_MINECART");
+        if (mailboxM == null) mailboxM = Material.matchMaterial("STORAGE_MINECART");
+        ItemStack mailbox = builder(mailboxM,
+                meta -> meta.setDisplayName(ChatColor.AQUA + get(viewer, "constants.mailbox")),
+                nbt -> {
+                    nbt.setID("mail:mailbox");
+                    nbt.set(TYPE_TAG, CORPORATION_TAG);
+                    nbt.set(CORPORATION_TAG, c.getUniqueId());
+                }
+        );
+        if (c.hasPermission(viewer, CorporationPermission.VIEW_MAILBOX))
+            inv.setItem(17, mailbox);
 
         if (c.getSetting(Settings.Corporation.FEATURE_PRODUCTS) && !c.getChildren().isEmpty() && r.nextDouble() < 0.4) {
             List<Map.Entry<Business, BusinessProduct>> products = c.getChildren()
@@ -1624,7 +1650,7 @@ public final class Generator {
         inv.setItem(12, Items.builder(OAK_SIGN,
                 meta -> {
                     meta.setDisplayName(ChatColor.LIGHT_PURPLE + get(p, "constants.language.name"));
-                    meta.setLore(Arrays.stream(ChatPaginator.wordWrap(get(p, "constants.language.desc"), 30))
+                    meta.setLore(Arrays.stream(ChatPaginator.wordWrap(get(p, "constants.language.example"), 30))
                             .map(s -> ChatColor.GRAY + s)
                             .collect(Collectors.toList()));
                 }
@@ -1667,10 +1693,6 @@ public final class Generator {
 
             for (Mail m : mailS)
                 inv.addItem(builder(m.generateBook(),
-                        meta -> {
-                            List<String> lore = new ArrayList<>(meta.getLore());
-                            lore.add(0, m.isRead() ? ChatColor.GRAY + get(viewer, "constants.sorting_types.mail.read") : ChatColor.GOLD + get(viewer, "constants.sorting_types.mail.unread"));
-                        },
                         nbt -> {
                             nbt.setID("mail:view");
                             nbt.set("mail_id", m.getUniqueId());
