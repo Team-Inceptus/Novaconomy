@@ -14,6 +14,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.bukkit.configuration.serialization.DelegateDeserialization;
 import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -656,6 +657,7 @@ public final class Business implements ConfigurationSerializable {
      * @return true if blacklisted, else false
      */
     public boolean isBlacklisted(@NotNull Business business) {
+        if (business == null) return false;
         if (this.equals(business)) return false;
         return this.blacklist.contains(business.id) || business.blacklist.contains(this.id);
     }
@@ -1695,42 +1697,24 @@ public final class Business implements ConfigurationSerializable {
     }
 
     /**
-     * Marks all mail as read.
-     */
-    public void markMailAsRead() {
-        this.mail.forEach(m -> m.setRead(true));
-        saveBusiness();
-    }
-
-    /**
-     * Marks mail as read.
-     * @param mail Mail to mark as read
-     */
-    public void markMailAsRead(@NotNull Mail mail) {
-        if (mail == null) throw new IllegalArgumentException("Mail cannot be null!");
-        if (!this.mail.contains(mail)) throw new IllegalArgumentException("Mail does not belong to this Corporation!");
-
-        this.mail.remove(mail);
-        mail.setRead(true);
-        this.mail.add(mail);
-
-        saveBusiness();
-    }
-
-    /**
-     * Marks mail as read.
-     * @param id ID of Mail to mark as read
-     */
-    public void markMailAsRead(@NotNull UUID id) {
-        markMailAsRead(getMail(id));
-    }
-
-    /**
      * Clears all mail from this Business.
      */
     public void clearMail() {
         mail.clear();
         saveBusiness();
+    }
+
+    /**
+     * Gets whether this business allows a player to send it mail.
+     * @param p Player to check
+     * @return true if player can send mail, else false
+     */
+    public boolean canSendMail(@NotNull OfflinePlayer p) {
+        if (p == null) return false;
+        if (p.isOnline() && !p.getPlayer().hasPermission("novaconomy.user.mail")) return false;
+        if (isBlacklisted(Business.byOwner(p))) return false;
+
+        return getSetting(Settings.Business.OPEN_MAILBOX);
     }
 
     @Override

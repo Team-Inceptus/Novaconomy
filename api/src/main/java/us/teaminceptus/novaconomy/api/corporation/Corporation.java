@@ -900,7 +900,7 @@ public final class Corporation {
     }
 
     /**
-     * Checks if a Business has a rank.
+     * Checks if a Business has a permission.
      * @param child Business to check
      * @param permission Permission to check
      * @return true if has permission, false otherwise
@@ -914,6 +914,23 @@ public final class Corporation {
         if (rank == null) return false;
 
         return rank.hasPermission(permission);
+    }
+
+    /**
+     * Checks if a Player has a permission. This will silently return false if the player does not own a business or is not apart of the corporation.
+     * @param p Player to check
+     * @param permission Permission to check
+     * @return true if has permission, false otherwise
+     */
+    public boolean hasPermission(@NotNull Player p, @NotNull CorporationPermission permission) {
+        if (p == null) throw new IllegalArgumentException("Player cannot be null!");
+        if (isOwner(p)) return true;
+
+        Business b = Business.byOwner(p);
+        if (b == null) return false;
+        if (!children.contains(b)) return false;
+
+        return hasPermission(b, permission);
     }
 
     /**
@@ -1052,41 +1069,24 @@ public final class Corporation {
     }
 
     /**
-     * Marks all mail as read.
-     */
-    public void markMailAsRead() {
-        this.mail.forEach(m -> m.setRead(true));
-        saveCorporation();
-    }
-
-    /**
-     * Marks mail as read.
-     * @param mail Mail to mark as read
-     */
-    public void markMailAsRead(@NotNull Mail mail) {
-        if (mail == null) throw new IllegalArgumentException("Mail cannot be null!");
-        if (!this.mail.contains(mail)) throw new IllegalArgumentException("Mail does not belong to this Corporation!");
-
-        this.mail.remove(mail);
-        mail.setRead(true);
-        this.mail.add(mail);
-        saveCorporation();
-    }
-
-    /**
-     * Marks mail as read.
-     * @param id ID of Mail to mark as read
-     */
-    public void markMailAsRead(@NotNull UUID id) {
-        markMailAsRead(getMail(id));
-    }
-
-    /**
      * Clears all mail from this Corporation.
      */
     public void clearMail() {
         mail.clear();
         saveCorporation();
+    }
+
+    /**
+     * Gets whether this corporation allows a player to send it mail.
+     * @param p Player to check
+     * @return true if player can send mail, else false
+     */
+    public boolean canSendMail(@NotNull OfflinePlayer p) {
+        if (p == null) return false;
+        if (p.isOnline() && !p.getPlayer().hasPermission("novaconomy.user.mail")) return false;
+        if (isBanned(p)) return false;
+
+        return getSetting(Settings.Corporation.OPEN_MAILBOX);
     }
 
     @Override
