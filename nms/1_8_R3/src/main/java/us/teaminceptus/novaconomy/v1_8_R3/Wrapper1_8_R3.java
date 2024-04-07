@@ -8,14 +8,14 @@ import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.craftbukkit.v1_8_R3.CraftWorld;
 import org.bukkit.craftbukkit.v1_8_R3.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_8_R3.inventory.CraftItemStack;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.material.Crops;
-import org.bukkit.scheduler.BukkitRunnable;
 import us.teaminceptus.novaconomy.abstraction.NBTWrapper;
 import us.teaminceptus.novaconomy.abstraction.NovaInventory;
 import us.teaminceptus.novaconomy.abstraction.Wrapper;
-import us.teaminceptus.novaconomy.api.NovaConfig;
 
 import java.util.Arrays;
 import java.util.function.Consumer;
@@ -115,6 +115,14 @@ final class Wrapper1_8_R3 implements Wrapper {
 
             ((CraftPlayer) p).getHandle().playerConnection.sendPacket(sent3);
         }, 2L);
+    }
+
+    @Override
+    public void openBook(Player p, ItemStack book) {
+        ItemStack old = p.getItemInHand();
+        p.setItemInHand(book);
+        ((CraftPlayer) p).getHandle().openBook(CraftItemStack.asNMSCopy(book));
+        p.setItemInHand(old);
     }
 
 }

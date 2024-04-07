@@ -16,11 +16,9 @@ import org.bukkit.craftbukkit.v1_14_R1.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.PlayerInventory;
-import org.bukkit.scheduler.BukkitRunnable;
 import us.teaminceptus.novaconomy.abstraction.NBTWrapper;
 import us.teaminceptus.novaconomy.abstraction.NovaInventory;
 import us.teaminceptus.novaconomy.abstraction.Wrapper;
-import us.teaminceptus.novaconomy.api.NovaConfig;
 
 import java.util.function.Consumer;
 
@@ -124,6 +122,11 @@ final class Wrapper1_14_R1 implements Wrapper {
 
             ((CraftPlayer) p).getHandle().playerConnection.sendPacket(sent3);
         }, 2L);
+    }
+
+    @Override
+    public void openBook(Player p, org.bukkit.inventory.ItemStack book) {
+        p.openBook(book);
     }
 
 }

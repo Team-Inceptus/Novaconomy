@@ -64,4 +64,7 @@ public final class TestWrapper implements Wrapper {
     @Override
     public void sendSign(Player p, Consumer<String[]> lines) {}
 
+    @Override
+    public void openBook(Player p, ItemStack book) {}
+
 }
