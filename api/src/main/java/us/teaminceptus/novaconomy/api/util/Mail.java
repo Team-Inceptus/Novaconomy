@@ -17,14 +17,7 @@ import us.teaminceptus.novaconomy.api.corporation.Corporation;
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
-import java.util.Base64;
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -52,6 +45,7 @@ public final class Mail implements ConfigurationSerializable, Serializable {
     private final UUID uniqueId;
     private final UUID sender;
     private final UUID recipient;
+    private final String recipientName;
     private final String subject;
     private final String message;
     private final long timestamp;
@@ -59,10 +53,11 @@ public final class Mail implements ConfigurationSerializable, Serializable {
     private boolean anonymous;
     private boolean read;
 
-    private Mail(@NotNull UUID uniqueId, @NotNull UUID sender, @NotNull UUID recipient, @NotNull String subject, @NotNull String message, long timestamp, boolean anonymous) {
+    private Mail(@NotNull UUID uniqueId, @NotNull UUID sender, @NotNull UUID recipient, @NotNull String recipientName, @NotNull String subject, @NotNull String message, long timestamp, boolean anonymous) {
         this.uniqueId = uniqueId;
         this.sender = sender;
         this.recipient = recipient;
+        this.recipientName = recipientName;
         this.subject = subject;
         this.message = message;
         this.timestamp = timestamp;
@@ -99,6 +94,7 @@ public final class Mail implements ConfigurationSerializable, Serializable {
         this.uniqueId = UUID.randomUUID();
         this.sender = sender.getUniqueId();
         this.recipient = recipient.getUniqueId();
+        this.recipientName = recipient.getName();
         this.subject = subject;
         this.message = Base64.getEncoder().encodeToString(message.getBytes(StandardCharsets.UTF_8));
         this.timestamp = timestamp == null ? System.currentTimeMillis() : timestamp.getTime();
@@ -133,6 +129,7 @@ public final class Mail implements ConfigurationSerializable, Serializable {
         this.uniqueId = UUID.randomUUID();
         this.sender = sender.getUniqueId();
         this.recipient = recipient.getUniqueId();
+        this.recipientName = recipient.getName();
         this.subject = subject;
         this.message = Base64.getEncoder().encodeToString(message.getBytes(StandardCharsets.UTF_8));
         this.timestamp = timestamp == null ? System.currentTimeMillis() : timestamp.getTime();
@@ -163,6 +160,15 @@ public final class Mail implements ConfigurationSerializable, Serializable {
     @NotNull
     public UUID getRecipient() {
         return recipient;
+    }
+
+    /**
+     * Gets the name of the recipient of the mail message.
+     * @return Mail Recipient Name
+     */
+    @NotNull
+    public String getRecipientName() {
+        return recipientName;
     }
 
     /**
@@ -260,7 +266,10 @@ public final class Mail implements ConfigurationSerializable, Serializable {
         meta.setPages(pages);
 
         SimpleDateFormat format = new SimpleDateFormat(DATE_FORMAT, Language.getCurrentLocale());
-        meta.setLore(Collections.singletonList(ChatColor.DARK_GRAY + format.format(getTimestamp())));
+        meta.setLore(Arrays.asList(
+                ChatColor.GOLD + "" + ChatColor.BOLD + "✉ -> " + getRecipientName(),
+                ChatColor.DARK_GRAY + format.format(getTimestamp())
+        ));
 
         item.setItemMeta(meta);
 
@@ -285,12 +294,33 @@ public final class Mail implements ConfigurationSerializable, Serializable {
         return "<" + getSenderName() + "> " + subject + "\n\n" + getMessage();
     }
 
+    /**
+     * Gets a Mail object by its unique ID.
+     * @param id The unique ID of the mail.
+     * @return Mail Object, or null if not found
+     */
+    @Nullable
+    public static Mail byId(@NotNull UUID id) {
+        for (Business b : Business.getBusinesses()) {
+            Mail m = b.getMail(id);
+            if (m != null) return m;
+        }
+
+        for (Corporation c : Corporation.getCorporations()) {
+            Mail m = c.getMail(id);
+            if (m != null) return m;
+        }
+
+        return null;
+    }
+
     @Override
     public Map<String, Object> serialize() {
         return ImmutableMap.<String, Object>builder()
                 .put("id", uniqueId.toString())
                 .put("sender", sender.toString())
                 .put("recipient", recipient.toString())
+                .put("recipient_name", recipientName)
                 .put("message", message)
                 .put("subject", subject)
                 .put("timestamp", timestamp)
@@ -309,11 +339,12 @@ public final class Mail implements ConfigurationSerializable, Serializable {
         UUID id = UUID.fromString((String) serialized.get("id"));
         UUID sender = UUID.fromString((String) serialized.get("sender"));
         UUID recipient = UUID.fromString((String) serialized.get("recipient"));
+        String recipientName = (String) serialized.get("recipient_name");
         String message = (String) serialized.get("message");
         String subject = (String) serialized.get("subject");
         long timestamp = (long) serialized.get("timestamp");
         boolean anonymous = (boolean) serialized.get("anonymous");
 
-        return new Mail(id, sender, recipient, message, subject, timestamp, anonymous);
+        return new Mail(id, sender, recipient, recipientName, message, subject, timestamp, anonymous);
     }
 }
