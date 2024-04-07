@@ -15,6 +15,7 @@ import org.bukkit.util.io.BukkitObjectInputStream;
 import org.bukkit.util.io.BukkitObjectOutputStream;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.auction.AuctionProduct;
 import us.teaminceptus.novaconomy.api.bank.Bank;
@@ -950,6 +951,26 @@ public final class NovaPlayer {
         if (!NovaConfig.getConfiguration().isNegativeBalancesEnabled()) return false;
 
         return NovaConfig.getConfiguration().canBypassMaxNegativeAmount(p);
+    }
+
+    /**
+     * Gets the language of this player.
+     * @return Language of this player
+     */
+    @NotNull
+    public Language getLanguage() {
+        return Language.getById((String) pConfig.getOrDefault("language", Language.getCurrentLanguage().getIdentifier()));
+    }
+
+    /**
+     * Sets the language of this player.
+     * @param lang Language to set
+     * @throws IllegalArgumentException if language is null
+     */
+    public void setLanguage(@NotNull Language lang) throws IllegalArgumentException {
+        if (lang == null) throw new IllegalArgumentException("Language cannot be null");
+        pConfig.put("language", lang.getIdentifier());
+        save();
     }
 
     private void checkStats() {

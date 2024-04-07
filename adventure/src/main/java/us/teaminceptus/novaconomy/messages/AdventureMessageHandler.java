@@ -159,7 +159,7 @@ class AdventureMessageHandler implements MessageHandler {
         if (!advancedText(sender)) return component;
 
         if (MessageHandler.ERROR_EXAMPLES.containsKey(key)) {
-            Component text = fromLegacy(sender, EXAMPLE_COLORS[r.nextInt(EXAMPLE_COLORS.length)] + format(get("constants.example"), ChatColor.GOLD + MessageHandler.ERROR_EXAMPLES.get(key).get()));
+            Component text = fromLegacy(sender, EXAMPLE_COLORS[r.nextInt(EXAMPLE_COLORS.length)] + format(sender, get(sender, "constants.example"), ChatColor.GOLD + MessageHandler.ERROR_EXAMPLES.get(key).get()));
             component = component.hoverEvent(HoverEvent.showText(text));
         }
 
@@ -195,7 +195,7 @@ class AdventureMessageHandler implements MessageHandler {
             case "success.business.create": {
                 component = component
                         .hoverEvent(HoverEvent.showText(
-                                Component.text(get("constants.click_to_open")).color(TextColor.color(0xFFD500))
+                                Component.text(get(sender, "constants.click_to_open")).color(TextColor.color(0xFFD500))
                         ))
                         .clickEvent(ClickEvent.callback(audience -> {
                             if (audience instanceof Player)
@@ -206,7 +206,7 @@ class AdventureMessageHandler implements MessageHandler {
             case "success.corporation.create": {
                 component = component
                         .hoverEvent(HoverEvent.showText(
-                                Component.text(get("constants.click_to_open")).color(TextColor.color(0xFFD500))
+                                Component.text(get(sender, "constants.click_to_open")).color(TextColor.color(0xFFD500))
                         ))
                         .clickEvent(ClickEvent.callback(audience -> {
                             if (audience instanceof Player)
@@ -221,26 +221,26 @@ class AdventureMessageHandler implements MessageHandler {
 
     @Override
     public void send(CommandSender sender, String key, Object... args) {
-        Component message = map(sender, fromLegacy(sender, format(get(key), args)), key, args);
+        Component message = map(sender, fromLegacy(sender, format(sender, get(sender, key), args)), key, args);
 
         sender.sendMessage(message);
     }
 
     @Override
     public void sendMessage(CommandSender sender, String key, Object... args) {
-        Component message = map(sender, fromLegacy(sender, format(get(key), args)), key, args);
+        Component message = map(sender, fromLegacy(sender, format(sender, get(sender, key), args)), key, args);
         sendComponents(sender, prefix(sender), message);
     }
 
     @Override
     public void sendError(CommandSender sender, String key, Object... args) {
-        Component message = map(sender, fromLegacy(sender, ChatColor.RED + format(get(key), args)), key, args);
+        Component message = map(sender, fromLegacy(sender, ChatColor.RED + format(sender, get(sender, key), args)), key, args);
         sendComponents(sender, prefix(sender), message);
     }
 
     @Override
     public void sendSuccess(CommandSender sender, String key, Object... args) {
-        Component message = map(sender, fromLegacy(sender, ChatColor.GREEN + format(get(key), args)), key, args);
+        Component message = map(sender, fromLegacy(sender, ChatColor.GREEN + format(sender, get(sender, key), args)), key, args);
         sendComponents(sender, prefix(sender), message);
     }
 

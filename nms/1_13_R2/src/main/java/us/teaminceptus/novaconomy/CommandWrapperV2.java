@@ -16,6 +16,7 @@ import revxrsal.commands.autocomplete.SuggestionProvider;
 import revxrsal.commands.bukkit.BukkitCommandActor;
 import revxrsal.commands.bukkit.BukkitCommandHandler;
 import revxrsal.commands.bukkit.annotation.CommandPermission;
+import revxrsal.commands.util.Either;
 import us.teaminceptus.novaconomy.NovaAnnotationReplacer.BalanceToRange;
 import us.teaminceptus.novaconomy.abstraction.CommandWrapper;
 import us.teaminceptus.novaconomy.api.Language;
@@ -32,6 +33,7 @@ import us.teaminceptus.novaconomy.util.command.MaterialSelector;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -52,7 +54,7 @@ final class CommandWrapperV2 implements CommandWrapper {
             if (param.hasAnnotation(Length.class)) {
                 int length = param.getAnnotation(Length.class).value();
                 if (value.length() > length)
-                    throw new TranslatableErrorException("error.argument.length", length);
+                    throw new TranslatableErrorException(actor.as(BukkitCommandActor.class).getSender(), "error.argument.length", length);
             }
         });
 
@@ -60,48 +62,48 @@ final class CommandWrapperV2 implements CommandWrapper {
                 String value = ctx.popForParameter();
                 if (value.equalsIgnoreCase("me")) return ((BukkitCommandActor) ctx.actor()).requirePlayer();
                 OfflinePlayer p = NovaUtil.getPlayer(value);
-                if (p == null) throw new TranslatableErrorException("error.argument.player");
+                if (p == null) throw new TranslatableErrorException(p, "error.argument.player");
                 return p;
         }).registerValueResolver(Material.class, ctx -> {
             Material m = Material.matchMaterial(ctx.popForParameter());
             if (!w.isItem(m))
-                throw new TranslatableErrorException("error.argument.item");
+                throw new TranslatableErrorException(ctx.actor().as(BukkitCommandActor.class).getSender(), "error.argument.item");
 
             return m;
         }).registerValueResolver(Economy.class, ctx -> {
             Economy econ = Economy.byName(ctx.popForParameter());
             if (econ == null)
-                throw new TranslatableErrorException("error.argument.economy");
+                throw new TranslatableErrorException(ctx.actor().as(BukkitCommandActor.class).getSender(), "error.argument.economy");
 
             return econ;
         }).registerValueResolver(Business.class, ctx -> {
             Business b = Business.byName(ctx.popForParameter());
             if (b == null)
-                throw new TranslatableErrorException("error.argument.business");
+                throw new TranslatableErrorException(ctx.actor().as(BukkitCommandActor.class).getSender(), "error.argument.business");
 
             return b;
         }).registerValueResolver(Corporation.class, ctx -> {
             Corporation c = Corporation.byName(ctx.popForParameter());
             if (c == null)
-                throw new TranslatableErrorException("error.argument.corporation");
+                throw new TranslatableErrorException(ctx.actor().as(BukkitCommandActor.class).getSender(), "error.argument.corporation");
 
             return c;
         }).registerValueResolver(MaterialSelector.class, ctx -> {
             MaterialSelector selector = MaterialSelector.of(ctx.popForParameter());
             if (selector == null)
-                throw new TranslatableErrorException("error.argument.item");
+                throw new TranslatableErrorException(ctx.actor().as(BukkitCommandActor.class).getSender(), "error.argument.item");
 
             return selector;
         }).registerValueResolver(CorporationRank.class, ctx -> {
             Player p = ctx.actor().as(BukkitCommandActor.class).requirePlayer();
             Corporation c = Corporation.byMember(p);
             if (c == null)
-                throw new TranslatableErrorException("error.corporation.none.member");
+                throw new TranslatableErrorException(ctx.actor().as(BukkitCommandActor.class).getSender(), "error.corporation.none.member");
 
             CorporationRank rank = c.getRank(ctx.popForParameter());
 
             if (rank == null)
-                throw new TranslatableErrorException("error.argument.rank");
+                throw new TranslatableErrorException(ctx.actor().as(BukkitCommandActor.class).getSender(), "error.argument.rank");
 
             return rank;
         });
@@ -148,7 +150,7 @@ final class CommandWrapperV2 implements CommandWrapper {
                     Player p = sender.as(BukkitCommandActor.class).requirePlayer();
                     Corporation c = Corporation.byMember(p);
                     if (c == null)
-                        throw new TranslatableErrorException("error.corporation.none.member");
+                        throw new TranslatableErrorException(p, "error.corporation.none.member");
 
                     return c.getRanks()
                             .stream()
@@ -252,7 +254,14 @@ final class CommandWrapperV2 implements CommandWrapper {
                             .map(CorporationInvite::getFrom)
                             .map(Corporation::getName)
                             .collect(Collectors.toList());
-                });
+                })
+                .registerSuggestion("mail",
+                        SuggestionProvider.map(Business::getBusinesses, Business::getName)
+                        .compose(SuggestionProvider.map(Corporation::getCorporations, Corporation::getName))
+                        // with namespace
+                        .compose(SuggestionProvider.map(Business::getBusinesses, b -> BUSINESS_TAG + ":" + b.getName()))
+                        .compose(SuggestionProvider.map(Corporation::getCorporations, c -> CORPORATION_TAG + ":" + c.getName()))
+                );
 
         handler.registerAnnotationReplacer(Balance.class, new BalanceToRange());
 
@@ -379,7 +388,70 @@ final class CommandWrapperV2 implements CommandWrapper {
     @CommandPermission("novaconomy.user.leaderboard")
     public void businessLeaderboard(Player p) { CommandWrapper.super.businessLeaderboard(p, "ratings"); }
 
-    @Command({"business", "nbusiness", "nb", "b"})
+    @Override
+    @Command({"corporationchat", "corpchat", "cc", "ncc", "corporationc", "corpc", "cchat"})
+    @Usage("/cc <message>")
+    @Description("Chat with your Novaconomy Corporation")
+    @CommandPermission("novaconomy.user.corporation")
+    public void corporationChat(Player p, String message) {
+        CommandWrapper.super.corporationChat(p, message);
+    }
+
+
+    @Command({"corporationleaderboard", "corpleaderboard", "cleaderboard", "corpboard", "cboard"})
+    @Usage("/cleaderboard [category]")
+    @Description("View the Top 10 Corporations in various categories")
+    @CommandPermission("novaconomy.user.leaderboard")
+    public void corporationLeaderboard(Player p) { CommandWrapper.super.corporationLeaderboard(p, "ratings"); }
+
+    @Command({"nlanguage", "nlang", "novalang"})
+    @Usage("/nlanguage <language>")
+    @Description("Change your Novaconomy Language")
+    @CommandPermission("novaconomy.user.language")
+    public void language(Player p) { settings(p, "language"); }
+
+    @Command({"nmail", "novamail"})
+    @Usage("/nmail <target> [anonymous]")
+    @Description("Send Mail to a Business or Corporation")
+    @CommandPermission("novaconomy.user.mail")
+    @AutoComplete("@mail *")
+    public void mail(Player p, @Single String target, @Default("false") boolean anonymous) {
+        String targetName = target.split(":").length == 2 ? target.split(":")[1] : target;
+        String targetType;
+        UUID targetId;
+
+        java.util.Optional<Business> business = java.util.Optional.ofNullable(Business.byName(targetName));
+        java.util.Optional<Corporation> corporation = java.util.Optional.ofNullable(Corporation.byName(targetName));
+
+        if (business.isPresent()) {
+            Business b = business.get();
+            targetId = b.getUniqueId();
+            targetName = b.getName();
+            targetType = BUSINESS_TAG;
+
+            if (!b.canSendMail(p)) {
+                messages.sendError(p, "error.player.cannot_send_mail");
+                return;
+            }
+        } else if (corporation.isPresent()) {
+            Corporation c = corporation.get();
+            targetId = c.getUniqueId();
+            targetName = c.getName();
+            targetType = CORPORATION_TAG;
+
+            if (!c.canSendMail(p)) {
+                messages.sendError(p, "error.player.cannot_send_mail");
+                return;
+            }
+        } else {
+            messages.sendError(p, "error.argument.target");
+            return;
+        }
+
+        CommandWrapper.super.mail(p, anonymous, targetName, targetType, targetId);
+    }
+
+    @Command({BUSINESS_TAG, "nbusiness", "nb", "b"})
     @Description("Manage your Novaconomy Business")
     @Usage("/business <create|info|delete|addproduct|stock|query|...> <args...>")
     private static final class BusinessCommands {
@@ -392,7 +464,7 @@ final class CommandWrapperV2 implements CommandWrapper {
             handler.register(this);
         }
 
-        @DefaultFor({"business", "b", "nbusiness", "nb"})
+        @DefaultFor({BUSINESS_TAG, "b", "nbusiness", "nb"})
         @Subcommand({"info", "information"})
         public void businessInfo(Player p) { wrapper.businessInfo(p); }
 
@@ -541,6 +613,9 @@ final class CommandWrapperV2 implements CommandWrapper {
 
         @Subcommand("supply")
         public void supply(Player p) { wrapper.businessSupply(p); }
+
+        @Subcommand({"mailbox", "mail"})
+        public void mailbox(Player p) { wrapper.mailbox(p, Business.byOwner(p)); }
     }
 
     @Command({"nbank", "bank", "globalbank", "gbank"})
@@ -966,23 +1041,10 @@ final class CommandWrapperV2 implements CommandWrapper {
         public void corporationBroadcast(Player p, String message) {
             wrapper.broadcastCorporationMessage(p, message);
         }
+
+        @Subcommand({"mailbox", "mail"})
+        public void mailbox(Player p) { wrapper.mailbox(p, Corporation.byMember(p)); }
     }
-
-    @Override
-    @Command({"corporationchat", "corpchat", "cc", "ncc", "corporationc", "corpc", "cchat"})
-    @Usage("/cc <message>")
-    @Description("Chat with your Novaconomy Corporation")
-    @CommandPermission("novaconomy.user.corporation")
-    public void corporationChat(Player p, String message) {
-        CommandWrapper.super.corporationChat(p, message);
-    }
-
-
-    @Command({"corporationleaderboard", "corpleaderboard", "cleaderboard", "corpboard", "cboard"})
-    @Usage("/cleaderboard [category]")
-    @Description("View the Top 10 Corporations in various categories")
-    @CommandPermission("novaconomy.user.leaderboard")
-    public void corporationLeaderboard(Player p) { CommandWrapper.super.corporationLeaderboard(p, "ratings"); }
 
     @Command({"market", "novamarket", "novam", "m"})
     @Usage("/market <open|sell|...>")
@@ -1021,7 +1083,7 @@ final class CommandWrapperV2 implements CommandWrapper {
         @AutoComplete("enabled|disabled")
         public void setMarketRestockEnabled(CommandSender sender, @Single String enabled) {
             if (!enabled.equalsIgnoreCase("enabled") && !enabled.equalsIgnoreCase("disabled"))
-                throw new TranslatableErrorException("error.argument");
+                throw new TranslatableErrorException(sender, "error.argument");
             wrapper.setMarketRestockEnabled(sender, enabled.equalsIgnoreCase("enabled"));
         }
 
@@ -1044,7 +1106,7 @@ final class CommandWrapperV2 implements CommandWrapper {
         @AutoComplete("enabled|disabled")
         public void setMarketDepositEnabled(CommandSender sender, @Single String enabled) {
             if (!enabled.equalsIgnoreCase("enabled") && !enabled.equalsIgnoreCase("disabled"))
-                throw new TranslatableErrorException("error.argument");
+                throw new TranslatableErrorException(sender, "error.argument");
             wrapper.setMarketDepositEnabled(sender, enabled.equalsIgnoreCase("enabled"));
         }
 

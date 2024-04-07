@@ -14,6 +14,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.bukkit.configuration.serialization.DelegateDeserialization;
 import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -27,9 +28,11 @@ import us.teaminceptus.novaconomy.api.corporation.Corporation;
 import us.teaminceptus.novaconomy.api.corporation.CorporationInvite;
 import us.teaminceptus.novaconomy.api.economy.Economy;
 import us.teaminceptus.novaconomy.api.events.business.BusinessCreateEvent;
+import us.teaminceptus.novaconomy.api.events.business.BusinessReceiveMailEvent;
 import us.teaminceptus.novaconomy.api.events.business.BusinessSupplyEvent;
 import us.teaminceptus.novaconomy.api.player.NovaPlayer;
 import us.teaminceptus.novaconomy.api.settings.Settings;
+import us.teaminceptus.novaconomy.api.util.Mail;
 import us.teaminceptus.novaconomy.api.util.Price;
 import us.teaminceptus.novaconomy.api.util.Product;
 
@@ -91,6 +94,7 @@ public final class Business implements ConfigurationSerializable {
     private final List<String> keywords = new ArrayList<>();
     private final List<UUID> blacklist = new ArrayList<>();
     private final List<Location> supplyChests = new ArrayList<>();
+    private final List<Mail> mail = new ArrayList<>();
 
     private Business(UUID uid, @NotNull String name, Material icon, OfflinePlayer owner, Collection<Product> products, Collection<ItemStack> resources,
                      BusinessStatistics stats, Map<Settings.Business<?>, Object> settings, long creationDate, List<String> keywords,
@@ -653,6 +657,7 @@ public final class Business implements ConfigurationSerializable {
      * @return true if blacklisted, else false
      */
     public boolean isBlacklisted(@NotNull Business business) {
+        if (business == null) return false;
         if (this.equals(business)) return false;
         return this.blacklist.contains(business.id) || business.blacklist.contains(this.id);
     }
@@ -890,6 +895,9 @@ public final class Business implements ConfigurationSerializable {
 
             if (!(rs = md.getColumns(null, null, "businesses", "supply_chests")).next())
                 db.createStatement().execute("ALTER TABLE businesses ADD supply_chests LONGBLOB NOT NULL");
+
+            if (!(rs = md.getColumns(null, null, "businesses", "mail")).next())
+                db.createStatement().execute("ALTER TABLE businesses ADD mail MEDIUMBLOB NOT NULL");
         } finally {
             if (rs != null) rs.close();
         }
@@ -935,10 +943,11 @@ public final class Business implements ConfigurationSerializable {
                         "adbalance = ?, " +
                         "blacklist = ?, " +
                         "custom_model_data = ?, " +
-                        "supply_chests = ? " +
+                        "supply_chests = ?, " +
+                        "mail = ? " +
                         "WHERE id = \"" + this.id + "\"";
             else
-                sql = "INSERT INTO businesses VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                sql = "INSERT INTO businesses VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         }
 
         PreparedStatement ps = db.prepareStatement(sql);
@@ -1010,6 +1019,12 @@ public final class Business implements ConfigurationSerializable {
         supplyChestsBos.writeObject(this.supplyChests);
         supplyChestsBos.close();
         ps.setBytes(15, supplyChestsOs.toByteArray());
+
+        ByteArrayOutputStream mailOs = new ByteArrayOutputStream();
+        BukkitObjectOutputStream mailBos = new BukkitObjectOutputStream(mailOs);
+        mailBos.writeObject(this.mail);
+        mailBos.close();
+        ps.setBytes(16, mailOs.toByteArray());
 
         ps.executeUpdate();
         ps.close();
@@ -1085,11 +1100,17 @@ public final class Business implements ConfigurationSerializable {
         List<Location> supplyChests = (List<Location>) supplyChestsBis.readObject();
         supplyChestsBis.close();
 
+        ByteArrayInputStream mailIs = new ByteArrayInputStream(rs.getBytes("mail"));
+        BukkitObjectInputStream mailBis = new BukkitObjectInputStream(mailIs);
+        List<Mail> mail = (List<Mail>) mailBis.readObject();
+        mailBis.close();
+
         Business b = new Business(id, name, icon, owner, products, resources, stats, settings, creationDate, keywords, adBal, blacklist);
         b.setHome(home, false);
 
         b.customModelData = rs.getInt("custom_model_data");
         b.supplyChests.addAll(supplyChests);
+        b.mail.addAll(mail);
         return b;
     }
 
@@ -1196,6 +1217,15 @@ public final class Business implements ConfigurationSerializable {
         FileConfiguration suConfig = YamlConfiguration.loadConfiguration(supply);
         suConfig.set("supply_chests", this.supplyChests);
         suConfig.save(supply);
+
+        // Mail
+
+        File mailF = new File(folder, "mail.yml");
+        if (!mailF.exists()) mailF.createNewFile();
+
+        FileConfiguration mail = YamlConfiguration.loadConfiguration(mailF);
+        mail.set("mail", this.mail);
+        mail.save(mailF);
 
         // Other Information
 
@@ -1357,11 +1387,21 @@ public final class Business implements ConfigurationSerializable {
             supplyChests.addAll((List<Location>) sConfig.get("supply_chests"));
         }
 
+        // Mail
+        List<Mail> mail = new ArrayList<>();
+        File mailF = new File(folder, "mail.yml");
+        if (mailF.exists()) {
+            FileConfiguration mailConfig = YamlConfiguration.loadConfiguration(mailF);
+            mail.addAll((List<Mail>) mailConfig.getList("mail", new ArrayList<>()));
+        }
+
         Business b = new Business(id, name, icon, owner, product, resources, stats, settings, creationDate, keywords, advertisingBalance, blacklist);
         b.setHome(home, false);
 
         b.customModelData = oConfig.getInt("custom_model_data");
         b.supplyChests.addAll(supplyChests);
+        b.mail.addAll(mail);
+
         return b;
     }
 
@@ -1615,6 +1655,66 @@ public final class Business implements ConfigurationSerializable {
     public Business removeAdvertisingBalance(@Nullable Price p) {
         if (p == null) return this;
         return removeAdvertisingBalance(p.getAmount() * p.getEconomy().getConversionScale());
+    }
+
+    /**
+     * Gets an immutable copy of all the mail that belongs to this Business, sorted by timestamp.
+     * @return All Mail
+     */
+    @NotNull
+    public List<Mail> getMail() {
+        return ImmutableList.copyOf(mail
+                .stream()
+                .sorted(Comparator.comparing(Mail::getTimestamp))
+                .collect(Collectors.toList()));
+    }
+
+    /**
+     * Gets a mail object by its unique ID.
+     * @param id Mail ID
+     * @return Mail, or null if not found
+     */
+    @NotNull
+    public Mail getMail(@NotNull UUID id) {
+        return mail.stream()
+                .filter(m -> m.getUniqueId().equals(id))
+                .findFirst()
+                .orElse(null);
+    }
+
+    /**
+     * Sends mail to this Business.
+     * @param mail Mail to send
+     */
+    public void sendMail(@NotNull Mail mail) {
+        if (mail == null) throw new IllegalArgumentException("Mail cannot be null!");
+
+        this.mail.add(mail);
+        saveBusiness();
+
+        BusinessReceiveMailEvent event = new BusinessReceiveMailEvent(this, mail);
+        Bukkit.getPluginManager().callEvent(event);
+    }
+
+    /**
+     * Clears all mail from this Business.
+     */
+    public void clearMail() {
+        mail.clear();
+        saveBusiness();
+    }
+
+    /**
+     * Gets whether this business allows a player to send it mail.
+     * @param p Player to check
+     * @return true if player can send mail, else false
+     */
+    public boolean canSendMail(@NotNull OfflinePlayer p) {
+        if (p == null) return false;
+        if (p.isOnline() && !p.getPlayer().hasPermission("novaconomy.user.mail")) return false;
+        if (isBlacklisted(Business.byOwner(p))) return false;
+
+        return getSetting(Settings.Business.OPEN_MAILBOX);
     }
 
     @Override

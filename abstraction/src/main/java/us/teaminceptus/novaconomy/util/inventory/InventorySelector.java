@@ -2,19 +2,23 @@ package us.teaminceptus.novaconomy.util.inventory;
 
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
+import org.bukkit.util.ChatPaginator;
 import org.jetbrains.annotations.NotNull;
 import us.teaminceptus.novaconomy.abstraction.NovaInventory;
+import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.SortingType;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.corporation.Corporation;
 import us.teaminceptus.novaconomy.util.NovaSound;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.BUSINESS_TAG;
+import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.TYPE_TAG;
 import static us.teaminceptus.novaconomy.abstraction.NBTWrapper.builder;
 import static us.teaminceptus.novaconomy.messages.MessageHandler.get;
 import static us.teaminceptus.novaconomy.util.inventory.Generator.GUI_SPACE;
@@ -35,20 +39,20 @@ public final class InventorySelector {
 
     @NotNull
     public static NovaInventory confirm(Player p, Consumer<NovaInventory> confirm, Consumer<NovaInventory> cancel) {
-        NovaInventory inv = genGUI("confirm_menu", 27, get("constants.are_you_sure"));
+        NovaInventory inv = genGUI("confirm_menu", 27, get(p, "constants.are_you_sure"));
         inv.setCancelled();
 
         inv.setAttribute("accept_action", confirm);
         inv.setAttribute("cancel_action", cancel);
 
         inv.setItem(21, builder(Items.LIME_WOOL,
-                meta -> meta.setDisplayName(ChatColor.GREEN + get("constants.yes")),
-                nbt -> nbt.set("type", "accept"))
+                meta -> meta.setDisplayName(ChatColor.GREEN + get(p, "constants.yes")),
+                nbt -> nbt.set(TYPE_TAG, "accept"))
         );
 
         inv.setItem(23, builder(Items.RED_WOOL,
-                meta -> meta.setDisplayName(ChatColor.RED + get("constants.cancel")),
-                nbt -> nbt.set("type", "cancel"))
+                meta -> meta.setDisplayName(ChatColor.RED + get(p, "constants.cancel")),
+                nbt -> nbt.set(TYPE_TAG, "cancel"))
         );
 
         while (inv.firstEmpty() != -1)
@@ -58,7 +62,7 @@ public final class InventorySelector {
     }
 
     public static NovaInventory selectCorporationChildren(Player p, SortingType<Business> sorter, String searchQuery, Consumer<Business> consumer) {
-        NovaInventory inv = genGUI("select_corporation_children", 54, get("constants.corporation.select_child"));
+        NovaInventory inv = genGUI("select_corporation_children", 54, get(p, "constants.corporation.select_child"));
         inv.setCancelled();
 
         Corporation c = Corporation.byOwner(p);
@@ -74,7 +78,7 @@ public final class InventorySelector {
 
         inv.setItem(9, sorter(sorter));
         inv.setItem(17, builder(Items.OAK_SIGN,
-                meta -> meta.setDisplayName(ChatColor.GREEN + get("constants.search")),
+                meta -> meta.setDisplayName(ChatColor.GREEN + get(p, "constants.search")),
                 nbt -> nbt.setID("find_child:search"))
         );
 
@@ -85,6 +89,30 @@ public final class InventorySelector {
                 .collect(Collectors.toList());
 
         children.forEach(b -> inv.addItem(builder(b.getIcon(), nbt -> nbt.set(BUSINESS_TAG, b.getUniqueId()) )) );
+
+        return inv;
+    }
+
+    @NotNull
+    public static NovaInventory selectLanguage(Player p, Consumer<Language> consumer) {
+        NovaInventory inv = genGUI("select_language", 36, get(p, "constants.language.select"));
+        inv.setCancelled();
+
+        inv.setAttribute("action", consumer);
+
+        for (Language l : Language.values())
+            inv.addItem(builder(Items.LIME_WOOL,
+                    meta -> {
+                        meta.setDisplayName(ChatColor.GOLD + l.getMessage("constants.language.name"));
+                        meta.setLore(Arrays.stream(ChatPaginator.wordWrap(l.getMessage("constants.language.example"), 30))
+                                .map(s -> ChatColor.GRAY + s)
+                                .collect(Collectors.toList()));
+                    },
+                    nbt -> {
+                        nbt.setID("language:option");
+                        nbt.set("language", l.getIdentifier());
+                    }
+            ));
 
         return inv;
     }

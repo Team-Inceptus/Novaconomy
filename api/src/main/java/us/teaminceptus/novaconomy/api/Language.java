@@ -100,6 +100,7 @@ public enum Language {
      */
     @NotNull
     public String getIdentifier() {
+        if (this == ENGLISH) return "en";
         return this.id.replace("_", "");
     }
 

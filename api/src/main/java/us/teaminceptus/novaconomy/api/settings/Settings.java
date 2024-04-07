@@ -233,6 +233,12 @@ public final class Settings {
         @SettingDescription("settings.business.supply_interval")
         public static final Business<BusinessSupplyEvent.Interval> SUPPLY_INTERVAL = ofEnum("supply_interval","constants.settings.name.supply_interval", BusinessSupplyEvent.Interval.class, BusinessSupplyEvent.Interval.HOUR);
 
+        /**
+         * Whether the Business allows people to send it mail.
+         */
+        @SettingDescription("settings.open_mailbox")
+        public static final Business<Boolean> OPEN_MAILBOX = ofBoolean("open_mailbox", "constants.settings.name.open_mailbox", true);
+
         private static final long serialVersionUID = -7174484717138758485L;
 
         private final String key;
@@ -410,6 +416,12 @@ public final class Settings {
          */
         @SettingDescription("settings.corporation.feature_products")
         public static final Corporation<Boolean> FEATURE_PRODUCTS = ofBoolean("feature_products", "constants.settings.name.feature_products", true);
+
+        /**
+         * Whether the Corporation allows people to send it mail.
+         */
+        @SettingDescription("settings.open_mailbox")
+        public static final Corporation<Boolean> OPEN_MAILBOX = ofBoolean("open_mailbox", "constants.settings.name.open_mailbox", true);
 
         private static final long serialVersionUID = 2912177260114871976L;
 

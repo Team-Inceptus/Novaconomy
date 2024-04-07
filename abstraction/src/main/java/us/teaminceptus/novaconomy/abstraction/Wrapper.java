@@ -55,6 +55,8 @@ public interface Wrapper {
 
     void sendSign(Player p, Consumer<String[]> lines);
 
+    void openBook(Player p, ItemStack book);
+
     // Defaults
 
     default List<Material> getCrops() {

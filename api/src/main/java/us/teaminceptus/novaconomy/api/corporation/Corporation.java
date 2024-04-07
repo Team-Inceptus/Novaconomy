@@ -19,13 +19,9 @@ import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.business.Business;
 import us.teaminceptus.novaconomy.api.business.BusinessProduct;
 import us.teaminceptus.novaconomy.api.business.Rating;
-import us.teaminceptus.novaconomy.api.events.corporation.CorporationAwardAchievementEvent;
-import us.teaminceptus.novaconomy.api.events.corporation.CorporationBanEvent;
-import us.teaminceptus.novaconomy.api.events.corporation.CorporationCreateEvent;
-import us.teaminceptus.novaconomy.api.events.corporation.CorporationDeleteEvent;
-import us.teaminceptus.novaconomy.api.events.corporation.CorporationKickEvent;
-import us.teaminceptus.novaconomy.api.events.corporation.CorporationUnbanEvent;
+import us.teaminceptus.novaconomy.api.events.corporation.*;
 import us.teaminceptus.novaconomy.api.settings.Settings;
+import us.teaminceptus.novaconomy.api.util.Mail;
 
 import java.io.*;
 import java.lang.reflect.Method;
@@ -92,6 +88,7 @@ public final class Corporation {
     private final Set<UUID> banList = new HashSet<>();
     final Map<UUID, CorporationRank> ranks = new HashMap<>();
     private final Map<UUID, UUID> memberRanks = new HashMap<>();
+    private final List<Mail> mail = new ArrayList<>();
 
     private Corporation(@NotNull UUID id, long creationDate, OfflinePlayer owner) {
         this.id = id;
@@ -872,7 +869,7 @@ public final class Corporation {
         if (!children.contains(child)) throw new IllegalArgumentException("Business is not a child of this corporation!");
 
         UUID rankId = memberRanks.get(child.getUniqueId());
-        CorporationRank rank = null;
+        CorporationRank rank;
 
         if (rankId == null) {
             rank = isOwner(child.getOwner()) ? getOwnerRank() : getDefaultRank();
@@ -903,7 +900,7 @@ public final class Corporation {
     }
 
     /**
-     * Checks if a Business has a rank.
+     * Checks if a Business has a permission.
      * @param child Business to check
      * @param permission Permission to check
      * @return true if has permission, false otherwise
@@ -917,6 +914,23 @@ public final class Corporation {
         if (rank == null) return false;
 
         return rank.hasPermission(permission);
+    }
+
+    /**
+     * Checks if a Player has a permission. This will silently return false if the player does not own a business or is not apart of the corporation.
+     * @param p Player to check
+     * @param permission Permission to check
+     * @return true if has permission, false otherwise
+     */
+    public boolean hasPermission(@NotNull Player p, @NotNull CorporationPermission permission) {
+        if (p == null) throw new IllegalArgumentException("Player cannot be null!");
+        if (isOwner(p)) return true;
+
+        Business b = Business.byOwner(p);
+        if (b == null) return false;
+        if (!children.contains(b)) return false;
+
+        return hasPermission(b, permission);
     }
 
     /**
@@ -1013,6 +1027,66 @@ public final class Corporation {
         saveCorporation();
 
         return removed;
+    }
+
+    /**
+     * Gets an immutable copy of all the mail that belongs to this Corporation, sorted by timestamp.
+     * @return All Mail
+     */
+    @NotNull
+    public List<Mail> getMail() {
+        return ImmutableList.copyOf(mail
+                .stream()
+                .sorted(Comparator.comparing(Mail::getTimestamp))
+                .collect(Collectors.toList()));
+    }
+
+    /**
+     * Gets a mail object by its unique ID.
+     * @param id Mail ID
+     * @return Mail, or null if not found
+     */
+    @NotNull
+    public Mail getMail(@NotNull UUID id) {
+        return mail.stream()
+                .filter(m -> m.getUniqueId().equals(id))
+                .findFirst()
+                .orElse(null);
+    }
+
+    /**
+     * Sends mail to this Corporation.
+     * @param mail Mail to send
+     */
+    public void sendMail(@NotNull Mail mail) {
+        if (mail == null) throw new IllegalArgumentException("Mail cannot be null!");
+
+        this.mail.add(mail);
+        saveCorporation();
+
+        CorporationReceiveMailEvent event = new CorporationReceiveMailEvent(this, mail);
+        Bukkit.getPluginManager().callEvent(event);
+    }
+
+    /**
+     * Clears all mail from this Corporation.
+     */
+    public void clearMail() {
+        mail.clear();
+        saveCorporation();
+    }
+
+    /**
+     * Gets whether this corporation allows a player to send it mail.
+     * @param p Player to check
+     * @return true if player can send mail, else false
+     */
+    public boolean canSendMail(@NotNull OfflinePlayer p) {
+        if (p == null) return false;
+        if (p.isOnline() && !p.getPlayer().hasPermission("novaconomy.user.mail")) return false;
+        if (isBanned(p)) return false;
+
+        return getSetting(Settings.Corporation.OPEN_MAILBOX);
     }
 
     @Override
@@ -1469,6 +1543,9 @@ public final class Corporation {
 
             if (!(rs = md.getColumns(null, null, "corporations", "member_ranks")).next())
                 db.createStatement().execute("ALTER TABLE corporations ADD COLUMN member_ranks BLOB(65535) NOT NULL");
+
+            if (!(rs = md.getColumns(null, null, "corporations", "mail")).next())
+                db.createStatement().execute("ALTER TABLE corporations ADD COLUMN mail MEDIUMBLOB NOT NULL");
         } finally {
             if (rs != null) rs.close();
         }
@@ -1518,10 +1595,11 @@ public final class Corporation {
                         "custom_model_data = ?, " +
                         "ban_list = ?, " +
                         "ranks = ?, " +
-                        "member_ranks = ?" +
+                        "member_ranks = ?, " +
+                        "mail = ? " +
                         "WHERE id = \"" + this.id + "\"";
             else
-                sql = "INSERT INTO corporations VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                sql = "INSERT INTO corporations VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         }
 
         PreparedStatement ps = db.prepareStatement(sql);
@@ -1594,6 +1672,12 @@ public final class Corporation {
         memberRanksBos.close();
         ps.setBytes(17, memberRanksOs.toByteArray());
 
+        ByteArrayOutputStream mailOs = new ByteArrayOutputStream();
+        ObjectOutputStream mailBos = new ObjectOutputStream(mailOs);
+        mailBos.writeObject(this.mail);
+        mailBos.close();
+        ps.setBytes(18, mailOs.toByteArray());
+
         ps.executeUpdate();
         ps.close();
     }
@@ -1661,6 +1745,11 @@ public final class Corporation {
         ObjectInputStream memberRanksBis = new ObjectInputStream(memberRanksIs);
         c.memberRanks.putAll((Map<UUID, UUID>) memberRanksBis.readObject());
         memberRanksBis.close();
+
+        ByteArrayInputStream mailIs = new ByteArrayInputStream(rs.getBytes("mail"));
+        ObjectInputStream mailBis = new ObjectInputStream(mailIs);
+        c.mail.addAll((List<Mail>) mailBis.readObject());
+        mailBis.close();
 
         children0.forEach(b -> c.memberRanks.putIfAbsent(b.getUniqueId(), DEFAULT_RANK));
 
@@ -1765,6 +1854,14 @@ public final class Corporation {
                 .forEach(memberRanksSection::set);
 
         ranks.save(ranksF);
+
+        // Mail
+        File mailF = new File(folder, "mail.yml");
+        if (!mailF.exists()) mailF.createNewFile();
+        FileConfiguration mail = YamlConfiguration.loadConfiguration(mailF);
+        mail.set("mail", this.mail);
+
+        mail.save(mailF);
     }
 
     @NotNull
@@ -1874,6 +1971,13 @@ public final class Corporation {
             }
 
         children0.forEach(b -> c.memberRanks.putIfAbsent(b.getUniqueId(), DEFAULT_RANK));
+
+        // Mail
+        File mailF = new File(folder, "mail.yml");
+        if (!mailF.exists()) mailF.createNewFile();
+
+        FileConfiguration mail = YamlConfiguration.loadConfiguration(mailF);
+        c.mail.addAll((List<Mail>) mail.getList("mail", new ArrayList<>()));
 
         return c;
     }

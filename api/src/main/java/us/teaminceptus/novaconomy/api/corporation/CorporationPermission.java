@@ -62,6 +62,11 @@ public enum CorporationPermission {
      */
     CHANGE_USER_RANKS,
 
+    /**
+     * Permission to view the Corporation mailbox.
+     */
+    VIEW_MAILBOX(true),
+
     ;
 
     private final boolean defaultPermission;

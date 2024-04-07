@@ -10,6 +10,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.permissions.ServerOperator;
 import org.bukkit.plugin.Plugin;
 import us.teaminceptus.novaconomy.api.Language;
 import us.teaminceptus.novaconomy.api.NovaConfig;
@@ -125,8 +126,8 @@ public interface MessageHandler {
             .put("error.argument.icon", any(Material::values, Material::toString, w::isItem))
             .put("error.argument.integer", r::nextInt)
             .put("error.argument.item", any(Material::values, Material::toString, w::isItem))
-            .put("error.argument.scale", () -> r.nextInt(10, 30) / 10.0)
-            .put("error.argument.symbol", () -> "'" + (char) r.nextInt(0x21, 0x7E) + "'")
+            .put("error.argument.scale", () -> r.nextInt(20) / 10.0)
+            .put("error.argument.symbol", () -> "'" + (char) (r.nextInt(0x7E - 0x21) + 0x21) + "'")
 
             .build()
             .entrySet()
@@ -140,14 +141,36 @@ public interface MessageHandler {
         return get("plugin.prefix");
     }
 
+    static String prefix(ServerOperator sender) {
+        return get(sender, "plugin.prefix");
+    }
+
     static String get(String key) {
         return Language.getCurrentMessage(key);
+    }
+
+    static String get(ServerOperator sender, String key) {
+        if (!(sender instanceof Player)) return get(key);
+        Player p = (Player) sender;
+        NovaPlayer np = new NovaPlayer(p);
+
+        return np.getLanguage().getMessage(key);
     }
 
     static String format(String format, Object... args) {
         if (args.length == 0) return format;
 
         return String.format(Language.getCurrentLocale(), format, args)
+                .replace("\u00a0", " "); // Replace non-breaking space with regular space
+    }
+
+    static String format(ServerOperator sender, String format, Object... args) {
+        if (!(sender instanceof Player)) return format(format, args);
+
+        Player p = (Player) sender;
+        NovaPlayer np = new NovaPlayer(p);
+
+        return String.format(np.getLanguage().getLocale(), format, args)
                 .replace("\u00a0", " "); // Replace non-breaking space with regular space
     }
 

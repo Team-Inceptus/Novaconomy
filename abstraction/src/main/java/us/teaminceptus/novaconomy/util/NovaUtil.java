@@ -21,6 +21,7 @@ import java.util.*;
 import static us.teaminceptus.novaconomy.abstraction.Wrapper.USER_AGENT;
 import static us.teaminceptus.novaconomy.messages.MessageHandler.format;
 import static us.teaminceptus.novaconomy.messages.MessageHandler.get;
+import static us.teaminceptus.novaconomy.scheduler.NovaScheduler.scheduler;
 
 @SuppressWarnings("unchecked")
 public final class NovaUtil {
@@ -65,21 +66,11 @@ public final class NovaUtil {
     private NovaUtil() {}
 
     public static void sync(Runnable r) {
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                r.run();
-            }
-        }.runTask(NovaConfig.getPlugin());
+        scheduler.sync(r);
     }
 
     public static void async(Runnable r) {
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                r.run();
-            }
-        }.runTaskAsynchronously(NovaConfig.getPlugin());
+        scheduler.async(r);
     }
 
     public static String getDisplayName(@NotNull SortingType<?> type) {
@@ -110,32 +101,32 @@ public final class NovaUtil {
         return ROMAN_MAP.get(i) + toRoman(number - i);
     }
 
-    public static String formatTimeAgo(long start) {
+    public static String formatTimeAgo(OfflinePlayer p, long start) {
         long time = System.currentTimeMillis();
         long diff = time - start;
     
         long seconds = diff / 1000;
     
-        if (seconds < 2) return get("constants.time.ago.milli_ago");
-        if (seconds >= 2 && seconds < 60) return format(get("constants.time.ago.seconds_ago"), format("%,d", seconds));
+        if (seconds < 2) return get(p, "constants.time.ago.milli_ago");
+        if (seconds >= 2 && seconds < 60) return format(p, get(p, "constants.time.ago.seconds_ago"), format(p, "%,d", seconds));
     
         long minutes = seconds / 60;
-        if (minutes < 60) return format(get("constants.time.ago.minutes_ago"), format("%,d", minutes));
+        if (minutes < 60) return format(p, get(p, "constants.time.ago.minutes_ago"), format(p, "%,d", minutes));
     
         long hours = minutes / 60;
-        if (hours < 24) return format(get("constants.time.ago.hours_ago"), format("%,d", hours));
+        if (hours < 24) return format(p, get(p, "constants.time.ago.hours_ago"), format(p, "%,d", hours));
     
         long days = hours / 24;
-        if (days < 7) return format(get("constants.time.ago.days_ago"), format("%,d", days));
+        if (days < 7) return format(p, get(p, "constants.time.ago.days_ago"), format(p, "%,d", days));
     
         long weeks = days / 7;
-        if (weeks < 4) return format(get("constants.time.ago.weeks_ago"), format("%,d", weeks));
+        if (weeks < 4) return format(p, get(p, "constants.time.ago.weeks_ago"), format(p, "%,d", weeks));
     
         long months = weeks / 4;
-        if (months < 12) return format(get("constants.time.ago.months_ago"), format("%,d", months));
+        if (months < 12) return format(p, get(p, "constants.time.ago.months_ago"), format(p, "%,d", months));
     
         long years = months / 12;
-        return format(get("constants.time.ago.years_ago"), format("%,d", years));
+        return format(p, get(p, "constants.time.ago.years_ago"), format(p, "%,d", years));
     }
 
 

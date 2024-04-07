@@ -53,7 +53,7 @@ final class TreasuryCurrency implements Currency {
 
     private static String fromPlural(String str) {
         if (str.endsWith("s")) return str.substring(0, str.length() - 1);
-        if (str.endsWith("es")) return str.substring(0, str.length() - 2) + "s";
+        if (str.endsWith("es")) return str.substring(0, str.length() - 2);
         if (str.endsWith("ies")) return str.substring(0, str.length() - 3) + "y";
         return str;
     }

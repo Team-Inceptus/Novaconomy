@@ -122,6 +122,10 @@ public abstract class NBTWrapper {
         return null;
     }
 
+    public void cancel() { set("cancelled", true); }
+
+    public boolean isCancelled() { return getBoolean("cancelled"); }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

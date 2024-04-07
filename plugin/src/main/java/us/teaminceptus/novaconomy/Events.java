@@ -18,10 +18,7 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
-import org.bukkit.event.player.PlayerFishEvent;
-import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.*;
 import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
@@ -37,8 +34,10 @@ import us.teaminceptus.novaconomy.api.events.player.economy.PlayerChangeBalanceE
 import us.teaminceptus.novaconomy.api.events.player.economy.PlayerPurchaseProductEvent;
 import us.teaminceptus.novaconomy.api.player.Bounty;
 import us.teaminceptus.novaconomy.api.player.NovaPlayer;
+import us.teaminceptus.novaconomy.api.util.Mail;
 import us.teaminceptus.novaconomy.util.NovaSound;
 import us.teaminceptus.novaconomy.util.NovaUtil;
+import us.teaminceptus.novaconomy.util.inventory.Generator;
 
 import java.io.File;
 import java.io.IOException;
@@ -50,13 +49,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import static us.teaminceptus.novaconomy.Novaconomy.isIgnored;
-import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.AMOUNT_TAG;
-import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.ECON_TAG;
+import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.*;
 import static us.teaminceptus.novaconomy.abstraction.NBTWrapper.*;
 import static us.teaminceptus.novaconomy.abstraction.Wrapper.r;
 import static us.teaminceptus.novaconomy.abstraction.Wrapper.w;
 import static us.teaminceptus.novaconomy.api.corporation.CorporationAchievement.*;
 import static us.teaminceptus.novaconomy.messages.MessageHandler.*;
+import static us.teaminceptus.novaconomy.scheduler.NovaScheduler.scheduler;
 
 final class Events implements Listener {
 
@@ -287,7 +286,7 @@ final class Events implements Listener {
         int chance = plugin.getBuildingChance();
 
         NovaUtil.async(() -> {
-            double add = r.nextInt(2, 4) + 1;
+            double add = r.nextInt(2) + 3;
 
             if (ModifierReader.getModifier("Building") == null) return;
             Map<String, Set<Map.Entry<Economy, Double>>> entry = ModifierReader.getModifier("Building");
@@ -379,6 +378,59 @@ final class Events implements Listener {
         }
 
         messages.sendRawNotification(p, String.join("\n", lost.toArray(new String[0])));
+    }
+
+    @EventHandler
+    public void mail(PlayerEditBookEvent e) {
+        if (!e.isSigning()) return;
+
+        Player p = e.getPlayer();
+        int slot = e.getSlot();
+        ItemStack book = slot == -1 ? p.getInventory().getItem(40) : p.getInventory().getItem(slot);
+        NBTWrapper nbt = of(book);
+        if (!nbt.getID().equalsIgnoreCase("mail")) return;
+        e.setCancelled(true);
+
+        String message = e.getNewBookMeta().getPages()
+                .stream()
+                .collect(Collectors.joining());
+        String subject = e.getNewBookMeta().getTitle();
+
+        UUID recipient = nbt.getUUID("recipient");
+        String type = nbt.getString("type");
+        boolean anonymous = nbt.getBoolean("anonymous");
+
+        Mail mail;
+        Runnable run;
+        switch (type) {
+            case CORPORATION_TAG: {
+                Corporation c = Corporation.byId(recipient);
+                mail = new Mail(p, c, subject, message);
+                mail.setAnonymous(anonymous);
+
+                run = () -> {
+                    p.getInventory().removeItem(book);
+                    c.sendMail(mail);
+                };
+                break;
+            }
+            case BUSINESS_TAG: {
+                Business b = Business.byId(recipient);
+                mail = new Mail(p, b, subject, message);
+                mail.setAnonymous(anonymous);
+
+                run = () -> {
+                    p.getInventory().removeItem(book);
+                    b.sendMail(mail);
+                };
+                break;
+            }
+            default:
+                throw new IllegalStateException("Unexpected value: " + type);
+        }
+
+        p.openInventory(Generator.confirmMail(mail, p, run));
+        NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
     }
 
     // Corporation Leveling

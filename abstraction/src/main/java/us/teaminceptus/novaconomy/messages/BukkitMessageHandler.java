@@ -18,22 +18,22 @@ class BukkitMessageHandler implements MessageHandler {
 
     @Override
     public void send(CommandSender sender, String key, Object... args) {
-        sendRaw(sender, format(get(key), args));
+        sendRaw(sender, format(sender, get(sender, key), args));
     }
 
     @Override
     public void sendMessage(CommandSender sender, String key, Object... args) {
-        sendRawMessage(sender, format(get(key), args));
+        sendRawMessage(sender, format(sender, get(sender, key), args));
     }
 
     @Override
     public void sendError(CommandSender sender, String key, Object... args) {
-        sendRawMessage(sender, ChatColor.RED + format(get(key), args));
+        sendRawMessage(sender, ChatColor.RED + format(sender, get(sender, key), args));
     }
 
     @Override
     public void sendSuccess(CommandSender sender, String key, Object... args) {
-        sendRawMessage(sender, ChatColor.GREEN + format(get(key), args));
+        sendRawMessage(sender, ChatColor.GREEN + format(sender, get(sender, key), args));
     }
 
     @Override

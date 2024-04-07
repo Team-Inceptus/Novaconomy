@@ -129,4 +129,9 @@ final class Wrapper1_20_R1 implements Wrapper {
         });
     }
 
+    @Override
+    public void openBook(Player p, org.bukkit.inventory.ItemStack book) {
+        p.openBook(book);
+    }
+
 }

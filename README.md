@@ -71,6 +71,21 @@ Novaconomy is an economy plugin with so many features, you'll never need another
   - Fix Essentials-related Integration Issues
   - Fix Additional 1.20.3+ Issues
 
+- **v1.9.2** 
+  - **Player Language Override**
+    - Players can specify their own language
+    - Uses currently supported Languages
+    - **Not all messages can be used this way**. Some GUI-related items will use the global language.
+  - **Corporation & Business Mail**
+    - Corporations and Businesses can now receive mail messages from players.
+    - Use Book & Quill to write to them.
+    - Read Wiki for more information.
+  - Update to Gradle 8.7
+  - Update Lamp to v3.2.1
+  - Fix Java 8 Support
+  - Improve Testing Capabilities
+  - Minor Code Optimization
+
 ### 💸 1.8.0 Update: Ecstatic Economy
 - New Features
   - **Unlimited Business Products**
