@@ -23,8 +23,6 @@ done
 cp -Rfv ./docs/* ./
 rm -rf ./docs
 
-echo "novaconomy.teaminceptus.us" > CNAME
-
 git add .
 git commit -m "Update JavaDocs ($1)"
 git push -f origin gh-pages
