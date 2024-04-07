@@ -49,13 +49,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import static us.teaminceptus.novaconomy.Novaconomy.isIgnored;
-import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.AMOUNT_TAG;
-import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.ECON_TAG;
+import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.*;
 import static us.teaminceptus.novaconomy.abstraction.NBTWrapper.*;
 import static us.teaminceptus.novaconomy.abstraction.Wrapper.r;
 import static us.teaminceptus.novaconomy.abstraction.Wrapper.w;
 import static us.teaminceptus.novaconomy.api.corporation.CorporationAchievement.*;
 import static us.teaminceptus.novaconomy.messages.MessageHandler.*;
+import static us.teaminceptus.novaconomy.scheduler.NovaScheduler.scheduler;
 
 final class Events implements Listener {
 
@@ -386,37 +386,43 @@ final class Events implements Listener {
 
         Player p = e.getPlayer();
         int slot = e.getSlot();
-        String message = e.getNewBookMeta().getPages()
-                .stream()
-                .collect(Collectors.joining());
-
         ItemStack book = slot == -1 ? p.getInventory().getItem(40) : p.getInventory().getItem(slot);
         NBTWrapper nbt = of(book);
         if (!nbt.getID().equalsIgnoreCase("mail")) return;
+        e.setCancelled(true);
 
-        String subject = nbt.getString("subject");
+        String message = e.getNewBookMeta().getPages()
+                .stream()
+                .collect(Collectors.joining());
+        String subject = e.getNewBookMeta().getTitle();
+
         UUID recipient = nbt.getUUID("recipient");
         String type = nbt.getString("type");
-
         boolean anonymous = nbt.getBoolean("anonymous");
 
         Mail mail;
         Runnable run;
         switch (type) {
-            case "corporation": {
+            case CORPORATION_TAG: {
                 Corporation c = Corporation.byId(recipient);
                 mail = new Mail(p, c, subject, message);
                 mail.setAnonymous(anonymous);
 
-                run = () -> c.sendMail(mail);
+                run = () -> {
+                    p.getInventory().removeItem(book);
+                    c.sendMail(mail);
+                };
                 break;
             }
-            case "business": {
+            case BUSINESS_TAG: {
                 Business b = Business.byId(recipient);
                 mail = new Mail(p, b, subject, message);
                 mail.setAnonymous(anonymous);
 
-                run = () -> b.sendMail(mail);
+                run = () -> {
+                    p.getInventory().removeItem(book);
+                    b.sendMail(mail);
+                };
                 break;
             }
             default:
