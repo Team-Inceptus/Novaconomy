@@ -57,7 +57,6 @@ import us.teaminceptus.novaconomy.api.util.Price;
 import us.teaminceptus.novaconomy.api.util.Product;
 import us.teaminceptus.novaconomy.essentialsx.EssentialsListener;
 import us.teaminceptus.novaconomy.placeholderapi.Placeholders;
-import us.teaminceptus.novaconomy.scheduler.NovaScheduler;
 import us.teaminceptus.novaconomy.treasury.TreasuryRegistry;
 import us.teaminceptus.novaconomy.util.NovaUtil;
 import us.teaminceptus.novaconomy.vault.VaultRegistry;
@@ -76,7 +75,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static us.teaminceptus.novaconomy.abstraction.Wrapper.*;
+import static us.teaminceptus.novaconomy.abstraction.Wrapper.USER_AGENT;
+import static us.teaminceptus.novaconomy.abstraction.Wrapper.w;
 import static us.teaminceptus.novaconomy.messages.MessageHandler.*;
 import static us.teaminceptus.novaconomy.scheduler.NovaScheduler.scheduler;
 
