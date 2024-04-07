@@ -16,6 +16,7 @@ import revxrsal.commands.autocomplete.SuggestionProvider;
 import revxrsal.commands.bukkit.BukkitCommandActor;
 import revxrsal.commands.bukkit.BukkitCommandHandler;
 import revxrsal.commands.bukkit.annotation.CommandPermission;
+import revxrsal.commands.util.Either;
 import us.teaminceptus.novaconomy.NovaAnnotationReplacer.BalanceToRange;
 import us.teaminceptus.novaconomy.abstraction.CommandWrapper;
 import us.teaminceptus.novaconomy.api.Language;
@@ -32,6 +33,7 @@ import us.teaminceptus.novaconomy.util.command.MaterialSelector;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -252,7 +254,14 @@ final class CommandWrapperV2 implements CommandWrapper {
                             .map(CorporationInvite::getFrom)
                             .map(Corporation::getName)
                             .collect(Collectors.toList());
-                });
+                })
+                .registerSuggestion("mail",
+                        SuggestionProvider.map(Business::getBusinesses, Business::getName)
+                        .compose(SuggestionProvider.map(Corporation::getCorporations, Corporation::getName))
+                        // with namespace
+                        .compose(SuggestionProvider.map(Business::getBusinesses, b -> BUSINESS_TAG + ":" + b.getName()))
+                        .compose(SuggestionProvider.map(Corporation::getCorporations, c -> CORPORATION_TAG + ":" + c.getName()))
+                );
 
         handler.registerAnnotationReplacer(Balance.class, new BalanceToRange());
 
@@ -401,7 +410,48 @@ final class CommandWrapperV2 implements CommandWrapper {
     @CommandPermission("novaconomy.user.language")
     public void language(Player p) { settings(p, "language"); }
 
-    @Command({"business", "nbusiness", "nb", "b"})
+    @Command({"nmail", "novamail"})
+    @Usage("/nmail <target> [anonymous]")
+    @Description("Send Mail to a Business or Corporation")
+    @CommandPermission("novaconomy.user.mail")
+    @AutoComplete("@mail *")
+    public void mail(Player p, @Single String target, @Default("false") boolean anonymous) {
+        String targetName = target.split(":").length == 2 ? target.split(":")[1] : target;
+        String targetType;
+        UUID targetId;
+
+        java.util.Optional<Business> business = java.util.Optional.ofNullable(Business.byName(targetName));
+        java.util.Optional<Corporation> corporation = java.util.Optional.ofNullable(Corporation.byName(targetName));
+
+        if (business.isPresent()) {
+            Business b = business.get();
+            targetId = b.getUniqueId();
+            targetName = b.getName();
+            targetType = BUSINESS_TAG;
+
+            if (!b.canSendMail(p)) {
+                messages.sendError(p, "error.player.cannot_send_mail");
+                return;
+            }
+        } else if (corporation.isPresent()) {
+            Corporation c = corporation.get();
+            targetId = c.getUniqueId();
+            targetName = c.getName();
+            targetType = CORPORATION_TAG;
+
+            if (!c.canSendMail(p)) {
+                messages.sendError(p, "error.player.cannot_send_mail");
+                return;
+            }
+        } else {
+            messages.sendError(p, "error.argument.target");
+            return;
+        }
+
+        CommandWrapper.super.mail(p, anonymous, targetName, targetType, targetId);
+    }
+
+    @Command({BUSINESS_TAG, "nbusiness", "nb", "b"})
     @Description("Manage your Novaconomy Business")
     @Usage("/business <create|info|delete|addproduct|stock|query|...> <args...>")
     private static final class BusinessCommands {
@@ -414,7 +464,7 @@ final class CommandWrapperV2 implements CommandWrapper {
             handler.register(this);
         }
 
-        @DefaultFor({"business", "b", "nbusiness", "nb"})
+        @DefaultFor({BUSINESS_TAG, "b", "nbusiness", "nb"})
         @Subcommand({"info", "information"})
         public void businessInfo(Player p) { wrapper.businessInfo(p); }
 
@@ -563,6 +613,9 @@ final class CommandWrapperV2 implements CommandWrapper {
 
         @Subcommand("supply")
         public void supply(Player p) { wrapper.businessSupply(p); }
+
+        @Subcommand({"mailbox", "mail"})
+        public void mailbox(Player p) { wrapper.mailbox(p, Business.byOwner(p)); }
     }
 
     @Command({"nbank", "bank", "globalbank", "gbank"})
@@ -988,6 +1041,9 @@ final class CommandWrapperV2 implements CommandWrapper {
         public void corporationBroadcast(Player p, String message) {
             wrapper.broadcastCorporationMessage(p, message);
         }
+
+        @Subcommand({"mailbox", "mail"})
+        public void mailbox(Player p) { wrapper.mailbox(p, Corporation.byMember(p)); }
     }
 
     @Command({"market", "novamarket", "novam", "m"})

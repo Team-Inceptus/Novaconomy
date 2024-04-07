@@ -23,6 +23,7 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 
 import static us.teaminceptus.novaconomy.messages.MessageHandler.*;
 
@@ -1133,6 +1134,14 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         businessSupply(p);
                         break;
                     }
+                    case "mailbox":
+                    case "mail": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
+                        mailbox(p, Business.byOwner(p));
+                        break;
+                    }
                     default: {
                         messages.sendMessage(sender, "error.argument");
                         return false;
@@ -2085,6 +2094,14 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         corporationKick(p, target);
                         break;
                     }
+                    case "mailbox":
+                    case "mail": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
+                        mailbox(p, Corporation.byMember(p));
+                        break;
+                    }
                     default: {
                         messages.sendMessage(sender, "error.argument");
                         return false;
@@ -2394,6 +2411,53 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                 Player p = (Player) sender;
 
                 settings(p, "language");
+                break;
+            }
+            case "nmail": {
+                if (!(sender instanceof Player)) return false;
+                Player p = (Player) sender;
+
+                if (args.length < 1) {
+                    messages.sendMessage(p, "error.argument.target");
+                    return false;
+                }
+
+                UUID targetId;
+                String targetName;
+                String targetType;
+
+                Business b = Business.byName(args[0]);
+                if (b != null) {
+                    targetId = b.getUniqueId();
+                    targetName = b.getName();
+                    targetType = BUSINESS_TAG;
+
+                    if (!b.canSendMail(p)) {
+                        messages.sendError(p, "error.player.cannot_send_mail");
+                        return false;
+                    }
+                } else {
+                    Corporation c = Corporation.byName(args[0]);
+                    if (c != null) {
+                        targetId = c.getUniqueId();
+                        targetName = c.getName();
+                        targetType = CORPORATION_TAG;
+                    } else {
+                        messages.sendError(p, "error.argument.target");
+                        return false;
+                    }
+
+                    if (!c.canSendMail(p)) {
+                        messages.sendError(p, "error.player.cannot_send_mail");
+                        return false;
+                    }
+                }
+
+                boolean anonymous = false;
+                if (args.length >= 2)
+                    anonymous = Boolean.parseBoolean(args[1]);
+
+                mail(p, anonymous, targetName, targetType, targetId);
                 break;
             }
             default: {

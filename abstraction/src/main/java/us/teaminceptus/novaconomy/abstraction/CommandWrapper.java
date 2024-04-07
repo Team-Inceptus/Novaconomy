@@ -23,7 +23,6 @@ import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.plugin.Plugin;
-import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.ChatPaginator;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -124,6 +123,7 @@ public interface CommandWrapper {
             .put("corporationleaderboard", asList("corpleaderboard", "cleaderboard", "corpboard", "cboard"))
             .put("nauctionhouse", asList("novaah", "ah", "auctionhouse", "auctions"))
             .put("nlanguage", asList("novalang", "nlang"))
+            .put("nmail", asList("novamail"))
             .build();
 
     Map<String, String> COMMAND_PERMISSION = ImmutableMap.<String, String>builder()
@@ -149,6 +149,7 @@ public interface CommandWrapper {
             .put("corporationleaderboard", "novaconomy.user.leaderboard")
             .put("nauctionhouse", "novaconomy.user.auction_house")
             .put("nlanguage", "novaconomy.user.language")
+            .put("nmail", "novaconomy.user.mail")
             .build();
 
     Map<String, String> COMMAND_DESCRIPTION = ImmutableMap.<String, String>builder()
@@ -176,6 +177,7 @@ public interface CommandWrapper {
             .put("corporationleaderboard", "View the top 10 corporations in various categories")
             .put("nauctionhouse", "View the Novaconomy Auction House")
             .put("nlanguage", "Change your Novaconomy Language")
+            .put("nmail", "Send Mail to a Business or Corporation")
             .build();
 
     Map<String, String> COMMAND_USAGE = ImmutableMap.<String, String>builder()
@@ -203,6 +205,7 @@ public interface CommandWrapper {
             .put("corporationleaderboard", "/corporationleaderboard")
             .put("nauctionhouse", "/ah [open|search|add|...]")
             .put("nlanguage", "/nlang")
+            .put("nmail", "/nmail <target> [anonymous]")
             .build();
 
     // Command Methods
@@ -1246,7 +1249,7 @@ public interface CommandWrapper {
 
             ItemStack language = builder(OAK_SIGN,
                     meta -> {
-                        meta.setDisplayName(YELLOW + get(p, "constants.settings.language"));
+                        meta.setDisplayName(YELLOW + get(p, "constants.language"));
                         meta.addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1, true);
                         meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
                     }, nbt -> {
@@ -1306,7 +1309,7 @@ public interface CommandWrapper {
                             nbt.set("display", sett.getDisplayName());
                             nbt.set("section", section);
                             nbt.set(SETTING_TAG, sett.name());
-                            nbt.set("type", sett.getType());
+                            nbt.set(TYPE_TAG, sett.getType());
                             nbt.set("value", value.toString());
                         }
                 );
@@ -1362,7 +1365,8 @@ public interface CommandWrapper {
                 }
             }
 
-            settings.setItem(31, builder(BACK, nbt -> nbt.setID("back:settings")));
+            if (settings.getSize() == 36)
+                settings.setItem(31, builder(BACK, nbt -> nbt.setID("back:settings")));
         }
 
         settings.setCancelled();
@@ -4391,6 +4395,71 @@ public interface CommandWrapper {
             messages.sendNotification(target.getOwner(), "notification.corporation.kick", GOLD + c.getName() + RED);
 
         NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
+    }
+
+    default void mail(Player p, boolean anonymous, String recipientName, String recipientType, UUID recipientId) {
+        if (!p.hasPermission("novaconomy.user.mail")) {
+            messages.sendMessage(p, ERROR_PERMISSION);
+            return;
+        }
+
+        if (p.getInventory().firstEmpty() == -1) {
+            messages.sendError(p, "error.player.full_inventory");
+            return;
+        }
+
+        Material m = Material.matchMaterial("WRITABLE_BOOK");
+        if (m == null) m = Material.matchMaterial("BOOK_AND_QUILL");
+
+        ItemStack mail = NBTWrapper.builder(m,
+                meta -> meta.setDisplayName(LIGHT_PURPLE + "✉ -> " + recipientName),
+                nbt -> {
+                    nbt.setID("mail");
+                    nbt.set("recipient", recipientId);
+                    nbt.set(TYPE_TAG, recipientType);
+                    nbt.set("anonymous", anonymous);
+                    nbt.cancel();
+                });
+
+        p.getInventory().addItem(mail);
+        NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
+    }
+
+    default void mailbox(Player p, Business b) {
+        if (!p.hasPermission("novaconomy.user.mail")) {
+            messages.sendMessage(p, ERROR_PERMISSION);
+            return;
+        }
+
+        if (b == null) {
+            messages.sendError(p, "error.business.not_an_owner");
+            return;
+        }
+
+        NovaInventory inv = Generator.generateMailbox(b, SortingType.MAIL_DATE_ASCENDING, p).get(0);
+        p.openInventory(inv);
+        NovaSound.ITEM_BOOK_PAGE_TURN.play(p);
+    }
+
+    default void mailbox(Player p, Corporation c) {
+        if (!p.hasPermission("novaconomy.user.mail")) {
+            messages.sendMessage(p, ERROR_PERMISSION);
+            return;
+        }
+
+        if (c == null) {
+            messages.sendError(p, "error.corporation.none.member");
+            return;
+        }
+
+        if (!c.hasPermission(p, CorporationPermission.VIEW_MAILBOX)) {
+            messages.sendError(p, "error.permission.corporation");
+            return;
+        }
+
+        NovaInventory inv = Generator.generateMailbox(c, SortingType.MAIL_DATE_ASCENDING, p).get(0);
+        p.openInventory(inv);
+        NovaSound.ITEM_BOOK_PAGE_TURN.play(p);
     }
 
 }
