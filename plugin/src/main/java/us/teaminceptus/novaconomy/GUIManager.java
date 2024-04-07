@@ -10,6 +10,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.*;
+import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
@@ -679,7 +680,7 @@ final class GUIManager implements Listener {
                         .orElse(null);
 
                 String valueS = cNBT.getString("value");
-                Class<?> type = cNBT.getClass("type");
+                Class<?> type = cNBT.getClass(TYPE_TAG);
 
                 ItemStack nItem;
                 if (Boolean.class.isAssignableFrom(type)) {
@@ -704,7 +705,7 @@ final class GUIManager implements Listener {
                                 nbt.set("display", display);
                                 nbt.set("section", section);
                                 nbt.set(SETTING_TAG, setting);
-                                nbt.set("type", type);
+                                nbt.set(TYPE_TAG, type);
                                 nbt.set("value", String.valueOf(!value));
                             }
                     );
@@ -761,7 +762,7 @@ final class GUIManager implements Listener {
                                 nbt.set("display", display);
                                 nbt.set("section", section);
                                 nbt.set(SETTING_TAG, setting);
-                                nbt.set("type", type);
+                                nbt.set(TYPE_TAG, type);
                                 nbt.set("value", next.name());
                             }
                     );
@@ -2114,7 +2115,7 @@ final class GUIManager implements Listener {
             .put("language:select", (e, inv) -> {
                 Player p = (Player) e.getWhoClicked();
 
-                InventorySelector.selectLanguage(p, l -> {
+                NovaInventory sel = InventorySelector.selectLanguage(p, l -> {
                     NovaPlayer np = new NovaPlayer(p);
                     np.setLanguage(l);
                     messages.sendSuccess(p, "success.language.set", ChatColor.GOLD + NovaUtil.capitalize(l.name()));
@@ -2123,6 +2124,9 @@ final class GUIManager implements Listener {
 
                     p.openInventory(Generator.generateLanguageSettings(p));
                 });
+
+                p.openInventory(sel);
+                NovaSound.BLOCK_CHEST_OPEN.play(p);
             })
             .put("mail:view", (e, inv) -> {
                 Player p = (Player) e.getWhoClicked();
@@ -2144,12 +2148,43 @@ final class GUIManager implements Listener {
                 send.run();
                 NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
             })
+            .put("mail:mailbox", (e, inv) -> {
+                Player p = (Player) e.getWhoClicked();
+                ItemStack item = e.getCurrentItem();
+                NBTWrapper nbt = of(item);
+                String type = nbt.getString(TYPE_TAG);
+                UUID id = nbt.getUUID(type);
+
+                Object o;
+                switch (type) {
+                    case BUSINESS_TAG: {
+                        o = Business.byId(id);
+                        break;
+                    }
+                    case CORPORATION_TAG: {
+                        Corporation c = Corporation.byId(id);
+                        if (!c.hasPermission(p, CorporationPermission.VIEW_MAILBOX)) {
+                            messages.sendError(p, "error.permission.corporation");
+                            NovaSound.BLOCK_NOTE_BLOCK_PLING.playFailure(p);
+                            return;
+                        }
+
+                        o = c;
+                        break;
+                    }
+                    default:
+                        throw new IllegalStateException("Unexpected value: " + type);
+                }
+
+                p.openInventory(Generator.generateMailbox(o, SortingType.MAIL_DATE_ASCENDING, p).get(0));
+                NovaSound.ITEM_BOOK_PAGE_TURN.play(p);
+            })
             .build();
 
     static final Map<String, BiConsumer<InventoryClickEvent, NovaInventory>> CLICK_INVENTORIES = ImmutableMap.<String, BiConsumer<InventoryClickEvent, NovaInventory>>builder()
             .put("confirm_menu", (e, inv) -> {
                 ItemStack item = e.getCurrentItem();
-                String type = of(item).getString("type");
+                String type = of(item).getString(TYPE_TAG);
                 if (type.isEmpty()) return;
 
                 Consumer<NovaInventory> confirmR = inv.getAttribute("accept_action", Consumer.class);
@@ -2309,6 +2344,18 @@ final class GUIManager implements Listener {
 
         if (e.getItem() == null) return;
         ItemStack item = e.getItem();
+        NBTWrapper nbt = of(item);
+
+        if (item.isSimilar(GUI_BACKGROUND)) e.setCancelled(true);
+        if (nbt.isCancelled()) e.setCancelled(true);
+
+        String id = nbt.getID();
+        if (CLICK_ITEMS.containsKey(id)) e.setCancelled(true);
+    }
+
+    @EventHandler
+    public void drop(PlayerDropItemEvent e) {
+        ItemStack item = e.getItemDrop().getItemStack();
         NBTWrapper nbt = of(item);
 
         if (item.isSimilar(GUI_BACKGROUND)) e.setCancelled(true);
