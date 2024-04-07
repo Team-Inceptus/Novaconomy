@@ -51,7 +51,6 @@ public final class Mail implements ConfigurationSerializable, Serializable {
     private final long timestamp;
 
     private boolean anonymous;
-    private boolean read;
 
     private Mail(@NotNull UUID uniqueId, @NotNull UUID sender, @NotNull UUID recipient, @NotNull String recipientName, @NotNull String subject, @NotNull String message, long timestamp, boolean anonymous) {
         this.uniqueId = uniqueId;
@@ -185,7 +184,7 @@ public final class Mail implements ConfigurationSerializable, Serializable {
      * @return message
      */
     public String getMessage() {
-        return new String(Base64.getDecoder().decode(message));
+        return new String(Base64.getDecoder().decode(message.getBytes(StandardCharsets.UTF_8)));
     }
 
     /**
@@ -223,28 +222,12 @@ public final class Mail implements ConfigurationSerializable, Serializable {
     }
 
     /**
-     * Gets whether this Mail object was already opened by the recipient.
-     * @return Whether mail was already opened
-     */
-    public boolean isRead() {
-        return read;
-    }
-
-    /**
-     * Sets whether this Mail object was already opened by the recipient.
-     * @param read Whether mail was already opened
-     */
-    public void setRead(boolean read) {
-        this.read = read;
-    }
-
-    /**
      * Gets the display name for the sender. It will return {@code "???"} if the mail is anonymous.
      * @return Sender Name
      */
     @NotNull
     public String getSenderName() {
-        if (anonymous) return getSender().getName();
+        if (!anonymous) return getSender().getName();
         else return "???";
     }
 
@@ -257,7 +240,7 @@ public final class Mail implements ConfigurationSerializable, Serializable {
         ItemStack item = new ItemStack(Material.WRITTEN_BOOK);
         BookMeta meta = (BookMeta) item.getItemMeta();
         meta.setAuthor(getSenderName());
-        meta.setDisplayName(ChatColor.LIGHT_PURPLE + "" + ChatColor.BOLD + getSubject());
+        meta.setDisplayName(ChatColor.LIGHT_PURPLE + getSubject());
         meta.setTitle(getSubject());
 
         List<String> pages = Arrays.stream(toString().split("(?<=\\G.{798})"))
@@ -267,7 +250,8 @@ public final class Mail implements ConfigurationSerializable, Serializable {
 
         SimpleDateFormat format = new SimpleDateFormat(DATE_FORMAT, Language.getCurrentLocale());
         meta.setLore(Arrays.asList(
-                ChatColor.GOLD + "" + ChatColor.BOLD + "✉ -> " + getRecipientName(),
+                " ",
+                ChatColor.GOLD + "✉ -> " + getRecipientName(),
                 ChatColor.DARK_GRAY + format.format(getTimestamp())
         ));
 
@@ -340,11 +324,11 @@ public final class Mail implements ConfigurationSerializable, Serializable {
         UUID sender = UUID.fromString((String) serialized.get("sender"));
         UUID recipient = UUID.fromString((String) serialized.get("recipient"));
         String recipientName = (String) serialized.get("recipient_name");
-        String message = (String) serialized.get("message");
         String subject = (String) serialized.get("subject");
+        String message = (String) serialized.get("message");
         long timestamp = (long) serialized.get("timestamp");
         boolean anonymous = (boolean) serialized.get("anonymous");
 
-        return new Mail(id, sender, recipient, recipientName, message, subject, timestamp, anonymous);
+        return new Mail(id, sender, recipient, recipientName, subject, message, timestamp, anonymous);
     }
 }

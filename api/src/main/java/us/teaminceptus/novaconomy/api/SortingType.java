@@ -255,16 +255,6 @@ public interface SortingType<T> extends Comparator<T> {
      */
     SortingType<Mail> MAIL_ANONYMOUS = (m1, m2) -> Boolean.compare(m1.isAnonymous(), m2.isAnonymous());
 
-    /**
-     * Sorts a mail by whether it is read.
-     */
-    SortingType<Mail> MAIL_READ = (m1, m2) -> Boolean.compare(m1.isRead(), m2.isRead());
-
-    /**
-     * Sorts a mail by whether it is unread.
-     */
-    SortingType<Mail> MAIL_UNREAD = MAIL_READ.reversed();
-
     @Override
     default SortingType<T> reversed() {
         return (o1, o2) -> compare(o2, o1);
