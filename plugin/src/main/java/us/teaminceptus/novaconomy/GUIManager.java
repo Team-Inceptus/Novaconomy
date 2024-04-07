@@ -46,6 +46,7 @@ import us.teaminceptus.novaconomy.api.player.NovaPlayer;
 import us.teaminceptus.novaconomy.api.player.PlayerStatistics;
 import us.teaminceptus.novaconomy.api.settings.SettingDescription;
 import us.teaminceptus.novaconomy.api.settings.Settings;
+import us.teaminceptus.novaconomy.api.util.Mail;
 import us.teaminceptus.novaconomy.api.util.Price;
 import us.teaminceptus.novaconomy.api.util.Product;
 import us.teaminceptus.novaconomy.util.NovaSound;
@@ -2123,6 +2124,26 @@ final class GUIManager implements Listener {
                     p.openInventory(Generator.generateLanguageSettings(p));
                 });
             })
+            .put("mail:view", (e, inv) -> {
+                Player p = (Player) e.getWhoClicked();
+                ItemStack item = e.getCurrentItem();
+                NBTWrapper nbt = of(item);
+
+                UUID id = nbt.getUUID("mail_id");
+                Mail mail = Mail.byId(id);
+
+                w.openBook(p, mail.generateBook());
+                NovaSound.BLOCK_NOTE_BLOCK_PLING.playSuccess(p);
+            })
+            .put("mail:confirm", (e, inv) -> {
+                Player p = (Player) e.getWhoClicked();
+                Mail mail = inv.getAttribute("mail", Mail.class);
+                Runnable send = inv.getAttribute("send", Runnable.class);
+
+                p.closeInventory();
+                send.run();
+                NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
+            })
             .build();
 
     static final Map<String, BiConsumer<InventoryClickEvent, NovaInventory>> CLICK_INVENTORIES = ImmutableMap.<String, BiConsumer<InventoryClickEvent, NovaInventory>>builder()
@@ -2222,15 +2243,18 @@ final class GUIManager implements Listener {
 
         if (e.getCurrentItem() == null) return;
         ItemStack item = e.getCurrentItem();
+        NBTWrapper nbt = of(item);
 
         if (item.isSimilar(GUI_BACKGROUND)) {
             e.setCancelled(true);
             return;
         }
 
+        if (nbt.isCancelled()) e.setCancelled(true);
+
         if (CLICK_INVENTORIES.containsKey(inv.getId())) CLICK_INVENTORIES.get(inv.getId()).accept(e, inv);
 
-        String id = getID(item);
+        String id = nbt.getID();
         if (CLICK_ITEMS.containsKey(id)) CLICK_ITEMS.get(id).accept(e, inv);
     }
 
@@ -2243,7 +2267,10 @@ final class GUIManager implements Listener {
         for (ItemStack item : e.getNewItems().values()) {
             if (item == null) continue;
             if (item.isSimilar(GUI_BACKGROUND)) e.setCancelled(true);
-            if (CLICK_ITEMS.containsKey(getID(item))) e.setCancelled(true);
+
+            NBTWrapper nbt = of(item);
+            if (CLICK_ITEMS.containsKey(nbt.getID())) e.setCancelled(true);
+            if (nbt.isCancelled()) e.setCancelled(true);
         }
     }
 
@@ -2276,16 +2303,18 @@ final class GUIManager implements Listener {
 
     @EventHandler
     public void move(InventoryMoveItemEvent e) {
-        if (e.getItem() == null) return;
-        ItemStack item = e.getItem();
-
         if (!(e.getDestination() instanceof NovaInventory)) return;
         NovaInventory inv = (NovaInventory) e.getDestination();
         e.setCancelled(inv.isCancelled());
 
-        if (item.isSimilar(GUI_BACKGROUND)) e.setCancelled(true);
+        if (e.getItem() == null) return;
+        ItemStack item = e.getItem();
+        NBTWrapper nbt = of(item);
 
-        String id = getID(item);
+        if (item.isSimilar(GUI_BACKGROUND)) e.setCancelled(true);
+        if (nbt.isCancelled()) e.setCancelled(true);
+
+        String id = nbt.getID();
         if (CLICK_ITEMS.containsKey(id)) e.setCancelled(true);
     }
 
