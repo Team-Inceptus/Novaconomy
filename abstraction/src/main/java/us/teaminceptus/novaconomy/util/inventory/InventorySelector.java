@@ -18,6 +18,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.BUSINESS_TAG;
+import static us.teaminceptus.novaconomy.abstraction.CommandWrapper.TYPE_TAG;
 import static us.teaminceptus.novaconomy.abstraction.NBTWrapper.builder;
 import static us.teaminceptus.novaconomy.messages.MessageHandler.get;
 import static us.teaminceptus.novaconomy.util.inventory.Generator.GUI_SPACE;
@@ -46,12 +47,12 @@ public final class InventorySelector {
 
         inv.setItem(21, builder(Items.LIME_WOOL,
                 meta -> meta.setDisplayName(ChatColor.GREEN + get(p, "constants.yes")),
-                nbt -> nbt.set("type", "accept"))
+                nbt -> nbt.set(TYPE_TAG, "accept"))
         );
 
         inv.setItem(23, builder(Items.RED_WOOL,
                 meta -> meta.setDisplayName(ChatColor.RED + get(p, "constants.cancel")),
-                nbt -> nbt.set("type", "cancel"))
+                nbt -> nbt.set(TYPE_TAG, "cancel"))
         );
 
         while (inv.firstEmpty() != -1)
