@@ -411,6 +411,9 @@ final class Events implements Listener {
                 run = () -> {
                     p.getInventory().removeItem(book);
                     c.sendMail(mail);
+
+                    if (!c.isChild(p) && !c.isOwner(p))
+                        c.addExperience(25);
                 };
                 break;
             }
