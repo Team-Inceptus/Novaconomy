@@ -3,7 +3,7 @@ import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 plugins {
     kotlin("jvm") version "1.9.23"
     id("org.sonarqube") version "4.0.0.2929"
-    id("com.github.johnrengelman.shadow") version "8.1.1" apply false
+    id("io.github.goooler.shadow") version "8.1.7" apply false
 
     java
     `maven-publish`
@@ -96,7 +96,7 @@ val jvmVersion = JavaVersion.VERSION_1_8
 subprojects {
     apply<JacocoPlugin>()
     apply(plugin = "org.sonarqube")
-    apply(plugin = "com.github.johnrengelman.shadow")
+    apply(plugin = "io.github.goooler.shadow")
     apply(plugin = "org.jetbrains.kotlin.jvm")
 
     dependencies {

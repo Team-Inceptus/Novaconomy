@@ -26,7 +26,8 @@ val versions = mapOf(
     "1_19_R3" to 17,
     "1_20_R1" to 17,
     "1_20_R2" to 17,
-    "1_20_R3" to 17
+    "1_20_R3" to 17,
+    "1_20_R4" to 21
 )
 
 dependencies {
@@ -64,8 +65,11 @@ dependencies {
 
 tasks {
     compileJava {
-        if (JavaVersion.current().isCompatibleWith(JavaVersion.VERSION_17))
-            versions.filterValues { it >= 17 }.keys.forEach { dependsOn(project(":novaconomy-$it").tasks["assemble"]) }
+        for (version in versions) {
+            if (JavaVersion.current().isCompatibleWith(JavaVersion.toVersion(version.value)) && version.value >= 17) {
+                dependsOn(project(":novaconomy-${version.key}").tasks["assemble"])
+            }
+        }
     }
 
     register("sourcesJar", Jar::class.java) {

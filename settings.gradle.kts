@@ -40,7 +40,8 @@ mapOf(
     "1_19_R3" to 17,
     "1_20_R1" to 17,
     "1_20_R2" to 17,
-    "1_20_R3" to 17
+    "1_20_R3" to 17,
+    "1_20_R4" to 21
 ).forEach {
     val id = it.key
     val minJava = it.value
