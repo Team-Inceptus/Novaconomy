@@ -105,7 +105,7 @@ subprojects {
 
         testImplementation("org.spigotmc:spigot-api:1.8-R0.1-SNAPSHOT")
         testImplementation("net.md-5:bungeecord-chat:1.20-R0.2")
-        testImplementation("org.mockito:mockito-core:5.11.0")
+        testImplementation("org.mockito:mockito-core:5.12.0")
         testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
     }
 
