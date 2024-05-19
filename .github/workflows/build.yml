@@ -62,7 +62,7 @@ jobs:
             java-version: 17
           - version: 1.20.4
             java-version: 17
-          - version: 1.20.5
+          - version: 1.20.6
             java-version: 21
 
     name: Test Plugin on MC ${{ matrix.version }}
@@ -79,7 +79,7 @@ jobs:
       - name: Build Plugin
         run: ./gradlew clean assemble
       - name: Test Plugin - ${{ matrix.version }}
-        uses: GamerCoder215/TestMC@v1
+        uses: gmitch215/TestMC@v1
         with:
           path: 'plugin/build/libs/novaconomy-*.jar'
           runtime: 'paper'
