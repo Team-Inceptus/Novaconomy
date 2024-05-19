@@ -2605,4 +2605,26 @@ public final class Novaconomy extends JavaPlugin implements NovaConfig, NovaMark
         return isIncludedIn(functionality.getStringList("NegativeBalances.BypassMax"), p);
     }
 
+    @Override
+    public boolean isBusinessCopyrightEnabled() {
+        return config.getBoolean("Business.Copryright.Enabled", false);
+    }
+
+    @Override
+    public void setBusinessCopyrightEnabled(boolean enabled) {
+        config.set("Business.Copryright.Enabled", enabled);
+        saveConfig();
+    }
+
+    @Override
+    public double getBusinessCopyrightCost() {
+        return config.getDouble("Business.Copryright.Cost", 1000.0);
+    }
+
+    @Override
+    public void setBusinessCopyrightCost(double cost) {
+        config.set("Business.Copryright.Cost", cost);
+        saveConfig();
+    }
+
 }

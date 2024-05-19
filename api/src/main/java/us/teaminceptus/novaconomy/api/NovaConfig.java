@@ -392,6 +392,11 @@ public interface NovaConfig  {
         if (!config.isBoolean("Business.Advertising.Enabled")) config.set("Business.Advertising.Enabled", true);
         if (!config.isDouble("Business.Advertising.ClickReward") && !config.isInt("Business.Advertising.ClickReward")) config.set("Business.Advertising.ClickReward", 5D);
 
+        if (!config.isConfigurationSection("Business.Copyright")) config.createSection("Business.Copyright");
+        if (!config.isBoolean("Business.Copyright.Enabled")) config.set("Business.Copyright.Enabled", true);
+        if (!config.isDouble("Business.Copyright.Cost") && !config.isInt("Business.Copyright.Cost"))
+            config.set("Business.Copyright.Cost", 1000);
+
         // Database
 
         if (!config.isConfigurationSection("Database")) config.createSection("Database");
@@ -1306,5 +1311,28 @@ public interface NovaConfig  {
      */
     boolean canBypassMaxNegativeAmount(@NotNull OfflinePlayer p);
 
+    /**
+     * Whether Business Copyright is enabled.
+     * @return true if enabled, else false
+     */
+    boolean isBusinessCopyrightEnabled();
+
+    /**
+     * Sets whether Business Copyright is enabled.
+     * @param enabled true if enabled, else false
+     */
+    void setBusinessCopyrightEnabled(boolean enabled);
+
+    /**
+     * Fetches the cost of a Business Copyright.
+     * @return Cost of Business Copyright
+     */
+    double getBusinessCopyrightCost();
+
+    /**
+     * Sets the cost of a Business Copyright.
+     * @param cost Cost of Business Copyright
+     */
+    void setBusinessCopyrightCost(double cost);
 
 }

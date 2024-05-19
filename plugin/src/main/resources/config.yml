@@ -306,6 +306,15 @@ Business:
     # The Economy is randomly selected, and this value is multiplied by its conversion scale
     ClickReward: 5
 
+  # Business Copyright Settings
+  Copyright:
+
+    # Whether Business Copyright is Enabled
+    Enabled: true
+
+    # The base cost of a Business Copyright. This is multiplied by the economy's conversion scale.
+    Cost: 1000.0
+
 # Corporation Section
 Corporation:
 
