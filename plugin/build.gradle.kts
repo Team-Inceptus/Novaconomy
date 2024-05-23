@@ -42,7 +42,7 @@ dependencies {
     implementation("com.jeff_media:SpigotUpdateChecker:3.0.3")
 
     // Soft Dependencies
-    compileOnly("me.clip:placeholderapi:2.11.5")
+    compileOnly("me.clip:placeholderapi:2.11.6")
     compileOnly("com.github.MilkBowl:VaultAPI:1.7.1")
     compileOnly("com.github.lokka30.treasury:treasury-api:2.0.0")
     compileOnly("net.essentialsx:EssentialsX:2.20.1")
