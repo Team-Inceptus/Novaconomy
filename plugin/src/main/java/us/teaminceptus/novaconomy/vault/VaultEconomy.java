@@ -94,7 +94,7 @@ class VaultEconomy extends AbstractEconomy {
 
     @Override
     public boolean has(String playerName, double amount) {
-        return getBalance(playerName) == amount;
+        return getBalance(playerName) >= amount;
     }
 
     @Override
