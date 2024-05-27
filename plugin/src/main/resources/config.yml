@@ -307,6 +307,8 @@ Business:
     ClickReward: 5
 
   # Business Copyright Settings
+  #
+  # Copyright is ignored if the businesses are in the same Corporation. Existing products are grandfathered in and are not affected, but newer products are.
   Copyright:
 
     # Whether Business Copyright is Enabled
