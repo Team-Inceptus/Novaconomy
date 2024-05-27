@@ -306,6 +306,17 @@ Business:
     # The Economy is randomly selected, and this value is multiplied by its conversion scale
     ClickReward: 5
 
+  # Business Copyright Settings
+  #
+  # Copyright is ignored if the businesses are in the same Corporation. Existing products are grandfathered in and are not affected, but newer products are.
+  Copyright:
+
+    # Whether Business Copyright is Enabled
+    Enabled: true
+
+    # The base cost of a Business Copyright. This is multiplied by the economy's conversion scale.
+    Cost: 1000.0
+
 # Corporation Section
 Corporation:
 

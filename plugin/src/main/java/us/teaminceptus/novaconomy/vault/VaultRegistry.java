@@ -53,7 +53,7 @@ public class VaultRegistry {
     private static void inject() {
         Plugin plugin = NovaConfig.getPlugin();
         if (getVaultEconomy() == null) {
-            plugin.getLogger().info("VaultEconomy is disabled in the config - Registering All Economies...");
+            plugin.getLogger().warning("VaultEconomy is disabled in the config - Registering All Economies...");
 
             for (RegisteredServiceProvider<net.milkbowl.vault.economy.Economy> rsp : Bukkit.getServicesManager().getRegistrations(net.milkbowl.vault.economy.Economy.class))
                 if (rsp.getProvider() instanceof VaultEconomy)
@@ -70,7 +70,7 @@ public class VaultRegistry {
             Economy main = Economy.getEconomies().stream().sorted(Comparator.comparing(Economy::getName)).collect(Collectors.toList()).get(0);
             Bukkit.getServicesManager().register(net.milkbowl.vault.economy.Economy.class, new VaultEconomy(main), plugin, ServicePriority.High);
 
-            plugin.getLogger().info("Registered All Economies, Main Economy is: " + main.getName() + " (" + main.getUniqueId() + ")");
+            plugin.getLogger().warning("Registered All Economies, Main Economy is: " + main.getName() + " (" + main.getUniqueId() + ")");
         } else {
             Economy econ = getVaultEconomy();
 

@@ -5,7 +5,7 @@ plugins {
     id("io.github.patrick.remapper") version "1.4.1"
 }
 
-val mcVersion = "1.20.3"
+val mcVersion = "1.20.5"
 
 dependencies {
     api(project(":novaconomy-abstract"))
@@ -15,8 +15,8 @@ dependencies {
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
 }
 
 tasks {

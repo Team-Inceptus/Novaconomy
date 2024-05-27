@@ -25,10 +25,7 @@ import us.teaminceptus.novaconomy.api.SortingType;
 import us.teaminceptus.novaconomy.api.auction.AuctionHouse;
 import us.teaminceptus.novaconomy.api.auction.AuctionProduct;
 import us.teaminceptus.novaconomy.api.bank.Bank;
-import us.teaminceptus.novaconomy.api.business.Business;
-import us.teaminceptus.novaconomy.api.business.BusinessProduct;
-import us.teaminceptus.novaconomy.api.business.BusinessStatistics;
-import us.teaminceptus.novaconomy.api.business.Rating;
+import us.teaminceptus.novaconomy.api.business.*;
 import us.teaminceptus.novaconomy.api.corporation.Corporation;
 import us.teaminceptus.novaconomy.api.corporation.CorporationPermission;
 import us.teaminceptus.novaconomy.api.corporation.CorporationRank;
@@ -2178,6 +2175,31 @@ final class GUIManager implements Listener {
 
                 p.openInventory(Generator.generateMailbox(o, SortingType.MAIL_DATE_ASCENDING, p).get(0));
                 NovaSound.ITEM_BOOK_PAGE_TURN.play(p);
+            })
+            .put("business:remove_copyright", (e, inv) -> {
+                Player p = (Player) e.getWhoClicked();
+                ItemStack item = e.getCurrentItem();
+                NBTWrapper nbt = of(item);
+
+                Business b = getBusiness(item);
+                Product bp = nbt.getProduct(PRODUCT_TAG);
+
+                NovaInventory confirm = confirm(p, cInv -> {
+                    BusinessCopyright.removeOwner(bp.getItem());
+                    p.openInventory(generateBusinessCopyright(b, SortingType.MATERIAL_TYPE_ASCENDING, p).get(0));
+                    NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
+                });
+
+                confirm.setItem(13, bp.getItem());
+                p.openInventory(confirm);
+            })
+            .put("business:copyright", (e, inv) -> {
+                Player p = (Player) e.getWhoClicked();
+                ItemStack item = e.getCurrentItem();
+                Business b = getBusiness(item);
+
+                p.openInventory(generateBusinessCopyright(b, SortingType.MATERIAL_TYPE_ASCENDING, p).get(0));
+                NovaSound.BLOCK_CHEST_OPEN.play(p);
             })
             .build();
 

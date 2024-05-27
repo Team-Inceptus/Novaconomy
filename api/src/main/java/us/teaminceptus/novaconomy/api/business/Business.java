@@ -1717,6 +1717,39 @@ public final class Business implements ConfigurationSerializable {
         return getSetting(Settings.Business.OPEN_MAILBOX);
     }
 
+    /**
+     * Gets all the items copyrighted by this Business.
+     * @return All Copyrighted Items
+     */
+    @NotNull
+    public Set<ItemStack> getCopyrightedItems() {
+        return ImmutableSet.copyOf(BusinessCopyright.getAllItems().entrySet()
+                .stream()
+                .filter(e -> e.getValue().equals(this))
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toSet()));
+    }
+
+    /**
+     * Registers an item as being copyrighted under this business.
+     * @param item Item to register
+     * @throws IllegalStateException if the item is already copyrighted
+     */
+    public void registerCopyright(@NotNull ItemStack item) throws IllegalStateException {
+        if (item == null) return;
+        BusinessCopyright.setOwner(item, this);
+    }
+
+    /**
+     * Gets whether this Business is the owner of an item.
+     * @param item Item to check
+     * @return true if owner, else false
+     */
+    public boolean isOwner(@Nullable ItemStack item) {
+        if (item == null) return false;
+        return BusinessCopyright.getOwner(item) == this;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

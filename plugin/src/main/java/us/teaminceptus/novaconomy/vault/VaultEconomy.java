@@ -94,7 +94,7 @@ class VaultEconomy extends AbstractEconomy {
 
     @Override
     public boolean has(String playerName, double amount) {
-        return getBalance(playerName) == amount;
+        return getBalance(playerName) >= amount;
     }
 
     @Override
@@ -157,14 +157,14 @@ class VaultEconomy extends AbstractEconomy {
     public EconomyResponse bankWithdraw(String name, double amount) {
         Economy econ = Economy.byName(name);
         Bank.removeBalance(econ, amount);
-        return new VaultEconomyResponse(0, Bank.getBalance(Economy.byName(name)));
+        return new VaultEconomyResponse(amount, Bank.getBalance(Economy.byName(name)));
     }
 
     @Override
     public EconomyResponse bankDeposit(String name, double amount) {
         Economy econ = Economy.byName(name);
         Bank.addBalance(econ, amount);
-        return new VaultEconomyResponse(0, Bank.getBalance(Economy.byName(name)));
+        return new VaultEconomyResponse(amount, Bank.getBalance(Economy.byName(name)));
     }
 
     @Override

@@ -1142,6 +1142,28 @@ final class CommandWrapperV1 implements CommandWrapper, CommandExecutor {
                         mailbox(p, Business.byOwner(p));
                         break;
                     }
+                    case "copright": {
+                        if (!(sender instanceof Player)) return false;
+                        Player p = (Player) sender;
+
+                        if (args.length < 2) {
+                            businessCopyright(p);
+                            return false;
+                        }
+
+                        switch (args[1].toLowerCase()) {
+                            case "add":
+                            case "register": {
+                                registerBusinessCopyright(p);
+                                break;
+                            }
+                            default: {
+                                messages.sendMessage(p, "error.argument");
+                                return false;
+                            }
+                        }
+                        break;
+                    }
                     default: {
                         messages.sendMessage(sender, "error.argument");
                         return false;

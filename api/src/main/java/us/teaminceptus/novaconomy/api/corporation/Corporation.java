@@ -1089,6 +1089,46 @@ public final class Corporation {
         return getSetting(Settings.Corporation.OPEN_MAILBOX);
     }
 
+    /**
+     * Checks if this business is a child of this Corporation.
+     * @param b Business to check
+     * @return true if child, false otherwise
+     */
+    public boolean isChild(@NotNull Business b) {
+        if (b == null) return false;
+        return children.contains(b);
+    }
+
+    /**
+     * Checks if this business is a child of this Corporation.
+     * @param id Business ID to check
+     * @return true if child, false otherwise
+     */
+    public boolean isChild(@NotNull UUID id) {
+        if (id == null) return false;
+        return children.stream().anyMatch(b -> b.getUniqueId().equals(id));
+    }
+
+    /**
+     * Checks if this business is a child of this Corporation.
+     * @param name Business Name to check, case sensitive
+     * @return true if child, false otherwise
+     */
+    public boolean isChild(@NotNull String name) {
+        if (name == null) return false;
+        return children.stream().anyMatch(b -> b.getName().equals(name));
+    }
+
+    /**
+     * Checks if this player owns a business inside this Corporation. This will return false if {@link #isOwner(OfflinePlayer)} returns true.
+     * @param p Player to check
+     * @return true if child, false otherwise
+     */
+    public boolean isChild(@NotNull OfflinePlayer p) {
+        if (p == null) return false;
+        return children.stream().anyMatch(b -> b.getOwner().equals(p));
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
