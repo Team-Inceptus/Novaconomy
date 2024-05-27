@@ -42,8 +42,6 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -192,11 +190,21 @@ public final class Generator {
                     }
             );
 
+            ItemStack copyright = builder(
+                    Material.PAPER,
+                    meta -> meta.setDisplayName(ChatColor.AQUA + get(viewer, "constants.business.copyright")),
+                    nbt -> {
+                        nbt.setID("business:copyright");
+                        nbt.set(BUSINESS_TAG, b.getUniqueId());
+                    }
+            );
+
             if (b.isOwner(viewer)) {
                 inv.setItem(16, mailbox);
                 inv.setItem(17, invites);
                 inv.setItem(26, advInfo);
                 inv.setItem(27, supplyChests);
+                inv.setItem(36, copyright);
                 inv.setItem(53, settings);
             }
 
@@ -1730,6 +1738,64 @@ public final class Generator {
         inv.setItem(23, CANCEL);
 
         return inv;
+    }
+
+    public static List<NovaInventory> generateBusinessCopyright(@NotNull Business b, SortingType<Material> sorter, Player viewer) {
+        List<NovaInventory> invs = new ArrayList<>();
+        Set<ItemStack> copyrighted = b.getCopyrightedItems();
+
+        int limit = Math.max(((copyrighted.size() - 1) / 26) + 1, 1);
+        for (int i = 0; i < limit; i++) {
+            final int fI = i;
+
+            NovaInventory inv = genGUI(54, b.getName() + " | " + get(viewer, "constants.business.copyright"));
+            inv.setCancelled();
+
+            inv.setAttribute("sorting_type", Material.class);
+            inv.setAttribute("sorting_function", (Function<SortingType<? super Material>, NovaInventory>)
+                    s -> generateBusinessCopyright(b, sorter, viewer).get(fI));
+
+            inv.setItem(4, b.getPublicIcon());
+            inv.setItem(18, sorter(sorter));
+
+            List<ItemStack> items = copyrighted.stream()
+                    .sorted(Comparator.comparing(ItemStack::getType, sorter))
+                    .collect(Collectors.toList())
+                    .subList(i * 26, Math.min((i + 1) * 26, copyrighted.size()));
+
+            for (ItemStack item : items)
+                inv.addItem(builder(item,
+                        meta -> {
+                            List<String> lore = meta.hasLore() ? new ArrayList<>(meta.getLore()) : new ArrayList<>();
+                            lore.add(" ");
+                            lore.add(ChatColor.YELLOW + get(viewer, "constants.click_remove"));
+
+                            meta.setLore(lore);
+                        },
+                        nbt -> {
+                            nbt.setID("business:remove_copyright");
+                            nbt.set(BUSINESS_TAG, b.getUniqueId());
+                            nbt.set(PRODUCT_TAG, b.getProduct(item));
+                        })
+                );
+
+            inv.setItem(46, builder(BACK, nbt -> {
+                nbt.setID("business:click");
+                nbt.set(BUSINESS_TAG, b.getUniqueId());
+            }));
+
+            if (limit > 1) {
+                if (i > 0)
+                    inv.setItem(47, Items.prev(STORED));
+
+                if (i < (limit - 1))
+                    inv.setItem(53, Items.next(STORED));
+            }
+
+            invs.add(inv);
+        }
+
+        return invs;
     }
 
     // Utilities

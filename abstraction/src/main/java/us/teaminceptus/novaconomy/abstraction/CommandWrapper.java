@@ -31,6 +31,7 @@ import us.teaminceptus.novaconomy.api.NovaConfig;
 import us.teaminceptus.novaconomy.api.SortingType;
 import us.teaminceptus.novaconomy.api.bank.Bank;
 import us.teaminceptus.novaconomy.api.business.Business;
+import us.teaminceptus.novaconomy.api.business.BusinessCopyright;
 import us.teaminceptus.novaconomy.api.business.BusinessStatistics;
 import us.teaminceptus.novaconomy.api.business.Rating;
 import us.teaminceptus.novaconomy.api.corporation.Corporation;
@@ -769,6 +770,12 @@ public interface CommandWrapper {
 
         if (b.isProduct(pr)) {
             messages.sendMessage(p, "error.business.exists_product");
+            return;
+        }
+
+        Corporation c = b.getParentCorporation();
+        if (BusinessCopyright.isRegistered(pr) && (c == null || !c.equals(BusinessCopyright.getOwner(pr).getParentCorporation()))) {
+            messages.sendMessage(p, "error.business.product_copyright");
             return;
         }
 
@@ -4460,6 +4467,85 @@ public interface CommandWrapper {
         NovaInventory inv = Generator.generateMailbox(c, SortingType.MAIL_DATE_ASCENDING, p).get(0);
         p.openInventory(inv);
         NovaSound.ITEM_BOOK_PAGE_TURN.play(p);
+    }
+
+    default void businessCopyright(Player p) {
+        if (!p.hasPermission("novaconomy.user.business")) {
+            messages.sendMessage(p, ERROR_PERMISSION_ARGUMENT);
+            return;
+        }
+
+        if (!Business.exists(p)) {
+            messages.sendError(p, "error.business.none");
+            return;
+        }
+
+        Business b = Business.byOwner(p);
+
+        NovaInventory inv = Generator.generateBusinessCopyright(b, SortingType.MATERIAL_TYPE_ASCENDING, p).get(0);
+        p.openInventory(inv);
+        NovaSound.BLOCK_ENDER_CHEST_OPEN.play(p);
+    }
+
+    default void registerBusinessCopyright(Player p) {
+        if (!p.hasPermission("novaconomy.user.business")) {
+            messages.sendMessage(p, ERROR_PERMISSION_ARGUMENT);
+            return;
+        }
+
+        if (!Business.exists(p)) {
+            messages.sendError(p, "error.business.none");
+            return;
+        }
+
+        Business b = Business.byOwner(p);
+
+        if (p.getItemInHand() == null || p.getItemInHand().getType() == Material.AIR) {
+            messages.sendError(p, "error.argument.item.hold");
+            return;
+        }
+
+        ItemStack item = p.getItemInHand().clone();
+        item.setAmount(1);
+
+        if (BusinessCopyright.isDisallowed(item)) {
+            messages.sendError(p, "error.business.cant_copyright");
+            return;
+        }
+
+        if (BusinessCopyright.isRegistered(item)) {
+            messages.sendError(p, "error.business.already_copyright", ChatColor.GOLD + BusinessCopyright.getOwner(item).getName());
+            return;
+        }
+
+        if (!b.isProduct(item)) {
+            messages.sendError(p, "error.argument.item");
+            return;
+        }
+
+        NovaPlayer np = new NovaPlayer(p);
+        if (!np.canAfford(NovaConfig.getConfiguration().getBusinessCopyrightCost(), NovaConfig.getConfiguration().getWhenNegativeAllowPurchaseProducts())) {
+            messages.sendError(p, "error.market.not_enough_money");
+            return;
+        }
+
+        NovaInventory inv = InventorySelector.confirm(p, cInv -> {
+            BusinessCopyright.setOwner(item, b);
+            messages.sendSuccess(p, "success.business.add_copyright");
+            p.closeInventory();
+        });
+
+        inv.setItem(11, economyWheel(p));
+        inv.setItem(13, item);
+
+        double cost = NovaConfig.getConfiguration().getBusinessCopyrightCost();
+        inv.setItem(15, Items.builder(Material.GOLD_BLOCK,
+                meta -> meta.setDisplayName(format(get(p, "constants.price"), cost, ""))
+        ));
+
+
+        p.openInventory(inv);
+        NovaSound.ENTITY_ARROW_HIT_PLAYER.playSuccess(p);
     }
 
 }

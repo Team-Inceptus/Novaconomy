@@ -616,6 +616,13 @@ final class CommandWrapperV2 implements CommandWrapper {
 
         @Subcommand({"mailbox", "mail"})
         public void mailbox(Player p) { wrapper.mailbox(p, Business.byOwner(p)); }
+
+        @Subcommand("copyright")
+        @DefaultFor("business copyright")
+        public void businessCopyright(Player p) { wrapper.businessCopyright(p); }
+
+        @Subcommand({"copyright register", "copyright add"})
+        public void addBusinessCopyright(Player p) { wrapper.registerBusinessCopyright(p); }
     }
 
     @Command({"nbank", "bank", "globalbank", "gbank"})
