@@ -42,6 +42,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 /**
@@ -407,6 +408,29 @@ public final class NovaPlayer {
             double max = canBypassMaxNegativeBalance() ? Double.MIN_VALUE : NovaConfig.getConfiguration().getMaxNegativeBalance();
             return result >= max;
         }
+    }
+
+    /**
+     * Whether this NovaPlayer can afford an amount from any economy.
+     * @param amount Amount to buy at, converted into all other economies using {@link Economy#getConversionScale()}
+     * @return true if can afford, else false
+     */
+    public boolean canAfford(double amount) {
+        return canAfford(amount, false);
+    }
+
+    /**
+     * Whether this NovaPlayer can afford an amount from any economy.
+     * @param amount Amount to buy at, converted into all other economies using {@link Economy#getConversionScale()}
+     * @param allowDebt Whether to allow debt. This will be ignored if {@link NovaConfig#isNegativeBalancesEnabled()} returns false.
+     * @return true if can afford, else false
+     */
+    public boolean canAfford(double amount, boolean allowDebt) {
+        AtomicBoolean afford = new AtomicBoolean(false);
+        for (Economy econ : Economy.getEconomies())
+            if (canAfford(econ, amount * econ.getConversionScale(), allowDebt)) afford.set(true);
+
+        return afford.get();
     }
 
     /**
