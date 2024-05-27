@@ -1,7 +1,9 @@
 package us.teaminceptus.novaconomy.api.business;
 
 import com.google.common.collect.ImmutableMap;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.util.io.BukkitObjectInputStream;
 import org.bukkit.util.io.BukkitObjectOutputStream;
 import org.jetbrains.annotations.NotNull;
@@ -76,13 +78,14 @@ public final class BusinessCopyright {
      * Sets the owner of the specified item.
      * @param item The item to set the owner of.
      * @param business The business to set as the owner.
-     * @throws IllegalArgumentException if item or business is null
+     * @throws IllegalArgumentException if item or business is null, or {@link #isDisallowed(ItemStack)} returns true
      * @throws IllegalStateException if the item is already claimed
      */
     public static void setOwner(@NotNull ItemStack item, @NotNull Business business) throws IllegalArgumentException, IllegalStateException {
         if (item == null) throw new IllegalArgumentException("item cannot be null");
         if (business == null) throw new IllegalArgumentException("business cannot be null");
         if (isRegistered(item)) throw new IllegalStateException("item is already owned");
+        if (isDisallowed(item)) throw new IllegalArgumentException("item is banned from copyright");
 
         ItemStack item0 = item.clone();
         item0.setAmount(1);
@@ -104,6 +107,33 @@ public final class BusinessCopyright {
 
         registry.remove(item0);
         write();
+    }
+
+    /**
+     * Gets whether the specified item is disallowed from being registered.
+     * <p></p>
+     * An item is disallowed if:
+     * <ul>
+     *     <li>{@link ItemStack#hasItemMeta()} returns false</li>
+     *     <li>{@link ItemStack#getEnchantments()} has a size less than three</li>
+     * </ul>
+     *
+     * These rules will not apply if one of the following happens:
+     * <ul>
+     *     <li>{@link ItemMeta#hasLore()} returns true</li>
+     *     <li>{@link ItemMeta#getItemFlags()} is not empty</li>
+     * </ul>
+     * @param item The item to check
+     * @return true if the item is disallowed, false otherwise
+     */
+    public static boolean isDisallowed(@NotNull ItemStack item) {
+        if (!item.hasItemMeta()) return true;
+
+        // Automatic False
+        if (item.getItemMeta().hasLore()) return false;
+        if (!item.getItemMeta().getItemFlags().isEmpty()) return false;
+
+        return item.getEnchantments().size() < 3;
     }
 
     // I/O
